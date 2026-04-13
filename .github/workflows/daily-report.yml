@@ -1,4 +1,5 @@
 name: Generate Daily Market Report
+# Re-index: workflow renamed from generate-report.yml
 
 on:
   schedule:
