@@ -1,26 +1,37 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --mint: #00C2A7;
+  --green: #82D94B;
+  --gray: #666666;
+  --bg: #F5F7FA;
+  --card: #FFFFFF;
+  --text: #24292F;
+  --text-sub: #666666;
+  --border: #E5E7EB;
+  --up: #E54545;
+  --down: #4589E5;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #0D1117;
+    --card: #161B22;
+    --text: #C9D1D9;
+    --text-sub: #8B949E;
+    --border: #30363D;
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* 리포트 HTML 임베드를 위한 iframe 스타일 */
+.report-frame {
+  width: 100%;
+  border: none;
+  min-height: 100vh;
 }
