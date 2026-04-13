@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iM 글로벌 마켓 리포트 - 2026년 4월 3일</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #24292F;
+            background-color: #F5F7FA;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                color: #C9D1D9;
+                background-color: #0D1117;
+            }
+        }
+
+        .container {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Cover Section */
+        .cover {
+            background: linear-gradient(135deg, #00C2A7 0%, #82D94B 100%);
+            padding: 48px 0 60px;
+            margin: 0 -20px 48px;
+            text-align: center;
+            color: white;
+        }
+
+        @media (max-width: 640px) {
+            .cover {
+                width: calc(100% + 40px);
+                border-radius: 0;
+                padding: 36px 20px 48px;
+            }
+        }
+
+        .cover .date {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 16px;
+            letter-spacing: 0.5px;
+        }
+
+        .cover h1 {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 16px;
+            line-height: 1.3;
+        }
+
+        @media (max-width: 640px) {
+            .cover h1 {
+                font-size: 24px;
+            }
+        }
+
+        .cover .subtitle {
+            font-size: 18px;
+            opacity: 0.95;
+            margin-bottom: 32px;
+            line-height: 1.6;
+        }
+
+        .cover .byline {
+            font-size: 12px;
+            opacity: 0.8;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* Section Titles */
+        .section-title {
+            color: #00C2A7;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 32px;
+            position: relative;
+            padding-bottom: 12px;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background-color: #00C2A7;
+            border-radius: 2px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .section-title {
+                color: #00C2A7;
+            }
+        }
+
+        /* Market Pulse Section */
+        .market-pulse {
+            margin-bottom: 60px;
+        }
+
+        .pulse-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        @media (max-width: 640px) {
+            .pulse-grid {
+                display: flex;
+                overflow-x: auto;
+                scroll-snap-type: x mandatory;
+                gap: 12px;
+                -webkit-scrollbar: none;
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+
+            .pulse-grid::-webkit-scrollbar {
+                display: none;
+            }
+        }
+
+        .pulse-card {
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            text-align: center;
+            transition: transform 0.2s ease;
+        }
+
+        @media (max-width: 640px) {
+            .pulse-card {
+                min-width: 200px;
+                scroll-snap-align: start;
+                flex-shrink: 0;
+            }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .pulse-card {
+                background: #161B22;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            }
+        }
+
+        .pulse-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .pulse-card .name {
+            font-size: 14px;
+            color: #666666;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .pulse-card .price {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #24292F;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .pulse-card .price {
+                color: #C9D1D9;
+            }
+        }
+
+        .pulse-card .change {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .pulse-card.up {
+            background: rgba(229, 69, 69, 0.05);
+        }
+
+        .pulse-card.down {
+            background: rgba(69, 137, 229, 0.05);
+        }
+
+        .pulse-card.up .change {
+            color: #E54545;
+        }
+
+        .pulse-card.down .change {
+            color: #4589E5;
+        }
+
+        .pulse-card.strong-up {
+            background: rgba(229, 69, 69, 0.15);
+        }
+
+        .pulse-card.strong-down {
+            background: rgba(69, 137, 229, 0.15);
+        }
+
+        .pulse-card.extreme-up {
+            background: rgba(229, 69, 69, 0.3);
+        }
+
+        .pulse-card.extreme-down {
+            background: rgba(69, 137, 229, 0.3);
+        }
+
+        /* Main Story Section */
+        .main-story {
+            margin-bottom: 60px;
+        }
+
+        .story-content p {
+            margin-bottom: 24px;
+            text-align: justify;
+        }
+
+        .story-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .pull-quote {
+            background: rgba(0, 194, 167, 0.05);
+            border-left: 4px solid #00C2A7;
+            padding: 24px 28px;
+            margin: 32px 0;
+            font-size: 18px;
+            font-style: italic;
+            font-weight: 500;
+            color: #00C2A7;
+            border-radius: 0 8px 8px 0;
+        }
+
+        @media (max-width: 640px) {
+            .pull-quote {
+                margin: 32px -20px;
+                width: calc(100% + 40px);
+                border-radius: 0;
+                padding: 24px 20px;
+            }
+        }
+
+        .data-card {
+            background: white;
+            border: 1px solid rgba(0, 194, 167, 0.2);
+            padding: 24px;
+            margin: 32px 0;
+            border-radius: 12px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 16px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .data-card {
+                background: #161B22;
+                border-color: rgba(0, 194, 167, 0.3);
+            }
+        }
+
+        .data-item {
+            text-align: center;
+        }
+
+        .data-item .label {
+            font-size: 12px;
+            color: #666666;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .data-item .value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #24292F;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .data-item .value {
+                color: #C9D1D9;
+            }
+        }
+
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #00C2A7, transparent);
+            margin: 48px 0;
+        }
+
+        /* So What Section */
+        .so-what {
+            margin-bottom: 60px;
+        }
+
+        .insights-grid {
+            display: grid;
+            gap: 24px;
+        }
+
+        .insight-card {
+            background: white;
+            padding: 28px;
+            border-radius: 16px;
+            border: 1px solid rgba(0, 194, 167, 0.15);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .insight-card {
+                background: #161B22;
+                border-color: rgba(0, 194, 167, 0.25);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            }
+        }
+
+        .insight-card h3 {
+            color: #00C2A7;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+
+        .insight-card p {
+            margin-bottom: 12px;
+            line-height: 1.7;
+        }
+
+        .insight-card p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Closing Section */
+        .closing {
+            text-align: center;
+            padding: 32px 0;
+            border-top: 2px solid #00C2A7;
+            margin-top: 48px;
+        }
+
+        .closing-message {
+            font-size: 18px;
+            font-weight: 500;
+            color: #00C2A7;
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        .disclaimer {
+            font-size: 13px;
+            color: #666666;
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+
+        .footer {
+            font-size: 12px;
+            color: #666666;
+            opacity: 0.8;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .container {
+                padding: 0 16px;
+            }
+            
+            .section-title {
+                font-size: 20px;
+            }
+            
+            .pull-quote {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Cover Section -->
+        <div class="cover">
+            <div class="date">2026년 4월 3일 금요일</div>
+            <h1>원유 급등, 중동발 연쇄파장</h1>
+            <div class="subtitle">지정학적 위기가 에너지 가격을 끌어올리며 글로벌 인플레이션 우려를 재점화했습니다. 각국 증시는 제각각 다른 반응을 보였습니다.</div>
+            <div class="byline">iM AI Analyst</div>
+        </div>
+
+        <!-- Market Pulse Section -->
+        <div class="market-pulse">
+            <h2 class="section-title">시장 체온</h2>
+            <div class="pulse-grid">
+                <div class="pulse-card extreme-up">
+                    <div class="name">WTI 원유</div>
+                    <div class="price">$103.52</div>
+                    <div class="change up">+7.20%</div>
+                </div>
+                <div class="pulse-card strong-up">
+                    <div class="name">브렌트유</div>
+                    <div class="price">$101.74</div>
+                    <div class="change up">+6.87%</div>
+                </div>
+                <div class="pulse-card down">
+                    <div class="name">코스피</div>
+                    <div class="price">5,808.62</div>
+                    <div class="change down">-0.86%</div>
+                </div>
+                <div class="pulse-card up">
+                    <div class="name">코스닥</div>
+                    <div class="price">1,099.84</div>
+                    <div class="change up">+0.57%</div>
+                </div>
+                <div class="pulse-card strong-down">
+                    <div class="name">DAX</div>
+                    <div class="price">23,552.69</div>
+                    <div class="change down">-1.06%</div>
+                </div>
+                <div class="pulse-card down">
+                    <div class="name">항셍</div>
+                    <div class="price">25,622.57</div>
+                    <div class="change down">-1.05%</div>
+                </div>
+                <div class="pulse-card up">
+                    <div class="name">원/달러</div>
+                    <div class="price">1,487.78</div>
+                    <div class="change up">+0.16%</div>
+                </div>
+                <div class="pulse-card down">
+                    <div class="name">금</div>
+                    <div class="price">$4,753.4</div>
+                    <div class="change down">-0.71%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Story Section -->
+        <div class="main-story">
+            <h2 class="section-title">오늘의 시장 이야기</h2>
+            <div class="story-content">
+                <p>어제 밤 11시경 중동발 뉴스가 터졌습니다. 이란과 사우디 간 외교 갈등이 격화되면서 호르무즈 해협 봉쇄 가능성이 제기된 것입니다. 전 세계 석유 운송량의 20%가 지나는 이 해협이 막히면 글로벌 에너지 공급에 차질이 생깁니다. 시장은 즉시 반응했습니다.</p>
+
+                <p>WTI 원유는 하루 만에 <strong>7.2%</strong> 급등했습니다. 배럴당 <strong>103.52달러</strong>. 지난해 3월 이후 가장 높은 수준입니다. 불과 일주일 전 96달러였던 것을 감안하면 일주일 사이 8% 가까이 오른 셈입니다. 브렌트유도 <strong>6.87%</strong> 상승하며 101달러선을 회복했습니다. 두 유종 모두 100달러를 넘어선 것은 10개월 만입니다.</p>
+
+                <div class="pull-quote">
+                    "원유 가격이 100달러를 넘어서면 글로벌 인플레이션 압력이 본격화됩니다. 각국 중앙은행의 금리 정책에도 변수가 됩니다."
+                </div>
+
+                <p>문제는 시점입니다. 미국 연준과 유럽 중앙은행이 올해 하반기 금리 인하를 검토하던 바로 그 순간, 원유가 인플레이션 변수를 다시 꺼내든 것입니다. 에너지 비중이 높은 소비자물가지수 특성상, 유가 상승은 즉각 인플레이션 지표에 반영됩니다. 연준의 제롬 파월 의장이 지난주 "물가 안정세가 지속되면 통화정책 완화를 고려하겠다"고 했던 발언이 무색해질 상황입니다.</p>
+
+                <p>미국 시장은 갈팡질팡했습니다. S&P 500은 <strong>0.11%</strong> 소폭 하락했지만, 나스닥은 <strong>0.35%</strong> 상승했습니다. 다우존스는 <strong>0.56%</strong> 떨어졌습니다. 지수별로 다른 반응을 보인 이유는 섹터 차이 때문입니다. 에너지 기업들이 몰린 다우존스는 오히려 에너지주 상승 효과를 기대했지만, 전체적인 인플레이션 우려가 더 컸습니다. 반면 기술주 중심 나스닥은 상대적으로 에너지 비용 민감도가 낮아 다른 움직임을 보였습니다.</p>
+
+                <div class="data-card">
+                    <div class="data-item">
+                        <div class="label">1개월 전</div>
+                        <div class="value">$89.3</div>
+                    </div>
+                    <div class="data-item">
+                        <div class="label">1주일 전</div>
+                        <div class="value">$96.6</div>
+                    </div>
+                    <div class="data-item">
+                        <div class="label">현재 WTI</div>
+                        <div class="value">$103.5</div>
+                    </div>
+                    <div class="data-item">
+                        <div class="label">상승률</div>
+                        <div class="value">+16%</div>
+                    </div>
+                </div>
+
+                <p>유럽 시장은 더 민감했습니다. 독일 DAX는 <strong>1.06%</strong> 하락했고, 영국 FTSE 100도 <strong>0.46%</strong> 떨어졌습니다. 유럽은 미국보다 에너지 수입 의존도가 높습니다. 특히 독일은 러시아산 에너지 의존도를 줄인 뒤 중동산 원유 비중을 늘렸는데, 이번 호르무즈 해협 위기가 직격탄이 된 것입니다. 유럽 중앙은행(ECB)도 올해 금리 인하 계획을 세웠지만, 에너지 가격 상승으로 재검토가 불가피해 보입니다.</p>
+
+                <p>아시아 시장의 반응은 또 달랐습니다. 일본 닛케이는 <strong>0.74%</strong> 하락했지만, 중국 상해종합은 <strong>0.06%</strong> 소폭 상승했습니다. 중국이 상대적으로 선방한 이유는 이란과의 관계 때문입니다. 중국은 이란의 주요 원유 수입국이자 외교적 파트너입니다. 호르무즈 해협이 막히더라도 중국은 이란과 직접 거래할 수 있는 대체 루트를 확보하고 있습니다. 홍콩 항셍은 <strong>1.05%</strong> 떨어졌는데, 이는 홍콩이 글로벌 금융 허브 역할을 하면서 국제 에너지 가격 변동에 더 민감하게 반응하기 때문입니다.</p>
+
+                <div class="divider"></div>
+
+                <p>환율 시장에서는 달러가 다시 강세를 보였습니다. 달러인덱스는 <strong>0.27%</strong> 상승하며 98.92를 기록했습니다. 에너지 위기 상황에서 달러는 여전히 피난처 역할을 합니다. 원화는 달러 대비 <strong>0.16%</strong> 약세를 보이며 1,487원대로 올랐습니다. 지난 1월 1,420원 수준이었던 것과 비교하면 3개월 새 4.7% 원화가 약해진 셈입니다.</p>
+
+                <p>흥미로운 것은 엔화의 움직임입니다. 엔/달러는 <strong>0.23%</strong> 올라 159.61엔을 기록했습니다. 일반적으로 지정학적 위기 시 안전자산으로 분류되는 엔화가 약세를 보인 이유는 일본의 에너지 수입 구조 때문입니다. 일본은 에너지의 90% 이상을 수입에 의존하며, 그중 상당 부분이 중동산입니다. 에너지 가격 상승은 일본의 무역수지를 악화시키고, 이는 엔화 약세 압력으로 작용합니다.</p>
+
+                <div class="pull-quote">
+                    "에너지 위기는 각국의 산업 구조와 에너지 안보 수준에 따라 전혀 다른 영향을 미칩니다. 획일적인 '위험 회피' 시나리오로 설명할 수 없습니다."
+                </div>
+
+                <p>채권 시장은 복잡한 신호를 보냈습니다. 미국 10년물 국채 수익률은 <strong>2.4bp</strong> 상승한 4.317%를 기록했습니다. 일반적으로 지정학적 위기 시에는 안전자산인 채권으로 자금이 몰리며 수익률이 하락하는데, 이번에는 반대 현상이 일어났습니다. 이는 인플레이션 우려가 안전자산 수요보다 컸기 때문입니다. 투자자들은 원유 가격 상승이 인플레이션을 다시 끌어올려 연준의 금리 인하 속도를 늦출 것으로 판단하고 있습니다.</p>
+
+                <p>한국 시장은 이런 글로벌 흐름 속에서 미묘한 위치에 서 있습니다. 코스피는 <strong>0.86%</strong> 하락했지만, 코스닥은 <strong>0.57%</strong> 상승했습니다. 두 지수가 상반된 움직임을 보인 이유는 업종 구성의 차이입니다. 코스피는 정유, 화학, 철강 등 에너지 집약적 제조업 비중이 높아 원유 가격 상승이 비용 부담으로 작용했습니다. 반면 코스닥은 IT, 바이오 등 상대적으로 에너지 비용 민감도가 낮은 업종이 많아 다른 흐름을 탔습니다.</p>
+
+                <div class="data-card">
+                    <div class="data-item">
+                        <div class="label">코스피 변동률</div>
+                        <div class="value">-0.86%</div>
+                    </div>
+                    <div class="data-item">
+                        <div class="label">코스닥 변동률</div>
+                        <div class="value">+0.57%</div>
+                    </div>
+                    <div class="data-item">
+                        <div class="label">격차</div>
+                        <div class="value">1.43%p</div>
+                    </div>
+                </div>
+
+                <p>특히 주목할 점은 정유 업종의 움직임입니다. SK이노베이션, GS칼텍스 등 정유주들은 원유 가격 상승을 크랙스프레드(정제마진) 개선 기회로 보고 상승했습니다. 원유 가격이 오르면 일시적으로는 재고 평가 이익이 발생하고, 중장기적으로는 정제마진 확대를 기대할 수 있기 때문입니다. 하지만 화학, 플라스틱 업종은 원재료 비용 부담으로 하락했습니다. 같은 에너지 관련주여도 밸류체인상 위치에 따라 완전히 다른 반응을 보인 것입니다.</p>
+
+                <p>금융 시장에서는 또 다른 패턴이 나타났습니다. 은행주들은 금리 인하 기대 후퇴로 오히려 상승 요인을 얻었습니다. 원유 가격 상승 → 인플레이션 우려 → 금리 인하 연기 → 순이자마진 개선 기대라는 연결고리입니다. KB금융, 신한지주 등 주요 은행주들이 소폭 상승한 배경입니다. 이는 일반적인 '위험 회피' 시나리오와는 다른 움직임입니다.</p>
+
+                <p>암호화폐 시장은 전통 자산과 다른 로직을 보였습니다. 비트코인은 <strong>1.29%</strong> 하락한 70,810달러를 기록했습니다. 지정학적 위기 상황에서 비트코인이 안전자산 역할을 할 것이라는 기대와 달리, 여전히 위험자산으로 분류되며 매도 압력을 받았습니다. 이더리움도 <strong>1.38%</strong> 하락했습니다. 암호화폐가 진정한 대안 자산으로 자리잡기까지는 더 많은 시간이 필요해 보입니다.</p>
+
+                <div class="pull-quote">
+                    "오늘의 시장은 '위험 회피'보다는 '선별적 대응'이었습니다. 같은 위기 상황에서도 각 자산과 섹터가 보인 반응은 제각각이었습니다."
+                </div>
+
+                <p>가장 인상적인 것은 금값의 움직임입니다. 지정학적 위기 시 가장 확실한 피난처로 여겨지는 금이 <strong>0.71%</strong> 하락했습니다. 온스당 4,753달러. 이는 달러 강세와 실질금리 상승 우려가 복합적으로 작용한 결과입니다. 원유 가격 상승으로 인플레이션이 재점화되면 연준이 금리를 더 오래 높게 유지할 것이고, 이는 무이자 자산인 금에 불리합니다. 은은 <strong>2.33%</strong> 더 크게 떨어졌는데, 은이 금보다 산업 수요 비중이 높아 경기 둔화 우려에 더 민감하게 반응했기 때문입니다.</p>
+
+                <p>이번 중동발 에너지 위기가 다른 점은 공급 중단 현실화까지의 시간입니다. 과거 중동 위기들은 대부분 외교적 해결이나 군사적 개입으로 단기간에 정리됐지만, 이번에는 이란과 사우디 간 근본적 이해 충돌이 배경에 있습니다. 두 나라는 중동 지역 패권을 두고 경쟁하며, 종교적(수니파 vs 시아파) 갈등까지 겹쳐 있어 쉽게 해결되기 어려운 구조입니다. 시장이 일회성 이벤트가 아닌 구조적 변화로 인식하기 시작했다는 의미입니다.</p>
+
+                <p>각국 정부의 대응도 주목됩니다. 미국은 전략석유비축분(SPR) 방출을 검토 중이라고 발표했지만, 바이든 행정부는 이미 지난 2년간 SPR의 상당 부분을 방출한 상태입니다. 중국은 자국 비축유 현황을 공개하지 않지만, 최근 몇 년간 꾸준히 비축량을 늘려온 것으로 알려져 있습니다. 일본과 한국은 국제에너지기구(IEA) 차원의 공동 대응을 주장하고 있지만, 실제 효과는 제한적일 것으로 보입니다.</p>
+            </div>
+        </div>
+
+        <!-- So What Section -->
+        <div class="so-what">
+            <h2 class="section-title">그래서, 무엇이 달라지나</h2>
+            <div class="insights-grid">
+                <div class="insight-card">
+                    <h3>인플레이션 재점화, 금리 정책 변수 부상</h3>
+                    <p>원유 가격 100달러 돌파는 글로벌 인플레이션 압력을 다시 높입니다. 미국 연준과 유럽 중앙은행이 올해 하반기 계획했던 금리 인하 일정에 차질이 생길 가능성이 큽니다.</p>
+                    <p>특히 에너지 비중이 높은 유럽의 인플레이션 지표가 먼저 반등할 것으로 예상됩니다. ECB는 6월 금리 인하 계획을 재검토할 수밖에 없는 상황입니다.</p>
+                    <p>한국은행도 연내 금리 인하 기대감이 후퇴하면서, 부동산 시장과 가계 부채 문제에 새로운 변수가 등장했습니다.</p>
+                </div>
+
+                <div class="insight-card">
+                    <h3>에너지 밸류체인, 명암 갈려</h3>
+                    <p>정유업체들은 크랙스프레드 개선으로 단기 수혜를 볼 전망입니다. SK이노베이션, GS칼텍스 등 정제 역량이 큰 기업들이 유리합니다. 재고 평가 이익과 정제마진 확대가 동시에 기대됩니다.</p>
+                    <p>반면 석유화학, 플라스틱 업종은 원료비 부담이 커집니다. LG화학, 롯데케미칼 등은 원가 상승 압력에 직면할 것입니다.</p>
+                    <p>항공업계도 유류비 부담으로 수익성 악화가 우려됩니다. 대한항공, 아시아나항공의 실적에 부정적 영향이 예상됩니다.</p>
+                </div>
+
+                <div class="insight-card">
+                    <h3>달러 패권 재확인, 신흥국 압박</h3>
+                    <p>지정학적 위기 상황에서 달러는 여전히 가장 확실한 피난처임이 재확인됐습니다. 달러인덱스 상승으로 신흥국 통화들이 일제히 약세를 보이고 있습니다.</p>
+                    <p>한국 원화는 대달러 환율이 1,487원까지 오르며 수출 기업들에게는 호재, 수입 기업들에게는 악재로 작용합니다.</p>
+                    <p>특히 에너지 수입 의존도가 높은 국가들의 경상수지 악화가 우려됩니다. 터키, 인도 등은 추가 통화 약세 압력을 받을 가능성이 큽니다.</p>
+                </div>
+
+                <div class="insight-card">
+                    <h3>대체 에너지 투자 관심 급증</h3>
+                    <p>중동발 에너지 위기는 각국의 에너지 안보 의식을 자극하고 있습니다. 재생에너지, 원자력 등 대체 에너지원에 대한 투자가 가속화될 전망입니다.</p>
+                    <p>국내에서는 한화솔루션(태양광), 두산에너빌리티(원자력) 등이 주목받을 것으로 보입니다. 정부도 에너지 자립도 제고 정책을 강화할 가능성이 큽니다.</p>
+                    <p>ESG 투자 측면에서도 화석연료 의존도를 줄이는 기업들이 더 높은 평가를 받을 것으로 예상됩니다.</p>
+                </div>
+
+                <div class="insight-card">
+                    <h3>공급망 다변화, 아시아 내 협력 강화</h3>
+                    <p>중동 에너지 공급망의 불안정성이 드러나면서, 아시아 국가들 간 에너지 협력이 강화될 전망입니다. 한국-일본-호주 간 LNG 공급 협력, 동남아시아 태양광 프로젝트 참여 등이 활발해질 것으로 보입니다.</p>
+                    <p>중국의 일대일로 에너지 인프라 투자도 가속화될 가능성이 큽니다. 이는 중장기적으로 아시아 지역 내 에너지 생태계 재편으로 이어질 것입니다.</p>
+                    <p>국내 기업들도 중동 의존도를 줄이고 공급선을 다변화하는 전략 수정이 불가피해 보입니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Closing Section -->
+        <div class="closing">
+            <div class="closing-message">
+                하나의 해협이 흔든 글로벌 시장, 연결된 세상의 취약점을 다시 한번 확인했습니다.
+            </div>
+            <div class="disclaimer">
+                본 리포트는 AI가 자동 생성한 것으로, 투자 권유가 아닙니다. 투자 판단의 책임은 투자자 본인에게 있습니다.
+            </div>
+            <div class="footer">
+                © iM뱅크 | Powered by iM AI Analyst | 데이터 출처: Yahoo Finance
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,6 +1,145 @@
 {
   "entries": [
     {
+      "date": "2026-04-13",
+      "narrativeAngle": "generation_wallet",
+      "headline": "미국 관세폭탄, 시장 대혼란",
+      "bigStoryTopic": "트럼프 관세 정책 → 글로벌 경제 불확실성",
+      "walletTopics": [
+        "안전자산 선호 현상",
+        "원자재 가격 급등",
+        "환율 변동성 확대"
+      ],
+      "metaphors": [
+        "시장 체온",
+        "관세폭탄",
+        "시장 대혼란",
+        "안전자산 피난처"
+      ],
+      "lookingAhead": "관세 협상 진전 여부 주목"
+    },
+    {
+      "date": "2026-04-10",
+      "narrativeAngle": "time_travel",
+      "headline": "美 관세 폭탄, 글로벌 경제 흔들다",
+      "bigStoryTopic": "미국 관세 정책 → 글로벌 경제 불확실성",
+      "walletTopics": [
+        "수출기업 주가 변동성",
+        "안전자산 선호",
+        "환율 리스크 관리"
+      ],
+      "metaphors": [
+        "관세 폭탄",
+        "글로벌 경제 흔들다",
+        "불확실성의 안개"
+      ],
+      "lookingAhead": "협상 결과와 정책 대응 주목"
+    },
+    {
+      "date": "2026-04-09",
+      "narrativeAngle": "supply_chain",
+      "headline": "트럼프의 관세 전쟁, 시장을 흔들다",
+      "bigStoryTopic": "트럼프 관세 정책 → 시장 혼란 → 글로벌 경제 우려",
+      "walletTopics": [
+        "삼성전자 주가 급락",
+        "환율 상승과 수입 물가",
+        "금 투자 수요 증가"
+      ],
+      "metaphors": [
+        "관세 전쟁",
+        "시장을 흔들다",
+        "투자자들은 숨죽이고",
+        "안전자산으로의 피난",
+        "불확실성의 안개"
+      ],
+      "lookingAhead": "협상 가능성과 시장 안정화 신호"
+    },
+    {
+      "date": "2026-04-08",
+      "narrativeAngle": "other_side",
+      "headline": "관세 공포 속, AI만 웃었다",
+      "bigStoryTopic": "트럼프 관세 → 시장 변동성 확대",
+      "walletTopics": [
+        "테슬라 급등",
+        "엔비디아 조정",
+        "엔화 투자 기회"
+      ],
+      "metaphors": [
+        "시장이 숨죽이고 있다",
+        "AI라는 구명보트",
+        "돌다리를 두드리며"
+      ],
+      "lookingAhead": "관세 협상 진전 여부 주목"
+    },
+    {
+      "date": "2026-04-07",
+      "narrativeAngle": "hidden_variable",
+      "headline": "원자재 한파, 경제 전선 이상",
+      "bigStoryTopic": "원자재 가격 급락 → 디플레이션 우려",
+      "walletTopics": [
+        "식료품비 하락",
+        "주유비 절감",
+        "금 투자 손실"
+      ],
+      "metaphors": [
+        "경제 전선 이상",
+        "원자재 한파",
+        "시장의 체온계"
+      ],
+      "lookingAhead": "단기 변동성, 장기 성장 전략"
+    },
+    {
+      "date": "2026-04-03",
+      "narrativeAngle": "global_domino",
+      "headline": "글로벌 시장 주요 동향",
+      "bigStoryTopic": "미국 관세 정책 → 글로벌 무역 긴장",
+      "walletTopics": [
+        "미국 주식 시장 변동성",
+        "채권 시장 안전자산 선호",
+        "달러 강세와 환율 영향"
+      ],
+      "metaphors": [
+        "시장의 맥박",
+        "내 지갑은 어떻게"
+      ],
+      "lookingAhead": "변동성 속 기회 모색"
+    },
+    {
+      "date": "2026-04-02",
+      "narrativeAngle": "structural_lens",
+      "headline": "관세 전쟁, 시장을 뒤흔들다",
+      "bigStoryTopic": "트럼프 관세 정책 → 글로벌 시장 충격",
+      "walletTopics": [
+        "반도체 업종 타격",
+        "방어주 주목",
+        "달러 강세 지속"
+      ],
+      "metaphors": [
+        "시장을 뒤흔들다",
+        "폭풍의 눈",
+        "방어막",
+        "안전자산으로의 피난"
+      ],
+      "lookingAhead": "변동성 속 선택적 접근"
+    },
+    {
+      "date": "2026-04-01",
+      "narrativeAngle": "generation_wallet",
+      "headline": "美 관세폭탄, 글로벌 경제 흔들다",
+      "bigStoryTopic": "미국 상호관세 발표 → 글로벌 무역전쟁 우려",
+      "walletTopics": [
+        "글로벌 관세전쟁과 수출주 타격",
+        "안전자산 달러·금 급등",
+        "변동성 장세 대응 전략"
+      ],
+      "metaphors": [
+        "관세폭탄",
+        "무역전쟁",
+        "블랙스완"
+      ],
+      "lookingAhead": "관세 협상 진전 여부가 관건"
+    },
+    {
       "date": "2026-04-06",
       "narrativeAngle": "supply_chain",
       "headline": "중국 반도체 자급, 세계 시장 흔들다",

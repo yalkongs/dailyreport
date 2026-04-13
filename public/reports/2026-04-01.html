@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iM AI Analyst Daily Report - 2026.04.01</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #24292F;
+            background: #F5F7FA;
+            word-break: keep-all;
+        }
+
+        .container {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 다크모드 */
+        @media (prefers-color-scheme: dark) {
+            body {
+                color: #C9D1D9;
+                background: #0D1117;
+            }
+            .card {
+                background: #161B22 !important;
+                border-color: #30363D !important;
+            }
+            .pulse-card {
+                background: #161B22 !important;
+                border: 1px solid #30363D;
+            }
+            .data-card {
+                background: #161B22 !important;
+                border-color: rgba(0, 194, 167, 0.3) !important;
+            }
+            .pull-quote {
+                background: rgba(0, 194, 167, 0.1) !important;
+            }
+            .so-what-card {
+                background: #161B22 !important;
+                border-color: rgba(0, 194, 167, 0.2) !important;
+            }
+        }
+
+        /* 커버 */
+        .cover {
+            background: linear-gradient(135deg, #00C2A7 0%, #82D94B 100%);
+            color: white;
+            padding: 48px 32px;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 60px;
+            position: relative;
+        }
+
+        .cover-date {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 16px;
+            letter-spacing: 0.5px;
+        }
+
+        .cover-headline {
+            font-size: 32px;
+            font-weight: 800;
+            line-height: 1.3;
+            margin-bottom: 16px;
+        }
+
+        .cover-subline {
+            font-size: 18px;
+            opacity: 0.95;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .cover-byline {
+            font-size: 14px;
+            opacity: 0.8;
+            font-weight: 500;
+        }
+
+        /* 모바일 커버 */
+        @media (max-width: 640px) {
+            .container {
+                padding: 0 20px;
+            }
+            .cover {
+                border-radius: 0;
+                margin: 0 -20px 60px -20px;
+                width: calc(100% + 40px);
+            }
+            .cover-headline {
+                font-size: 24px;
+            }
+            .cover-subline {
+                font-size: 16px;
+            }
+        }
+
+        /* 섹션 */
+        .section {
+            margin-bottom: 60px;
+        }
+
+        .section-title {
+            color: #00C2A7;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            position: relative;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 40px;
+            height: 3px;
+            background: #00C2A7;
+        }
+
+        .section-description {
+            color: #666666;
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+
+        /* 시장 체온 */
+        .market-pulse {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .pulse-card {
+            background: #FFFFFF;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .pulse-name {
+            font-size: 14px;
+            color: #666666;
+            margin-bottom: 8px;
+        }
+
+        .pulse-price {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .pulse-change {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .pulse-change.up {
+            color: #E54545;
+        }
+
+        .pulse-change.down {
+            color: #4589E5;
+        }
+
+        .pulse-change.neutral {
+            color: #666666;
+        }
+
+        /* 모바일 시장 체온 스크롤 */
+        @media (max-width: 640px) {
+            .market-pulse {
+                display: flex;
+                overflow-x: auto;
+                scroll-snap-type: x mandatory;
+                gap: 16px;
+                padding-bottom: 8px;
+                -webkit-scrollbar: none;
+                scrollbar-width: none;
+            }
+            .market-pulse::-webkit-scrollbar {
+                display: none;
+            }
+            .pulse-card {
+                min-width: 200px;
+                scroll-snap-align: start;
+                flex-shrink: 0;
+            }
+        }
+
+        /* 메인 내러티브 */
+        .main-content {
+            background: #FFFFFF;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 60px;
+        }
+
+        .main-content p {
+            margin-bottom: 24px;
+        }
+
+        .main-content h3 {
+            color: #00C2A7;
+            font-size: 20px;
+            margin: 48px 0 24px 0;
+        }
+
+        /* Pull Quote */
+        .pull-quote {
+            border-left: 4px solid #00C2A7;
+            background: rgba(0, 194, 167, 0.05);
+            padding: 24px 32px;
+            margin: 36px 0;
+            font-size: 18px;
+            font-style: italic;
+            line-height: 1.6;
+            border-radius: 0 8px 8px 0;
+        }
+
+        @media (max-width: 640px) {
+            .main-content {
+                padding: 32px 20px;
+                border-radius: 12px;
+            }
+            .pull-quote {
+                margin: 36px -20px;
+                border-radius: 0;
+            }
+        }
+
+        /* 데이터 카드 */
+        .data-card {
+            background: rgba(0, 194, 167, 0.03);
+            border: 1px solid rgba(0, 194, 167, 0.2);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 32px 0;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .data-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .data-label {
+            color: #666666;
+            font-size: 14px;
+        }
+
+        .data-value {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .data-value.up {
+            color: #E54545;
+        }
+
+        .data-value.down {
+            color: #4589E5;
+        }
+
+        /* 구분선 */
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #00C2A7, transparent);
+            margin: 48px 0;
+        }
+
+        /* So What 섹션 */
+        .so-what-grid {
+            display: grid;
+            gap: 24px;
+        }
+
+        .so-what-card {
+            background: #FFFFFF;
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid rgba(0, 194, 167, 0.15);
+        }
+
+        .so-what-card h4 {
+            color: #00C2A7;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+
+        .so-what-card p {
+            margin-bottom: 16px;
+        }
+
+        .so-what-card p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* 클로징 */
+        .closing {
+            text-align: center;
+            padding: 40px 0;
+            border-top: 2px solid #00C2A7;
+        }
+
+        .closing-message {
+            font-size: 18px;
+            font-style: italic;
+            color: #00C2A7;
+            margin-bottom: 32px;
+        }
+
+        .disclaimer {
+            font-size: 12px;
+            color: #666666;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .footer {
+            font-size: 12px;
+            color: #666666;
+        }
+
+        /* 히트맵 배경 */
+        .heatmap-strong-up {
+            background: rgba(229, 69, 69, 0.3) !important;
+        }
+
+        .heatmap-medium-up {
+            background: rgba(229, 69, 69, 0.15) !important;
+        }
+
+        .heatmap-weak-up {
+            background: rgba(229, 69, 69, 0.05) !important;
+        }
+
+        .heatmap-strong-down {
+            background: rgba(69, 137, 229, 0.3) !important;
+        }
+
+        .heatmap-medium-down {
+            background: rgba(69, 137, 229, 0.15) !important;
+        }
+
+        .heatmap-weak-down {
+            background: rgba(69, 137, 229, 0.05) !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 커버 -->
+        <div class="cover">
+            <div class="cover-date">2026년 4월 1일 수요일</div>
+            <div class="cover-headline">에너지 가격 급등, 세대별 지갑 흔들다</div>
+            <div class="cover-subline">WTI 원유 7.4% 급등이 불러온 인플레이션 우려. 20대는 주식에, 50대는 예금에, 60대는 생활비에 각각 다른 타격.</div>
+            <div class="cover-byline">iM AI Analyst</div>
+        </div>
+
+        <!-- 시장 체온 -->
+        <div class="section">
+            <h2 class="section-title">시장 체온</h2>
+            <p class="section-description">주요 지표들의 오늘 움직임을 한눈에 확인하세요</p>
+            
+            <div class="market-pulse">
+                <div class="pulse-card heatmap-strong-up">
+                    <div class="pulse-name">WTI 원유</div>
+                    <div class="pulse-price">$103.69</div>
+                    <div class="pulse-change up"><strong>+7.37%</strong></div>
+                </div>
+
+                <div class="pulse-card heatmap-strong-up">
+                    <div class="pulse-name">브렌트유</div>
+                    <div class="pulse-price">$101.85</div>
+                    <div class="pulse-change up"><strong>+6.99%</strong></div>
+                </div>
+
+                <div class="pulse-card heatmap-medium-down">
+                    <div class="pulse-name">코스피</div>
+                    <div class="pulse-price">5,808.62</div>
+                    <div class="pulse-change down">-0.86%</div>
+                </div>
+
+                <div class="pulse-card heatmap-weak-up">
+                    <div class="pulse-name">코스닥</div>
+                    <div class="pulse-price">1,099.84</div>
+                    <div class="pulse-change up">+0.57%</div>
+                </div>
+
+                <div class="pulse-card heatmap-medium-down">
+                    <div class="pulse-name">다우존스</div>
+                    <div class="pulse-price">47,916.57</div>
+                    <div class="pulse-change down">-0.56%</div>
+                </div>
+
+                <div class="pulse-card heatmap-weak-up">
+                    <div class="pulse-name">나스닥</div>
+                    <div class="pulse-price">22,902.90</div>
+                    <div class="pulse-change up">+0.35%</div>
+                </div>
+
+                <div class="pulse-card heatmap-weak-up">
+                    <div class="pulse-name">원/달러</div>
+                    <div class="pulse-price">1,488.43</div>
+                    <div class="pulse-change up">+0.20%</div>
+                </div>
+
+                <div class="pulse-card heatmap-medium-down">
+                    <div class="pulse-name">금</div>
+                    <div class="pulse-price">$4,751.40</div>
+                    <div class="pulse-change down">-0.75%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 오늘의 시장 이야기 -->
+        <div class="main-content">
+            <h2 class="section-title">오늘의 시장 이야기</h2>
+
+            <p>배럴당 103.69달러. 어제 96.57달러였던 WTI 원유가 하루 만에 <strong>7.37%</strong> 급등했습니다. 브렌트유도 6.99% 오르며 101.85달러를 기록했습니다. 두 지표 모두 작년 같은 시기 70달러 중반대였던 것을 감안하면, 1년 사이 40% 가까이 상승한 셈입니다.</p>
+
+            <p>문제는 시점입니다. 미국 연방준비제도(Fed)가 올해 금리 인하를 검토하던 바로 그 순간, 원유가 인플레이션 압박의 새로운 변수로 등장한 것입니다. 에너지 가격 상승은 운송비, 제조업 원가, 전력비에 직접 연결되는 구조입니다.</p>
+
+            <div class="pull-quote">
+                "원유 10달러 상승은 미국 소비자물가지수(CPI)를 0.2~0.3%포인트 끌어올린다는 것이 과거 경험칙입니다. 지금 상황이면 Fed의 금리 인하 시나리오에 제동이 걸릴 가능성이 높습니다."
+            </div>
+
+            <p>이런 맥락에서 오늘 미국 주식 시장의 반응은 혼재했습니다. 다우존스는 269포인트(-0.56%) 하락했지만, 나스닥은 80포인트(+0.35%) 상승했습니다. 전통적 제조업 중심의 다우는 에너지 비용 부담을, 기술주 중심의 나스닥은 상대적으로 가벼운 에너지 의존도를 각각 반영한 것으로 해석됩니다.</p>
+
+            <div class="data-card">
+                <div class="data-row">
+                    <span class="data-label">WTI 원유 (3개월 전)</span>
+                    <span class="data-value">$89.20</span>
+                </div>
+                <div class="data-row">
+                    <span class="data-label">WTI 원유 (1개월 전)</span>
+                    <span class="data-value">$95.40</span>
+                </div>
+                <div class="data-row">
+                    <span class="data-label">WTI 원유 (오늘)</span>
+                    <span class="data-value up">$103.69</span>
+                </div>
+                <div class="data-row">
+                    <span class="data-label">3개월 누적 상승률</span>
+                    <span class="data-value up">+16.2%</span>
+                </div>
+            </div>
+
+            <p>에너지 가격 상승의 배경에는 지정학적 긴장과 공급 차질 우려가 있습니다. 중동 지역의 정세 불안정과 함께, 주요 산유국들의 생산량 조절 정책이 겹치면서 공급 측면의 제약이 커지고 있습니다. 여기에 북반구 난방 시즌 종료 이후에도 지속되는 견조한 수요가 가격 상승을 뒷받침했습니다.</p>
+
+            <p>유럽 증시는 더욱 직접적인 타격을 받았습니다. 독일 DAX는 235포인트(-0.99%) 급락했고, 유럽 STOXX 600도 0.67% 하락했습니다. 유럽은 에너지 수입 의존도가 높은 구조여서, 원유 가격 상승이 기업 수익성과 소비자 물가에 미치는 영향이 미국보다 큽니다.</p>
+
+            <div class="divider"></div>
+
+            <p>아시아 시장도 예외가 아니었습니다. 일본 닛케이 225는 421포인트(-0.74%) 떨어졌습니다. 일본은 에너지 자급률이 낮아 원유 가격 상승이 무역수지와 엔화 가치에 부정적 영향을 미치는 구조입니다. 실제로 달러 대비 엔화는 0.25% 약세를 보이며 159.64엔을 기록했습니다.</p>
+
+            <p>반면 중국 시장은 상대적으로 안정적이었습니다. 상하이종합지수는 소폭(+0.06%) 상승했지만, 홍콩 항셍지수는 1.03% 하락했습니다. 중국 본토는 정부의 에너지 정책과 전략 비축유 운용이 단기 가격 변동의 충격을 일정 부분 흡수하는 역할을 하고 있습니다.</p>
+
+            <div class="pull-quote">
+                "에너지 가격 상승은 제조업체에게는 비용 부담이지만, 에너지 관련 기업에게는 수익성 개선 요인입니다. 문제는 전체 경제에서 에너지 소비 부문이 생산 부문보다 훨씬 크다는 점입니다."
+            </div>
+
+            <p>환율 시장에서는 달러 강세가 뚜렷했습니다. 달러인덱스는 0.26% 상승한 98.91을 기록했습니다. 에너지 가격 상승이 인플레이션 우려로 이어지면서, Fed의 금리 인하 기대가 후퇴하고 달러 자산의 상대적 매력이 커진 것입니다.</p>
+
+            <p>원/달러 환율은 1,488.43원으로 전일 대비 3.02원(+0.20%) 상승했습니다. 한국은 에너지 수입국이어서 원유 가격 상승이 무역수지 악화와 원화 약세 압력으로 작용하는 전형적인 패턴입니다. 6개월 전 1,420원 수준이었던 것을 감안하면, 원화는 달러 대비 약 5% 약세를 보이고 있습니다.</p>
+
+            <div class="data-card">
+                <div class="data-row">
+                    <span class="data-label">미국 10년물 금리 (어제)</span>
+                    <span class="data-value">4.293%</span>
+                </div>
+                <div class="data-row">
+                    <span class="data-label">미국 10년물 금리 (오늘)</span>
+                    <span class="data-value up">4.317%</span>
+                </div>
+                <div class="data-row">
+                    <span class="data-label">미국 5년물 금리</span>
+                    <span class="data-value up">3.939%</span>
+                </div>
+                <div class="data-row">
+                    <span class="data-label">금리 상승폭</span>
+                    <span class="data-value up">+2.4bp</span>
+                </div>
+            </div>
+
+            <p>채권 시장은 인플레이션 우려를 즉각 반영했습니다. 미국 10년물 국채 수익률은 2.4베이시스포인트 상승한 4.317%를 기록했습니다. 5년물 수익률도 3.939%로 올랐습니다. 에너지 가격 상승이 장기 인플레이션 기대심리에 미칠 영향을 채권 시장이 선제적으로 반영한 것입니다.</p>
+
+            <p>한국 시장은 상반된 모습을 보였습니다. 코스피는 50.25포인트(-0.86%) 하락한 5,808.62로 마감했지만, 코스닥은 6.21포인트(+0.57%) 상승한 1,099.84를 기록했습니다. 코스피는 정유, 화학, 항공 등 에너지 비용 부담이 큰 대형주 중심으로 하락했고, 코스닥은 상대적으로 에너지 의존도가 낮은 IT, 바이오 중소형주가 버텼습니다.</p>
+
+            <div class="divider"></div>
+
+            <p>원자재 시장에서는 에너지와 귀금속이 엇갈렸습니다. 금은 0.75% 하락한 4,751.4달러를 기록했고, 은은 2.46% 떨어진 74.60달러였습니다. 일반적으로 인플레이션 헤지 자산으로 여겨지는 금이 하락한 것은, 금리 상승 기대가 금의 기회비용을 높였기 때문입니다.</p>
+
+            <p>암호화폐 시장도 위험자산 회피 심리로 조정을 받았습니다. 비트코인은 1.37% 하락한 70,779달러, 이더리움은 1.48% 내린 2,186달러를 기록했습니다. 에너지 가격 상승이 실물경제에 미칠 부담을 우려한 자금이 위험자산에서 이탈한 것으로 보입니다.</p>
+
+            <p>오늘의 시장 움직임은 에너지 가격이 여전히 글로벌 경제의 핵심 변수임을 다시 한번 확인시켜줍니다. 특히 각국 중앙은행의 통화정책 방향성에 미치는 영향이 크다는 점에서, 앞으로의 에너지 시장 동향에 대한 주의 깊은 관찰이 필요한 시점입니다.</p>
+        </div>
+
+        <!-- So What 섹션 -->
+        <div class="section">
+            <h2 class="section-title">그래서, 무엇이 달라지나</h2>
+            <p class="section-description">오늘의 변화가 당신의 지갑에 미치는 실제 영향을 세대별로 분석합니다</p>
+            
+            <div class="so-what-grid">
+                <div class="so-what-card">
+                    <h4>20~30대: 주식 포트폴리오 재점검 시간</h4>
+                    <p>에너지 가격 상승은 젊은 투자자들에게 양날의 검입니다. 보유 중인 항공, 배송, 자동차주는 단기 부담이 커지지만, 정유, 에너지 관련주는 수혜를 받을 수 있습니다.</p>
+                    <p>해외주식 투자자라면 환율 상승(+0.20%)도 고려해야 합니다. 달러 기준 투자 자산은 원화 환산 가치가 소폭 증가했지만, 앞으로 추가 투자 시에는 환전 비용이 더 들어갑니다.</p>
+                    <p>청약 저축이나 단기 자금은 금리 상승 기대로 예금 금리가 오를 가능성이 있어, 성급한 투자보다는 현금 비중 관리가 중요한 구간입니다.</p>
+                </div>
+
+                <div class="so-what-card">
+                    <h4>40~50대: 주담대와 교육비 이중 부담 심화</h4>
+                    <p>변동금리 주택담보대출을 보유한 가구에는 복합적 부담이 예상됩니다. 에너지 가격 상승 → 인플레이션 압력 → 금리 상승 기대로 이어지는 연쇄작용이 대출 이자에 직접 영향을 미칠 수 있습니다.</p>
+                    <p>자녀 교육비 중 학원비, 교통비 등도 에너지 비용 상승의 간접 영향을 받습니다. 특히 원/달러 환율 상승(1,488원)은 해외 교육 관련 비용을 높이는 요인입니다.</p>
+                    <p>반면 중장기 자산 배분에서는 인플레이션 헤지 자산(부동산, 인플레이션 연동 채권)에 대한 관심이 커질 수 있는 시점입니다.</p>
+                </div>
+
+                <div class="so-what-card">
+                    <h4>60대 이상: 생활비 부담과 예금 이자의 상반된 영향</h4>
+                    <p>에너지 가격 상승은 연금 생활자에게 즉각적인 생활비 부담으로 작용합니다. 난방비, 교통비, 생필품 물가가 연쇄 상승할 가능성이 높기 때문입니다.</p>
+                    <p>하지만 예금 중심의 자산 구조를 가진 분들에게는 금리 상승 기대가 긍정적 요인이 될 수 있습니다. 미국 10년물 금리가 4.317%로 오른 흐름이 국내 예금 금리에도 반영될 가능성이 있습니다.</p>
+                    <p>건강보험료, 의료비 등 고정 지출이 많은 연령대여서, 인플레이션 압력을 가장 직접적으로 체감하는 세대이기도 합니다.</p>
+                </div>
+
+                <div class="so-what-card">
+                    <h4>정유·화학·운송업계 실적 분화 본격화</h4>
+                    <p>WTI 원유 7.37% 급등으로 정유업계는 재고 차익과 정제 마진 개선 효과를 동시에 얻을 것으로 예상됩니다. SK이노베이션, S-Oil, 현대오일뱅크 등이 단기 수혜주로 부상할 가능성이 높습니다.</p>
+                    <p>반면 화학업계는 원료비 상승 부담이 제품 가격 전가 속도를 앞지를 수 있어 단기 수익성 압박이 예상됩니다. 항공사와 택배·물류업체도 유류할증료 인상 압력을 받게 됩니다.</p>
+                    <p>이런 업종별 분화는 향후 2~3개월간 기업 실적 발표 시즌에 뚜렷하게 나타날 것으로 보입니다.</p>
+                </div>
+
+                <div class="so-what-card">
+                    <h4>Fed 금리 인하 시나리오 재검토 국면</h4>
+                    <p>연준이 올해 2~3차례 금리 인하를 검토하고 있던 상황에서, 에너지 가격 급등은 인플레이션 재점화 우려를 키웁니다. 오늘 미국 10년물 금리가 4.317%로 오른 것이 그 신호입니다.</p>
+                    <p>4월 30일~5월 1일 연준 FOMC 회의에서 금리 동결 가능성이 높아졌고, 6월 인하 시나리오도 불투명해졌습니다. 이는 글로벌 자산 배분과 달러 강세 흐름에 중요한 변수가 될 것입니다.</p>
+                    <p>한국은행도 미국 금리 동향을 지켜보며 통화정책을 조율해야 하는 상황이어서, 국내 기준금리 인하 기대도 후퇴할 가능성이 있습니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 클로징 -->
+        <div class="closing">
+            <div class="closing-message">
+                에너지 가격의 변화는 모든 세대의 일상에 스며듭니다. 중요한 것은 각자의 상황에 맞는 대응입니다.
+            </div>
+            
+            <div class="disclaimer">
+                본 리포트는 AI가 자동 생성한 것으로, 투자 권유가 아닙니다. 투자 판단의 책임은 투자자 본인에게 있습니다.
+            </div>
+            
+            <div class="footer">
+                © iM뱅크 | Powered by iM AI Analyst | 데이터 출처: Yahoo Finance
+            </div>
+        </div>
+    </div>
+</body>
+</html>

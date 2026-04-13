@@ -46,8 +46,8 @@ export default async function ReportPage({ params }: PageProps) {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="max-w-3xl mx-auto py-6">
+      <div className="mb-4 flex items-center justify-between px-4">
         <a
           href="/archive"
           className="text-sm text-[var(--text-sub)] hover:text-[#00C2A7] transition-colors font-medium"
@@ -56,7 +56,7 @@ export default async function ReportPage({ params }: PageProps) {
         </a>
         <span className="text-sm text-[var(--text-sub)]">{date}</span>
       </div>
-      <div className="bg-[var(--card)] rounded-2xl border border-[var(--border)] overflow-hidden">
+      <div className="sm:mx-4 sm:rounded-2xl sm:border sm:border-[var(--border)] overflow-hidden">
         <iframe
           src={`/reports/${date}.html`}
           className="report-frame"

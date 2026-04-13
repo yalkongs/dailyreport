@@ -116,8 +116,8 @@ export default function Home() {
       )}
 
       {/* 오늘의 리포트 */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
+      <section className="-mx-4 sm:mx-0">
+        <div className="flex items-center justify-between mb-3 px-4 sm:px-0">
           <h2 className="text-sm font-semibold text-[var(--text-sub)]">
             오늘의 리포트
           </h2>
@@ -125,7 +125,7 @@ export default function Home() {
             {latest.date}
           </span>
         </div>
-        <div className="bg-[var(--card)] rounded-2xl border border-[var(--border)] overflow-hidden">
+        <div className="sm:rounded-2xl sm:border sm:border-[var(--border)] overflow-hidden">
           <iframe
             src={latest.filePath}
             className="report-frame"
