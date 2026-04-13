@@ -78,13 +78,7 @@ jobs:
           # 날짜 포맷 (예: 4월 13일 월요일)
           FORMATTED_DATE=$(TZ=Asia/Seoul date +"%m월 %d일 %A" | sed 's/Monday/월요일/;s/Tuesday/화요일/;s/Wednesday/수요일/;s/Thursday/목요일/;s/Friday/금요일/')
 
-          MESSAGE="📊 <b>iM AI Market Report</b>
-
-<b>${HEADLINE}</b>
-
-📅 ${FORMATTED_DATE}
-
-👉 <a href=\"${REPORT_URL}\">리포트 보기</a>"
+          MESSAGE=$(printf '📊 <b>iM AI Market Report</b>\n\n<b>%s</b>\n\n📅 %s\n\n👉 <a href="%s">리포트 보기</a>' "$HEADLINE" "$FORMATTED_DATE" "$REPORT_URL")
 
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto" \
             -F "chat_id=${TELEGRAM_CHAT_ID}" \
