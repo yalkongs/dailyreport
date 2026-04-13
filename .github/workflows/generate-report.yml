@@ -4,7 +4,7 @@ on:
   schedule:
     # KST 07:00 (월~금) = UTC 22:00 (일~목)
     - cron: '0 22 * * 0-4'
-  workflow_dispatch: {} # 수동 실행 가능
+  workflow_dispatch:
 
 env:
   TZ: Asia/Seoul
