@@ -1,6 +1,24 @@
 {
   "entries": [
     {
+      "date": "2026-04-14",
+      "narrativeAngle": "global_domino",
+      "headline": "미국 점화, 아시아 침묵",
+      "bigStoryTopic": "미국 증시 급등 → 아시아 증시 무반응",
+      "walletTopics": [
+        "달러/원 환율",
+        "국제유가",
+        "금 가격"
+      ],
+      "metaphors": [
+        "점화",
+        "침묵",
+        "연결고리가 끊어지는",
+        "제각각 다른 길을 걸었습니다"
+      ],
+      "lookingAhead": "글로벌 시장 분화 지속 여부"
+    },
+    {
       "date": "2026-04-13",
       "narrativeAngle": "job_perspective",
       "headline": "기름값 올라도 농부만 웃는다",

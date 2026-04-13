@@ -1,6 +1,14 @@
 {
   "reports": [
     {
+      "date": "2026-04-14",
+      "title": "iM AI Market Report - 2026-04-14",
+      "headline": "미국 점화, 아시아 침묵",
+      "subline": "Wall Street이 1%대 급등하는 동안, 아시아 증시는 제각각 다른 길을 걸었습니다. 글로벌 연결고리가 끊어지는 순간을 포착했습니다.",
+      "generatedAt": "2026-04-14T07:17:52+09:00",
+      "filePath": "/reports/2026-04-14.html"
+    },
+    {
       "date": "2026-04-13",
       "title": "iM AI Market Report - 2026-04-13",
       "headline": "기름값 올라도 농부만 웃는다",
@@ -73,5 +81,5 @@
       "subline": "유가 급등이 석유화학부터 배터리까지, 산업 체인을 따라 흘러가는 하루"
     }
   ],
-  "lastUpdated": "2026-04-13T19:51:53+09:00"
+  "lastUpdated": "2026-04-14T07:17:52+09:00"
 }

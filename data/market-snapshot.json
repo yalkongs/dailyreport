@@ -1,7 +1,7 @@
 {
-  "date": "2026-04-13",
-  "dayOfWeek": "월",
-  "collectedAt": "2026-04-13T19:49:31+09:00",
+  "date": "2026-04-14",
+  "dayOfWeek": "화",
+  "collectedAt": "2026-04-14T07:15:35+09:00",
   "headline": "",
   "items": [
     {
@@ -20,52 +20,52 @@
     },
     {
       "name": "S&P 500",
-      "value": "6,816.89",
-      "change": "-0.11%",
-      "changePercent": -0.113852106,
-      "direction": "down"
+      "value": "6,886.24",
+      "change": "+1.02%",
+      "changePercent": 1.0173275,
+      "direction": "up"
     },
     {
       "name": "나스닥",
-      "value": "22,902.9",
-      "change": "+0.35%",
-      "changePercent": 0.35269797,
+      "value": "23,183.74",
+      "change": "+1.23%",
+      "changePercent": 1.2262284,
       "direction": "up"
     },
     {
       "name": "다우존스",
-      "value": "47,916.57",
-      "change": "-0.56%",
-      "changePercent": -0.55873406,
-      "direction": "down"
+      "value": "48,218.25",
+      "change": "+0.63%",
+      "changePercent": 0.6295937,
+      "direction": "up"
     },
     {
       "name": "원/달러",
-      "value": "1,487.18",
-      "change": "+0.12%",
-      "changePercent": 0.11916033,
-      "direction": "up"
+      "value": "1,478",
+      "change": "-0.50%",
+      "changePercent": -0.49885446,
+      "direction": "down"
     },
     {
       "name": "WTI 원유",
-      "value": "$104.32",
-      "change": "+8.03%",
-      "changePercent": 8.025267,
-      "direction": "up"
+      "value": "$97.76",
+      "change": "-1.33%",
+      "changePercent": -1.3322564,
+      "direction": "down"
     },
     {
       "name": "금",
-      "value": "$4,738.9",
-      "change": "-1.01%",
-      "changePercent": -1.0130761,
-      "direction": "down"
+      "value": "$4,772.5",
+      "change": "+0.11%",
+      "changePercent": 0.1069786,
+      "direction": "up"
     },
     {
       "name": "비트코인",
-      "value": "$70,782",
-      "change": "-1.05%",
-      "changePercent": -1.0518383,
-      "direction": "down"
+      "value": "$73,469",
+      "change": "+3.71%",
+      "changePercent": 3.7105954,
+      "direction": "up"
     }
   ]
 }
