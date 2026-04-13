@@ -33,9 +33,16 @@ jobs:
         run: npm ci
 
       - name: Generate market report
+        id: report
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: npx tsx scripts/run.ts
+        run: |
+          npx tsx scripts/run.ts
+          REPORT_DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          echo "date=${REPORT_DATE}" >> $GITHUB_OUTPUT
+          # reports-index.json에서 헤드라인 추출
+          HEADLINE=$(node -e "const i=JSON.parse(require('fs').readFileSync('data/reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');console.log(r?.headline||'오늘의 시장 리포트')")
+          echo "headline=${HEADLINE}" >> $GITHUB_OUTPUT
 
       - name: Check for changes
         id: changes
@@ -47,7 +54,39 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          REPORT_DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          REPORT_DATE=${{ steps.report.outputs.date }}
           git add public/reports/ data/
           git commit -m "Daily Market Report - ${REPORT_DATE} (KST)"
           git push
+
+      - name: Wait for Vercel deployment
+        if: steps.changes.outputs.changed == 'true'
+        run: sleep 60
+
+      - name: Send Telegram notification
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          REPORT_DATE=${{ steps.report.outputs.date }}
+          HEADLINE="${{ steps.report.outputs.headline }}"
+          REPORT_URL="https://dailyreport-eta.vercel.app/reports/${REPORT_DATE}"
+          OG_IMAGE_URL="https://dailyreport-eta.vercel.app/api/og?date=${REPORT_DATE}"
+
+          # 날짜 포맷 (예: 4월 13일 월요일)
+          FORMATTED_DATE=$(TZ=Asia/Seoul date +"%m월 %d일 %A" | sed 's/Monday/월요일/;s/Tuesday/화요일/;s/Wednesday/수요일/;s/Thursday/목요일/;s/Friday/금요일/')
+
+          MESSAGE="📊 <b>iM AI Market Report</b>
+
+<b>${HEADLINE}</b>
+
+📅 ${FORMATTED_DATE}
+
+👉 <a href=\"${REPORT_URL}\">리포트 보기</a>"
+
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto" \
+            -F "chat_id=${TELEGRAM_CHAT_ID}" \
+            -F "photo=${OG_IMAGE_URL}" \
+            -F "caption=${MESSAGE}" \
+            -F "parse_mode=HTML"
