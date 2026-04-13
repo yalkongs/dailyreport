@@ -8,6 +8,22 @@ import type {
   MarketDataCollection,
 } from "./types";
 
+// --- KST 시간 유틸리티 ---
+const KST_OFFSET = 9 * 60 * 60 * 1000;
+
+/** UTC Date를 KST 날짜 문자열(YYYY-MM-DD)로 변환 */
+function toKSTDateString(date: Date): string {
+  const kst = new Date(date.getTime() + KST_OFFSET);
+  return kst.toISOString().split("T")[0];
+}
+
+/** UTC Date를 KST ISO 문자열로 변환 (예: 2026-04-13T07:00:00+09:00) */
+export function toKSTString(date: Date): string {
+  const kst = new Date(date.getTime() + KST_OFFSET);
+  const iso = kst.toISOString().replace("Z", "");
+  return iso.slice(0, 19) + "+09:00";
+}
+
 const KOREA_INDICES = [
   { symbol: "^KS11", name: "KOSPI", nameKo: "코스피" },
   { symbol: "^KQ11", name: "KOSDAQ", nameKo: "코스닥" },
@@ -184,9 +200,7 @@ function getEffectiveDate(): { now: Date; dateStr: string } {
     return { now, dateStr: testDate };
   }
   const now = new Date();
-  const kstOffset = 9 * 60 * 60 * 1000;
-  const kst = new Date(now.getTime() + kstOffset);
-  return { now, dateStr: kst.toISOString().split("T")[0] };
+  return { now, dateStr: toKSTDateString(now) };
 }
 
 export async function collectAllMarketData(): Promise<MarketDataCollection> {
@@ -229,7 +243,7 @@ export async function collectAllMarketData(): Promise<MarketDataCollection> {
   }
 
   return {
-    collectedAt: now.toISOString(),
+    collectedAt: toKSTString(now),
     date: dateStr,
     dayOfWeek: getKoreanDayOfWeek(now),
     koreaStocks: korea.data,

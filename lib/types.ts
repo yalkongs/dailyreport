@@ -46,7 +46,7 @@ export interface CryptoData {
 }
 
 export interface MarketDataCollection {
-  collectedAt: string; // ISO 8601
+  collectedAt: string; // KST ISO 8601 (e.g. 2026-04-13T07:00:00+09:00)
   date: string; // YYYY-MM-DD
   dayOfWeek: string; // 월, 화, 수, 목, 금
   koreaStocks: MarketIndex[];
@@ -72,7 +72,7 @@ export interface ReportMeta {
   title: string;
   headline: string; // 커버 헤드라인 (OG용)
   subline: string; // 서브라인 (OG description용)
-  generatedAt: string; // ISO 8601
+  generatedAt: string; // KST ISO 8601
   filePath: string;
 }
 

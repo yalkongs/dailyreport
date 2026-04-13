@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { collectAllMarketData } from "../lib/market-data";
+import { collectAllMarketData, toKSTString } from "../lib/market-data";
 import { generateReport } from "../lib/claude-client";
 import type { AntiRepetitionContext } from "../lib/claude-client";
 import { selectAngle } from "../lib/narrative-angles";
@@ -25,7 +25,7 @@ function loadIndex(): ReportsIndex {
   if (fs.existsSync(INDEX_PATH)) {
     return JSON.parse(fs.readFileSync(INDEX_PATH, "utf-8"));
   }
-  return { reports: [], lastUpdated: new Date().toISOString() };
+  return { reports: [], lastUpdated: toKSTString(new Date()) };
 }
 
 function saveIndex(index: ReportsIndex) {
@@ -201,7 +201,7 @@ async function main() {
     title: `iM AI Market Report - ${reportDate}`,
     headline,
     subline,
-    generatedAt: new Date().toISOString(),
+    generatedAt: toKSTString(new Date()),
     filePath: `/reports/${fileName}`,
   };
 
@@ -213,7 +213,7 @@ async function main() {
     console.log(`➕ 새 리포트 추가: ${reportDate}`);
   }
 
-  index.lastUpdated = new Date().toISOString();
+  index.lastUpdated = toKSTString(new Date());
   saveIndex(index);
   console.log(`📁 인덱스 업데이트 완료 (총 ${index.reports.length}건)`);
   console.log();

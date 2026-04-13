@@ -2,10 +2,12 @@ name: Generate Daily Market Report
 
 on:
   schedule:
-    # UTC 22:00 = KST 07:00 다음날
-    # 일~목(UTC) 실행 = 한국 기준 월~금 오전 7시
+    # KST 07:00 (월~금) = UTC 22:00 (일~목)
     - cron: '0 22 * * 0-4'
   workflow_dispatch: {} # 수동 실행 가능
+
+env:
+  TZ: Asia/Seoul
 
 permissions:
   contents: write
@@ -45,7 +47,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          REPORT_DATE=$(date -u -d '+9 hours' +%Y-%m-%d 2>/dev/null || date -u -v+9H +%Y-%m-%d)
-          git add public/reports/ data/reports-index.json
-          git commit -m "📊 Daily Market Report - ${REPORT_DATE}"
+          REPORT_DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          git add public/reports/ data/
+          git commit -m "Daily Market Report - ${REPORT_DATE} (KST)"
           git push
