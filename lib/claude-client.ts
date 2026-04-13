@@ -258,6 +258,22 @@ ${ctx.sideways.isSideways && ctx.deepDiveTopic
   - 헤드라인: 24px로 축소
 - null 데이터: 해당 문맥에서 자연스럽게 "확인이 어렵습니다"로 처리
 
+### Open Graph 메타태그 (Link Preview)
+HTML <head> 안에 반드시 다음 OG 메타태그를 포함하십시오:
+\`\`\`html
+<meta property="og:title" content="[커버 헤드라인 텍스트]">
+<meta property="og:description" content="[서브라인 텍스트]">
+<meta property="og:type" content="article">
+<meta property="og:image" content="https://dailyreport-eta.vercel.app/api/og?date=${data.date}">
+<meta property="og:image:width" content="600">
+<meta property="og:image:height" content="900">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="[커버 헤드라인 텍스트]">
+<meta name="twitter:description" content="[서브라인 텍스트]">
+<meta name="twitter:image" content="https://dailyreport-eta.vercel.app/api/og?date=${data.date}">
+\`\`\`
+[커버 헤드라인 텍스트]와 [서브라인 텍스트]는 실제 커버에 사용한 텍스트로 대체하십시오.
+
 **HTML 코드만 출력하십시오. <!DOCTYPE html>로 시작하는 순수 HTML만 반환하십시오.**`;
 }
 

@@ -70,6 +70,8 @@ export interface VolatilityScore {
 export interface ReportMeta {
   date: string; // YYYY-MM-DD
   title: string;
+  headline: string; // 커버 헤드라인 (OG용)
+  subline: string; // 서브라인 (OG description용)
   generatedAt: string; // ISO 8601
   filePath: string;
 }

@@ -1,9 +1,50 @@
 import fs from "fs";
 import path from "path";
+import type { Metadata } from "next";
 import type { ReportsIndex } from "../../../../lib/types";
 
 interface PageProps {
   params: Promise<{ date: string }>;
+}
+
+function getReportMeta(date: string) {
+  const indexPath = path.join(process.cwd(), "data", "reports-index.json");
+  if (!fs.existsSync(indexPath)) return null;
+  const index: ReportsIndex = JSON.parse(fs.readFileSync(indexPath, "utf-8"));
+  return index.reports.find((r) => r.date === date) || null;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { date } = await params;
+  const report = getReportMeta(date);
+
+  const headline = report?.headline || "iM AI Market Report";
+  const subline = report?.subline || "매일 아침 전달되는 글로벌 금융 시장 리포트";
+  const ogImageUrl = `/api/og?date=${date}`;
+
+  return {
+    title: `${headline} - iM AI Market Report`,
+    description: subline,
+    openGraph: {
+      title: headline,
+      description: subline,
+      type: "article",
+      images: [
+        {
+          url: ogImageUrl,
+          width: 600,
+          height: 900,
+          alt: headline,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: headline,
+      description: subline,
+      images: [ogImageUrl],
+    },
+  };
 }
 
 export async function generateStaticParams() {

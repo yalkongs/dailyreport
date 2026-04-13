@@ -32,6 +32,18 @@ function saveIndex(index: ReportsIndex) {
   fs.writeFileSync(INDEX_PATH, JSON.stringify(index, null, 2), "utf-8");
 }
 
+function extractHeadlineFromHtml(html: string): { headline: string; subline: string } {
+  // cover-headline 클래스 또는 headline 클래스에서 추출
+  const headlineMatch = html.match(/class="[^"]*headline[^"]*"[^>]*>([^<]+)/)
+    || html.match(/<h1[^>]*>([^<]+)<\/h1>/);
+  const sublineMatch = html.match(/class="[^"]*subline[^"]*"[^>]*>([^<]+)/)
+    || html.match(/<h1[^>]*>[^<]+<\/h1>\s*<p[^>]*>([^<]+)/);
+  return {
+    headline: headlineMatch?.[1]?.trim() || "iM AI Market Report",
+    subline: sublineMatch?.[1]?.trim() || "",
+  };
+}
+
 function buildMarketSnapshot(data: MarketDataCollection): MarketSnapshot {
   const items: MarketSnapshotItem[] = [];
 
@@ -180,10 +192,15 @@ async function main() {
   console.log("━━━ Step 6: 인덱스 업데이트 ━━━");
   const index = loadIndex();
 
+  const { headline, subline } = extractHeadlineFromHtml(html);
+  console.log(`📰 헤드라인: "${headline}"`);
+
   const existingIdx = index.reports.findIndex((r) => r.date === reportDate);
   const meta: ReportMeta = {
     date: reportDate,
     title: `iM AI Market Report - ${reportDate}`,
+    headline,
+    subline,
     generatedAt: new Date().toISOString(),
     filePath: `/reports/${fileName}`,
   };
