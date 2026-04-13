@@ -2,21 +2,20 @@
   "entries": [
     {
       "date": "2026-04-13",
-      "narrativeAngle": "generation_wallet",
-      "headline": "미국 관세폭탄, 시장 대혼란",
-      "bigStoryTopic": "트럼프 관세 정책 → 글로벌 경제 불확실성",
+      "narrativeAngle": "job_perspective",
+      "headline": "기름값 올라도 농부만 웃는다",
+      "bigStoryTopic": "원유 급등 → 업종별 희비",
       "walletTopics": [
-        "안전자산 선호 현상",
-        "원자재 가격 급등",
-        "환율 변동성 확대"
+        "택배비 인상",
+        "커피값 상승",
+        "농산물 가격"
       ],
       "metaphors": [
-        "시장 체온",
-        "관세폭탄",
-        "시장 대혼란",
-        "안전자산 피난처"
+        "농부만 웃는다",
+        "수송비 걱정하는 택배 기사",
+        "원두비 계산하는 카페 사장"
       ],
-      "lookingAhead": "관세 협상 진전 여부 주목"
+      "lookingAhead": "유가 변동성 지속 관찰"
     },
     {
       "date": "2026-04-10",
