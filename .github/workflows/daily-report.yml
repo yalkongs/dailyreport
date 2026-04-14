@@ -6,6 +6,12 @@ on:
     # KST 07:00 (월~금) = UTC 22:00 (일~목)
     - cron: '0 22 * * 0-4'
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '테스트 실행 (텔레그램 발송 안 함, commit 안 함)'
+        required: false
+        type: boolean
+        default: false
 
 env:
   TZ: Asia/Seoul
@@ -51,7 +57,7 @@ jobs:
           git diff --quiet && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
 
       - name: Commit and push report
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -61,11 +67,11 @@ jobs:
           git push
 
       - name: Wait for Vercel deployment
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true
         run: sleep 60
 
       - name: Send Telegram notification
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
