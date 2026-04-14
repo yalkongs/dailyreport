@@ -2,14 +2,18 @@
   "entries": [
     {
       "date": "2026-04-14",
-      "narrativeAngle": "historical_deja_vu",
-      "headline": "2021년 봄과 같은 순간, 하지만 더 복잡한 변수들",
-      "bigStoryTopic": "금리 인하 기대감 + 중동 리스크 → 원유가 급등 + AI 붐·탈달러화 복합 작용",
+      "narrativeAngle": "data_anatomy",
+      "headline": "코스피 6000선, 숫자 하나에 담긴 5가지 의미",
+      "bigStoryTopic": "3.5% 상승으로 6014포인트를 기록한 오늘. 같은 숫자가 연령대별로, 투자자별로 완전히",
       "walletTopics": [
-        "현재 매력도 진단"
+        "수출 기업 실적 재평가 시점",
+        "부동산 시장에 미치는 영향",
+        "젊은 투자자들의 위험 관리 필요성",
+        "투자 매력도 진단",
+        "수익률 비교 분석"
       ],
       "metaphors": [],
-      "lookingAhead": "중국 GDP, OPEC+ 회의, 미국 실적, G7 회의"
+      "lookingAhead": "중국 1분기 GDP 발표"
     },
     {
       "date": "2026-04-13",
