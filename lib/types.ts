@@ -110,6 +110,80 @@ export interface SidewaysAnalysis {
   deepDiveTopic: string | null;
 }
 
+// --- 컨텍스트 데이터 (맥락 제공용) ---
+
+export interface NewsHeadline {
+  title: string;
+  source: string;
+  category: "global" | "korea" | "economy";
+  pubDate?: string;
+}
+
+export interface EconomicEvent {
+  date: string;
+  time?: string;
+  country: string;
+  event: string;
+  importance: number; // 1-5
+  actual?: string;
+  forecast?: string;
+  previous?: string;
+}
+
+export interface FredIndicator {
+  seriesId: string;
+  name: string;
+  value: number;
+  date: string;
+  unit: string;
+}
+
+export interface MarketSentiment {
+  vix?: { value: number; change: number; changePercent: number };
+  fearGreed?: { value: number; label: string; previousClose: number };
+}
+
+export interface InvestorFlow {
+  date: string;
+  foreign: { buy: number; sell: number; net: number };
+  institution: { buy: number; sell: number; net: number };
+  individual: { buy: number; sell: number; net: number };
+}
+
+export interface KoreanBondYield {
+  name: string;
+  yield: number;
+  change: number;
+  date: string;
+}
+
+export interface HistoricalComparison {
+  symbol: string;
+  nameKo: string;
+  current: number;
+  oneWeekAgo?: number;
+  oneMonthAgo?: number;
+  threeMonthsAgo?: number;
+  oneYearAgo?: number;
+}
+
+export interface ContextError {
+  source: string;
+  status: number | string;
+  message: string;
+}
+
+export interface ContextData {
+  news: NewsHeadline[];
+  economicCalendar: EconomicEvent[];
+  fredIndicators: FredIndicator[];
+  sentiment: MarketSentiment;
+  investorFlow: InvestorFlow | null;
+  koreanBonds: KoreanBondYield[];
+  historicalComparison: HistoricalComparison[];
+  contextErrors: ContextError[];
+}
+
 // --- 시장 데이터 스냅샷 (홈 페이지 표시용) ---
 
 export interface MarketSnapshotItem {

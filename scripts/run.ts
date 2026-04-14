@@ -1,8 +1,10 @@
 import * as fs from "fs";
 import * as path from "path";
 import { collectAllMarketData, toKSTString } from "../lib/market-data";
+import { collectContextData } from "../lib/context-data";
 import { generateReport } from "../lib/claude-client";
 import type { AntiRepetitionContext } from "../lib/claude-client";
+import type { ContextData } from "../lib/types";
 import { selectAngle } from "../lib/narrative-angles";
 import { analyzeSideways, selectDeepDiveTopic } from "../lib/sideways-detector";
 import {
@@ -127,6 +129,16 @@ async function main() {
   const marketData = await collectAllMarketData();
   console.log();
 
+  // Step 1b: 컨텍스트 데이터 수집 (kill switch 지원)
+  let contextData: ContextData | null = null;
+  if (process.env.DISABLE_CONTEXT === "true") {
+    console.log("━━━ Step 1b: 컨텍스트 수집 건너뜀 (DISABLE_CONTEXT=true) ━━━");
+  } else {
+    console.log("━━━ Step 1b: 컨텍스트 데이터 수집 ━━━");
+    contextData = await collectContextData();
+    console.log();
+  }
+
   // Step 2: 수집 결과 검증
   console.log("━━━ Step 2: 수집 결과 검증 ━━━");
   const totalItems =
@@ -176,7 +188,7 @@ async function main() {
     sideways,
     deepDiveTopic,
   };
-  const html = await generateReport(marketData, ctx);
+  const html = await generateReport(marketData, ctx, contextData);
   console.log();
 
   // Step 5: 파일 저장

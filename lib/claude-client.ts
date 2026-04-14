@@ -4,6 +4,7 @@ import type {
   NarrativeAngle,
   NarrativeLogEntry,
   SidewaysAnalysis,
+  ContextData,
 } from "./types";
 
 const client = new Anthropic();
@@ -40,6 +41,11 @@ function buildSystemPrompt(): string {
 - ❌ 근거 없는 추론 금지: 데이터에서 직접 도출할 수 없는 예측이나 인과관계를 만들어내지 말 것
 - ❌ 문장을 장식적으로 부풀리지 말 것. 정보가 없는 문장은 쓰지 말 것.
 
+### ⛔ 허위 정보 생성 금지 — 이 규칙은 다른 모든 지시보다 우선합니다
+- ❌ **가상 인물/인터뷰 생성 절대 금지**: "경기도 일산의 한 택배 기사", "강남의 한 직장인" 등 실존하지 않는 인물의 발언이나 사례를 만들어내지 말 것. 구체적 인물이 필요하면 "가령 수출 중소기업이라면~" 식의 가정법을 사용할 것.
+- ❌ **제공되지 않은 숫자 날조 금지**: 과거 가격, 과거 환율, 과거 지수 등 제공된 데이터에 포함되지 않은 수치를 만들어내지 말 것. 과거 비교가 필요하면 반드시 데이터에 포함된 historicalComparison 필드의 수치만 사용할 것. 해당 데이터가 없으면 과거 비교를 생략할 것.
+- ❌ **가상 통계/설문 결과 금지**: "최근 설문에 따르면", "업계 관계자에 따르면" 등 출처 없는 통계나 인용을 만들어내지 말 것.
+
 ### 좋은 글 vs 나쁜 글 예시
 
 **❌ 나쁜 글 (이렇게 쓰지 마세요):**
@@ -67,7 +73,7 @@ function buildSystemPrompt(): string {
 1. **하나의 큰 줄거리**: 오늘 시장 전체를 관통하는 핵심 스토리를 먼저 잡을 것. 모든 내용은 이 줄거리 안에서 전개할 것.
 2. **시장별 칸막이 금지**: "미국 시장", "유럽 시장"으로 나눠서 쓰지 말고, 하나의 이야기 흐름 안에서 각 시장을 자연스럽게 엮을 것.
 3. **인과관계 체인**: 사건 → 원인 → 파급 → 한국 영향 순서로 서술할 것.
-4. **맥락 제공**: 항상 과거 비교(1주 전, 1개월 전, 1년 전)로 현재 수치의 위치를 보여줄 것.
+4. **맥락 제공**: 데이터에 historicalComparison이 포함되어 있으면 과거 비교로 현재 수치의 위치를 보여줄 것. 포함되지 않은 과거 수치는 절대 사용하지 말 것.
 5. **방향성 제시, 추천 금지**: "이런 흐름이면 이런 자산군에 관심이 갈 수 있습니다" 수준까지만. 특정 종목 매수·매도 추천은 절대 금지.
 
 ## ⛔ 트리비얼 연결 금지 목록
@@ -129,9 +135,88 @@ function buildSidewaysBlock(ctx: AntiRepetitionContext): string {
 `;
 }
 
-function buildReportPrompt(data: MarketDataCollection, ctx: AntiRepetitionContext): string {
+function buildContextBlock(context: ContextData | null): string {
+  if (!context) return "";
+
+  let block = `\n## 컨텍스트 데이터 (맥락 제공용)\n`;
+  block += `아래 데이터는 시장 분석의 맥락을 제공합니다. 리포트 본문에 자연스럽게 녹여 활용하십시오.\n`;
+
+  // 뉴스 헤드라인
+  if (context.news.length > 0) {
+    block += `\n### 주요 뉴스 헤드라인\n`;
+    for (const n of context.news) {
+      block += `- [${n.category}] ${n.title} (${n.source})\n`;
+    }
+  }
+
+  // 경제 캘린더
+  if (context.economicCalendar.length > 0) {
+    block += `\n### 경제 캘린더 (오늘~내일)\n`;
+    for (const e of context.economicCalendar) {
+      const vals = [e.actual && `실제: ${e.actual}`, e.forecast && `예상: ${e.forecast}`, e.previous && `이전: ${e.previous}`].filter(Boolean).join(", ");
+      block += `- [${e.country}] ${e.event} (중요도: ${e.importance}/5)${vals ? ` — ${vals}` : ""}\n`;
+    }
+  }
+
+  // FRED 경제지표
+  if (context.fredIndicators.length > 0) {
+    block += `\n### 미국 경제지표 (FRED)\n`;
+    for (const f of context.fredIndicators) {
+      block += `- ${f.name}: ${f.value}${f.unit === "%" ? "%" : ""} (${f.date} 기준)\n`;
+    }
+  }
+
+  // 시장 심리
+  if (context.sentiment.vix || context.sentiment.fearGreed) {
+    block += `\n### 시장 심리\n`;
+    if (context.sentiment.vix) {
+      const v = context.sentiment.vix;
+      block += `- VIX(공포지수): ${v.value.toFixed(2)} (${v.changePercent >= 0 ? "+" : ""}${v.changePercent.toFixed(2)}%)\n`;
+    }
+    if (context.sentiment.fearGreed) {
+      const fg = context.sentiment.fearGreed;
+      block += `- CNN Fear & Greed Index: ${fg.value} (${fg.label})\n`;
+    }
+  }
+
+  // 투자자 수급
+  if (context.investorFlow) {
+    const f = context.investorFlow;
+    block += `\n### 코스피 투자자별 매매동향 (${f.date})\n`;
+    block += `- 외국인: 순매수 ${(f.foreign.net / 100000000).toFixed(0)}억원\n`;
+    block += `- 기관: 순매수 ${(f.institution.net / 100000000).toFixed(0)}억원\n`;
+    block += `- 개인: 순매수 ${(f.individual.net / 100000000).toFixed(0)}억원\n`;
+  }
+
+  // 한국 국채
+  if (context.koreanBonds.length > 0) {
+    block += `\n### 한국 국채 수익률\n`;
+    for (const b of context.koreanBonds) {
+      block += `- ${b.name}: ${b.yield.toFixed(3)}% (${b.change >= 0 ? "+" : ""}${b.change.toFixed(3)}%p)\n`;
+    }
+  }
+
+  // 과거 비교 데이터
+  if (context.historicalComparison.length > 0) {
+    block += `\n### 과거 비교 데이터 (historicalComparison)\n`;
+    block += `⚠️ 과거 수치를 인용할 때는 반드시 이 데이터만 사용하십시오. 여기에 없는 과거 수치를 만들어내지 마십시오.\n`;
+    for (const h of context.historicalComparison) {
+      const parts = [`현재: ${h.current}`];
+      if (h.oneWeekAgo != null) parts.push(`1주전: ${h.oneWeekAgo}`);
+      if (h.oneMonthAgo != null) parts.push(`1개월전: ${h.oneMonthAgo}`);
+      if (h.threeMonthsAgo != null) parts.push(`3개월전: ${h.threeMonthsAgo}`);
+      if (h.oneYearAgo != null) parts.push(`1년전: ${h.oneYearAgo}`);
+      block += `- ${h.nameKo}: ${parts.join(" / ")}\n`;
+    }
+  }
+
+  return block;
+}
+
+function buildReportPrompt(data: MarketDataCollection, ctx: AntiRepetitionContext, context: ContextData | null = null): string {
   const antiRepetition = buildAntiRepetitionBlock(ctx);
   const sidewaysBlock = buildSidewaysBlock(ctx);
+  const contextBlock = buildContextBlock(context);
 
   return `아래 시장 데이터를 바탕으로 웹진 스타일의 리포트 HTML을 생성하십시오.
 
@@ -145,6 +230,7 @@ function buildReportPrompt(data: MarketDataCollection, ctx: AntiRepetitionContex
 ## 수집 시각: ${data.collectedAt}
 ${antiRepetition}
 ${sidewaysBlock}
+${contextBlock}
 ## 시장 데이터
 \`\`\`json
 ${JSON.stringify(data, null, 2)}
@@ -160,21 +246,28 @@ ${JSON.stringify(data, null, 2)}
 - 마크다운 **는 HTML에서 그대로 별표로 표시되므로 반드시 HTML 태그를 사용하십시오.
 
 ### 디자인 시스템
-- **메인 컬러**: #00C2A7 (민트/틸)
-- **보조 컬러 1**: #82D94B (그린)
-- **보조 컬러 2**: #666666 (그레이)
-- **배경**: 라이트 #F5F7FA, 다크 #0D1117
+- **메인 컬러**: #0A2F5C (딥 네이비)
+- **액센트 컬러**: #00796B (딥 틸)
+- **보조 컬러**: #8B9DAF (슬레이트 그레이)
+- **배경**: 라이트 #F7F8FA, 다크 #0D1117
 - **카드**: 라이트 #FFFFFF, 다크 #161B22
-- **본문**: 라이트 #24292F, 다크 #C9D1D9
-- **상승**: #E54545, **하락**: #4589E5 (한국 관례 유지)
-- **폰트**: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif
-- **본문**: 16px, line-height 1.8
-- **최대 너비**: 640px, 다크모드 필수 지원 (@media prefers-color-scheme: dark)
+- **본문**: 라이트 #1A1A2E, 다크 #C9D1D9
+- **상승**: #D32F2F, **하락**: #1565C0 (한국 관례 유지)
+- **폰트**: 'Pretendard Variable', 'Pretendard', -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif
+- **숫자 전용**: font-variant-numeric: tabular-nums
+- **본문**: 16px, line-height 1.8, letter-spacing: -0.01em
+- **최대 너비**: 680px, 다크모드 필수 지원 (@media prefers-color-scheme: dark)
+
+### 폰트 로딩
+HTML <head>에 다음을 포함하십시오:
+\`\`\`html
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+\`\`\`
 
 ### 리포트 구조 — 5개 섹션
 
 #### 1. 커버
-- **배경**: linear-gradient(135deg, #00C2A7 0%, #82D94B 100%) — 민트→그린 그라데이션
+- **배경**: linear-gradient(135deg, #0A2F5C 0%, #00796B 100%) — 딥네이비→딥틸 그라데이션
 - 날짜: "2026년 4월 6일 월요일" 형식, 흰 텍스트
 - **헤드라인**: 오늘 시장을 관통하는 핵심 한 줄 (15~25자, 간결하고 임팩트 있게), 흰 텍스트
 - **서브라인**: 헤드라인을 보충하는 1~2문장, 흰 텍스트 opacity 0.95
@@ -188,9 +281,9 @@ ${JSON.stringify(data, null, 2)}
 
 **히트맵 규칙:**
 - 각 카드의 **배경색 농도**를 변동률 절대값에 비례하여 조절
-- 상승 시: rgba(229, 69, 69, 농도) — 농도는 변동률에 비례 (0.3% → 0.05, 1% → 0.15, 3% → 0.3, 5%+ → 0.5)
-- 하락 시: rgba(69, 137, 229, 농도) — 동일 비례
-- 변동률 텍스트 색상도 상승 #E54545 / 하락 #4589E5
+- 상승 시: rgba(211, 47, 47, 농도) — 농도는 변동률에 비례 (0.3% → 0.05, 1% → 0.15, 3% → 0.3, 5%+ → 0.5)
+- 하락 시: rgba(21, 101, 192, 농도) — 동일 비례
+- 변동률 텍스트 색상도 상승 #D32F2F / 하락 #1565C0
 - 변동률이 거의 0인 항목: 배경 투명, 텍스트 #666666
 
 **레이아웃:**
@@ -200,8 +293,17 @@ ${JSON.stringify(data, null, 2)}
   - 각 카드: min-width: 200px, scroll-snap-align: start
   - 스크롤바 숨김: -webkit-scrollbar { display: none }
   - 좌우로 넘기면 다음 카드가 보이는 구조
-- 각 카드: 지표명(14px, #666), 수치(24px, bold), 변동률(14px, 상승/하락 색상)
+- 각 카드: 지표명(14px, #8B9DAF), 수치(24px, bold, font-variant-numeric: tabular-nums), 변동률(14px, 상승/하락 색상)
 - 이 섹션은 데이터 중심. 서술 최소화.
+
+#### 2-1. 과거 비교 미니 차트 (historicalComparison 데이터가 있을 때만)
+historicalComparison 데이터가 제공되면, 핵심 지표 3~4개에 대해 **인라인 SVG 미니 바차트**를 생성하십시오.
+- 각 차트: width 100%, height 48px, 수평 바 4개 (1년전/3개월전/1개월전/현재)
+- 바 색상: 현재값 #0A2F5C, 과거값 #8B9DAF (opacity 점진적 증가)
+- 각 바 오른쪽에 수치 라벨
+- 차트 왼쪽에 기간 라벨 ("1Y", "3M", "1M", "현재")
+- 카드 형태로 시장 체온 아래에 배치
+- historicalComparison 데이터가 없으면 이 섹션을 생략하십시오.
 
 #### 3. 오늘의 시장 이야기 (Main Narrative) — 리포트의 핵심, 전체 분량의 60% 이상
 ${ctx.sideways.isSideways && ctx.deepDiveTopic
@@ -237,19 +339,19 @@ ${ctx.sideways.isSideways && ctx.deepDiveTopic
 #### 5. 클로징 + 푸터
 - iM AI Analyst의 마무리 한 문장 (절제된 톤, 따뜻하지만 가볍지 않게)
 - 면책: "본 리포트는 AI가 자동 생성한 것으로, 투자 권유가 아닙니다. 투자 판단의 책임은 투자자 본인에게 있습니다."
-- "© iM뱅크 | Powered by iM AI Analyst | 데이터 출처: Yahoo Finance"
+- "© iM뱅크 | Powered by iM AI Analyst | 데이터 출처: Yahoo Finance, FRED, ECOS, KRX, Google News"
 
 ### 스타일 세부
 - 섹션 간 여백: 48~60px
 - 카드: border-radius 12~16px, box-shadow 0 2px 8px rgba(0,0,0,0.06)
-- 섹션 타이틀: color #00C2A7, 하단 accent bar도 #00C2A7
-- pull quote: border-left 4px **#00C2A7**, 큰 폰트, 이탤릭, 배경 rgba(0,194,167,0.05)
-- data-card 보더: rgba(0,194,167,0.2)
-- 구분선(divider): linear-gradient(90deg, transparent, #00C2A7, transparent)
-- So What 카드: 보더 rgba(0,194,167,0.15), 제목 색상 #00C2A7
+- 섹션 타이틀: color #0A2F5C, font-weight 700, 하단 accent bar #00796B (3px, width 40px)
+- pull quote: border-left 4px **#00796B**, font-size 18px, 배경 rgba(0,121,107,0.04)
+- data-card 보더: rgba(10,47,92,0.12)
+- 구분선(divider): linear-gradient(90deg, transparent, #8B9DAF, transparent)
+- So What 카드: 보더 rgba(0,121,107,0.15), 제목 색상 #0A2F5C
 - 변동률 ±2% 이상: bold + 히트맵 배경 강조
-- 클로징 구분선: #00C2A7
-- 링크/강조 텍스트: #00C2A7
+- 클로징 구분선: #0A2F5C
+- 링크/강조 텍스트: #00796B
 - viewport meta, charset utf-8 필수
 - **모바일 반응형 필수:**
   - 커버: full-width (border-radius: 0, margin: 0 -20px, width: calc(100% + 40px))
@@ -279,7 +381,8 @@ HTML <head> 안에 반드시 다음 OG 메타태그를 포함하십시오:
 
 export async function generateReport(
   data: MarketDataCollection,
-  ctx?: AntiRepetitionContext
+  ctx?: AntiRepetitionContext,
+  context?: ContextData | null
 ): Promise<string> {
   const defaultCtx: AntiRepetitionContext = ctx || {
     angle: {
@@ -305,7 +408,7 @@ export async function generateReport(
         messages: [
           {
             role: "user",
-            content: buildReportPrompt(data, defaultCtx),
+            content: buildReportPrompt(data, defaultCtx, context ?? null),
           },
         ],
         system: buildSystemPrompt(),

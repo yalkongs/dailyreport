@@ -6,6 +6,7 @@ import type {
   BondData,
   CryptoData,
   MarketDataCollection,
+  HistoricalComparison,
 } from "./types";
 
 // --- KST 시간 유틸리티 ---
@@ -68,6 +69,8 @@ const COMMODITIES = [
 const BONDS = [
   { symbol: "^TNX", name: "US 10Y Treasury", nameKo: "미국 10년물" },
   { symbol: "^FVX", name: "US 5Y Treasury", nameKo: "미국 5년물" },
+  { symbol: "^IRX", name: "US 13W Treasury", nameKo: "미국 13주물" },
+  { symbol: "^TYX", name: "US 30Y Treasury", nameKo: "미국 30년물" },
 ];
 
 const CRYPTO = [
@@ -201,6 +204,90 @@ function getEffectiveDate(): { now: Date; dateStr: string } {
   }
   const now = new Date();
   return { now, dateStr: toKSTDateString(now) };
+}
+
+/** VIX 수집 — context-data.ts에서 호출 */
+export async function collectVix(): Promise<{ value: number; change: number; changePercent: number } | undefined> {
+  try {
+    const quote = await fetchQuote("^VIX");
+    if (quote.price != null) {
+      return {
+        value: quote.price,
+        change: quote.change ?? 0,
+        changePercent: quote.changePercent ?? 0,
+      };
+    }
+  } catch {
+    // ignore
+  }
+  return undefined;
+}
+
+/** 과거 시계열 비교 데이터 수집 — 핵심 지표 6개 */
+const HISTORICAL_SYMBOLS = [
+  { symbol: "^KS11", nameKo: "코스피" },
+  { symbol: "^GSPC", nameKo: "S&P 500" },
+  { symbol: "^IXIC", nameKo: "나스닥" },
+  { symbol: "KRW=X", nameKo: "원/달러" },
+  { symbol: "CL=F", nameKo: "WTI 원유" },
+  { symbol: "GC=F", nameKo: "금" },
+];
+
+export async function collectHistoricalData(): Promise<HistoricalComparison[]> {
+  const results: HistoricalComparison[] = [];
+  const now = new Date();
+
+  for (const item of HISTORICAL_SYMBOLS) {
+    try {
+      const currentQuote = await fetchQuote(item.symbol);
+      if (currentQuote.price == null) continue;
+
+      const comparison: HistoricalComparison = {
+        symbol: item.symbol,
+        nameKo: item.nameKo,
+        current: currentQuote.price,
+      };
+
+      // 1주, 1개월, 3개월, 1년 전 데이터
+      const periods: { key: keyof HistoricalComparison; daysAgo: number }[] = [
+        { key: "oneWeekAgo", daysAgo: 7 },
+        { key: "oneMonthAgo", daysAgo: 30 },
+        { key: "threeMonthsAgo", daysAgo: 90 },
+        { key: "oneYearAgo", daysAgo: 365 },
+      ];
+
+      for (const period of periods) {
+        try {
+          const pastDate = new Date(now);
+          pastDate.setDate(pastDate.getDate() - period.daysAgo);
+          const futureDate = new Date(pastDate);
+          futureDate.setDate(futureDate.getDate() + 5); // 주말/휴일 대비
+
+          const history = await yahooFinance.chart(item.symbol, {
+            period1: pastDate,
+            period2: futureDate,
+            interval: "1d",
+          });
+
+          const quotes = history.quotes;
+          if (quotes && quotes.length > 0) {
+            const close = quotes[0].close;
+            if (close != null) {
+              (comparison as unknown as Record<string, unknown>)[period.key] = +close.toFixed(2);
+            }
+          }
+        } catch {
+          // 개별 기간 실패는 무시
+        }
+      }
+
+      results.push(comparison);
+    } catch {
+      // 개별 심볼 실패는 무시
+    }
+  }
+
+  return results;
 }
 
 export async function collectAllMarketData(): Promise<MarketDataCollection> {
