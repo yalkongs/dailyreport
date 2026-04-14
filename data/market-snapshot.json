@@ -1,7 +1,7 @@
 {
   "date": "2026-04-15",
   "dayOfWeek": "수",
-  "collectedAt": "2026-04-15T07:36:57+09:00",
+  "collectedAt": "2026-04-15T07:26:29+09:00",
   "headline": "",
   "items": [
     {
@@ -41,30 +41,30 @@
     },
     {
       "name": "원/달러",
-      "value": "1,470.31",
-      "change": "-0.55%",
-      "changePercent": -0.54923093,
+      "value": "1,470.53",
+      "change": "-0.53%",
+      "changePercent": -0.5343161,
       "direction": "down"
     },
     {
       "name": "WTI 원유",
-      "value": "$91.46",
-      "change": "+0.20%",
-      "changePercent": 0.19719578,
+      "value": "$91.49",
+      "change": "+0.23%",
+      "changePercent": 0.23006035,
       "direction": "up"
     },
     {
       "name": "금",
-      "value": "$4,866",
-      "change": "+0.33%",
-      "changePercent": 0.32782626,
+      "value": "$4,868.8",
+      "change": "+0.39%",
+      "changePercent": 0.385553,
       "direction": "up"
     },
     {
       "name": "비트코인",
-      "value": "$74,033",
-      "change": "-0.84%",
-      "changePercent": -0.8409065,
+      "value": "$74,092",
+      "change": "-0.76%",
+      "changePercent": -0.76165235,
       "direction": "down"
     }
   ]

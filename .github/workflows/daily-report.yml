@@ -12,6 +12,11 @@ on:
         required: false
         type: boolean
         default: false
+      force_regenerate:
+        description: '오늘 자 리포트가 이미 있어도 강제 재생성'
+        required: false
+        type: boolean
+        default: false
 
 env:
   TZ: Asia/Seoul
@@ -47,6 +52,7 @@ jobs:
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
           KRX_API_KEY: ${{ secrets.KRX_API_KEY }}
           DISABLE_CONTEXT: ${{ inputs.dry_run == true && 'false' || 'false' }}
+          FORCE_REGENERATE: ${{ inputs.force_regenerate == true && 'true' || 'false' }}
         run: |
           npx tsx scripts/run.ts
           REPORT_DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)

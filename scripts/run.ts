@@ -130,6 +130,32 @@ async function main() {
   const marketData = await collectAllMarketData();
   console.log();
 
+  // Step 1a: 중복 실행 방지 가드 — 오늘 자 리포트가 이미 있으면 종료
+  // (GitHub Actions 크론 지연·수동 실행 충돌로 인한 중복 생성/텔레그램 재발송 방지)
+  console.log("━━━ Step 1a: 중복 실행 방지 체크 ━━━");
+  {
+    const todayDate = marketData.date;
+    const todayHtmlPath = path.join(REPORTS_DIR, `${todayDate}.html`);
+    const existingIndex = loadIndex();
+    const todayEntry = existingIndex.reports.find((r) => r.date === todayDate);
+
+    if (fs.existsSync(todayHtmlPath) && todayEntry) {
+      if (process.env.FORCE_REGENERATE === "true") {
+        console.log(`⚠️ 오늘(${todayDate}) 리포트가 이미 존재하지만 FORCE_REGENERATE=true로 재생성합니다.`);
+      } else {
+        console.log(`✋ 오늘(${todayDate}) 리포트가 이미 존재합니다. 파이프라인을 종료합니다.`);
+        console.log(`   기존 파일: ${todayHtmlPath}`);
+        console.log(`   기존 헤드라인: "${todayEntry.headline}"`);
+        console.log(`   기존 생성 시각: ${todayEntry.generatedAt}`);
+        console.log(`   강제 재생성이 필요하면 FORCE_REGENERATE=true 환경변수로 실행하세요.`);
+        process.exit(0);
+      }
+    } else {
+      console.log(`✓ 오늘(${todayDate}) 신규 리포트 생성 진행`);
+    }
+  }
+  console.log();
+
   // Step 1b: 컨텍스트 데이터 수집 (kill switch 지원)
   let contextData: ContextData | null = null;
   if (process.env.DISABLE_CONTEXT === "true") {
