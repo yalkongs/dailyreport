@@ -57,15 +57,47 @@ export async function generateStaticParams() {
   }));
 }
 
-function reportExists(date: string): boolean {
+function getReportContent(date: string): string | null {
   const filePath = path.join(process.cwd(), "public", "reports", `${date}.html`);
-  return fs.existsSync(filePath);
+  if (!fs.existsSync(filePath)) return null;
+
+  const html = fs.readFileSync(filePath, "utf-8");
+
+  // <body>...</body> 내부 콘텐츠만 추출
+  const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+  if (bodyMatch) return bodyMatch[1];
+
+  // body 태그가 없으면 전체 반환 (style 포함)
+  // <!DOCTYPE>, <html>, <head> 제거
+  return html
+    .replace(/<!DOCTYPE[^>]*>/i, "")
+    .replace(/<html[^>]*>/i, "")
+    .replace(/<\/html>/i, "")
+    .replace(/<head>[\s\S]*?<\/head>/i, "")
+    .trim();
+}
+
+function getReportStyles(date: string): string {
+  const filePath = path.join(process.cwd(), "public", "reports", `${date}.html`);
+  if (!fs.existsSync(filePath)) return "";
+
+  const html = fs.readFileSync(filePath, "utf-8");
+
+  // 모든 <style> 블록 추출
+  const styles: string[] = [];
+  const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+  let match;
+  while ((match = styleRegex.exec(html)) !== null) {
+    styles.push(match[1]);
+  }
+  return styles.join("\n");
 }
 
 export default async function ReportPage({ params }: PageProps) {
   const { date } = await params;
+  const content = getReportContent(date);
 
-  if (!reportExists(date)) {
+  if (!content) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-20 text-center">
         <div className="bg-[var(--card)] rounded-2xl p-12 border border-[var(--border)]">
@@ -77,7 +109,7 @@ export default async function ReportPage({ params }: PageProps) {
           </p>
           <a
             href="/archive"
-            className="text-sm text-[#00C2A7] hover:underline font-medium"
+            className="text-sm text-[var(--teal)] hover:underline font-medium"
           >
             ← 아카이브로 돌아가기
           </a>
@@ -86,23 +118,24 @@ export default async function ReportPage({ params }: PageProps) {
     );
   }
 
+  const styles = getReportStyles(date);
+
   return (
     <div className="max-w-3xl mx-auto py-6">
       <div className="mb-4 flex items-center justify-between px-4">
         <a
           href="/archive"
-          className="text-sm text-[var(--text-sub)] hover:text-[#00C2A7] transition-colors font-medium"
+          className="text-sm text-[var(--text-sub)] hover:text-[var(--teal)] transition-colors font-medium"
         >
           ← 아카이브
         </a>
         <span className="text-sm text-[var(--text-sub)]">{date}</span>
       </div>
-      <div className="sm:mx-4 sm:rounded-2xl sm:border sm:border-[var(--border)] overflow-hidden">
-        <iframe
-          src={`/reports/${date}.html`}
-          className="report-frame"
-          title={`iM AI Market Report - ${date}`}
-        />
+      <div className="report-embed">
+        {styles && (
+          <style dangerouslySetInnerHTML={{ __html: styles }} />
+        )}
+        <div dangerouslySetInnerHTML={{ __html: content }} />
       </div>
     </div>
   );

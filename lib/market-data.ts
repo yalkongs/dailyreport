@@ -223,14 +223,18 @@ export async function collectVix(): Promise<{ value: number; change: number; cha
   return undefined;
 }
 
-/** 과거 시계열 비교 데이터 수집 — 핵심 지표 6개 */
+/** 과거 시계열 비교 데이터 수집 — 모든 주요 지표 */
 const HISTORICAL_SYMBOLS = [
   { symbol: "^KS11", nameKo: "코스피" },
+  { symbol: "^KQ11", nameKo: "코스닥" },
   { symbol: "^GSPC", nameKo: "S&P 500" },
   { symbol: "^IXIC", nameKo: "나스닥" },
+  { symbol: "^DJI", nameKo: "다우존스" },
+  { symbol: "^N225", nameKo: "닛케이 225" },
   { symbol: "KRW=X", nameKo: "원/달러" },
   { symbol: "CL=F", nameKo: "WTI 원유" },
   { symbol: "GC=F", nameKo: "금" },
+  { symbol: "BTC-USD", nameKo: "비트코인" },
 ];
 
 export async function collectHistoricalData(): Promise<HistoricalComparison[]> {

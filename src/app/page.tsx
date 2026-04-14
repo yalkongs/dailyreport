@@ -2,6 +2,34 @@ import fs from "fs";
 import path from "path";
 import type { ReportsIndex, MarketSnapshot } from "../../lib/types";
 
+function getReportContent(filePath: string): { body: string; styles: string } | null {
+  const fullPath = path.join(process.cwd(), "public", filePath.replace(/^\//, ""));
+  if (!fs.existsSync(fullPath)) return null;
+
+  const html = fs.readFileSync(fullPath, "utf-8");
+
+  // <style> 추출
+  const styles: string[] = [];
+  const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+  let match;
+  while ((match = styleRegex.exec(html)) !== null) {
+    styles.push(match[1]);
+  }
+
+  // <body> 내부 추출
+  const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+  const body = bodyMatch
+    ? bodyMatch[1]
+    : html
+        .replace(/<!DOCTYPE[^>]*>/i, "")
+        .replace(/<html[^>]*>/i, "")
+        .replace(/<\/html>/i, "")
+        .replace(/<head>[\s\S]*?<\/head>/i, "")
+        .trim();
+
+  return { body, styles: styles.join("\n") };
+}
+
 function getLatestReport(): { date: string; filePath: string } | null {
   const indexPath = path.join(process.cwd(), "data", "reports-index.json");
   if (!fs.existsSync(indexPath)) return null;
@@ -66,7 +94,7 @@ export default function Home() {
               {snapshot.date} ({snapshot.dayOfWeek}) 기준
             </span>
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
             {snapshot.items.map((item) => {
               const absPct = Math.abs(item.changePercent);
               let bgOpacity = 0.04;
@@ -77,31 +105,31 @@ export default function Home() {
 
               const bgColor =
                 item.direction === "up"
-                  ? `rgba(229, 69, 69, ${bgOpacity})`
+                  ? `rgba(211, 47, 47, ${bgOpacity})`
                   : item.direction === "down"
-                  ? `rgba(69, 137, 229, ${bgOpacity})`
+                  ? `rgba(21, 101, 192, ${bgOpacity})`
                   : "transparent";
 
               return (
                 <div
                   key={item.name}
-                  className="min-w-[140px] flex-shrink-0 rounded-xl px-4 py-3 border border-[var(--border)]"
+                  className="rounded-xl px-3 py-2.5 border border-[var(--border)]"
                   style={{ backgroundColor: bgColor }}
                 >
-                  <div className="text-xs text-[var(--text-sub)] mb-1">
+                  <div className="text-[11px] text-[var(--text-sub)] mb-0.5 truncate">
                     {item.name}
                   </div>
-                  <div className="text-lg font-bold text-[var(--text)]">
+                  <div className="text-sm font-bold text-[var(--text)] tabular-nums text-right">
                     {item.value}
                   </div>
                   <div
-                    className="text-sm font-semibold"
+                    className="text-xs font-semibold tabular-nums text-right"
                     style={{
                       color:
                         item.direction === "up"
-                          ? "#E54545"
+                          ? "#D32F2F"
                           : item.direction === "down"
-                          ? "#4589E5"
+                          ? "#1565C0"
                           : "var(--text-sub)",
                     }}
                   >
@@ -121,17 +149,23 @@ export default function Home() {
           <h2 className="text-sm font-semibold text-[var(--text-sub)]">
             오늘의 리포트
           </h2>
-          <span className="text-xs text-[var(--text-sub)] opacity-60">
-            {latest.date}
-          </span>
+          <a
+            href={`/reports/${latest.date}`}
+            className="text-xs text-[var(--teal)] font-medium hover:underline"
+          >
+            전체 보기 →
+          </a>
         </div>
-        <div className="sm:rounded-2xl sm:border sm:border-[var(--border)] overflow-hidden">
-          <iframe
-            src={latest.filePath}
-            className="report-frame"
-            title={`iM AI Market Report - ${latest.date}`}
-          />
-        </div>
+        {(() => {
+          const reportData = getReportContent(latest.filePath);
+          if (!reportData) return null;
+          return (
+            <div className="sm:rounded-2xl sm:border sm:border-[var(--border)] overflow-hidden report-embed">
+              <style dangerouslySetInnerHTML={{ __html: reportData.styles }} />
+              <div dangerouslySetInnerHTML={{ __html: reportData.body }} />
+            </div>
+          );
+        })()}
       </section>
 
       {/* 최근 리포트 */}
@@ -143,7 +177,7 @@ export default function Home() {
             </h2>
             <a
               href="/archive"
-              className="text-xs text-[#00C2A7] font-medium hover:underline"
+              className="text-xs text-[var(--teal)] font-medium hover:underline"
             >
               전체 보기 →
             </a>
@@ -153,12 +187,12 @@ export default function Home() {
               <a
                 key={report.date}
                 href={`/reports/${report.date}`}
-                className="flex items-center justify-between bg-[var(--card)] rounded-xl px-4 py-3 border border-[var(--border)] hover:border-[#00C2A7] transition-colors"
+                className="flex items-center justify-between bg-[var(--card)] rounded-xl px-4 py-3 border border-[var(--border)] hover:border-[var(--teal)] transition-colors"
               >
                 <span className="text-sm font-medium text-[var(--text)]">
                   {formatDate(report.date)}
                 </span>
-                <span className="text-xs text-[#00C2A7] font-medium">
+                <span className="text-xs text-[var(--teal)] font-medium">
                   보기 →
                 </span>
               </a>

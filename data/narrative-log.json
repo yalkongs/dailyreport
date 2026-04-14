@@ -2,21 +2,14 @@
   "entries": [
     {
       "date": "2026-04-14",
-      "narrativeAngle": "global_domino",
-      "headline": "미국 점화, 아시아 침묵",
-      "bigStoryTopic": "미국 증시 급등 → 아시아 증시 무반응",
+      "narrativeAngle": "historical_deja_vu",
+      "headline": "2021년 봄과 같은 순간, 하지만 더 복잡한 변수들",
+      "bigStoryTopic": "금리 인하 기대감 + 중동 리스크 → 원유가 급등 + AI 붐·탈달러화 복합 작용",
       "walletTopics": [
-        "달러/원 환율",
-        "국제유가",
-        "금 가격"
+        "현재 매력도 진단"
       ],
-      "metaphors": [
-        "점화",
-        "침묵",
-        "연결고리가 끊어지는",
-        "제각각 다른 길을 걸었습니다"
-      ],
-      "lookingAhead": "글로벌 시장 분화 지속 여부"
+      "metaphors": [],
+      "lookingAhead": "중국 GDP, OPEC+ 회의, 미국 실적, G7 회의"
     },
     {
       "date": "2026-04-13",

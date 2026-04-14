@@ -1,4 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
+import * as fs from "fs";
+import * as path from "path";
 import type {
   MarketDataCollection,
   NarrativeAngle,
@@ -6,6 +8,7 @@ import type {
   SidewaysAnalysis,
   ContextData,
 } from "./types";
+import { injectSparklines } from "./chart-generator";
 
 const client = new Anthropic();
 
@@ -221,10 +224,11 @@ function buildReportPrompt(data: MarketDataCollection, ctx: AntiRepetitionContex
   return `아래 시장 데이터를 바탕으로 웹진 스타일의 리포트 HTML을 생성하십시오.
 
 ## ⚠️ 분량 요구사항 — 매우 중요
-**생성할 HTML 파일의 총 분량은 최소 30,000자(공백 포함) 이상이어야 합니다.**
-본문 텍스트(태그 제외)만 최소 3,000자 이상이어야 합니다. 짧게 쓰지 마십시오.
-특히 "오늘의 시장 이야기" 섹션은 최소 2,000자 이상 작성하십시오.
+**생성할 HTML 파일의 총 분량은 최소 40,000자(공백 포함) 이상이어야 합니다.**
+본문 텍스트(태그 제외)만 최소 5,000자 이상이어야 합니다. 짧게 쓰지 마십시오.
+"오늘의 시장 이야기" 섹션은 최소 2,500자, "iM 투자 나침반" 섹션은 최소 1,500자 이상 작성하십시오.
 충분한 분석, 충분한 맥락, 충분한 데이터 비교를 포함하십시오.
+증권사 데일리 브리핑 수준의 깊이와 분량을 목표로 하십시오.
 
 ## 날짜: ${data.date} (${data.dayOfWeek}요일)
 ## 수집 시각: ${data.collectedAt}
@@ -264,7 +268,7 @@ HTML <head>에 다음을 포함하십시오:
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 \`\`\`
 
-### 리포트 구조 — 5개 섹션
+### 리포트 구조 — 8개 섹션
 
 #### 1. 커버
 - **배경**: linear-gradient(135deg, #0A2F5C 0%, #00796B 100%) — 딥네이비→딥틸 그라데이션
@@ -293,17 +297,14 @@ HTML <head>에 다음을 포함하십시오:
   - 각 카드: min-width: 200px, scroll-snap-align: start
   - 스크롤바 숨김: -webkit-scrollbar { display: none }
   - 좌우로 넘기면 다음 카드가 보이는 구조
-- 각 카드: 지표명(14px, #8B9DAF), 수치(24px, bold, font-variant-numeric: tabular-nums), 변동률(14px, 상승/하락 색상)
+- 각 카드: 지표명(14px, #8B9DAF), 수치(24px, bold, font-variant-numeric: tabular-nums, **text-align: right**), 변동률(14px, 상승/하락 색상, **text-align: right**)
+- 금융 숫자는 반드시 우측 정렬(text-align: right)할 것
 - 이 섹션은 데이터 중심. 서술 최소화.
 
-#### 2-1. 과거 비교 미니 차트 (historicalComparison 데이터가 있을 때만)
-historicalComparison 데이터가 제공되면, 핵심 지표 3~4개에 대해 **인라인 SVG 미니 바차트**를 생성하십시오.
-- 각 차트: width 100%, height 48px, 수평 바 4개 (1년전/3개월전/1개월전/현재)
-- 바 색상: 현재값 #0A2F5C, 과거값 #8B9DAF (opacity 점진적 증가)
-- 각 바 오른쪽에 수치 라벨
-- 차트 왼쪽에 기간 라벨 ("1Y", "3M", "1M", "현재")
-- 카드 형태로 시장 체온 아래에 배치
-- historicalComparison 데이터가 없으면 이 섹션을 생략하십시오.
+#### 2-1. 과거 비교 (자동 처리)
+- **SVG 차트를 절대 직접 생성하지 마십시오.** chart-card, svg, rect, polyline 등 차트 관련 HTML을 직접 작성하지 마십시오.
+- 스파크라인 미니 그래프가 후처리 과정에서 pulse-card 내부에 자동 삽입됩니다.
+- 플레이스홀더도 삽입하지 마십시오.
 
 #### 3. 오늘의 시장 이야기 (Main Narrative) — 리포트의 핵심, 전체 분량의 60% 이상
 ${ctx.sideways.isSideways && ctx.deepDiveTopic
@@ -327,37 +328,91 @@ ${ctx.sideways.isSideways && ctx.deepDiveTopic
 시장별 소제목(🇺🇸 미국, 🇪🇺 유럽 등)으로 분리하지 마십시오. 하나의 글에 녹여내십시오.
 단, 흐름의 전환점에서 소제목 없이 구분선(hr) 또는 여백을 활용할 수 있습니다.`}
 
-#### 4. 그래서, 무엇이 달라지나 (So What) — 최소 4~5개 포인트
+#### 4. 오늘의 관찰 포인트 (Today's Watch) — 카드 3~4개
+**오늘 시장에서 주목해야 할 관찰 포인트**를 정리합니다.
+
+- 각 카드는 아이콘 + 제목(1줄) + 설명(2~3문장)
+- 반드시 포함: 오늘 주목할 경제지표 발표, 주요 이벤트, 시장 변동 가능성
+- 뉴스 헤드라인이나 경제 캘린더 데이터가 있으면 적극 활용
+- "왜 이것을 지켜봐야 하는가"를 간결하게 설명
+- 예: "미국 CPI 발표 예정 — 시장 예상치와의 괴리가 금리 방향을 결정합니다"
+- 카드 상단에 작은 라벨로 시간대 표기 (예: "오전", "오후", "이번 주")
+
+#### 5. iM 투자 나침반 (iM Investment Compass) — 최소 1,500자
+**iM뱅크 고객 관점에서의 투자 방향성과 자산 관리 인사이트.**
+이 섹션은 증권사 리포트와 차별화되는 핵심 섹션입니다.
+
+**반드시 포함할 3가지 소주제:**
+
+**5-1. 자산군별 온도계**
+- 주식/채권/예금/금/달러 등 주요 자산군의 현재 매력도를 데이터 기반으로 평가
+- 각 자산군에 대해 "관심 확대", "중립 유지", "신중 접근" 중 하나의 톤을 제시 (특정 종목 추천 금지)
+- VIX, 금리, 환율 데이터를 연결하여 근거 제시
+- 인라인 SVG로 간단한 온도계 또는 게이지 시각화 (가로 바 형태, 5단계)
+
+**5-2. 예금·적금 vs 투자 — 오늘의 판단 기준**
+- 현재 기준금리, 예금 금리 방향성, 채권 수익률을 비교
+- "지금 정기예금을 넣으면 실질금리가 양수인가 음수인가" — CPI 데이터와 연결
+- 목돈 운용, 월 적립 등 일반 은행 고객의 실제 의사결정에 도움이 되는 프레임 제시
+- 투자 추천이 아닌 판단 기준과 고려 요소를 제공
+
+**5-3. 국내 투자자 수급 동향과 시사점**
+- 외국인/기관/개인 매매동향 데이터가 있으면 분석 (없으면 최근 추세 기반 서술)
+- "외국인이 3일 연속 순매수 중" 같은 맥락 제공
+- 수급 데이터가 코스피/코스닥 방향성에 미치는 의미
+- 개인 투자자가 기관/외국인과 반대로 움직이는 경우 그 의미 해설
+
+각 소주제를 카드 또는 박스로 시각적으로 구분하십시오.
+
+#### 6. 그래서, 무엇이 달라지나 (So What) — 최소 5~6개 포인트
 **현재 영향 + 앞으로 주목할 것**을 하나의 섹션으로 통합합니다.
 
-- **최소 4~5가지** 포인트를 카드 형태로 정리
-- 각 포인트는 제목(한 줄) + 본문(3~4문장)으로 구성
+- **최소 5~6가지** 포인트를 카드 형태로 정리
+- 각 포인트는 제목(한 줄) + 본문(3~5문장)으로 구성
 - 각 포인트는 **구체적 영향 경로**를 설명할 것 (트리비얼 금지)
-- 반드시 다양한 영역을 커버할 것: 산업/기업 영향, 개인 자산 영향, 정책/제도 영향, 앞으로의 일정/이벤트 등
+- 반드시 다양한 영역을 커버할 것:
+  - 산업/기업 영향 (어떤 업종이 수혜/피해를 받는가)
+  - 개인 자산 영향 (내 예금, 주식, 연금에 어떤 변화가 오는가)
+  - 정책/제도 영향 (한은 금리 결정, 정부 정책 방향)
+  - 앞으로의 일정/이벤트 (이번 주/다음 주 주목 이벤트)
+  - 환율이 일상에 미치는 영향 (수입물가, 해외투자)
 - 오늘의 관점("${ctx.angle.name}")을 이 섹션에 반영하십시오
 
-#### 5. 클로징 + 푸터
+#### 7. 이번 주 캘린더 (경제 캘린더 데이터가 있을 때만)
+경제 캘린더 데이터가 있으면, **이번 주 주요 경제 일정**을 테이블 형태로 정리하십시오.
+- 컬럼: 날짜, 국가, 이벤트, 중요도 (별 ★ 표시)
+- 중요도 5: ★★★★★, 중요도 4: ★★★★, 중요도 3: ★★★
+- 테이블 스타일: 깔끔한 보더, 번갈아 배경색
+- 경제 캘린더 데이터가 없으면 이 섹션을 생략하십시오.
+
+#### 8. 클로징 + 푸터
 - iM AI Analyst의 마무리 한 문장 (절제된 톤, 따뜻하지만 가볍지 않게)
+- 오늘 리포트의 핵심 메시지를 한 줄로 요약하는 클로징 멘트
 - 면책: "본 리포트는 AI가 자동 생성한 것으로, 투자 권유가 아닙니다. 투자 판단의 책임은 투자자 본인에게 있습니다."
 - "© iM뱅크 | Powered by iM AI Analyst | 데이터 출처: Yahoo Finance, FRED, ECOS, KRX, Google News"
 
-### 스타일 세부
-- 섹션 간 여백: 48~60px
-- 카드: border-radius 12~16px, box-shadow 0 2px 8px rgba(0,0,0,0.06)
-- 섹션 타이틀: color #0A2F5C, font-weight 700, 하단 accent bar #00796B (3px, width 40px)
-- pull quote: border-left 4px **#00796B**, font-size 18px, 배경 rgba(0,121,107,0.04)
-- data-card 보더: rgba(10,47,92,0.12)
-- 구분선(divider): linear-gradient(90deg, transparent, #8B9DAF, transparent)
-- So What 카드: 보더 rgba(0,121,107,0.15), 제목 색상 #0A2F5C
-- 변동률 ±2% 이상: bold + 히트맵 배경 강조
-- 클로징 구분선: #0A2F5C
-- 링크/강조 텍스트: #00796B
+### ⚠️ CSS 클래스명 규칙 — 반드시 준수
+CSS는 자동 주입됩니다. <style> 태그를 직접 작성하지 마십시오.
+아래 클래스명을 정확히 사용하십시오. 다른 이름을 만들지 마십시오.
+
+- \`.report-container\` — 전체 래퍼 (body 직속)
+- \`.cover\` > \`.cover-date\`, \`.cover-headline\`, \`.cover-subline\`, \`.cover-byline\`
+- \`.section\` + \`.section-title\` — 모든 섹션 공통
+- \`.market-grid\` > \`.pulse-card\` > \`.label\`, \`.value\`, \`.change.up|down|flat\`
+  - 히트맵 강도: \`.heat-up-1\`~\`.heat-up-5\`, \`.heat-down-1\`~\`.heat-down-5\` (변동률에 비례)
+- \`.chart-card\` > \`.chart-title\` + SVG — 과거 비교 차트 (자동 생성됨, 직접 만들지 말 것)
+- \`.narrative\` — 본문 래퍼
+- \`<div class="pull-quote">\` — 인용 블록. 반드시 \`<div>\` 태그를 사용할 것. \`<pull-quote>\` 같은 커스텀 태그 금지.
+- \`.data-card\` > \`.data-title\` + \`.data-row\` > \`.data-label\` + \`.data-value\`
+- \`.watch-card\` > \`.watch-badge\`, \`.watch-title\`, \`.watch-desc\`
+- \`.compass-box\` > \`.compass-label\`, \`.compass-title\`, p 태그
+  - 게이지: \`.gauge-bar\` > \`.gauge-fill.cautious|neutral|positive|strong\`
+- \`.sowhat-card\` > \`.sowhat-title\`, p — 첫 번째 카드가 자동으로 강조됨
+- \`.calendar-table\` > th, td, \`.stars\`
+- \`.report-footer\` > \`.closing\`, \`.disclaimer\`, \`.copyright\`
+- \`.divider\` — 구분선
+
 - viewport meta, charset utf-8 필수
-- **모바일 반응형 필수:**
-  - 커버: full-width (border-radius: 0, margin: 0 -20px, width: calc(100% + 40px))
-  - pull-quote: 풀블리드 (좌우 여백 제거)
-  - 본문 폰트: 16px 유지
-  - 헤드라인: 24px로 축소
 - null 데이터: 해당 문맥에서 자연스럽게 "확인이 어렵습니다"로 처리
 
 ### Open Graph 메타태그 (Link Preview)
@@ -404,7 +459,7 @@ export async function generateReport(
     try {
       const stream = await client.messages.stream({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 32000,
+        max_tokens: 64000,
         messages: [
           {
             role: "user",
@@ -443,6 +498,109 @@ export async function generateReport(
   }
   html = html.trim();
 
+  // 후처리 1: CSS 템플릿 주입 — Claude의 <style>을 고정 CSS로 교체
+  html = injectStandardCSS(html);
+
+  // 후처리 2: pulse-card에 미니 스파크라인 주입
+  if (context?.historicalComparison && context.historicalComparison.length > 0) {
+    html = injectSparklines(html, context.historicalComparison);
+    console.log(`📊 스파크라인 주입 완료 (${context.historicalComparison.length}개 지표)`);
+  }
+
+  // 후처리 3: 비표준 HTML 태그 교정 (pull-quote, watch-card 등 커스텀 태그 → div)
+  html = fixNonStandardTags(html);
+
+  // 후처리 4: 금지어 검증 및 제거
+  html = sanitizeBannedExpressions(html);
+
   console.log(`✅ 리포트 생성 완료 (${html.length} bytes)`);
+  return html;
+}
+
+/** Claude가 생성한 <style> 블록을 표준 CSS로 교체 */
+function injectStandardCSS(html: string): string {
+  const cssPath = path.join(__dirname, "report-template.css");
+  if (!fs.existsSync(cssPath)) {
+    console.log("⚠️ report-template.css 없음 — CSS 주입 건너뜀");
+    return html;
+  }
+  const standardCSS = fs.readFileSync(cssPath, "utf-8");
+
+  // 기존 <style> 블록 모두 제거
+  let result = html.replace(/<style[\s\S]*?<\/style>/gi, "");
+
+  // <link rel="stylesheet" ...pretendard...> 도 제거 (CSS에 포함됨)
+  result = result.replace(/<link[^>]*pretendard[^>]*\/?>/gi, "");
+
+  // </head> 앞에 표준 CSS 삽입
+  const styleTag = `<style>\n${standardCSS}\n</style>`;
+  if (result.includes("</head>")) {
+    result = result.replace("</head>", `${styleTag}\n</head>`);
+  } else {
+    // <head>가 없으면 맨 앞에 추가
+    result = `<style>\n${standardCSS}\n</style>\n${result}`;
+  }
+
+  return result;
+}
+
+/** Claude가 생성할 수 있는 비표준 HTML 태그를 <div>로 교정 */
+function fixNonStandardTags(html: string): string {
+  // <pull-quote ...> → <div class="pull-quote" ...>
+  // <watch-card ...> → <div class="watch-card" ...>
+  // 등 CSS 클래스명과 동일한 커스텀 태그를 div로 변환
+  const customTags = [
+    "pull-quote", "data-card", "watch-card", "compass-box",
+    "sowhat-card", "pulse-card", "chart-card", "gauge-bar",
+    "gauge-fill", "section-title", "cover-date", "cover-headline",
+    "cover-subline", "cover-byline",
+  ];
+
+  for (const tag of customTags) {
+    // 여는 태그: <pull-quote class="pull-quote"> 또는 <pull-quote>
+    const openWithClass = new RegExp(`<${tag}(\\s+class="[^"]*"[^>]*)>`, "gi");
+    html = html.replace(openWithClass, `<div$1>`);
+
+    const openWithoutClass = new RegExp(`<${tag}(\\s*)>`, "gi");
+    html = html.replace(openWithoutClass, `<div class="${tag}"$1>`);
+
+    // 닫는 태그
+    const closeTag = new RegExp(`</${tag}>`, "gi");
+    html = html.replace(closeTag, "</div>");
+  }
+
+  return html;
+}
+
+/** 금지된 표현을 감지하고 대체 */
+function sanitizeBannedExpressions(html: string): string {
+  const BANNED_PATTERNS: { pattern: RegExp; replacement: string }[] = [
+    // 가상 인물 패턴: "OO의 한 직업" 또는 "OO동의 한 직업"
+    { pattern: /[가-힣]+[시도군구동읍면리]의\s한\s[가-힣]+\s[가-힣]+는/g, replacement: "" },
+    { pattern: /[가-힣]+[시도군구동읍면리]의\s한\s[가-힣]+\s[가-힣]+은/g, replacement: "" },
+  ];
+
+  // 금지 비유 표현 — 발견되면 <strong>으로 래핑된 부분 포함 제거하지 않고 로그만 남김
+  const BANNED_METAPHORS = [
+    "폭풍의 눈", "폭풍전야", "양날의 검", "나비효과", "뇌관", "불씨", "신호탄",
+    "혈관", "뇌관", "안전자산으로의 피난", "블랙스완", "퍼펙트 스톰",
+    "시한폭탄", "도화선", "화약고", "판도라의 상자", "좌표를 찍",
+  ];
+
+  let bannedFound: string[] = [];
+  for (const metaphor of BANNED_METAPHORS) {
+    if (html.includes(metaphor)) {
+      bannedFound.push(metaphor);
+    }
+  }
+
+  if (bannedFound.length > 0) {
+    console.log(`⚠️ 금지 표현 ${bannedFound.length}건 감지: ${bannedFound.join(", ")}`);
+  }
+
+  for (const { pattern, replacement } of BANNED_PATTERNS) {
+    html = html.replace(pattern, replacement);
+  }
+
   return html;
 }

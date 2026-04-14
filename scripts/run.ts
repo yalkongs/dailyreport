@@ -17,6 +17,7 @@ import type { ReportsIndex, ReportMeta, MarketSnapshot, MarketSnapshotItem, Mark
 const REPORTS_DIR = path.join(process.cwd(), "public", "reports");
 const INDEX_PATH = path.join(process.cwd(), "data", "reports-index.json");
 const SNAPSHOT_PATH = path.join(process.cwd(), "data", "market-snapshot.json");
+const LAST_DATA_HASH_PATH = path.join(process.cwd(), "data", "last-data-hash.txt");
 
 function ensureDirectories() {
   fs.mkdirSync(REPORTS_DIR, { recursive: true });
@@ -158,6 +159,22 @@ async function main() {
     console.error("❌ 50% 이상 데이터 수집 실패. 리포트 생성을 중단합니다.");
     process.exit(1);
   }
+
+  // 동일 데이터 감지 — 핵심 가격 해시 비교
+  const priceHash = [
+    ...marketData.koreaStocks.map(s => `${s.symbol}:${s.price}`),
+    ...marketData.usStocks.map(s => `${s.symbol}:${s.price}`),
+    ...marketData.forex.map(f => `${f.symbol}:${f.rate}`),
+  ].join("|");
+
+  if (fs.existsSync(LAST_DATA_HASH_PATH)) {
+    const lastHash = fs.readFileSync(LAST_DATA_HASH_PATH, "utf-8").trim();
+    if (priceHash === lastHash) {
+      console.log("⚠️ 시장 데이터가 이전과 동일합니다 (주말/휴일 가능성). 리포트 생성을 건너뜁니다.");
+      process.exit(0);
+    }
+  }
+  fs.writeFileSync(LAST_DATA_HASH_PATH, priceHash, "utf-8");
   console.log();
 
   // Step 3: 반복 방지 컨텍스트 구성

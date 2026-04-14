@@ -47,7 +47,7 @@ export default function ArchivePage() {
             const [year, month] = monthKey.split("-");
             return (
               <div key={monthKey}>
-                <h2 className="text-sm font-semibold mb-3 text-[#00C2A7]">
+                <h2 className="text-sm font-semibold mb-3 text-[var(--teal)]">
                   {year}년 {parseInt(month)}월
                 </h2>
                 <div className="grid gap-2">
@@ -55,12 +55,12 @@ export default function ArchivePage() {
                     <a
                       key={report.date}
                       href={`/reports/${report.date}`}
-                      className="flex items-center justify-between bg-[var(--card)] rounded-xl px-4 py-3 border border-[var(--border)] hover:border-[#00C2A7] transition-colors"
+                      className="flex items-center justify-between bg-[var(--card)] rounded-xl px-4 py-3 border border-[var(--border)] hover:border-[var(--teal)] transition-colors"
                     >
                       <span className="text-sm font-medium text-[var(--text)]">
                         {formatDate(report.date)}
                       </span>
-                      <span className="text-xs text-[#00C2A7] font-medium">
+                      <span className="text-xs text-[var(--teal)] font-medium">
                         보기 →
                       </span>
                     </a>

@@ -22,7 +22,7 @@ export default function RootLayout({
         <header className="sticky top-0 z-50 bg-[var(--card)] border-b border-[var(--border)] backdrop-blur-sm bg-opacity-95">
           <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
             <a href="/" className="flex items-center gap-1.5">
-              <span className="text-xl font-bold text-[#00C2A7]">iM</span>
+              <span className="text-xl font-bold text-[var(--teal)]">iM</span>
               <span className="text-base font-semibold text-[var(--text)]">
                 AI Market Report
               </span>
@@ -30,13 +30,13 @@ export default function RootLayout({
             <nav className="flex items-center gap-5 text-sm">
               <a
                 href="/"
-                className="text-[var(--text-sub)] hover:text-[#00C2A7] transition-colors font-medium"
+                className="text-[var(--text-sub)] hover:text-[var(--teal)] transition-colors font-medium"
               >
                 홈
               </a>
               <a
                 href="/archive"
-                className="text-[var(--text-sub)] hover:text-[#00C2A7] transition-colors font-medium"
+                className="text-[var(--text-sub)] hover:text-[var(--teal)] transition-colors font-medium"
               >
                 아카이브
               </a>
