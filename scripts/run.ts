@@ -9,7 +9,6 @@ import { selectAngle } from "../lib/narrative-angles";
 import { analyzeSideways, selectDeepDiveTopic } from "../lib/sideways-detector";
 import {
   getRecentEntries,
-  extractNarrativeFromHtml,
   saveNarrativeEntry,
 } from "../lib/narrative-memory";
 import type { ReportsIndex, ReportMeta, MarketSnapshot, MarketSnapshotItem, MarketDataCollection } from "../lib/types";
@@ -36,11 +35,12 @@ function saveIndex(index: ReportsIndex) {
 }
 
 function extractHeadlineFromHtml(html: string): { headline: string; subline: string } {
-  // cover-headline 클래스 또는 headline 클래스에서 추출
-  const headlineMatch = html.match(/class="[^"]*headline[^"]*"[^>]*>([^<]+)/)
+  // cover-headline에서 추출
+  const headlineMatch = html.match(/class="cover-headline"[^>]*>([^<]+)/)
+    || html.match(/class="[^"]*headline[^"]*"[^>]*>([^<]+)/)
     || html.match(/<h1[^>]*>([^<]+)<\/h1>/);
-  const sublineMatch = html.match(/class="[^"]*subline[^"]*"[^>]*>([^<]+)/)
-    || html.match(/<h1[^>]*>[^<]+<\/h1>\s*<p[^>]*>([^<]+)/);
+  const sublineMatch = html.match(/class="cover-subline"[^>]*>([^<]+)/)
+    || html.match(/class="[^"]*subline[^"]*"[^>]*>([^<]+)/);
   return {
     headline: headlineMatch?.[1]?.trim() || "iM AI Market Report",
     subline: sublineMatch?.[1]?.trim() || "",
@@ -205,7 +205,7 @@ async function main() {
     sideways,
     deepDiveTopic,
   };
-  const html = await generateReport(marketData, ctx, contextData);
+  const { html, content: reportContent } = await generateReport(marketData, ctx, contextData);
   console.log();
 
   // Step 5: 파일 저장
@@ -247,24 +247,27 @@ async function main() {
   console.log(`📁 인덱스 업데이트 완료 (총 ${index.reports.length}건)`);
   console.log();
 
-  // Step 7: 내러티브 로그 저장 (다음 날 반복 방지용)
+  // Step 7: 내러티브 로그 저장 (JSON에서 직접 추출 — 2차 API 호출 불필요)
   console.log("━━━ Step 7: 내러티브 로그 저장 ━━━");
-  try {
-    const narrativeEntry = await extractNarrativeFromHtml(html, reportDate, angle.id);
-    saveNarrativeEntry(narrativeEntry);
-    console.log(`📝 내러티브 로그 저장 완료: 앵글=${angle.id}, 헤드라인="${narrativeEntry.headline}"`);
-  } catch (err) {
-    // 로그 추출 실패해도 리포트 자체는 이미 생성/저장됨 — fallback 저장
-    console.log(`⚠️ 내러티브 추출 API 실패, 기본 로그로 저장`);
-    saveNarrativeEntry({
+  {
+    // Claude JSON 출력에서 직접 내러티브 요소 추출
+    const soWhatTopics = reportContent.soWhat.map((s) => s.title);
+    const watchTopics = reportContent.watchPoints.map((w) => w.title);
+    const compassTopics = reportContent.compass.map((c) => c.title);
+    const lookingAhead = reportContent.watchPoints[0]?.title || "";
+
+    const narrativeEntry = {
       date: reportDate,
       narrativeAngle: angle.id,
-      headline: "",
-      bigStoryTopic: "",
-      walletTopics: [],
-      metaphors: [],
-      lookingAhead: "",
-    });
+      headline: reportContent.cover.headline,
+      bigStoryTopic: reportContent.cover.subline.substring(0, 50),
+      walletTopics: [...soWhatTopics.slice(0, 3), ...compassTopics.slice(0, 2)],
+      metaphors: [], // JSON 모드에서는 별도 추출 불필요
+      lookingAhead,
+    };
+
+    saveNarrativeEntry(narrativeEntry);
+    console.log(`📝 내러티브 로그 저장 완료 (JSON 직접 추출): 앵글=${angle.id}, 헤드라인="${narrativeEntry.headline}"`);
   }
   console.log();
 

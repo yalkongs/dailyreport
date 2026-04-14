@@ -184,6 +184,60 @@ export interface ContextData {
   contextErrors: ContextError[];
 }
 
+// --- Claude JSON 출력 인터페이스 (콘텐츠/구조 분리) ---
+
+export interface ReportContentBlock {
+  type: "paragraph" | "pullQuote" | "dataCard";
+  text?: string; // paragraph, pullQuote
+  title?: string; // dataCard
+  rows?: Array<{ label: string; value: string }>; // dataCard
+}
+
+export interface ReportWatchPoint {
+  badge: string; // "오전", "오후", "이번 주"
+  title: string;
+  description: string;
+}
+
+export interface ReportCompassSection {
+  label: string; // "자산군별 온도계"
+  title: string;
+  items: Array<{
+    asset: string; // "주식", "채권" 등
+    body: string; // 분석 텍스트 (HTML 인라인 태그 허용)
+    gaugePercent: number; // 0~100
+    gaugeType: "cautious" | "neutral" | "positive" | "strong";
+  }>;
+  paragraphs?: string[]; // 추가 본문 (items 없는 서브섹션용)
+}
+
+export interface ReportSoWhat {
+  title: string;
+  body: string;
+}
+
+export interface ReportCalendarItem {
+  date: string;
+  country: string;
+  event: string;
+  importance: number; // 1~5
+}
+
+export interface ReportContent {
+  cover: {
+    headline: string;
+    subline: string;
+  };
+  bigStory: {
+    content: ReportContentBlock[];
+  };
+  watchPoints: ReportWatchPoint[];
+  compass: ReportCompassSection[];
+  soWhat: ReportSoWhat[];
+  calendar: ReportCalendarItem[];
+  closingMessage: string;
+}
+
 // --- 시장 데이터 스냅샷 (홈 페이지 표시용) ---
 
 export interface MarketSnapshotItem {
