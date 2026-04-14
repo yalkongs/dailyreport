@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-04-15",
+      "narrativeAngle": "historical_deja_vu",
+      "headline": "2011년과 닮은꼴, 달리 흘러가는 이유",
+      "bigStoryTopic": "원유·금 동반 상승에도 시장이 웃는 이유는 15년 전과 다른 금리 환경 때문입니다. 코스피",
+      "walletTopics": [
+        "2011년식 에너지 쇼크는 없다",
+        "기술주가 시장 안정판 역할",
+        "한국 증시, 6000선이 새로운 베이스캠프",
+        "지금 뜨거운 자산, 차가운 자산",
+        "안전자산과 위험자산의 수익률 비교"
+      ],
+      "metaphors": [],
+      "lookingAhead": "중국 1분기 GDP 발표"
+    },
+    {
       "date": "2026-04-14",
       "narrativeAngle": "data_anatomy",
       "headline": "코스피 6000선, 숫자 하나에 담긴 5가지 의미",
