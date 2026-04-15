@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-04-16",
+      "narrativeAngle": "structural_lens",
+      "headline": "시장은 흔들리지 않는다",
+      "bigStoryTopic": "미국 은행주 실적 선방에도 불구하고 채권금리는 상승했습니다. 투자자들이 읽는 시장 신호는 ",
+      "walletTopics": [
+        "반도체 업종 실적 재평가 시점",
+        "수출기업 환율 헤지 전략 점검 필요",
+        "금리 상승기 은행주 투자 전략",
+        "투자 매력도 진단",
+        "수익률 비교 분석"
+      ],
+      "metaphors": [],
+      "lookingAhead": "미국 소매판매 지표 발표"
+    },
+    {
       "date": "2026-04-15",
       "narrativeAngle": "historical_deja_vu",
       "headline": "2011년과 닮은꼴, 달리 흘러가는 이유",
