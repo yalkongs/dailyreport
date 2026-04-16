@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-04-17",
+      "narrativeAngle": "supply_chain",
+      "headline": "유가 반락에도 증시 '2%대' 상승",
+      "bigStoryTopic": "WTI 원유가 하락 전환했지만 코스피는 6226포인트까지 오르며 3거래일 연속 상승했습니다",
+      "walletTopics": [
+        "정유업체 정제 마진 개선 기대감",
+        "석유화학 업체 원가 부담 완화",
+        "포장재·물류업계 비용 절감 효과",
+        "유가 하락으로 인플레이션 우려 완화",
+        "실질금리 개선으로 예금 매력도 상승"
+      ],
+      "metaphors": [],
+      "lookingAhead": "미국 소매판매와 산업생산 지표"
+    },
+    {
       "date": "2026-04-16",
       "narrativeAngle": "structural_lens",
       "headline": "시장은 흔들리지 않는다",
