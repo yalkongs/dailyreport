@@ -1,1 +1,20 @@
-{"reports":[]}
+{
+  "reports": [
+    {
+      "date": "2026-04-17",
+      "type": "morning",
+      "headline": "해외 선행 신호가 국내 ETF 거래로 이어지는지 확인하는 날",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-04-17",
+      "anomalyCount": 6,
+      "createdAt": "2026-04-18T14:55:57.200Z"
+    },
+    {
+      "date": "2026-04-16",
+      "type": "morning",
+      "headline": "해외 선행 신호가 국내 ETF 거래로 이어지는지 확인",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-04-16",
+      "anomalyCount": 0,
+      "createdAt": "2026-04-18T14:54:24.964Z"
+    }
+  ]
+}

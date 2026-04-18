@@ -23,9 +23,17 @@ import type { CollectedData, ReportMeta, MacroContext } from '../lib/etf/types'
 const LENS_LOG_PATH = 'data/etf-lens-log.json'
 
 async function main() {
-  // Use KST timezone to correctly label reports (06:30 KST = 21:30 UTC prev day)
-  const date = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
-  console.log(`\n=== ETF Morning Pipeline: ${date} ===\n`)
+  // Use KST timezone to correctly label reports (06:30 KST = 21:30 UTC prev day).
+  // ETF_REPORT_DATE (YYYY-MM-DD) overrides the auto-computed date — useful
+  // for backfilling missing archive entries. Data collection still uses
+  // the current market snapshot; the override only changes the label and
+  // output filenames.
+  const override = process.env.ETF_REPORT_DATE?.trim()
+  if (override && !/^\d{4}-\d{2}-\d{2}$/.test(override)) {
+    throw new Error(`ETF_REPORT_DATE must be YYYY-MM-DD, got "${override}"`)
+  }
+  const date = override || new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
+  console.log(`\n=== ETF Morning Pipeline: ${date}${override ? ' (override)' : ''} ===\n`)
 
   // Step 1: 데이터 수집 (병렬)
   console.log('[1/8] 데이터 수집 중...')
