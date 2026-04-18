@@ -1,0 +1,121 @@
+// scripts/run-etf.ts — ETF morning pipeline (absorbed from etfreport).
+//
+// Runs after the market report pipeline in the daily GitHub Actions
+// workflow. Fully independent: ETF failure does not affect the already-
+// sent market report, and vice versa.
+
+import { collectAllEtfData } from '../lib/etf/etf-data'
+import { collectMacroContext } from '../lib/etf/market-context'
+import { collectNews } from '../lib/etf/news'
+import { detectAnomalies } from '../lib/etf/analyzer'
+import { generateMorningReport } from '../lib/etf/claude-client'
+import { selectAnalysisLens } from '../lib/etf/analysis-lens'
+import { renderMorningHtml, saveReport, saveReportPreviewImage } from '../lib/etf/renderer'
+import { sendReportUrl, sendError } from '../lib/etf/telegram'
+import {
+  validateData,
+  updateReportsIndex,
+  loadJson,
+  saveJson,
+} from '../lib/etf/pipeline-utils'
+import type { CollectedData, ReportMeta, MacroContext } from '../lib/etf/types'
+
+const LENS_LOG_PATH = 'data/etf-lens-log.json'
+
+async function main() {
+  // Use KST timezone to correctly label reports (06:30 KST = 21:30 UTC prev day)
+  const date = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
+  console.log(`\n=== ETF Morning Pipeline: ${date} ===\n`)
+
+  // Step 1: 데이터 수집 (병렬)
+  console.log('[1/8] 데이터 수집 중...')
+  const [etfData, macro, news] = await Promise.allSettled([
+    collectAllEtfData(),
+    collectMacroContext(),
+    collectNews(),
+  ])
+
+  const { quotes, flows, investorFlows } = etfData.status === 'fulfilled'
+    ? etfData.value : { quotes: [], flows: [], investorFlows: [] }
+
+  // Step 2: 데이터 검증
+  console.log('[2/8] 데이터 검증 중...')
+  try {
+    validateData(quotes)
+  } catch (e) {
+    await sendError('데이터 검증', e)
+    process.exit(1)
+  }
+
+  // Step 3: 분석 렌즈 선택
+  const recentLenses = loadJson<string[]>(LENS_LOG_PATH, [])
+  const analysisLens = selectAnalysisLens(recentLenses, { flows })
+  console.log(`[3/8] 분석 렌즈: ${analysisLens}`)
+
+  // Step 4: 이상 탐지
+  console.log('[4/8] 이상 탐지 중...')
+  const anomalies = detectAnomalies(quotes, flows, investorFlows)
+  console.log(`  → ${anomalies.length}건 탐지`)
+
+  const data: CollectedData = {
+    reportType: 'morning',
+    date,
+    quotes,
+    flows,
+    investorFlows,
+    macro: macro.status === 'fulfilled' ? macro.value : {} as MacroContext,
+    news: news.status === 'fulfilled' ? news.value : [],
+    analysisLens,
+  }
+
+  // Step 5: Claude 분석 (1회 재시도)
+  console.log('[5/8] Claude 리포트 생성 중...')
+  let report
+  try {
+    report = await generateMorningReport(data)
+  } catch (e) {
+    console.warn('[warn] Claude API 1차 실패, 재시도:', e)
+    try {
+      report = await generateMorningReport(data)
+    } catch (e2) {
+      await sendError('Claude API', e2)
+      process.exit(1)
+    }
+  }
+
+  // Step 6: HTML 렌더링
+  console.log('[6/8] HTML 렌더링 중...')
+  const publicBaseUrl =
+    process.env.ETF_PUBLIC_BASE_URL?.trim() ||
+    process.env.VERCEL_URL?.trim() ||
+    'https://dailyreport-eta.vercel.app'
+  const html = renderMorningHtml(report, data, { publicBaseUrl })
+  saveReport(html, date)
+  await saveReportPreviewImage(date, report.cover.headline, report.cover.subline)
+
+  // Step 7: 인덱스 업데이트
+  console.log('[7/8] 인덱스 갱신 중...')
+  const reportUrl = `${publicBaseUrl.replace(/\/$/, '')}/etf-reports/${date}`
+  const meta: ReportMeta = {
+    date,
+    type: 'morning',
+    headline: report.cover.headline,
+    url: reportUrl,
+    anomalyCount: anomalies.length,
+    createdAt: new Date().toISOString(),
+  }
+  updateReportsIndex(meta)
+  saveJson(LENS_LOG_PATH, [...recentLenses, analysisLens].slice(-30))
+
+  // Step 8: Telegram 발송
+  console.log('[8/8] Telegram 발송 중...')
+  await sendReportUrl(reportUrl, date, report.cover.headline, anomalies.length)
+
+  console.log(`\n✅ ETF Morning 완료: ${reportUrl}\n`)
+}
+
+main().catch(async (e) => {
+  console.error('파이프라인 오류:', e)
+  await sendError('ETF Pipeline', e)
+  process.exit(1)
+})
