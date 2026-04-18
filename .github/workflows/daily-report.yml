@@ -63,7 +63,7 @@ jobs:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
           KRX_API_KEY: ${{ secrets.KRX_API_KEY }}
-          DISABLE_CONTEXT: ${{ inputs.dry_run == true && 'false' || 'false' }}
+          DISABLE_CONTEXT: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && 'false' || 'false' }}
           FORCE_REGENERATE: ${{ inputs.force_regenerate == true && 'true' || 'false' }}
         run: |
           npx tsx scripts/run.ts
@@ -79,7 +79,7 @@ jobs:
           git diff --quiet && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
 
       - name: Commit and push report
-        if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true
+        if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true && inputs.dry_run != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -89,11 +89,11 @@ jobs:
           git push
 
       - name: Wait for Vercel deployment
-        if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true
+        if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true && inputs.dry_run != 'true'
         run: sleep 60
 
       - name: Send Telegram notification
-        if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true
+        if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true && inputs.dry_run != 'true'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -140,8 +140,8 @@ jobs:
         id: etf
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ inputs.dry_run == true && '' || secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ inputs.dry_run == true && '' || secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && '' || secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && '' || secrets.TELEGRAM_CHAT_ID }}
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           KRX_AUTH_KEY: ${{ secrets.KRX_AUTH_KEY }}
           ETF_PUBLIC_BASE_URL: https://dailyreport-eta.vercel.app
@@ -156,7 +156,7 @@ jobs:
           git diff --quiet && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
 
       - name: Commit and push ETF report
-        if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true
+        if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true && inputs.dry_run != 'true'
         run: |
           # Pull any market-job commit that landed during this run so we
           # don't race-fail on push.
