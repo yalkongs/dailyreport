@@ -1,10 +1,15 @@
 name: Generate Daily Market Report
-# Re-index: workflow renamed from generate-report.yml
+# Runs at 06:30 KST on weekdays. Two sequential jobs:
+#   1. `market` — global market report (existing pipeline)
+#   2. `etf`    — ETF morning report (absorbed from etfreport)
+# The jobs are independent: if `market` fails, `etf` still runs.
+# Only the ordering is preserved so Telegram pushes arrive in a
+# predictable order (market first, then ETF).
 
 on:
   schedule:
-    # KST 07:00 (월~금) = UTC 22:00 (일~목)
-    - cron: '0 22 * * 0-4'
+    # KST 06:30 (월~금) = UTC 21:30 (일~목)
+    - cron: '30 21 * * 0-4'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -17,6 +22,12 @@ on:
         required: false
         type: boolean
         default: false
+      only:
+        description: '실행 대상 (market | etf | both)'
+        required: false
+        type: choice
+        options: [both, market, etf]
+        default: both
 
 env:
   TZ: Asia/Seoul
@@ -25,7 +36,8 @@ permissions:
   contents: write
 
 jobs:
-  generate:
+  market:
+    if: ${{ inputs.only != 'etf' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -101,3 +113,57 @@ jobs:
             -F "photo=${OG_IMAGE_URL}" \
             -F "caption=${MESSAGE}" \
             -F "parse_mode=HTML"
+
+  etf:
+    needs: market
+    if: ${{ always() && inputs.only != 'market' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ETF pipeline
+        id: etf
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ inputs.dry_run == true && '' || secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ inputs.dry_run == true && '' || secrets.TELEGRAM_CHAT_ID }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          KRX_AUTH_KEY: ${{ secrets.KRX_AUTH_KEY }}
+          ETF_PUBLIC_BASE_URL: https://dailyreport-eta.vercel.app
+        run: |
+          npx tsx scripts/run-etf.ts
+          REPORT_DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          echo "date=${REPORT_DATE}" >> $GITHUB_OUTPUT
+
+      - name: Check for changes
+        id: changes
+        run: |
+          git diff --quiet && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push ETF report
+        if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true
+        run: |
+          # Pull any market-job commit that landed during this run so we
+          # don't race-fail on push.
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main || true
+          REPORT_DATE=${{ steps.etf.outputs.date }}
+          git add public/etf-reports/ data/
+          git commit -m "ETF Daily Report - ${REPORT_DATE} (KST)"
+          git push
