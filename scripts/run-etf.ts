@@ -11,7 +11,12 @@ import { detectAnomalies } from '../lib/etf/analyzer'
 import { generateMorningReport } from '../lib/etf/claude-client'
 import { selectAnalysisLens } from '../lib/etf/analysis-lens'
 import { renderMorningHtml, saveReport, saveReportPreviewImage } from '../lib/etf/renderer'
-import { sendReportUrl, sendError } from '../lib/etf/telegram'
+// NOTE: Only the error-notification path is imported. The success-path
+// Telegram send was moved to the GitHub Actions workflow so that the
+// message is dispatched AFTER git push + Vercel redeploy — otherwise
+// the link preview would scrape a 404 and Telegram caches that as
+// "no preview card" for the URL.
+import { sendError } from '../lib/etf/telegram'
 import {
   validateData,
   updateReportsIndex,
@@ -115,11 +120,11 @@ async function main() {
   updateReportsIndex(meta)
   saveJson(LENS_LOG_PATH, [...recentLenses, analysisLens].slice(-30))
 
-  // Step 8: Telegram 발송
-  console.log('[8/8] Telegram 발송 중...')
-  await sendReportUrl(reportUrl, date, report.cover.headline, anomalies.length)
-
-  console.log(`\n✅ ETF Morning 완료: ${reportUrl}\n`)
+  // Telegram send lives in .github/workflows/daily-report.yml (after
+  // commit + push + Vercel redeploy). Running this script locally never
+  // sends to Telegram, by design — even if tokens are present in env.
+  console.log(`\n✅ ETF Morning 파일 생성 완료: ${reportUrl}\n`)
+  console.log('(Telegram 발송은 워크플로의 별도 step에서 처리됨)')
 }
 
 main().catch(async (e) => {

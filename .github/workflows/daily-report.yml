@@ -140,8 +140,12 @@ jobs:
         id: etf
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && '' || secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && '' || secrets.TELEGRAM_CHAT_ID }}
+          # Telegram tokens are intentionally NOT exposed to this step.
+          # The script only reaches sendError() on failure paths, and
+          # success-path Telegram now lives in the dedicated post-deploy
+          # step below. Withholding the tokens here is belt-and-braces
+          # protection against any future regression where the script
+          # might try to DM on the happy path.
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           KRX_AUTH_KEY: ${{ secrets.KRX_AUTH_KEY }}
           ETF_PUBLIC_BASE_URL: https://dailyreport-eta.vercel.app
@@ -149,6 +153,11 @@ jobs:
           npx tsx scripts/run-etf.ts
           REPORT_DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
           echo "date=${REPORT_DATE}" >> $GITHUB_OUTPUT
+          # Extract headline and anomaly count for the Telegram step
+          HEADLINE=$(node -e "const i=JSON.parse(require('fs').readFileSync('data/etf-reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');console.log(r?.headline||'오늘의 ETF 리포트')")
+          ANOMALY_COUNT=$(node -e "const i=JSON.parse(require('fs').readFileSync('data/etf-reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');console.log(r?.anomalyCount||0)")
+          echo "headline=${HEADLINE}" >> $GITHUB_OUTPUT
+          echo "anomaly_count=${ANOMALY_COUNT}" >> $GITHUB_OUTPUT
 
       - name: Check for changes
         id: changes
@@ -167,3 +176,38 @@ jobs:
           git add public/etf-reports/ data/
           git commit -m "ETF Daily Report - ${REPORT_DATE} (KST)"
           git push
+
+      - name: Wait for Vercel deployment
+        if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true && inputs.dry_run != 'true'
+        run: sleep 60
+
+      - name: Send ETF Telegram notification
+        if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true && inputs.dry_run != 'true'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          REPORT_DATE=${{ steps.etf.outputs.date }}
+          HEADLINE="${{ steps.etf.outputs.headline }}"
+          ANOMALY_COUNT=${{ steps.etf.outputs.anomaly_count }}
+          REPORT_URL="https://dailyreport-eta.vercel.app/etf-reports/${REPORT_DATE}"
+
+          # 날짜 포맷 (예: 4월 20일 월요일)
+          FORMATTED_DATE=$(TZ=Asia/Seoul date +"%m월 %d일 %A" | sed 's/Monday/월요일/;s/Tuesday/화요일/;s/Wednesday/수요일/;s/Thursday/목요일/;s/Friday/금요일/')
+
+          # 이상 탐지 알림 라인 (0건이면 생략)
+          ALERT_LINE=""
+          if [ "${ANOMALY_COUNT}" -gt 0 ] 2>/dev/null; then
+            ALERT_LINE=$'\n⚠️ 이상 탐지: '"${ANOMALY_COUNT}"'건'
+          fi
+
+          MESSAGE=$(printf '🌅 <b>iM AI ETF Report</b>\n\n<b>%s</b>%s\n\n📅 %s\n\n👉 <a href="%s">리포트 보기</a>' "$HEADLINE" "$ALERT_LINE" "$FORMATTED_DATE" "$REPORT_URL")
+
+          # sendMessage (not sendPhoto) — Telegram will scrape og:image
+          # from the deployed page for the link preview card. This only
+          # works because we waited 60s for Vercel above.
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=${MESSAGE}" \
+            --data-urlencode "parse_mode=HTML" \
+            --data-urlencode "disable_web_page_preview=false"
