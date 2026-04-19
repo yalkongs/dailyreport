@@ -3,10 +3,10 @@
     {
       "date": "2026-04-17",
       "type": "morning",
-      "headline": "해외 선행 신호가 국내 거래대금으로 이어지는지 확인",
+      "headline": "해외 반도체·대표지수 선행 신호, 국내 거래대금으로 연결되는지 확인",
       "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-04-17",
       "anomalyCount": 6,
-      "createdAt": "2026-04-19T01:14:02.639Z"
+      "createdAt": "2026-04-19T04:17:28.008Z"
     },
     {
       "date": "2026-04-16",
@@ -14,7 +14,7 @@
       "headline": "해외 선행 신호가 국내 ETF 거래로 이어지는지 확인",
       "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-04-16",
       "anomalyCount": 6,
-      "createdAt": "2026-04-19T01:13:12.735Z"
+      "createdAt": "2026-04-19T04:16:05.864Z"
     }
   ]
 }

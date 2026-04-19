@@ -11,6 +11,7 @@ import {
   getRecentEntries,
   saveNarrativeEntry,
 } from "../lib/narrative-memory";
+import { saveMarketPreviewImage } from "../lib/market/preview";
 import type { ReportsIndex, ReportMeta, MarketSnapshot, MarketSnapshotItem, MarketDataCollection } from "../lib/types";
 
 const REPORTS_DIR = path.join(process.cwd(), "public", "reports");
@@ -271,6 +272,17 @@ async function main() {
   index.lastUpdated = toKSTString(new Date());
   saveIndex(index);
   console.log(`📁 인덱스 업데이트 완료 (총 ${index.reports.length}건)`);
+  console.log();
+
+  // Step 6b: 링크 프리뷰 이미지 생성 (Telegram sendPhoto + OG card용)
+  console.log("━━━ Step 6b: 링크 프리뷰 PNG 생성 ━━━");
+  try {
+    const previewPath = await saveMarketPreviewImage(reportDate, headline, subline);
+    console.log(`🖼️  프리뷰 이미지: ${previewPath}`);
+  } catch (err) {
+    // 프리뷰 실패는 치명적 아님 — 기존 /api/og 폴백이 워크플로에 남아있다면 그걸로 처리
+    console.warn(`⚠️  프리뷰 이미지 생성 실패 (계속 진행):`, err);
+  }
   console.log();
 
   // Step 7: 내러티브 로그 저장 (JSON에서 직접 추출 — 2차 API 호출 불필요)

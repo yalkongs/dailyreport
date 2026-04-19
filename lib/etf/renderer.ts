@@ -29,14 +29,10 @@ export function escapeHtml(s: string): string {
 
 const e = escapeHtml
 
-// Brand logo. Filenames searched in priority order; first match wins.
-// Mime type is detected from magic bytes so an extension/content
-// mismatch (e.g. JPEG bytes saved with .png) still renders correctly.
-const IM_BANK_LOGO_CANDIDATES = [
-  path.join(process.cwd(), 'public', 'im-bank-logo.png'),
-  path.join(process.cwd(), 'public', 'im-bank-logo.jpg'),
-  path.join(process.cwd(), 'public', 'im-bank-signature-ko.jpg'),
-]
+// Logo loading is centralized in lib/preview/brand-logo.ts so the same
+// candidate list / mime detection serves both the HTML report cover and
+// the link-preview PNG.
+import { tryLoadBrandLogoDataUri } from '../preview/brand-logo'
 
 interface RenderHtmlOptions {
   publicBaseUrl?: string
@@ -61,32 +57,13 @@ const ETF_LABEL_OVERRIDES: Record<string, string> = {
   '251340.KS': 'KODEX 코스닥150선물인버스 (251340)',
 }
 
-function detectImageMime(buf: Buffer): string {
-  // PNG: 89 50 4E 47, JPEG: FF D8 FF, WebP: RIFF....WEBP
-  if (buf.length >= 4 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
-    return 'image/png'
-  }
-  if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) {
-    return 'image/jpeg'
-  }
-  if (buf.length >= 12 && buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP') {
-    return 'image/webp'
-  }
-  return 'image/jpeg' // safe default
-}
-
 function imBankLogoSrc(): string {
-  for (const candidate of IM_BANK_LOGO_CANDIDATES) {
-    try {
-      const image = fs.readFileSync(candidate)
-      const mime = detectImageMime(image)
-      return `data:${mime};base64,${image.toString('base64')}`
-    } catch {
-      // try next candidate
-    }
+  const src = tryLoadBrandLogoDataUri()
+  if (!src) {
+    console.warn('[renderer] iM 뱅크 로고 파일을 찾을 수 없습니다. 빈 src 반환.')
+    return ''
   }
-  console.warn('[renderer] iM 뱅크 로고 파일을 찾을 수 없습니다. 빈 src 반환.')
-  return ''
+  return src
 }
 
 function baseHtml(title: string, date: string, type: string, body: string, metadata?: HtmlMetadata): string {
