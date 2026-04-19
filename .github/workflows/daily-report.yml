@@ -190,8 +190,11 @@ jobs:
           echo "date=${REPORT_DATE}" >> $GITHUB_OUTPUT
           HEADLINE=$(node -e "const i=JSON.parse(require('fs').readFileSync('data/etf-reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');console.log(r?.headline||'오늘의 ETF 리포트')")
           ANOMALY_COUNT=$(node -e "const i=JSON.parse(require('fs').readFileSync('data/etf-reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');console.log(r?.anomalyCount||0)")
+          # Breakdown: "괴리율 2/거래량 1/매도 1" 형태. 0건은 빈 문자열.
+          ANOMALY_BREAKDOWN=$(node -e "const L={premiumDiscount:'괴리율',trackingError:'추적오차',volumeSpike:'거래량',consecutiveSell:'매도'};const i=JSON.parse(require('fs').readFileSync('data/etf-reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');const b=r?.anomalyBreakdown||{};const s=Object.entries(b).filter(([,c])=>c>0).map(([t,c])=>(L[t]||t)+' '+c).join('/');console.log(s)")
           echo "headline=${HEADLINE}" >> $GITHUB_OUTPUT
           echo "anomaly_count=${ANOMALY_COUNT}" >> $GITHUB_OUTPUT
+          echo "anomaly_breakdown=${ANOMALY_BREAKDOWN}" >> $GITHUB_OUTPUT
 
       - name: Read today's ETF headline (resend mode)
         id: read_etf_today
@@ -201,8 +204,10 @@ jobs:
           echo "date=${REPORT_DATE}" >> $GITHUB_OUTPUT
           HEADLINE=$(node -e "const i=JSON.parse(require('fs').readFileSync('data/etf-reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');console.log(r?.headline||'오늘의 ETF 리포트')")
           ANOMALY_COUNT=$(node -e "const i=JSON.parse(require('fs').readFileSync('data/etf-reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');console.log(r?.anomalyCount||0)")
+          ANOMALY_BREAKDOWN=$(node -e "const L={premiumDiscount:'괴리율',trackingError:'추적오차',volumeSpike:'거래량',consecutiveSell:'매도'};const i=JSON.parse(require('fs').readFileSync('data/etf-reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');const b=r?.anomalyBreakdown||{};const s=Object.entries(b).filter(([,c])=>c>0).map(([t,c])=>(L[t]||t)+' '+c).join('/');console.log(s)")
           echo "headline=${HEADLINE}" >> $GITHUB_OUTPUT
           echo "anomaly_count=${ANOMALY_COUNT}" >> $GITHUB_OUTPUT
+          echo "anomaly_breakdown=${ANOMALY_BREAKDOWN}" >> $GITHUB_OUTPUT
 
       - name: Check for changes
         id: changes
@@ -237,15 +242,20 @@ jobs:
           REPORT_DATE="${{ steps.etf.outputs.date || steps.read_etf_today.outputs.date }}"
           HEADLINE="${{ steps.etf.outputs.headline || steps.read_etf_today.outputs.headline }}"
           ANOMALY_COUNT="${{ steps.etf.outputs.anomaly_count || steps.read_etf_today.outputs.anomaly_count }}"
+          ANOMALY_BREAKDOWN="${{ steps.etf.outputs.anomaly_breakdown || steps.read_etf_today.outputs.anomaly_breakdown }}"
           REPORT_URL="https://dailyreport-eta.vercel.app/etf-reports/${REPORT_DATE}"
 
           # 날짜 포맷 (예: 4월 20일 월요일)
           FORMATTED_DATE=$(TZ=Asia/Seoul date +"%m월 %d일 %A" | sed 's/Monday/월요일/;s/Tuesday/화요일/;s/Wednesday/수요일/;s/Thursday/목요일/;s/Friday/금요일/')
 
-          # 이상 탐지 알림 라인 (0건이면 생략)
+          # 이상 탐지 알림 라인 (0건이면 생략, breakdown 있으면 분류 표기)
           ALERT_LINE=""
           if [ "${ANOMALY_COUNT}" -gt 0 ] 2>/dev/null; then
-            ALERT_LINE=$'\n이상 탐지: '"${ANOMALY_COUNT}"'건'
+            if [ -n "${ANOMALY_BREAKDOWN}" ]; then
+              ALERT_LINE=$'\n이상 탐지: '"${ANOMALY_COUNT}"'건 ('"${ANOMALY_BREAKDOWN}"')'
+            else
+              ALERT_LINE=$'\n이상 탐지: '"${ANOMALY_COUNT}"'건'
+            fi
           fi
 
           MESSAGE=$(printf '<b>iM AI ETF Report</b>\n\n<b>%s</b>%s\n\n%s\n\n<a href="%s">리포트 보기</a>' "$HEADLINE" "$ALERT_LINE" "$FORMATTED_DATE" "$REPORT_URL")

@@ -25,7 +25,7 @@ import {
   loadJson,
   saveJson,
 } from '../lib/etf/pipeline-utils'
-import type { CollectedData, ReportMeta, MacroContext } from '../lib/etf/types'
+import type { CollectedData, ReportMeta, MacroContext, AnomalyType } from '../lib/etf/types'
 
 const LENS_LOG_PATH = 'data/etf-lens-log.json'
 
@@ -136,12 +136,18 @@ async function main() {
   // Step 7: 인덱스 업데이트
   console.log('[7/8] 인덱스 갱신 중...')
   const reportUrl = `${publicBaseUrl.replace(/\/$/, '')}/etf-reports/${date}`
+  // 룰 종류별 카운트 집계 (Telegram 메시지에서 분리 표기용)
+  const breakdown: Partial<Record<AnomalyType, number>> = {}
+  for (const a of anomalies) {
+    breakdown[a.type] = (breakdown[a.type] ?? 0) + 1
+  }
   const meta: ReportMeta = {
     date,
     type: 'morning',
     headline: report.cover.headline,
     url: reportUrl,
     anomalyCount: anomalies.length,
+    anomalyBreakdown: breakdown,
     createdAt: new Date().toISOString(),
   }
   updateReportsIndex(meta)

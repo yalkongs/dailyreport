@@ -183,6 +183,9 @@ export interface ReportMeta {
   headline: string
   url: string
   anomalyCount: number
+  // 룰 종류별 카운트. 옛 인덱스 엔트리는 이 필드가 없을 수 있어 optional.
+  // 키 누락 = 0건. 값이 0인 키는 직렬화 시 생략 가능.
+  anomalyBreakdown?: Partial<Record<AnomalyType, number>>
   createdAt: string
 }
 
