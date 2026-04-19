@@ -132,11 +132,13 @@ jobs:
 
           MESSAGE=$(printf '<b>iM AI Market Report</b>\n\n<b>%s</b>\n\n%s\n\n<a href="%s">리포트 보기</a>' "$HEADLINE" "$FORMATTED_DATE" "$REPORT_URL")
 
+          # --form-string: value는 리터럴로 처리 (caption이 '<'로 시작하면
+          # -F는 "파일에서 읽기"로 오해해 exit 26 낸다. 이모지 제거로 노출됨)
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto" \
-            -F "chat_id=${TELEGRAM_CHAT_ID}" \
-            -F "photo=${OG_IMAGE_URL}" \
-            -F "caption=${MESSAGE}" \
-            -F "parse_mode=HTML"
+            --form-string "chat_id=${TELEGRAM_CHAT_ID}" \
+            --form-string "photo=${OG_IMAGE_URL}" \
+            --form-string "caption=${MESSAGE}" \
+            --form-string "parse_mode=HTML"
 
   etf:
     needs: market
@@ -246,7 +248,7 @@ jobs:
           OG_IMAGE_URL="https://dailyreport-eta.vercel.app/etf-reports/${REPORT_DATE}-preview.png"
 
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto" \
-            -F "chat_id=${TELEGRAM_CHAT_ID}" \
-            -F "photo=${OG_IMAGE_URL}" \
-            -F "caption=${MESSAGE}" \
-            -F "parse_mode=HTML"
+            --form-string "chat_id=${TELEGRAM_CHAT_ID}" \
+            --form-string "photo=${OG_IMAGE_URL}" \
+            --form-string "caption=${MESSAGE}" \
+            --form-string "parse_mode=HTML"
