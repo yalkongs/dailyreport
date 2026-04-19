@@ -4,6 +4,8 @@
 // workflow. Fully independent: ETF failure does not affect the already-
 // sent market report, and vice versa.
 
+import * as fs from 'fs'
+import * as path from 'path'
 import { collectAllEtfData } from '../lib/etf/etf-data'
 import { collectMacroContext } from '../lib/etf/market-context'
 import { collectNews } from '../lib/etf/news'
@@ -39,6 +41,31 @@ async function main() {
   }
   const date = override || new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
   console.log(`\n=== ETF Morning Pipeline: ${date}${override ? ' (override)' : ''} ===\n`)
+
+  // Step 0: 중복 실행 방지 가드 — 같은 날짜 ETF 리포트가 이미 있으면 종료
+  // (GH Actions 크론 지연 + 수동 트리거 겹침 같은 상황에서 두 번째 실행을
+  //  조용히 종료시켜 Telegram 재발송을 예방. 시장 스크립트의 Step 1a와 동일.)
+  {
+    const htmlPath = path.resolve(process.cwd(), 'public', 'etf-reports', `${date}.html`)
+    const indexPath = path.resolve(process.cwd(), 'data', 'etf-reports-index.json')
+    let todayEntry: { headline?: string; createdAt?: string } | undefined
+    if (fs.existsSync(indexPath)) {
+      const idx = JSON.parse(fs.readFileSync(indexPath, 'utf-8')) as { reports: { date: string; headline?: string; createdAt?: string }[] }
+      todayEntry = idx.reports.find(r => r.date === date)
+    }
+    if (fs.existsSync(htmlPath) && todayEntry) {
+      if (process.env.FORCE_REGENERATE === 'true') {
+        console.log(`⚠️ 오늘(${date}) ETF 리포트가 이미 존재하지만 FORCE_REGENERATE=true로 재생성합니다.`)
+      } else {
+        console.log(`✋ 오늘(${date}) ETF 리포트가 이미 존재합니다. 종료합니다.`)
+        console.log(`   기존 파일: ${htmlPath}`)
+        console.log(`   기존 헤드라인: "${todayEntry.headline ?? ''}"`)
+        console.log(`   기존 생성 시각: ${todayEntry.createdAt ?? ''}`)
+        console.log(`   강제 재생성이 필요하면 FORCE_REGENERATE=true 로 실행하세요.`)
+        process.exit(0)
+      }
+    }
+  }
 
   // Step 1: 데이터 수집 (병렬)
   console.log('[1/8] 데이터 수집 중...')
