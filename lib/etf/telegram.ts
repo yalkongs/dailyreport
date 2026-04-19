@@ -23,8 +23,8 @@ export async function sendReportUrl(
     return
   }
 
-  const alertLine = anomalyCount > 0 ? `\n⚠️ 이상 탐지: ${anomalyCount}건` : ''
-  const text = `🌅 ${date} ETF 리포트\n\n${headline}${alertLine}\n\n👉 ${url}`
+  const alertLine = anomalyCount > 0 ? `\n이상 탐지: ${anomalyCount}건` : ''
+  const text = `${date} ETF 리포트\n\n${headline}${alertLine}\n\n${url}`
 
   await sendMessage(botToken, chatId, text)
 }
@@ -36,7 +36,7 @@ export async function sendError(step: string, error: unknown): Promise<void> {
   if (!botToken || !chatId) return
 
   const message = error instanceof Error ? error.message : String(error)
-  const text = `🔴 [etf] ${step} 실패\n\n${message}`
+  const text = `[etf] ${step} 실패\n\n${message}`
 
   await sendMessage(botToken, chatId, text)
 }
