@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-04-22",
+      "type": "morning",
+      "headline": "원자재는 오르고 귀금속은 내렸습니다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-04-22",
+      "anomalyCount": 11,
+      "anomalyBreakdown": {
+        "premiumDiscount": 11
+      },
+      "createdAt": "2026-04-21T22:08:47.288Z"
+    },
+    {
       "date": "2026-04-21",
       "type": "morning",
       "headline": "해외 선행 신호가 국내 거래대금으로 이어지는지 확인",
