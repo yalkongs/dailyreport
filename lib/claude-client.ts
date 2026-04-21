@@ -170,13 +170,11 @@ function buildContextBlock(context: ContextData | null): string {
     }
   }
 
-  if (context.investorFlow) {
-    const f = context.investorFlow;
-    block += `\n### 코스피 투자자별 매매동향 (${f.date})\n`;
-    block += `- 외국인: 순매수 ${(f.foreign.net / 100000000).toFixed(0)}억원\n`;
-    block += `- 기관: 순매수 ${(f.institution.net / 100000000).toFixed(0)}억원\n`;
-    block += `- 개인: 순매수 ${(f.individual.net / 100000000).toFixed(0)}억원\n`;
-  }
+  // NOTE: KRX OpenAPI는 투자자별 매매동향 데이터를 제공하지 않음.
+  // lib/krx-investor-flow.ts 는 deprecated stub이며 항상 null 반환.
+  // 과거 이 블록은 매번 허위 수치로 채워져 Claude가 'compass.국내 투자자
+  // 수급 동향' 섹션에 존재하지 않는 근거로 서술을 만들던 원인이었음.
+  // 프롬프트에서 블록 제거 + compass 슬롯 재설계로 대응 (본 파일 하단).
 
   if (context.koreanBonds.length > 0) {
     block += `\n### 한국 국채 수익률\n`;
@@ -252,7 +250,7 @@ ${JSON.stringify(data, null, 2)}
   ],
   "compass": [
     {
-      "label": string,     // "자산군별 온도계", "예금·적금 vs 투자", "국내 투자자 수급 동향"
+      "label": string,     // "자산군별 온도계" / "예금·적금 vs 투자" / 세 번째 슬롯은 아래 compass 작성 규칙의 [A]/[B]/[C] 메뉴에서 선택한 label
       "title": string,     // 소제목
       "items": [            // 자산군별 온도계용
         {
@@ -303,7 +301,27 @@ ${JSON.stringify(data, null, 2)}
 3개 소주제를 반드시 포함:
 1. **자산군별 온도계**: items 배열에 주식/채권/금/달러/암호화폐 등 5~6개. gaugePercent는 VIX, 금리, 환율 데이터를 근거로 산출.
 2. **예금·적금 vs 투자**: paragraphs 배열 사용. 기준금리, CPI, 실질금리 비교.
-3. **국내 투자자 수급 동향**: paragraphs 배열 사용. 투자자 매매동향 데이터 분석.
+3. **[오늘의 맥락]** — 아래 3개 메뉴 중 오늘 데이터에 가장 부합하는 **1개**를 선택해 1개 compass 섹션으로 작성하십시오. 선택한 항목의 label 문자열을 그대로 사용합니다.
+
+   **[A] label="내 지갑과 이 뉴스"**
+   - 오늘의 금리·환율·물가 변화가 가계 재무(예적금 수익률, 대출이자, 환전비용, 장바구니 물가, 연금·국민연금)에 미치는 구체적 맥락을 paragraphs 2~3문단으로.
+   - 선택 기준: USD/KRW, 미 10Y, 한은 기준금리, CPI 등 거시 지표의 변동률이 유의미하거나 금리·환율 관련 정책 뉴스가 있을 때.
+   - soWhat 섹션은 '오늘 뉴스의 개별 산업·기업 영향'이므로 이 compass 섹션은 '가계 재무 맥락 (거시→개인 재무)' 로 역할 분리.
+
+   **[B] label="오늘의 글로벌 연결"**
+   - 미·유럽·아시아 시장의 연쇄 반응 구조와 그것이 한국 시장에 미치는 2차·3차 파급. paragraphs 2~3문단.
+   - 선택 기준: 해외(미국·중국·유럽)에서 발생한 사건이 글로벌 리플을 일으킨 날, bigStory에서 다 담지 못한 추가 연결고리가 있을 때.
+   - bigStory와 중복 금지. bigStory가 사건의 '무엇'을 다뤘다면 여기서는 '어떻게 퍼지나·어디로 갈 것인가' 만.
+
+   **[C] label="오늘의 업종 온도"**
+   - 한국 시장 섹터별 상대 강도 (반도체·자동차·에너지·금융·바이오 등). items 배열 사용 가능 (asset=섹터명, gaugePercent 0~100, gaugeType, body 짧은 설명) 또는 paragraphs 2~3문단.
+   - 선택 기준: 섹터 로테이션·특정 업종 급등락·업종별 수급 집중이 관측되는 날.
+
+   **선택 규칙 (위 3개 중 하나만)**:
+   - 오늘 제공된 데이터에서 **가장 두드러진 신호**가 있는 주제를 우선 선택.
+   - 어느 신호도 확실치 않으면 **[A]를 기본값**으로 선택 (거시 지표만 있어도 가계 맥락은 항상 쓸 수 있음).
+   - **제공된 실제 수치만 인용하십시오**. 외국인 순매수 금액·세대별 매매 비중 등 입력에 없는 수치는 절대 추측해 넣지 마십시오.
+   - 선택한 label을 compass 배열의 3번째 객체 label 필드에 그대로 사용.
 
 ### soWhat 작성 규칙
 - 최소 5~6개
