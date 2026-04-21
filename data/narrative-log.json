@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-04-22",
+      "narrativeAngle": "hidden_variable",
+      "headline": "코스피 홀로 2.7% 상승, 한국만 다른 이유",
+      "bigStoryTopic": "미국·유럽 주요 지수가 일제히 하락한 가운데 코스피는 6388포인트로 치솟았습니다. 표면적",
+      "walletTopics": [
+        "정유·석유화학 업체 실적 개선 신호",
+        "수출 대기업 환율 수혜 본격화",
+        "은행권 순이자마진 개선 기대감",
+        "지금 뜨거운 자산, 차가운 자산",
+        "실질수익률로 본 자산 배분"
+      ],
+      "metaphors": [],
+      "lookingAhead": "미국 주택 관련 지표 발표"
+    },
+    {
       "date": "2026-04-21",
       "narrativeAngle": "generation_wallet",
       "headline": "같은 장세, 다른 계산법",
