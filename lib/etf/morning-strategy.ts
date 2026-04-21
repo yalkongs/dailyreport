@@ -222,10 +222,10 @@ function buildEtfGroupStrategies(data: CollectedData, scores: StrategyScore[]): 
     group: '미국 대표지수 ETF',
     stance: risk >= 1 && volatility <= 1 ? '선호' : risk <= -1 ? '경계' : '관찰',
     tickers: ['SPY', 'VOO', 'VTI', 'QQQ'],
-    rationale: risk >= 1 ? 'SPY와 QQQ가 함께 오르면 대표지수 ETF가 장 초반 기준이 됩니다.' : '위험선호가 약하면 지수 ETF는 관찰 비중을 높입니다.',
-    actionGuide: risk >= 1 ? '갭 상승 뒤 거래대금이 동반될 때만 단계적으로 점검합니다.' : '지수 방향이 엇갈리면 추가 노출 확대를 보류합니다.',
-    confirmSignal: 'SPY와 QQQ가 함께 강하고 HYG가 약하지 않아야 합니다.',
-    avoid: '지수 갭 상승 직후 시장가 추격은 피합니다.',
+    rationale: risk >= 1 ? 'SPY와 QQQ가 나란히 오르는 날, 대표지수 ETF는 장 초반 시장이 기댈 기준점이 됩니다.' : '위험선호가 가라앉은 날에는 지수 ETF를 성급히 늘리기보다 흐름을 더 관찰합니다.',
+    actionGuide: risk >= 1 ? '갭 상승이 나온 뒤 거래대금이 따라붙는지를 확인하고 단계적으로 접근합니다.' : '지수 방향이 엇갈리고 있다면 새로운 진입은 미뤄두는 편이 안전합니다.',
+    confirmSignal: 'SPY·QQQ가 함께 강세이고, HYG(하이일드)가 빠지지 않는다면 신호가 탄탄합니다.',
+    avoid: '지수가 갭 상승한 직후 시장가로 들어가는 건 피하세요.',
     evidence: [ev('SPY', fmtPct(pct(quotes.get('SPY'))), '대형주 대표 ETF입니다.'), ev('QQQ', fmtPct(pct(quotes.get('QQQ'))), '성장주 대표 ETF입니다.')],
   })
 
@@ -233,10 +233,10 @@ function buildEtfGroupStrategies(data: CollectedData, scores: StrategyScore[]): 
     group: '반도체·AI ETF',
     stance: korea >= 2 || pct(quotes.get('SOXX')) !== null && (pct(quotes.get('SOXX')) ?? 0) >= 1 ? '선호' : volatility >= 2 ? '경계' : '관찰',
     tickers: ['SOXX', 'BOTZ', 'ARKK', '091160.KS', '364970.KS'],
-    rationale: '나스닥 강세는 성장 ETF에 우호적이지만 SOXX가 약하면 국내 반도체 ETF로 이어지는 힘은 제한됩니다.',
-    actionGuide: '개장 후 30분 거래대금이 동반될 때만 반도체·AI ETF를 검토합니다.',
-    confirmSignal: 'SOXX 강세, QQQ 강세, 국내 반도체 ETF 거래대금 증가가 함께 확인되어야 합니다.',
-    avoid: '미국 ETF 상승만 보고 국내 ETF를 장 시작 직후 추격하지 않습니다.',
+    rationale: '나스닥이 강해도 SOXX가 따라오지 않으면, 국내 반도체 ETF로 불씨가 옮겨가는 힘은 제한적입니다.',
+    actionGuide: '개장 후 30분의 거래대금이 함께 늘어나는지 확인한 뒤에 접근하는 게 합리적입니다.',
+    confirmSignal: 'SOXX와 QQQ가 모두 강하고, 국내 반도체 ETF 거래대금도 같이 커지는 조합이 가장 깨끗합니다.',
+    avoid: '미국 ETF가 올랐다는 이유만으로 국내 ETF를 장 시작 직후 따라잡는 건 위험합니다.',
     evidence: [ev('SOXX', fmtPct(pct(quotes.get('SOXX'))), '미국 반도체 ETF입니다.'), ev('QQQ', fmtPct(pct(quotes.get('QQQ'))), '미국 성장주 방향입니다.')],
   })
 
@@ -244,10 +244,10 @@ function buildEtfGroupStrategies(data: CollectedData, scores: StrategyScore[]): 
     group: '채권 ETF',
     stance: rates <= -1 ? '선호' : rates >= 1 ? '경계' : '중립',
     tickers: ['SHY', 'IEF', 'TLT', 'BND', '114820.KS', '148070.KS'],
-    rationale: rates >= 1 ? '금리 부담이 높으면 장기채 ETF의 가격 변동성이 커집니다.' : '금리 부담이 완화되면 채권 ETF의 방어 역할이 커집니다.',
-    actionGuide: rates >= 1 ? '금리 부담이 남아 있으면 장기채보다 단기채를 우선합니다.' : '미국 10년 금리가 내려갈 때만 장기채를 검토합니다.',
-    confirmSignal: '미국 10년 금리 하락과 TLT 상승이 함께 확인되어야 합니다.',
-    avoid: '금리 방향이 엇갈릴 때 장기채 ETF를 크게 늘리지 않습니다.',
+    rationale: rates >= 1 ? '금리 부담이 남아있는 국면에서는 장기채 ETF의 가격 변동폭이 의외로 크게 벌어집니다.' : '금리 압력이 풀리기 시작하면 채권 ETF가 포트폴리오의 방어막 역할을 다시 맡게 됩니다.',
+    actionGuide: rates >= 1 ? '금리 부담이 남아있는 동안엔 장기채보다 단기채 쪽에 무게를 두는 게 낫습니다.' : '미국 10년 금리가 실제로 내려오는 구간에 한해 장기채를 들여다봅니다.',
+    confirmSignal: '미국 10년 금리가 내려오는 가운데 TLT가 오르는 그림이 나와야 신호가 유효합니다.',
+    avoid: '금리 방향이 오락가락하는 시점에 장기채 ETF를 단번에 늘리는 건 위험합니다.',
     evidence: [ev('US 10Y', data.macro.us10y ? `${data.macro.us10y.toFixed(2)}%` : '미확보', '금리 압력입니다.'), ev('TLT', fmtPct(pct(quotes.get('TLT'))), '장기채 ETF 반응입니다.')],
   })
 
@@ -255,10 +255,10 @@ function buildEtfGroupStrategies(data: CollectedData, scores: StrategyScore[]): 
     group: '금·원자재 ETF',
     stance: (pct(quotes.get('GLD')) ?? 0) >= 1 || (pct(quotes.get('SLV')) ?? 0) >= 1 ? '선호' : '관찰',
     tickers: ['GLD', 'SLV', 'DBC', 'USO', '132030.KS', '261270.KS'],
-    rationale: '금과 원자재 ETF는 달러·실질금리·지정학 뉴스가 함께 움직일 때 전략 가치가 커집니다.',
-    actionGuide: '귀금속과 에너지 방향을 분리하고 같은 원자재로 묶어 추격하지 않습니다.',
-    confirmSignal: 'GLD·SLV 강세와 USO·XLE 방향이 같은 흐름인지 확인합니다.',
-    avoid: '금 ETF 강세를 원자재 ETF 전체 강세로 확대 해석하지 않습니다.',
+    rationale: '달러·실질금리·지정학 변수가 같은 방향으로 움직일 때, 금과 원자재 ETF의 전략적 의미가 커집니다.',
+    actionGuide: '귀금속과 에너지는 서로 다른 논리로 움직입니다. "원자재"라는 한 단어로 묶어 쫓지 마세요.',
+    confirmSignal: 'GLD·SLV와 USO·XLE가 같은 흐름을 만드는지 확인해야 그림이 선명해집니다.',
+    avoid: '금 ETF가 오른다고 원자재 전체가 오른 것으로 확대 해석하지 마세요.',
     evidence: [ev('GLD', fmtPct(pct(quotes.get('GLD'))), '금 ETF 반응입니다.'), ev('WTI', fmtNum(data.macro.wti, 1), '원유 가격입니다.')],
   })
 
@@ -266,10 +266,10 @@ function buildEtfGroupStrategies(data: CollectedData, scores: StrategyScore[]): 
     group: '환노출 해외 ETF',
     stance: dollar >= 2 ? '관찰' : '중립',
     tickers: ['360750.KS', '133690.KS', '441680.KS'],
-    rationale: dollar >= 2 ? '달러 강세는 보유분의 원화 수익률에는 우호적이지만 추가 편입 비용을 높입니다.' : '환율 부담이 제한적이면 기초지수 흐름을 더 우선해 볼 수 있습니다.',
-    actionGuide: dollar >= 2 ? '보유분 평가는 환율 효과를 반영하고 추가 편입 판단은 속도를 낮춥니다.' : '환율보다 기초지수 방향을 우선 확인합니다.',
-    confirmSignal: 'USD/KRW가 안정되고 기초지수가 강할 때 추가 편입 조건이 개선됩니다.',
-    avoid: '원화 약세 구간에서 환노출 ETF를 한 번에 크게 늘리지 않습니다.',
+    rationale: dollar >= 2 ? '달러가 강한 국면이라면 이미 들고 있는 몫에는 보탬이지만, 새로 담는 비용은 부담스러워집니다.' : '환율 부담이 크지 않다면 환율보다 지수 흐름을 먼저 놓고 봐도 괜찮습니다.',
+    actionGuide: dollar >= 2 ? '보유분 평가엔 환율 효과를 반영하되, 새로 담는 결정은 한 박자 늦추는 게 합리적입니다.' : '환율보다 기초지수 방향이 오늘의 우선순위입니다.',
+    confirmSignal: 'USD/KRW가 안정되고 기초지수까지 강해지는 조합이 만들어져야 편입 조건이 나아집니다.',
+    avoid: '원화 약세가 진행되는 구간에서 환노출 ETF를 한꺼번에 키우는 건 위험합니다.',
     evidence: [ev('USD/KRW', fmtNum(data.macro.usdKrw, 0), '환노출 ETF의 원화 성과 변수입니다.')],
   })
 
@@ -277,10 +277,10 @@ function buildEtfGroupStrategies(data: CollectedData, scores: StrategyScore[]): 
     group: '레버리지·인버스 ETF',
     stance: volatility >= 1 ? '경계' : '관찰',
     tickers: ['122630.KS', '252670.KS'],
-    rationale: '변동성이 높을수록 레버리지·인버스 ETF는 장중 가격 흔들림과 복리 효과 부담이 커집니다.',
-    actionGuide: '당일 단기 전술 목적이 아니면 일반 장기투자 점검 대상에서 제외합니다.',
-    confirmSignal: '기초지수 방향, NAV 괴리율, 손실 허용폭이 모두 맞을 때만 검토합니다.',
-    avoid: '방향이 불명확한 구간에서 레버리지와 인버스를 동시에 다루지 않습니다.',
+    rationale: '변동성이 커질수록 레버리지·인버스는 장중 흔들림과 복리 왜곡이라는 이중 부담을 짊어집니다.',
+    actionGuide: '하루 안에 닫을 전술 목적이 아니라면, 장기 투자 후보 군에서는 빼고 생각하는 편이 낫습니다.',
+    confirmSignal: '기초지수 방향·NAV 괴리·손실 허용폭 — 이 세 가지가 모두 맞아떨어질 때만 검토 대상이 됩니다.',
+    avoid: '시장 방향이 애매한 구간에서 레버리지와 인버스를 동시에 다루는 건 위험합니다.',
     evidence: [ev('VIX', fmtNum(data.macro.vix), '변동성 점검 지표입니다.')],
   })
 
@@ -297,7 +297,7 @@ function buildRiskAlerts(data: CollectedData, scores: StrategyScore[]): RiskAler
     alerts.push({
       level: volatility >= 2 ? 'caution' : 'watch',
       title: '변동성 점검',
-      body: '장 초반 추격보다 가격 안정과 거래량 확인이 우선입니다.',
+      body: '장 초반의 충동적 진입보다, 가격이 안정되고 거래량이 받쳐주는 시점을 기다리는 게 낫습니다.',
     })
   }
 
@@ -305,7 +305,7 @@ function buildRiskAlerts(data: CollectedData, scores: StrategyScore[]): RiskAler
     alerts.push({
       level: 'watch',
       title: '환율 부담',
-      body: '환노출 해외 ETF는 보유분과 추가 편입 판단의 환율 효과를 분리해서 봅니다.',
+      body: '환노출 해외 ETF는 이미 들고 있는 비중과 새로 담을 때의 환율 영향을 다른 문제로 봐야 합니다.',
     })
   }
 
@@ -313,7 +313,7 @@ function buildRiskAlerts(data: CollectedData, scores: StrategyScore[]): RiskAler
     alerts.push({
       level: 'caution',
       title: '국내 ETF 괴리율',
-      body: `괴리율 절대값 0.5% 이상인 국내 ETF가 ${premiumCount}개입니다. 지정가 주문과 NAV 점검을 우선합니다.`,
+      body: `괴리율이 0.5%를 넘어서는 국내 ETF가 오늘 ${premiumCount}개 관측됩니다. 체결 전에 NAV를 한 번 더 보고, 시장가보다 지정가를 쓰는 게 안전합니다.`,
     })
   }
 

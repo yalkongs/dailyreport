@@ -786,17 +786,17 @@ function renderStoryOpening(report: MorningReport, data: CollectedData): string 
     <div class="story-act">
       <div class="story-act-label">1막 · 선행 신호</div>
       <div class="story-act-value">${renderReportText(shortReportText(firstSentence(report.overnightBrief.narrative), 96), data.quotes)}</div>
-      <div class="story-act-note">${renderReportText(`${primaryName}의 거래대금이 이 신호를 확인해 주는지 살핍니다.`, data.quotes)}</div>
+      <div class="story-act-note">${renderReportText(`${primaryName}의 거래대금이 함께 따라와야 이 신호가 실제로 움직이는 흐름이 됩니다.`, data.quotes)}</div>
     </div>
     <div class="story-act">
       <div class="story-act-label">2막 · 환율 변수</div>
       <div class="story-act-value">${e(usdKrw)}</div>
-      <div class="story-act-note">${renderReportText(`${gateName}는 기초지수 성과와 환율 부담을 분리해서 봅니다.`, data.quotes)}</div>
+      <div class="story-act-note">${renderReportText(`${gateName}는 지수가 오른 폭과 환율이 깎아내는 폭을 나눠 보는 게 중요합니다.`, data.quotes)}</div>
     </div>
     <div class="story-act">
       <div class="story-act-label">3막 · 국내 검증</div>
       <div class="story-act-value">개장 30분 거래대금</div>
-      <div class="story-act-note">가격보다 거래대금과 괴리율을 먼저 확인합니다.</div>
+      <div class="story-act-note">당장의 가격 움직임보다 거래대금과 NAV 괴리가 말해주는 이야기를 먼저 읽어봅니다.</div>
     </div>
   </div>
 </div>`
@@ -923,10 +923,10 @@ function findSentenceEndBefore(text: string, maxLength: number): number {
 function renderStoryCharacters(data: CollectedData): string {
   const characters = selectStoryCharacters(data.quotes)
   const cards = [
-    characters.primary ? renderCharacterCard(characters.primary, '성장 신호 확인', '미국 성장주 흐름이 국내 시장의 실제 수요로 이어지는지 확인하는 상품입니다. 거래대금이 함께 늘어야 의미가 커집니다.') : '',
-    characters.gate && characters.gate !== characters.primary ? renderCharacterCard(characters.gate, '환율 영향 점검', '같은 해외 지수 흐름이라도 원화 환율에 따라 체감 수익률이 달라집니다. 기초지수와 환율을 분리해서 봅니다.') : '',
-    characters.alternative ? renderCharacterCard(characters.alternative, '대안 관찰', '성장주 흐름이 약하거나 금리가 내려갈 때 함께 살펴볼 수 있는 상품입니다. 주도 상품으로 단정하지 않습니다.') : '',
-    characters.warning ? renderCharacterCard(characters.warning, '과열 경계', '레버리지와 인버스는 가격 변동을 크게 만듭니다. 일반 장기투자 점검 대상이 아니라 장중 전술형 관찰 대상으로 분리합니다.') : '',
+    characters.primary ? renderCharacterCard(characters.primary, '성장 신호 확인', '미국 성장주 흐름이 국내 시장의 실제 수요로 전해지는지 보는 창구입니다. 거래대금이 함께 늘어나야 이 신호는 의미를 얻습니다.') : '',
+    characters.gate && characters.gate !== characters.primary ? renderCharacterCard(characters.gate, '환율 영향 점검', '같은 해외 지수 흐름이라도 원화 환율이 달라지면 체감 수익률은 다른 모습을 보입니다. 지수와 환율을 구분해서 봐야 합니다.') : '',
+    characters.alternative ? renderCharacterCard(characters.alternative, '대안 관찰', '성장주 흐름이 주춤하거나 금리가 내려가는 국면에서 함께 눈여겨볼 상품입니다. 오늘의 주인공으로 확정 짓긴 이릅니다.') : '',
+    characters.warning ? renderCharacterCard(characters.warning, '과열 경계', '레버리지와 인버스는 가격 변동폭이 큰 상품입니다. 장기 투자 후보로 다루기보다, 장중 전술 관찰 대상으로 따로 구분해 다룹니다.') : '',
   ].filter(Boolean)
 
   if (cards.length === 0) return ''
@@ -975,17 +975,17 @@ function renderStoryResolution(data: CollectedData): string {
     <div class="resolution-row">
       <div><span class="resolution-label stance-prefer">연결 확인</span></div>
       <div class="action-text">${renderReportText(success || '국내 성장 ETF', data.quotes)}</div>
-      <div class="action-text">해외 성장주 흐름과 국내 거래대금이 함께 나타나면 관찰 우선순위를 높입니다.</div>
+      <div class="action-text">해외 흐름이 국내 거래로 전해지면 지켜볼 만한 상품으로 올라갑니다.</div>
     </div>
     <div class="resolution-row">
       <div><span class="resolution-label stance-watch">확인 보류</span></div>
       <div class="action-text">${renderReportText(delay, data.quotes)}</div>
-      <div class="action-text">성장주 흐름이 국내 거래대금으로 이어지지 않으면 대안 관찰 대상으로 분류합니다.</div>
+      <div class="action-text">해외 신호가 국내까지 닿지 않는다면 오늘은 대안에 더 주목합니다.</div>
     </div>
     <div class="resolution-row">
       <div><span class="resolution-label stance-caution">과열 경계</span></div>
       <div class="action-text">${renderReportText(overheat, data.quotes)}</div>
-      <div class="action-text">괴리율 확대, 얇은 호가, 환율 재상승이 겹치면 일반 검토 대상에서 제외합니다.</div>
+      <div class="action-text">괴리 확대·얇은 호가·환율 재상승이 겹친다면 한발 물러서는 게 맞습니다.</div>
     </div>
   </div>
 </div>`
@@ -1003,15 +1003,15 @@ function uniqueQuotes(quotes: Array<EtfQuote | undefined>): EtfQuote[] {
 }
 
 function checklistActionText(index: number): string {
-  if (index === 0) return '거래대금이 함께 늘어날 때만 관찰 우선순위를 높입니다.'
-  if (index === 1) return '환율과 금리가 불리하면 추가 편입 판단을 서두르지 않습니다.'
-  return '괴리율이 커지면 시장가보다 지정가를 우선합니다.'
+  if (index === 0) return '해외 흐름을 국내 거래대금이 받아내는지 — 거기서 오늘의 실체를 읽습니다.'
+  if (index === 1) return '환율과 금리가 모두 불리한 날엔, 결정을 서두르기보다 한 박자 늦추는 편이 낫습니다.'
+  return 'NAV와 벌어진 ETF는 시장가보다 지정가로 접근하는 게 안전합니다.'
 }
 
 function checklistAvoidText(index: number): string {
-  if (index === 0) return '해외 ETF 강세만 보고 국내 ETF를 장 시작 직후 추격하지 않습니다.'
-  if (index === 1) return 'USD/KRW 부담 구간에서 환노출 ETF를 한 번에 늘리지 않습니다.'
-  return '레버리지·인버스는 일반 장기투자 점검 대상에서 제외합니다.'
+  if (index === 0) return '미국 ETF가 강하다고 국내 ETF를 장 시작 직후 따라잡는 건 위험합니다.'
+  if (index === 1) return '환율 부담이 큰 구간에서는, 환노출 해외 ETF를 단번에 늘리지 않는 게 좋습니다.'
+  return '레버리지·인버스는 장기 보유 후보가 아닙니다. 오늘 하루 안에 끝낼 전술형으로만 다룹니다.'
 }
 
 function findQuote(quotes: EtfQuote[], ticker: string): EtfQuote | undefined {
@@ -1029,11 +1029,11 @@ function quoteLabel(q: EtfQuote | undefined, fallback: string): string {
 
 function renderGlobalKrMatching(data: CollectedData): string {
   const pairs = [
-    { theme: '미국 S&P 500', global: ['SPY', 'VOO', 'IVV'], kr: ['360750.KS', '379800.KS'], check: '환율과 S&P 500 선물 방향을 함께 확인합니다.' },
-    { theme: '미국 나스닥 100', global: ['QQQ'], kr: ['133690.KS', '379810.KS'], check: '성장주 강세가 원화 환율 부담을 상쇄하는지 확인합니다.' },
-    { theme: '반도체', global: ['SOXX', 'SMH'], kr: ['091160.KS', '396500.KS', '381180.KS'], check: '미국 반도체 흐름과 국내 거래대금 증가를 함께 확인합니다.' },
-    { theme: '장기 미국채', global: ['TLT', 'IEF'], kr: ['453850.KS', '476550.KS'], check: '미국 10년 금리와 TLT 방향이 일치하는지 확인합니다.' },
-    { theme: '배당성장', global: ['SCHD', 'VIG'], kr: ['458730.KS', '429000.KS'], check: '방어 수요와 환율 수준을 분리해서 판단합니다.' },
+    { theme: '미국 S&P 500', global: ['SPY', 'VOO', 'IVV'], kr: ['360750.KS', '379800.KS'], check: '환율 방향과 S&P 500 선물이 같은 편을 들어주는지가 오늘의 관전 포인트입니다.' },
+    { theme: '미국 나스닥 100', global: ['QQQ'], kr: ['133690.KS', '379810.KS'], check: '성장주 강세가 원화 약세의 부담을 이겨낼 만큼인지 가늠해 봅니다.' },
+    { theme: '반도체', global: ['SOXX', 'SMH'], kr: ['091160.KS', '396500.KS', '381180.KS'], check: '미국 반도체 흐름이 국내 거래대금 증가로 실제 이어지는지가 열쇠입니다.' },
+    { theme: '장기 미국채', global: ['TLT', 'IEF'], kr: ['453850.KS', '476550.KS'], check: '미국 10년 금리와 TLT가 같은 방향을 가리키는지 봐야 판단이 깔끔합니다.' },
+    { theme: '배당성장', global: ['SCHD', 'VIG'], kr: ['458730.KS', '429000.KS'], check: '방어 수요가 먼저인지, 환율이 먼저인지 — 두 요인을 따로 떼어서 봅니다.' },
   ]
 
   const rows = pairs.map(pair => {
@@ -1078,17 +1078,17 @@ function renderGlobalKoreaBridge(data: CollectedData): string {
     {
       step: '미국 기술주 신호',
       signal: `SOXX ${fmtQuoteMove(soxx)} · QQQ ${fmtQuoteMove(qqq)}`,
-      target: `${quoteLabel(semiconductor, '국내 반도체 ETF')}와 ${quoteLabel(bio, '국내 성장 테마 ETF')}는 장 초반 거래대금 증가가 확인 포인트입니다.`,
+      target: `${quoteLabel(semiconductor, '국내 반도체 ETF')}와 ${quoteLabel(bio, '국내 성장 테마 ETF')}의 장 초반 거래대금이 늘어나야 이 신호에 무게가 실립니다.`,
     },
     {
       step: '환율 영향',
       signal: `USD/KRW ${formatNumber(data.macro.usdKrw, 0)}`,
-      target: `${quoteLabel(sp500Kr, '국내 상장 해외 ETF')}는 보유분 환율 효과와 추가 편입 비용을 분리해서 봅니다.`,
+      target: `${quoteLabel(sp500Kr, '국내 상장 해외 ETF')}는 이미 들고 있는 비중과 새로 담는 비용을 다른 방식으로 따져봐야 합니다.`,
     },
     {
       step: '변동성 실행 리스크',
       signal: `TLT ${fmtQuoteMove(tlt)} · VIX ${formatNumber(data.macro.vix, 2)}`,
-      target: `${quoteLabel(leverage, '레버리지 ETF')}와 ${quoteLabel(inverse, '인버스 ETF')}는 기초지수 방향과 NAV를 먼저 확인합니다.`,
+      target: `${quoteLabel(leverage, '레버리지 ETF')}와 ${quoteLabel(inverse, '인버스 ETF')}는 진입 전 기초지수 방향과 NAV를 꼭 한 번 더 짚어봅니다.`,
     },
   ]
 
@@ -1156,12 +1156,12 @@ function heatClass(value: number): string {
 
 function renderIssueEtfs(data: CollectedData): string {
   const issues = [
-    { title: '반도체·AI', reason: '미국 반도체 흐름이 국내 IT ETF 거래대금으로 이어지는지 확인합니다.', tickers: ['SOXX', 'SMH', '091160.KS', '396500.KS'] },
-    { title: '배당·인컴', reason: '변동성 확대 구간에서 방어 수요가 커지는지 확인합니다.', tickers: ['SCHD', 'VIG', '458730.KS'] },
-    { title: '장기채·금리', reason: '미국 10년 금리 변화가 장기채 ETF 가격에 반영되는지 봅니다.', tickers: ['TLT', 'IEF', '453850.KS'] },
-    { title: '환노출 미국주식', reason: '기초지수 성과와 USD/KRW 효과를 분리해 판단합니다.', tickers: ['360750.KS', '133690.KS', '379810.KS'] },
-    { title: '레버리지·인버스', reason: '장 초반 NAV·괴리율 확인 전 추격 진입을 피합니다.', tickers: ['122630.KS', '252670.KS', '233740.KS'] },
-    { title: '금·원자재', reason: '지정학 뉴스와 달러 방향이 원자재 ETF에 같은 신호를 주는지 봅니다.', tickers: ['GLD', 'SLV', 'USO', '132030.KS'] },
+    { title: '반도체·AI', reason: '미국 반도체의 열기가 국내 IT ETF 거래대금까지 옮겨 붙는지가 오늘의 관전 포인트입니다.', tickers: ['SOXX', 'SMH', '091160.KS', '396500.KS'] },
+    { title: '배당·인컴', reason: '변동성이 커지는 국면에서 방어 자산으로 자금이 이동하는 흐름이 보이는지 눈여겨봅니다.', tickers: ['SCHD', 'VIG', '458730.KS'] },
+    { title: '장기채·금리', reason: '미국 10년 금리의 움직임이 장기채 ETF 가격에 어떻게 새겨지는지 읽어냅니다.', tickers: ['TLT', 'IEF', '453850.KS'] },
+    { title: '환노출 미국주식', reason: '지수가 오른 폭과 환율이 깎아낸 폭을 따로 떼어 계산해 봅니다.', tickers: ['360750.KS', '133690.KS', '379810.KS'] },
+    { title: '레버리지·인버스', reason: 'NAV와 괴리 상태를 먼저 확인한 뒤에야 장 초반 진입을 고민할 수 있는 상품군입니다.', tickers: ['122630.KS', '252670.KS', '233740.KS'] },
+    { title: '금·원자재', reason: '지정학 변수와 달러 방향이 원자재 ETF에 같은 신호를 보내는지 맞춰 봅니다.', tickers: ['GLD', 'SLV', 'USO', '132030.KS'] },
   ]
 
   const cards = issues.map(issue => {
@@ -1254,7 +1254,7 @@ function renderTacticalEtfWarning(quotes: EtfQuote[]): string {
           ${renderMetricItem('괴리율', premium)}
           ${renderMetricItem('지수대비', gap)}
         </div>
-        <div class="compact-note">기초지수 방향과 NAV 괴리율이 맞지 않으면 등락률이 커도 추격하지 않습니다.</div>
+        <div class="compact-note">지수는 오르는데 NAV 괴리가 벌어진다면, 수익률이 커 보여도 들어가기엔 이릅니다.</div>
       </div>`
     }).join('')}
   </div>
@@ -1279,16 +1279,30 @@ function renderDomesticActionBoard(quotes: EtfQuote[]): string {
 
   if (withPremium.length === 0 && withTradingValue.length === 0 && withIndexGap.length === 0) return ''
 
+  // 반복 문구 방지 — 같은 자리에 매일 같은 문장이 박히지 않도록
+  // 인덱스에 따라 2~3가지 변주를 돌려가며 사용합니다.
+  const liquidityNotes = [
+    '거래가 활발해 체결은 수월하지만, 장 초반 급등락은 따로 챙겨봅니다.',
+    '자금이 몰리는 자리입니다. 방향보다 변동폭의 크기를 먼저 가늠합니다.',
+    '수급이 두텁습니다. 지표나 거시 변화에 평소보다 민감하게 반응할 수 있습니다.',
+    '유동성은 풍부합니다. 이 자금이 어디로 쏠리는지 함께 살필 타이밍입니다.',
+  ]
+  const premiumNotes = [
+    '체결가와 NAV가 벌어져 있어, 오늘은 지정가 주문이 시장가보다 안전합니다.',
+    'NAV 대비 가격이 기울어져 있습니다. 좁혀지는 방향으로 정상화될 때까지 기다려볼 만합니다.',
+    '괴리가 눈에 띄는 상품입니다. 체결 후 손실 방지 차원에서 NAV를 한 번 더 확인하세요.',
+  ]
+
   return `<div class="section">
   <div class="section-title">Domestic ETF Action Board</div>
   <div class="action-board">
     <div class="action-panel">
       <div class="action-panel-title">유동성 집중</div>
-      ${withTradingValue.map(q => renderCompactEtfRow(q, '거래대금 상위 상품입니다. 체결 여건은 양호하지만 장 초반 가격 변동을 먼저 확인합니다.', q.tradingValue ?? 0, '거래대금(원)', compactKrwAmount(q.tradingValue ?? 0), 'liquidity')).join('')}
+      ${withTradingValue.map((q, i) => renderCompactEtfRow(q, liquidityNotes[i % liquidityNotes.length], q.tradingValue ?? 0, '거래대금(원)', compactKrwAmount(q.tradingValue ?? 0), 'liquidity')).join('')}
     </div>
     <div class="action-panel">
       <div class="action-panel-title">가격 괴리</div>
-      ${withPremium.map(q => renderCompactEtfRow(q, 'NAV와 체결가 간격을 먼저 점검합니다.', q.premiumDiscount ?? 0, '괴리율', `${(q.premiumDiscount ?? 0) > 0 ? '+' : ''}${(q.premiumDiscount ?? 0).toFixed(2)}%`, 'premium')).join('')}
+      ${withPremium.map((q, i) => renderCompactEtfRow(q, premiumNotes[i % premiumNotes.length], q.premiumDiscount ?? 0, '괴리율', `${(q.premiumDiscount ?? 0) > 0 ? '+' : ''}${(q.premiumDiscount ?? 0).toFixed(2)}%`, 'premium')).join('')}
     </div>
     <div class="action-panel">
       <div class="action-panel-title">기초지수 대비</div>
