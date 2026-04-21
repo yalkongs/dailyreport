@@ -97,6 +97,16 @@ async function main() {
   const anomalies = detectAnomalies(quotes, flows, investorFlows)
   console.log(`  → ${anomalies.length}건 탐지`)
 
+  // Step 4a: 최근 헤드라인 로드 (반복 방지용)
+  const etfIndex = loadJson<{ reports?: { date: string; headline?: string }[] }>(
+    'data/etf-reports-index.json',
+    { reports: [] },
+  )
+  const recentHeadlines = (etfIndex.reports ?? [])
+    .filter(r => r.date !== date && r.headline)
+    .slice(0, 7)
+    .map(r => r.headline as string)
+
   const data: CollectedData = {
     reportType: 'morning',
     date,
@@ -106,6 +116,7 @@ async function main() {
     macro: macro.status === 'fulfilled' ? macro.value : {} as MacroContext,
     news: news.status === 'fulfilled' ? news.value : [],
     analysisLens,
+    recentHeadlines,
   }
 
   // Step 5: Claude 분석 (1회 재시도)

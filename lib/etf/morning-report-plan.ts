@@ -48,6 +48,18 @@ export function buildMorningNarrativePlan(
   const preferred = strategy.executiveSummary.preferredGroups.slice(0, 2).join(' · ') || '대표 ETF군'
   const centerTopic = `${strategy.regime.displayName}: ${preferred} 확인`
 
+  // Today Watch 1 지시문 회전 — 매일 같은 "해외 → 국내 거래대금" 프레임
+  // 대신 요일마다 다른 관점(외국인 수급 / 섹터 순환 / 거래량 급증 등)을 섞어 다양성 확보.
+  const dayOfWeek = new Date(`${data.date}T00:00:00+09:00`).getDay() // 0=Sun..6=Sat
+  const domesticOpenInstructions = [
+    '해외 선행 지수 대비 국내 반도체 ETF의 장 초반 거래대금이 얼마나 따라오는지 씁니다.',
+    '외국인 수급과 국내 주요 ETF 거래 흐름이 어떻게 엇갈리거나 일치하는지 씁니다.',
+    '섹터별로 장 초반 자금이 어디로 먼저 몰리는지, 선행 섹터를 한 가지 짚어서 씁니다.',
+    '야간 해외 움직임이 국내 개장 가격에 이미 반영됐는지, 갭 크기와 후속 거래량을 함께 씁니다.',
+    '해외 선행과 다른 시그널을 내는 국내 ETF가 있다면 그 이유를 한 가지 근거로 씁니다.',
+  ]
+  const domesticOpenInstruction = domesticOpenInstructions[dayOfWeek % domesticOpenInstructions.length]
+
   return {
     centerTopic,
     coverFacts: [
@@ -78,7 +90,7 @@ export function buildMorningNarrativePlan(
         title: '국내 개장 확인',
         role: 'domestic-open',
         facts: [`SOXX ${fmtMove(soxx)}`, krName(semiconductor, '국내 반도체 ETF'), '개장 후 30분 거래대금'],
-        instruction: '해외 선행 신호가 국내 거래대금으로 이어지는지 씁니다.',
+        instruction: domesticOpenInstruction,
       },
       {
         title: '환율/금리 확인',

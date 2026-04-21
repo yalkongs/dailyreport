@@ -93,6 +93,9 @@ export interface CollectedData {
   macro: MacroContext
   news: NewsItem[]
   analysisLens: string
+  // 최근 7일 헤드라인. 프롬프트에 주입하여 Claude가 동일·유사 문장 반복을 피하게 함.
+  // optional — 비어있거나 undefined면 프롬프트에서 해당 블록 생략.
+  recentHeadlines?: string[]
 }
 
 export type StrategyStance = '선호' | '관찰' | '중립' | '경계'
