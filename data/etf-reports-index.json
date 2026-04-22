@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-04-23",
+      "type": "morning",
+      "headline": "반도체가 앞서고 환율이 속도를 제한합니다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-04-23",
+      "anomalyCount": 7,
+      "anomalyBreakdown": {
+        "premiumDiscount": 7
+      },
+      "createdAt": "2026-04-22T22:12:55.495Z"
+    },
+    {
       "date": "2026-04-22",
       "type": "morning",
       "headline": "원자재는 오르고 귀금속은 내렸습니다",
