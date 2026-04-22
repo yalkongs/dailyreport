@@ -175,6 +175,42 @@ export interface MorningReport {
   }
   todayWatch: { items: { title: string; body: string }[] }
   closingLine: string
+  // Tier 2 — 본문 내러티브를 Claude가 생성하는 선택적 필드.
+  // 모든 필드 optional: Claude가 누락/형식 오류일 경우 renderer 가 기존
+  // Tier 1 하드코딩 문구로 자동 fallback. 최악 시나리오도 Tier 1 수준 유지.
+  narrativeNotes?: {
+    // Story Spine — 오늘의 서사 3막
+    storySpine?: {
+      act1?: string  // 오늘의 주인공 ETF와 왜 주목받는가
+      act2?: string  // 주인공이 마주한 제약·변수
+      act3?: string  // 독자가 장 초반 무엇을 볼지
+    }
+    // Characters — 4개 ETF 페르소나, 왜 오늘 등장하는가
+    characters?: {
+      primary?: string
+      gate?: string
+      alternative?: string
+      warning?: string
+    }
+    // Resolutions — 시나리오별 결말
+    resolutions?: {
+      connect?: string
+      delay?: string
+      overheat?: string
+    }
+    // Checklist — 오늘 특별히 지킬/피할 것
+    checklist?: {
+      actions?: string[]
+      avoids?: string[]
+    }
+    // ETF군별 전략 지도 — 7개 그룹 prose (morning-strategy.ts는 데이터만 제공)
+    strategyProse?: Array<{
+      group: string
+      rationale?: string
+      actionGuide?: string
+      avoid?: string
+    }>
+  }
 }
 
 export type ReportContent = MorningReport

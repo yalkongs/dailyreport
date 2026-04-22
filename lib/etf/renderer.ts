@@ -591,24 +591,36 @@ function displayStance(stance: string): string {
   return stance === '선호' ? '확인 우선' : stance
 }
 
-function renderStrategyMap(strategy: MorningStrategyInput, quotes: EtfQuote[]): string {
+function renderStrategyMap(strategy: MorningStrategyInput, quotes: EtfQuote[], report?: MorningReport): string {
+  // Tier 2: Claude strategyProse 가 있으면 group 이름으로 매칭해 prose override
+  const proseByGroup = new Map<string, { rationale?: string; actionGuide?: string; avoid?: string }>()
+  for (const p of report?.narrativeNotes?.strategyProse ?? []) {
+    proseByGroup.set(p.group, { rationale: p.rationale, actionGuide: p.actionGuide, avoid: p.avoid })
+  }
+
   return `<div class="section">
   <div class="section-title">ETF군별 전략 지도</div>
   <div class="strategy-map">
-  ${strategy.etfGroupStrategies.map(item => `
+  ${strategy.etfGroupStrategies.map(item => {
+    const prose = proseByGroup.get(item.group)
+    const rationale = prose?.rationale?.trim() || publicText(item.rationale)
+    const actionGuide = prose?.actionGuide?.trim() || publicText(item.actionGuide)
+    const avoid = prose?.avoid?.trim() || publicText(item.avoid)
+    return `
     <div class="strategy-item">
       <div class="strategy-head">
         <strong>${e(item.group)}</strong>
         <span class="stance ${stanceClass(item.stance)}">${e(displayStance(item.stance))}</span>
       </div>
       <div class="tickers">${item.tickers.map(ticker => renderStrategyTicker(ticker, quotes)).join(' · ')}</div>
-      <div class="watch-body">${renderReportText(publicText(item.rationale), quotes)}</div>
+      <div class="watch-body">${renderReportText(rationale, quotes)}</div>
       <div class="action-grid">
-        <div class="action-box"><div class="action-label">점검 기준</div><div class="action-text">${renderReportText(publicText(item.actionGuide), quotes)}</div></div>
+        <div class="action-box"><div class="action-label">점검 기준</div><div class="action-text">${renderReportText(actionGuide, quotes)}</div></div>
         <div class="action-box"><div class="action-label">확인</div><div class="action-text">${renderReportText(publicText(item.confirmSignal), quotes)}</div></div>
-        <div class="action-box"><div class="action-label">피할 점</div><div class="action-text">${renderReportText(publicText(item.avoid), quotes)}</div></div>
+        <div class="action-box"><div class="action-label">피할 점</div><div class="action-text">${renderReportText(avoid, quotes)}</div></div>
       </div>
-    </div>`).join('')}
+    </div>`
+  }).join('')}
   </div>
 </div>`
 }
@@ -750,17 +762,23 @@ function renderTodayChecklist(report: MorningReport, quotes: EtfQuote[]): string
     { scope: '주문 리스크', condition: '조건', action: '행동', avoid: '피할 점' },
   ]
 
+  // Tier 2: Claude narrativeNotes 우선, 없으면 Tier 1 하드코딩 fallback
+  const claudeActions = report.narrativeNotes?.checklist?.actions ?? []
+  const claudeAvoids = report.narrativeNotes?.checklist?.avoids ?? []
+
   return `<div class="section">
   <div class="section-title">오늘의 실행 체크리스트</div>
   <div class="watch-grid">
   ${report.todayWatch.items.slice(0, 3).map((item, index) => {
     const label = labels[index] ?? labels[2]
+    const actionText = claudeActions[index]?.trim() || checklistActionText(index)
+    const avoidText = claudeAvoids[index]?.trim() || checklistAvoidText(index)
     return `<div class="watch-item">
     <div class="watch-title">${e(label.scope)} · ${renderReportText(item.title, quotes)}</div>
     <div class="action-grid">
       <div class="action-box action-box-primary"><div class="action-label">${e(label.condition)}</div><div class="action-text">${renderReportText(item.body, quotes)}</div></div>
-      <div class="action-box"><div class="action-label">${e(label.action)}</div><div class="action-text">${e(checklistActionText(index))}</div></div>
-      <div class="action-box"><div class="action-label">${e(label.avoid)}</div><div class="action-text">${e(checklistAvoidText(index))}</div></div>
+      <div class="action-box"><div class="action-label">${e(label.action)}</div><div class="action-text">${renderReportText(actionText, quotes)}</div></div>
+      <div class="action-box"><div class="action-label">${e(label.avoid)}</div><div class="action-text">${renderReportText(avoidText, quotes)}</div></div>
     </div>
   </div>`
   }).join('')}
@@ -778,6 +796,12 @@ function renderStoryOpening(report: MorningReport, data: CollectedData): string 
     ? `USD/KRW ${formatNumber(data.macro.usdKrw, 0)}`
     : '환율'
 
+  // Tier 2: Claude storySpine 우선, 없으면 Tier 1 하드코딩 fallback
+  const spine = report.narrativeNotes?.storySpine
+  const act1Note = spine?.act1?.trim() || `${primaryName}의 거래대금이 함께 따라와야 이 신호가 실제로 움직이는 흐름이 됩니다.`
+  const act2Note = spine?.act2?.trim() || `${gateName}는 지수가 오른 폭과 환율이 깎아내는 폭을 나눠 보는 게 중요합니다.`
+  const act3Note = spine?.act3?.trim() || '당장의 가격 움직임보다 거래대금과 NAV 괴리가 말해주는 이야기를 먼저 읽어봅니다.'
+
   return `<div class="story-card">
   <div class="hero-kicker">Story of the Day</div>
   <div class="story-title">오늘의 초점은 ${renderReportText(report.cover.headline, data.quotes)}</div>
@@ -786,17 +810,17 @@ function renderStoryOpening(report: MorningReport, data: CollectedData): string 
     <div class="story-act">
       <div class="story-act-label">1막 · 선행 신호</div>
       <div class="story-act-value">${renderReportText(shortReportText(firstSentence(report.overnightBrief.narrative), 96), data.quotes)}</div>
-      <div class="story-act-note">${renderReportText(`${primaryName}의 거래대금이 함께 따라와야 이 신호가 실제로 움직이는 흐름이 됩니다.`, data.quotes)}</div>
+      <div class="story-act-note">${renderReportText(act1Note, data.quotes)}</div>
     </div>
     <div class="story-act">
       <div class="story-act-label">2막 · 환율 변수</div>
       <div class="story-act-value">${e(usdKrw)}</div>
-      <div class="story-act-note">${renderReportText(`${gateName}는 지수가 오른 폭과 환율이 깎아내는 폭을 나눠 보는 게 중요합니다.`, data.quotes)}</div>
+      <div class="story-act-note">${renderReportText(act2Note, data.quotes)}</div>
     </div>
     <div class="story-act">
       <div class="story-act-label">3막 · 국내 검증</div>
       <div class="story-act-value">개장 30분 거래대금</div>
-      <div class="story-act-note">당장의 가격 움직임보다 거래대금과 NAV 괴리가 말해주는 이야기를 먼저 읽어봅니다.</div>
+      <div class="story-act-note">${renderReportText(act3Note, data.quotes)}</div>
     </div>
   </div>
 </div>`
@@ -920,13 +944,19 @@ function findSentenceEndBefore(text: string, maxLength: number): number {
   return found
 }
 
-function renderStoryCharacters(data: CollectedData): string {
+function renderStoryCharacters(report: MorningReport, data: CollectedData): string {
   const characters = selectStoryCharacters(data.quotes)
+  // Tier 2: Claude characters 우선, 없으면 Tier 1 하드코딩 fallback
+  const c = report.narrativeNotes?.characters
+  const primaryNote = c?.primary?.trim() || '미국 성장주 흐름이 국내 시장의 실제 수요로 전해지는지 보는 창구입니다. 거래대금이 함께 늘어나야 이 신호는 의미를 얻습니다.'
+  const gateNote = c?.gate?.trim() || '같은 해외 지수 흐름이라도 원화 환율이 달라지면 체감 수익률은 다른 모습을 보입니다. 지수와 환율을 구분해서 봐야 합니다.'
+  const alternativeNote = c?.alternative?.trim() || '성장주 흐름이 주춤하거나 금리가 내려가는 국면에서 함께 눈여겨볼 상품입니다. 오늘의 주인공으로 확정 짓긴 이릅니다.'
+  const warningNote = c?.warning?.trim() || '레버리지와 인버스는 가격 변동폭이 큰 상품입니다. 장기 투자 후보로 다루기보다, 장중 전술 관찰 대상으로 따로 구분해 다룹니다.'
   const cards = [
-    characters.primary ? renderCharacterCard(characters.primary, '성장 신호 확인', '미국 성장주 흐름이 국내 시장의 실제 수요로 전해지는지 보는 창구입니다. 거래대금이 함께 늘어나야 이 신호는 의미를 얻습니다.') : '',
-    characters.gate && characters.gate !== characters.primary ? renderCharacterCard(characters.gate, '환율 영향 점검', '같은 해외 지수 흐름이라도 원화 환율이 달라지면 체감 수익률은 다른 모습을 보입니다. 지수와 환율을 구분해서 봐야 합니다.') : '',
-    characters.alternative ? renderCharacterCard(characters.alternative, '대안 관찰', '성장주 흐름이 주춤하거나 금리가 내려가는 국면에서 함께 눈여겨볼 상품입니다. 오늘의 주인공으로 확정 짓긴 이릅니다.') : '',
-    characters.warning ? renderCharacterCard(characters.warning, '과열 경계', '레버리지와 인버스는 가격 변동폭이 큰 상품입니다. 장기 투자 후보로 다루기보다, 장중 전술 관찰 대상으로 따로 구분해 다룹니다.') : '',
+    characters.primary ? renderCharacterCard(characters.primary, '성장 신호 확인', primaryNote) : '',
+    characters.gate && characters.gate !== characters.primary ? renderCharacterCard(characters.gate, '환율 영향 점검', gateNote) : '',
+    characters.alternative ? renderCharacterCard(characters.alternative, '대안 관찰', alternativeNote) : '',
+    characters.warning ? renderCharacterCard(characters.warning, '과열 경계', warningNote) : '',
   ].filter(Boolean)
 
   if (cards.length === 0) return ''
@@ -963,11 +993,17 @@ function renderCharacterCard(q: EtfQuote, role: string, note: string): string {
 </div>`
 }
 
-function renderStoryResolution(data: CollectedData): string {
+function renderStoryResolution(report: MorningReport, data: CollectedData): string {
   const characters = selectStoryCharacters(data.quotes)
   const success = uniqueQuotes([characters.primary, characters.gate]).map(q => formatEtfIdentity(q).plain).join(' · ')
   const delay = characters.alternative ? formatEtfIdentity(characters.alternative).plain : '장기채·배당 ETF'
   const overheat = characters.warning ? formatEtfIdentity(characters.warning).plain : '레버리지·인버스 ETF'
+
+  // Tier 2: Claude resolutions 우선, 없으면 Tier 1 하드코딩 fallback
+  const r = report.narrativeNotes?.resolutions
+  const connectNote = r?.connect?.trim() || '해외 흐름이 국내 거래로 전해지면 지켜볼 만한 상품으로 올라갑니다.'
+  const delayNote = r?.delay?.trim() || '해외 신호가 국내까지 닿지 않는다면 오늘은 대안에 더 주목합니다.'
+  const overheatNote = r?.overheat?.trim() || '괴리 확대·얇은 호가·환율 재상승이 겹친다면 한발 물러서는 게 맞습니다.'
 
   return `<div class="section">
   <div class="section-title">How The Story Resolves</div>
@@ -975,17 +1011,17 @@ function renderStoryResolution(data: CollectedData): string {
     <div class="resolution-row">
       <div><span class="resolution-label stance-prefer">연결 확인</span></div>
       <div class="action-text">${renderReportText(success || '국내 성장 ETF', data.quotes)}</div>
-      <div class="action-text">해외 흐름이 국내 거래로 전해지면 지켜볼 만한 상품으로 올라갑니다.</div>
+      <div class="action-text">${renderReportText(connectNote, data.quotes)}</div>
     </div>
     <div class="resolution-row">
       <div><span class="resolution-label stance-watch">확인 보류</span></div>
       <div class="action-text">${renderReportText(delay, data.quotes)}</div>
-      <div class="action-text">해외 신호가 국내까지 닿지 않는다면 오늘은 대안에 더 주목합니다.</div>
+      <div class="action-text">${renderReportText(delayNote, data.quotes)}</div>
     </div>
     <div class="resolution-row">
       <div><span class="resolution-label stance-caution">과열 경계</span></div>
       <div class="action-text">${renderReportText(overheat, data.quotes)}</div>
-      <div class="action-text">괴리 확대·얇은 호가·환율 재상승이 겹친다면 한발 물러서는 게 맞습니다.</div>
+      <div class="action-text">${renderReportText(overheatNote, data.quotes)}</div>
     </div>
   </div>
 </div>`
@@ -1451,9 +1487,9 @@ ${renderStoryOpening(report, data)}
 
 ${renderStorySpine(report, data)}
 
-${renderStoryCharacters(data)}
+${renderStoryCharacters(report, data)}
 
-${renderStoryResolution(data)}
+${renderStoryResolution(report, data)}
 
 ${renderTodayChecklist(report, data.quotes)}
 
@@ -1472,7 +1508,7 @@ ${renderGlobalKoreaBridge(data)}
 
 ${renderGlobalKrMatching(data)}
 
-${renderStrategyMap(strategy, data.quotes)}
+${renderStrategyMap(strategy, data.quotes, report)}
 
 ${renderMarketHeatmap(data)}
 

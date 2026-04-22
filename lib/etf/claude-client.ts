@@ -243,6 +243,50 @@ ${data.recentHeadlines.map(h => `- ${h}`).join('\n')}
 - 자금 유입, 자금 유출, 순유입, 순유출, 영문 flow 표현을 쓰지 마십시오.
 - 매수/매도 지시를 하지 말고 ETF군별 확인 우선·관찰·경계로만 표현하십시오.
 
+[narrativeNotes 작성 규칙 — 리포트 본문의 주요 내러티브]
+
+리포트의 본문 여러 섹션 (Story Spine, Characters, Resolutions, 체크리스트, ETF군별 전략 지도)
+은 지금까지 코드가 매일 같은 문구로 박아 넣던 영역입니다. 이제 당신이 오늘 데이터를 반영해
+직접 작성합니다. 입력의 [ETF군별 전략 지도] 의 rationale/actionGuide/avoid 문장은 **참고 데이터일
+뿐, 그 문장을 그대로 복사하지 마십시오.** 오늘의 수치·흐름을 반영해 새로운 문장으로 씁니다.
+
+narrativeNotes.storySpine (3개 act, 각 2~3문장)
+  act1: 오늘의 주인공 ETF군과 그가 왜 오늘 서사의 중심에 서는지. 구체적 지수·섹터 움직임을 근거로.
+  act2: 주인공이 마주한 제약 또는 변수 (환율·금리·변동성·수급 중 하나). 어떤 힘이 발목을 잡는지.
+  act3: 독자가 장 초반 무엇을 보면 이 서사의 방향이 확정되는지. 구체 지표·시각·ETF를 명시.
+
+narrativeNotes.characters (각 2~3문장)
+  primary: 오늘의 주인공 ETF (예: 반도체 ETF)가 왜 오늘 주목되는지. 오늘 수치 기반으로.
+  gate: 환율 영향을 받는 ETF가 왜 게이트 역할을 하는지. USD/KRW 수준 반영.
+  alternative: 대안 ETF가 오늘 주도주가 아닌 이유. 장기채·배당·채권 중 하나.
+  warning: 레버리지·인버스를 오늘 경계해야 하는 이유. 변동성 수치 근거.
+
+narrativeNotes.resolutions (각 1~2문장)
+  connect: 해외 신호가 국내 거래대금으로 이어지는 시나리오의 구체 묘사.
+  delay: 해외 신호가 국내에 닿지 않는 경우 오늘의 대안은 무엇인지.
+  overheat: 괴리율·얇은 호가·환율 재상승이 겹치는 경계 시나리오.
+
+narrativeNotes.checklist (각 1~2문장씩, actions/avoids 3개)
+  actions: 오늘 특별히 챙겨봐야 할 것 3가지 (일반론 금지, 오늘 상황 반영).
+  avoids: 오늘 특별히 피해야 할 행동 3가지.
+
+narrativeNotes.strategyProse (7개 그룹 — 입력 [ETF군별 전략 지도] 의 group 이름과 1:1 매칭)
+  group: 그룹 이름 (예: "미국 대표지수 ETF", "반도체·AI ETF" 등 — 입력과 정확히 동일하게)
+  rationale: 오늘 이 그룹이 왜 관심/관찰/경계 대상인지 1~2문장. 오늘 수치 근거.
+  actionGuide: 오늘 이 그룹에 대한 행동 가이드 1~2문장.
+  avoid: 오늘 이 그룹과 관련해 피할 행동 1~2문장.
+
+[narrativeNotes 작성 규칙 — 엄격한 제약]
+- 모든 narrativeNotes 필드는 **입력에 명시된 수치와 사실**만 인용. 입력에 없는 수치(외국인
+  순매수 금액, 자산운용사 보도, 세대별 매매 비중 등)를 추측해 쓰지 마십시오.
+- 입력 [ETF군별 전략 지도] 의 rationale/actionGuide/avoid 문장을 그대로 복사하지 마십시오.
+  오늘 데이터를 근거로 다시 씁니다.
+- 매일 다른 서술을 위해 **어제 리포트와 비슷한 프레임·어휘 조합을 의도적으로 피하십시오.**
+- 길이 범위 엄수: 위에 지정된 문장 수를 넘기지 마십시오.
+- **"확인합니다·점검합니다·봅니다" 어미는 narrativeNotes 전체 합쳐 최대 8회까지만** 사용.
+  이를 넘길 것 같으면 "~가 오늘의 변수입니다", "~가 의미 있습니다", "~가 보여주는 이야기가
+  있습니다", "~에서 힌트를 얻을 수 있습니다" 같은 서술로 다양화.
+
 아래 JSON 형식으로만 응답하십시오:
 {
   "cover": { "headline": "...", "subline": "..." },
@@ -253,7 +297,21 @@ ${data.recentHeadlines.map(h => `- ${h}`).join('\n')}
     "sectorNarrative": "..."
   },
   "todayWatch": { "items": [{ "title": "...", "body": "..." }, { "title": "...", "body": "..." }, { "title": "...", "body": "..." }] },
-  "closingLine": "..."
+  "closingLine": "...",
+  "narrativeNotes": {
+    "storySpine": { "act1": "...", "act2": "...", "act3": "..." },
+    "characters": { "primary": "...", "gate": "...", "alternative": "...", "warning": "..." },
+    "resolutions": { "connect": "...", "delay": "...", "overheat": "..." },
+    "checklist": { "actions": ["...", "...", "..."], "avoids": ["...", "...", "..."] },
+    "strategyProse": [
+      { "group": "미국 대표지수 ETF", "rationale": "...", "actionGuide": "...", "avoid": "..." },
+      { "group": "반도체·AI ETF", "rationale": "...", "actionGuide": "...", "avoid": "..." },
+      { "group": "채권 ETF", "rationale": "...", "actionGuide": "...", "avoid": "..." },
+      { "group": "금·원자재 ETF", "rationale": "...", "actionGuide": "...", "avoid": "..." },
+      { "group": "환노출 해외 ETF", "rationale": "...", "actionGuide": "...", "avoid": "..." },
+      { "group": "레버리지·인버스 ETF", "rationale": "...", "actionGuide": "...", "avoid": "..." }
+    ]
+  }
 }`
 }
 

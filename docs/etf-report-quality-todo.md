@@ -37,19 +37,18 @@
 
 ---
 
-## Tier 2 (TODO — 중간 재균형, 예상 공수 반나절)
+## Tier 2 (완료 — 2026-04-22 야간)
 
 **목표**: 코드 20+ 섹션 중 **내러티브성이 필요한 섹션을 Claude 생성으로 이관**.
 
-**구체 작업**
-- [ ] `renderer.ts` `renderMorningHtml` 에서 Claude가 쓸 수 있는 섹션 식별
-  - 후보: Story Spine 텍스트, Characters 설명, Resolution 가이드, 체크리스트 하단 문구
-- [ ] `lib/etf/types.ts` `MorningReport` 인터페이스에 신규 필드 추가
-  - 예: `narrativeNotes: { storySpine: string[], resolutions: string[] }`
-- [ ] `lib/etf/claude-client.ts` 프롬프트에 해당 필드 작성 지시 추가
-- [ ] `renderer.ts` 가 해당 섹션을 Claude 출력에서 읽도록 변경
-- [ ] `report-quality.ts` 에 신규 필드 검증 규칙 추가
-- [ ] 2~3일 운영 관찰 후 품질 평가
+**완료된 작업**
+- [x] narrativeNotes?: 옵셔널 필드 5개 섹션 (storySpine, characters, resolutions, checklist, strategyProse) `lib/etf/types.ts` 에 추가
+- [x] `lib/etf/claude-client.ts` 프롬프트에 narrativeNotes 스키마·작성 규칙·허위수치 금지 추가
+- [x] `lib/etf/report-quality.ts` flattenMorningReport에 narrativeNotes 포함, weakActionCount threshold 10→18 상향
+- [x] `lib/etf/report-language.ts` normalizeMorningReportLanguage에 narrativeNotes 재귀 적용
+- [x] `lib/etf/renderer.ts` 5개 섹션에 fallback 로직 (Tier 1 하드코딩 유지 — 최악 시나리오도 Tier 1 수준 보장)
+- [x] Side-effect 3개(S1 threshold / S2 normalize / S3 flatten) 완화 확인
+- [ ] **다음 자동 실행(4/23 06:30 KST)부터 적용. 3~5일 관찰 후 Tier 3 결정.**
 
 **리스크**
 - Claude가 데이터 근거 없이 서술 확장 → `report-quality.ts` 가드 필수

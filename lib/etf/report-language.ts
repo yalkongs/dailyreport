@@ -21,8 +21,12 @@ export function polishKoreanReportText(text: string): string {
     .replace(/(^|[.!?]\s+)(방어 우위 국면)\./g, '$1$2입니다.')
 }
 
+function neutralizeOptional(value: string | undefined): string | undefined {
+  return typeof value === 'string' ? neutralizeInvestmentLanguage(value) : value
+}
+
 export function normalizeMorningReportLanguage(report: MorningReport): MorningReport {
-  return {
+  const normalized: MorningReport = {
     ...report,
     cover: {
       headline: neutralizeInvestmentLanguage(report.cover.headline),
@@ -51,4 +55,40 @@ export function normalizeMorningReportLanguage(report: MorningReport): MorningRe
     },
     closingLine: neutralizeInvestmentLanguage(report.closingLine),
   }
+
+  // Tier 2: narrativeNotes 의 모든 문자열 필드도 동일 규칙 적용
+  // (새 필드로 "매수 후보" 같은 금지 어휘가 우회되지 않도록)
+  if (report.narrativeNotes) {
+    const n = report.narrativeNotes
+    normalized.narrativeNotes = {
+      storySpine: n.storySpine && {
+        act1: neutralizeOptional(n.storySpine.act1),
+        act2: neutralizeOptional(n.storySpine.act2),
+        act3: neutralizeOptional(n.storySpine.act3),
+      },
+      characters: n.characters && {
+        primary: neutralizeOptional(n.characters.primary),
+        gate: neutralizeOptional(n.characters.gate),
+        alternative: neutralizeOptional(n.characters.alternative),
+        warning: neutralizeOptional(n.characters.warning),
+      },
+      resolutions: n.resolutions && {
+        connect: neutralizeOptional(n.resolutions.connect),
+        delay: neutralizeOptional(n.resolutions.delay),
+        overheat: neutralizeOptional(n.resolutions.overheat),
+      },
+      checklist: n.checklist && {
+        actions: n.checklist.actions?.map(s => neutralizeInvestmentLanguage(s)),
+        avoids: n.checklist.avoids?.map(s => neutralizeInvestmentLanguage(s)),
+      },
+      strategyProse: n.strategyProse?.map(s => ({
+        group: s.group,
+        rationale: neutralizeOptional(s.rationale),
+        actionGuide: neutralizeOptional(s.actionGuide),
+        avoid: neutralizeOptional(s.avoid),
+      })),
+    }
+  }
+
+  return normalized
 }

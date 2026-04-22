@@ -54,7 +54,7 @@ const RAW_KRW_AMOUNT_PATTERN = /\d{10,}원/g
 const ETF_OR_NUMBER_PATTERN = /([A-Z]{2,5}|[가-힣A-Za-z]+ ETF|ETF|USD\/KRW|US 10Y|VIX|NAV|거래대금|\d+(?:,\d{3})*(?:\.\d+)?%?)/
 
 function flattenMorningReport(report: MorningReport): string {
-  return [
+  const core: (string | undefined)[] = [
     report.cover.headline,
     report.cover.subline,
     report.overnightBrief.narrative,
@@ -64,7 +64,30 @@ function flattenMorningReport(report: MorningReport): string {
     report.usEtfHighlights.sectorNarrative,
     ...report.todayWatch.items.flatMap(item => [item.title, item.body]),
     report.closingLine,
-  ].join('\n')
+  ]
+
+  // Tier 2: narrativeNotes 모든 서브필드도 검증 대상에 포함
+  // (hallucination/금지어 검사가 새 필드에도 적용되도록)
+  const notes = report.narrativeNotes
+  if (notes) {
+    core.push(
+      notes.storySpine?.act1,
+      notes.storySpine?.act2,
+      notes.storySpine?.act3,
+      notes.characters?.primary,
+      notes.characters?.gate,
+      notes.characters?.alternative,
+      notes.characters?.warning,
+      notes.resolutions?.connect,
+      notes.resolutions?.delay,
+      notes.resolutions?.overheat,
+      ...(notes.checklist?.actions ?? []),
+      ...(notes.checklist?.avoids ?? []),
+      ...(notes.strategyProse ?? []).flatMap(s => [s.rationale, s.actionGuide, s.avoid]),
+    )
+  }
+
+  return core.filter((s): s is string => typeof s === 'string' && s.length > 0).join('\n')
 }
 
 function findMatches(text: string, patterns: RegExp[]): string[] {
@@ -133,8 +156,11 @@ export function validateMorningReportQuality(
     violations.push(`원화 금액은 억 원/조 원 단위로 축약해야 합니다: ${rawKrwAmount.slice(0, 2).join(', ')}`)
   }
 
+  // Tier 2: narrativeNotes 가 flatten 대상이 되어 문장 총량이 늘어남.
+  // 기존 >= 10 threshold를 >= 18로 상향. 프롬프트에서 "어미 반복 금지" 지시
+  // 와 이중 완화 — 진정 과도한 반복만 차단, 정상 리포트는 통과.
   const weakActionCount = (text.match(/확인합니다|점검합니다|봅니다/g) ?? []).length
-  if (weakActionCount >= 10) {
+  if (weakActionCount >= 18) {
     violations.push('확인/점검/봅니다 문장이 과도합니다. 확인 결과에 따른 행동 기준까지 써야 합니다')
   }
 
