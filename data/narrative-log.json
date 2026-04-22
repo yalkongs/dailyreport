@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-04-23",
+      "narrativeAngle": "other_side",
+      "headline": "이란 긴장 완화에도 증시만 웃었다",
+      "bigStoryTopic": "호르무즈 해협 개방 선언으로 원유는 소폭 하락했지만, 미국과 한국 증시는 강세를 이어갔습니",
+      "walletTopics": [
+        "정유업계, 유가 안정으로 정제 마진 개선 신호",
+        "반도체 업체, 미국 기술주 강세 동반 상승",
+        "암호화폐 투자자, 위험 회피 완화로 4% 수익",
+        "위험 완화 수혜 자산군 부각",
+        "실질 수익률 개선으로 예금 매력도 상승"
+      ],
+      "metaphors": [],
+      "lookingAhead": "미국 기술주 실적 발표 집중"
+    },
+    {
       "date": "2026-04-22",
       "narrativeAngle": "hidden_variable",
       "headline": "코스피 홀로 2.7% 상승, 한국만 다른 이유",
