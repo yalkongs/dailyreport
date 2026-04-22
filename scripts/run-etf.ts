@@ -119,19 +119,33 @@ async function main() {
     recentHeadlines,
   }
 
-  // Step 5: Claude 분석 (1회 재시도)
+  // Step 5: Claude 분석 (최대 3회 시도)
+  // 4/22 Tier 2 적용 후 관찰: narrativeNotes 추가로 Claude 출력이 품질
+  // 검증 규칙(중복 문장·금지 어휘 등)에 걸릴 확률이 ~50%. 기존 1회
+  // 재시도로는 전체 실패율이 ~25%. 3회 시도 시 ~12.5%로 감소.
   console.log('[5/8] Claude 리포트 생성 중...')
-  let report
-  try {
-    report = await generateMorningReport(data)
-  } catch (e) {
-    console.warn('[warn] Claude API 1차 실패, 재시도:', e)
+  const MAX_CLAUDE_ATTEMPTS = 3
+  let report: Awaited<ReturnType<typeof generateMorningReport>> | undefined
+  let lastError: unknown
+  for (let attempt = 1; attempt <= MAX_CLAUDE_ATTEMPTS; attempt++) {
     try {
       report = await generateMorningReport(data)
-    } catch (e2) {
-      await sendError('Claude API', e2)
-      process.exit(1)
+      if (attempt > 1) {
+        console.log(`  ✓ ${attempt}회차에서 성공`)
+      }
+      break
+    } catch (e) {
+      lastError = e
+      if (attempt < MAX_CLAUDE_ATTEMPTS) {
+        console.warn(`[warn] Claude API ${attempt}/${MAX_CLAUDE_ATTEMPTS}회 실패, 재시도:`, (e as Error).message)
+      } else {
+        console.error(`[error] Claude API ${MAX_CLAUDE_ATTEMPTS}회 모두 실패`)
+      }
     }
+  }
+  if (!report) {
+    await sendError('Claude API', lastError)
+    process.exit(1)
   }
 
   // Step 6: HTML 렌더링
