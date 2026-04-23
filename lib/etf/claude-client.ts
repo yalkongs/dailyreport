@@ -76,6 +76,16 @@ function extractJsonFromResponse(response: Anthropic.Message, reportType: string
 }
 
 export async function generateMorningReport(data: CollectedData): Promise<MorningReport> {
+  const report = await generateMorningReportRaw(data)
+  validateMorningReportQuality(report, data, buildMorningStrategyInput(data))
+  return report
+}
+
+// P0 (2026-04-24): validator 재시도 소진 시 fallback 경로에서 사용.
+// 생성·파싱·언어 정규화까지 수행하되 품질 검증은 하지 않는다.
+// run-etf.ts가 narrativeNotes를 drop한 뒤 재검증해서 Tier 1 수준의 안전한
+// 리포트를 발송할 수 있게 한다.
+export async function generateMorningReportRaw(data: CollectedData): Promise<MorningReport> {
   const prompt = buildMorningPrompt(data)
   const response = await getClient().messages.create({
     model: 'claude-sonnet-4-6',
@@ -93,9 +103,12 @@ export async function generateMorningReport(data: CollectedData): Promise<Mornin
   } catch (e) {
     throw new Error(`[claude-client] morning 리포트 JSON 파싱 실패: ${e}\n응답: ${text.slice(0, 200)}`)
   }
-  report = normalizeMorningReportLanguage(report)
+  return normalizeMorningReportLanguage(report)
+}
+
+// P0 (2026-04-24): Tier 1 fallback용. 외부에서 직접 호출해 검증할 때 사용.
+export function validateMorningReport(report: MorningReport, data: CollectedData): void {
   validateMorningReportQuality(report, data, buildMorningStrategyInput(data))
-  return report
 }
 
 function formatPromptNumber(value: number | null | undefined, digits = 0): string {
@@ -144,6 +157,17 @@ function buildMorningPrompt(data: CollectedData): string {
 
   return `오늘 날짜: ${data.date}
 분석 렌즈: ${data.analysisLens}
+
+[독자·발행 맥락 — 모든 문장 작성 시 전제]
+- 발행 시각: 매일 **06:30 KST** (한국 증시 개장 전). 독자는 막 잠에서 깬 한국 개인 투자자입니다.
+- 독자는 **전일 한국 증시의 마감가·뉴스를 이미 알고** 있으며, '지수/시장' 같은 단어를 보면 반사적으로 KOSPI를 떠올립니다.
+- 이 리포트의 주된 데이터는 **간밤 해외 시장(미국 마감, 유럽, 환율 야간)** 입니다.
+- 용어 규칙:
+  · "지수" 단독 표기 금지. 반드시 "S&P500", "나스닥", "코스피", "코스닥" 등 구체적으로 씁니다.
+  · "시장" 단독 표기 금지. "미 증시", "국내 증시", "야간 환시" 등 접두를 붙입니다.
+  · "증시가 하락했다"처럼 주체가 불명확한 서술 금지. 어느 시장인지를 반드시 명시합니다.
+- 전일 한국 증시와 간밤 미국 시장이 **서로 다른 방향**으로 움직인 경우, 그 차이를 **명시적으로** 언급하십시오. 한국 독자가 반사적으로 떠올리는 한국 흐름과 오늘 새벽 해외 흐름이 다를 수 있다는 점을 고려합니다.
+- 헤드라인에 한국 독자가 오해할 여지가 있는 애매어(지수/시장)를 쓰지 말고 **시장을 특정**하여 씁니다.
 
 [오늘의 시장 국면]
 ${strategy.regime.displayName}
@@ -197,8 +221,15 @@ US 10Y: ${formatPromptNumber(data.macro.us10y, 2)}%
 WTI: ${formatPromptNumber(data.macro.wti, 1)}
 Gold: ${formatPromptNumber(data.macro.gold, 0)}
 
-[주요 뉴스]
-${data.news.slice(0, 6).map(n => `- ${n.title} (${n.source}, ${n.publishedAt}, ${n.url})`).join('\n')}
+[주요 뉴스 — 발행 N시간 경과 라벨 포함]
+${data.news.slice(0, 6).map(n => {
+  const ago = typeof n.publishedHoursAgo === 'number'
+    ? `${Math.round(n.publishedHoursAgo)}h전`
+    : 'age 불명'
+  return `- [${ago}] ${n.title} (${n.source}, ${n.url})`
+}).join('\n')}
+- **24시간 초과 기사는 "배경 맥락"으로만 활용**하고, 현재 상황·오늘의 전개로 단정하지 마십시오.
+- 뉴스 내용이 어제 한국 증시 마감 이후의 전개인지, 그 이전의 전개인지 발행 시각으로 판단하여 쓰십시오.
 ${data.recentHeadlines && data.recentHeadlines.length > 0 ? `
 [최근 ETF 리포트 헤드라인 — 절대 반복·유사 표현 금지]
 ${data.recentHeadlines.map(h => `- ${h}`).join('\n')}

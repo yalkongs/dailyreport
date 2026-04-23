@@ -71,6 +71,9 @@ export interface NewsItem {
   source: string
   publishedAt: string
   url: string
+  // P0 (2026-04-24): 발행 시각 기준 경과 시간.
+  // Claude 프롬프트에 전달되어 "24h 초과 기사는 배경 맥락으로만" 지시.
+  publishedHoursAgo?: number
 }
 
 // 이상 탐지 결과

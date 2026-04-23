@@ -10,7 +10,11 @@ import { collectAllEtfData } from '../lib/etf/etf-data'
 import { collectMacroContext } from '../lib/etf/market-context'
 import { collectNews } from '../lib/etf/news'
 import { detectAnomalies } from '../lib/etf/analyzer'
-import { generateMorningReport } from '../lib/etf/claude-client'
+import {
+  generateMorningReport,
+  generateMorningReportRaw,
+  validateMorningReport,
+} from '../lib/etf/claude-client'
 import { selectAnalysisLens } from '../lib/etf/analysis-lens'
 import { renderMorningHtml, saveReport, saveReportPreviewImage } from '../lib/etf/renderer'
 // NOTE: Only the error-notification path is imported. The success-path
@@ -119,12 +123,12 @@ async function main() {
     recentHeadlines,
   }
 
-  // Step 5: Claude 분석 (최대 3회 시도)
-  // 4/22 Tier 2 적용 후 관찰: narrativeNotes 추가로 Claude 출력이 품질
-  // 검증 규칙(중복 문장·금지 어휘 등)에 걸릴 확률이 ~50%. 기존 1회
-  // 재시도로는 전체 실패율이 ~25%. 3회 시도 시 ~12.5%로 감소.
+  // Step 5: Claude 분석 (최대 2회 시도 + Tier 1 fallback)
+  // P0 (2026-04-24): 기존 3회 재시도는 대증요법(패턴 좁히기)에 의존해 왔음.
+  // 새 구조: 2회 검증 실패 시 narrativeNotes 를 drop한 Tier 1 수준 리포트로
+  // fallback 검증 → 성공 시 발송, 실패 시에만 Telegram 에러. 새벽 침묵 리스크 ↓.
   console.log('[5/8] Claude 리포트 생성 중...')
-  const MAX_CLAUDE_ATTEMPTS = 3
+  const MAX_CLAUDE_ATTEMPTS = 2
   let report: Awaited<ReturnType<typeof generateMorningReport>> | undefined
   let lastError: unknown
   for (let attempt = 1; attempt <= MAX_CLAUDE_ATTEMPTS; attempt++) {
@@ -139,13 +143,25 @@ async function main() {
       if (attempt < MAX_CLAUDE_ATTEMPTS) {
         console.warn(`[warn] Claude API ${attempt}/${MAX_CLAUDE_ATTEMPTS}회 실패, 재시도:`, (e as Error).message)
       } else {
-        console.error(`[error] Claude API ${MAX_CLAUDE_ATTEMPTS}회 모두 실패`)
+        console.warn(`[warn] Claude API ${MAX_CLAUDE_ATTEMPTS}회 모두 실패. Tier 1 fallback 시도:`, (e as Error).message)
       }
     }
   }
+
+  // P0 fallback: narrativeNotes 만 drop해서 Tier 1 하드코딩 본문으로 렌더링
   if (!report) {
-    await sendError('Claude API', lastError)
-    process.exit(1)
+    try {
+      console.log('[5b/8] Tier 1 fallback — narrativeNotes drop 후 재검증')
+      const raw = await generateMorningReportRaw(data)
+      const stripped: typeof raw = { ...raw, narrativeNotes: undefined }
+      validateMorningReport(stripped, data)
+      report = stripped
+      console.log('  ✓ Tier 1 fallback 성공 — narrativeNotes 없이 발송합니다')
+    } catch (fallbackErr) {
+      console.error('[error] Tier 1 fallback도 실패:', (fallbackErr as Error).message)
+      await sendError('Claude API (fallback 실패)', lastError)
+      process.exit(1)
+    }
   }
 
   // Step 6: HTML 렌더링
