@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-04-24",
+      "type": "morning",
+      "headline": "반도체는 올랐지만 지수는 내렸습니다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-04-24",
+      "anomalyCount": 7,
+      "anomalyBreakdown": {
+        "premiumDiscount": 7
+      },
+      "createdAt": "2026-04-23T23:08:38.465Z"
+    },
+    {
       "date": "2026-04-23",
       "type": "morning",
       "headline": "반도체가 앞서고 환율이 속도를 제한합니다",
