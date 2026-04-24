@@ -698,6 +698,9 @@ function buildEtfMentionCandidates(quotes: EtfQuote[]): EtfMentionCandidate[] {
     add(quote, identity.plain)
     if (quote.market === 'KR') {
       const code = quote.ticker.replace(/\.(KS|KQ)$/i, '')
+      // Claude가 "KODEX 반도체 (091160)" (공백 포함) 로 쓰는 케이스도 허용.
+      // 더 긴 후보가 먼저 매치되도록 공백 변형을 공백 없는 변형보다 먼저 등록.
+      add(quote, `${identity.primary} (${code})`)
       add(quote, `${identity.primary}(${code})`)
       add(quote, identity.primary)
     } else {
@@ -742,16 +745,16 @@ function renderClientNotice(data: CollectedData, strategy: MorningStrategyInput)
 </div>`
 }
 
-function renderExecutiveSummary(strategy: MorningStrategyInput): string {
+function renderExecutiveSummary(strategy: MorningStrategyInput, quotes: EtfQuote[]): string {
   return `<div class="strategy-hero">
   <div class="hero-kicker">ETF Today Decision Frame</div>
-  <div class="hero-title">${e(publicText(strategy.executiveSummary.title))}</div>
+  <div class="hero-title">${renderReportText(strategy.executiveSummary.title, quotes)}</div>
   <div class="hero-grid">
     <div class="hero-item"><div class="hero-label">시장 태도</div><div class="hero-value">${e(strategy.executiveSummary.tacticalStance)}</div></div>
     <div class="hero-item"><div class="hero-label">확인 우선 ETF군</div><div class="hero-value">${e(publicText(strategy.executiveSummary.preferredGroups.join(' · ') || '없음'))}</div></div>
     <div class="hero-item"><div class="hero-label">보류/경계</div><div class="hero-value">${e(publicText([...strategy.executiveSummary.watchGroups, ...strategy.executiveSummary.cautionGroups].slice(0, 4).join(' · ') || '없음'))}</div></div>
   </div>
-  <div class="avoid"><strong>오늘 피해야 할 실수</strong><br>${e(publicText(strategy.executiveSummary.avoidToday))}</div>
+  <div class="avoid"><strong>오늘 피해야 할 실수</strong><br>${renderReportText(strategy.executiveSummary.avoidToday, quotes)}</div>
 </div>`
 }
 
@@ -953,10 +956,10 @@ function renderStoryCharacters(report: MorningReport, data: CollectedData): stri
   const alternativeNote = c?.alternative?.trim() || '성장주 흐름이 주춤하거나 금리가 내려가는 국면에서 함께 눈여겨볼 상품입니다. 오늘의 주인공으로 확정 짓긴 이릅니다.'
   const warningNote = c?.warning?.trim() || '레버리지와 인버스는 가격 변동폭이 큰 상품입니다. 장기 투자 후보로 다루기보다, 장중 전술 관찰 대상으로 따로 구분해 다룹니다.'
   const cards = [
-    characters.primary ? renderCharacterCard(characters.primary, '성장 신호 확인', primaryNote) : '',
-    characters.gate && characters.gate !== characters.primary ? renderCharacterCard(characters.gate, '환율 영향 점검', gateNote) : '',
-    characters.alternative ? renderCharacterCard(characters.alternative, '대안 관찰', alternativeNote) : '',
-    characters.warning ? renderCharacterCard(characters.warning, '과열 경계', warningNote) : '',
+    characters.primary ? renderCharacterCard(characters.primary, '성장 신호 확인', primaryNote, data.quotes) : '',
+    characters.gate && characters.gate !== characters.primary ? renderCharacterCard(characters.gate, '환율 영향 점검', gateNote, data.quotes) : '',
+    characters.alternative ? renderCharacterCard(characters.alternative, '대안 관찰', alternativeNote, data.quotes) : '',
+    characters.warning ? renderCharacterCard(characters.warning, '과열 경계', warningNote, data.quotes) : '',
   ].filter(Boolean)
 
   if (cards.length === 0) return ''
@@ -969,7 +972,7 @@ function renderStoryCharacters(report: MorningReport, data: CollectedData): stri
 </div>`
 }
 
-function renderCharacterCard(q: EtfQuote, role: string, note: string): string {
+function renderCharacterCard(q: EtfQuote, role: string, note: string, quotes: EtfQuote[]): string {
   const identity = formatEtfIdentity(q)
   const change = q.changePercent !== null ? `${q.changePercent > 0 ? '+' : ''}${q.changePercent.toFixed(2)}%` : '미확보'
   const moveClass = q.changePercent !== null && q.changePercent >= 0 ? 'change-up' : 'change-down'
@@ -989,7 +992,7 @@ function renderCharacterCard(q: EtfQuote, role: string, note: string): string {
     <div class="character-move ${moveClass}">${e(change)}</div>
   </div>
   ${metrics ? `<div class="metric-grid character-metrics">${metrics}</div>` : ''}
-  <div class="watch-body">${e(publicText(note))}</div>
+  <div class="watch-body">${renderReportText(note, quotes)}</div>
 </div>`
 }
 
@@ -1080,7 +1083,7 @@ function renderGlobalKrMatching(data: CollectedData): string {
     return `<div class="match-row">
       <div><div class="match-head">테마</div><div class="match-body">${e(pair.theme)}</div></div>
       <div><div class="match-head">글로벌 신호</div><div class="match-body">${globalText}</div></div>
-      <div><div class="match-head">국내 실행 확인</div><div class="match-body">${krText}<br>${e(pair.check)}</div></div>
+      <div><div class="match-head">국내 실행 확인</div><div class="match-body">${krText}<br>${renderReportText(pair.check, data.quotes)}</div></div>
     </div>`
   }).join('')
 
@@ -1491,7 +1494,7 @@ export function renderMorningHtml(report: MorningReport, data: CollectedData, op
   </div>
 </div>
 
-${renderExecutiveSummary(strategy)}
+${renderExecutiveSummary(strategy, data.quotes)}
 
 ${renderStoryOpening(report, data)}
 
