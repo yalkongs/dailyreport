@@ -799,7 +799,7 @@ function renderStoryOpening(report: MorningReport, data: CollectedData): string 
   // Tier 2: Claude storySpine 우선, 없으면 Tier 1 하드코딩 fallback
   const spine = report.narrativeNotes?.storySpine
   const act1Note = spine?.act1?.trim() || `${primaryName}의 거래대금이 함께 따라와야 이 신호가 실제로 움직이는 흐름이 됩니다.`
-  const act2Note = spine?.act2?.trim() || `${gateName}는 지수가 오른 폭과 환율이 깎아내는 폭을 나눠 보는 게 중요합니다.`
+  const act2Note = spine?.act2?.trim() || `${gateName}는 기초지수가 오른 폭과 환율이 깎아내는 폭을 나눠 보는 게 중요합니다.`
   const act3Note = spine?.act3?.trim() || '당장의 가격 움직임보다 거래대금과 NAV 괴리가 말해주는 이야기를 먼저 읽어봅니다.'
 
   return `<div class="story-card">
@@ -948,8 +948,8 @@ function renderStoryCharacters(report: MorningReport, data: CollectedData): stri
   const characters = selectStoryCharacters(data.quotes)
   // Tier 2: Claude characters 우선, 없으면 Tier 1 하드코딩 fallback
   const c = report.narrativeNotes?.characters
-  const primaryNote = c?.primary?.trim() || '미국 성장주 흐름이 국내 시장의 실제 수요로 전해지는지 보는 창구입니다. 거래대금이 함께 늘어나야 이 신호는 의미를 얻습니다.'
-  const gateNote = c?.gate?.trim() || '같은 해외 지수 흐름이라도 원화 환율이 달라지면 체감 수익률은 다른 모습을 보입니다. 지수와 환율을 구분해서 봐야 합니다.'
+  const primaryNote = c?.primary?.trim() || '미국 성장주 흐름이 국내 증시의 실제 수요로 전해지는지 보는 창구입니다. 거래대금이 함께 늘어나야 이 신호는 의미를 얻습니다.'
+  const gateNote = c?.gate?.trim() || '같은 해외 지수(S&P500·나스닥) 흐름이라도 원화 환율이 달라지면 체감 수익률은 다른 모습을 보입니다. 기초지수와 환율을 구분해서 봐야 합니다.'
   const alternativeNote = c?.alternative?.trim() || '성장주 흐름이 주춤하거나 금리가 내려가는 국면에서 함께 눈여겨볼 상품입니다. 오늘의 주인공으로 확정 짓긴 이릅니다.'
   const warningNote = c?.warning?.trim() || '레버리지와 인버스는 가격 변동폭이 큰 상품입니다. 장기 투자 후보로 다루기보다, 장중 전술 관찰 대상으로 따로 구분해 다룹니다.'
   const cards = [
@@ -1195,7 +1195,7 @@ function renderIssueEtfs(data: CollectedData): string {
     { title: '반도체·AI', reason: '미국 반도체의 열기가 국내 IT ETF 거래대금까지 옮겨 붙는지가 오늘의 관전 포인트입니다.', tickers: ['SOXX', 'SMH', '091160.KS', '396500.KS'] },
     { title: '배당·인컴', reason: '변동성이 커지는 국면에서 방어 자산으로 자금이 이동하는 흐름이 보이는지 눈여겨봅니다.', tickers: ['SCHD', 'VIG', '458730.KS'] },
     { title: '장기채·금리', reason: '미국 10년 금리의 움직임이 장기채 ETF 가격에 어떻게 새겨지는지 읽어냅니다.', tickers: ['TLT', 'IEF', '453850.KS'] },
-    { title: '환노출 미국주식', reason: '지수가 오른 폭과 환율이 깎아낸 폭을 따로 떼어 계산해 봅니다.', tickers: ['360750.KS', '133690.KS', '379810.KS'] },
+    { title: '환노출 미국주식', reason: 'S&P500·나스닥이 오른 폭과 원/달러 환율이 깎아낸 폭을 따로 떼어 계산해 봅니다.', tickers: ['360750.KS', '133690.KS', '379810.KS'] },
     { title: '레버리지·인버스', reason: 'NAV와 괴리 상태를 먼저 확인한 뒤에야 장 초반 진입을 고민할 수 있는 상품군입니다.', tickers: ['122630.KS', '252670.KS', '233740.KS'] },
     { title: '금·원자재', reason: '지정학 변수와 달러 방향이 원자재 ETF에 같은 신호를 보내는지 맞춰 봅니다.', tickers: ['GLD', 'SLV', 'USO', '132030.KS'] },
   ]
@@ -1268,15 +1268,25 @@ function renderTacticalEtfWarning(quotes: EtfQuote[]): string {
 
   if (tactical.length === 0) return ''
 
+  // P1+보강 [H1] (2026-04-24):
+  // 기존: 모든 전술형 ETF 카드에 "지수는 오르는데 ..." 같은 문구가 동일
+  // 반복 출력 + "지수" 단독 표기로 한국 독자 혼동 유발. '기초지수' 로 명확화
+  // + 3종 변주로 분산 (같은 카드가 같은 문장을 쓰지 않도록).
+  const TACTICAL_WARNINGS = [
+    '기초지수가 오르는데 NAV 괴리가 벌어진다면, 수익률이 커 보여도 들어가기엔 이릅니다.',
+    '전술형 상품은 기초지수 방향과 NAV 괴리를 같이 살펴야 진입 조건이 성립합니다.',
+    '장중 변동성이 커진 날 전술형 상품의 호가창 잔량을 먼저 확인하는 편이 안전합니다.',
+  ]
   return `<div class="section">
   <div class="section-title">Tactical ETF Warning Board</div>
   <p class="narrative" style="margin-bottom:16px">레버리지·인버스 ETF는 일간 수익률을 추종하는 고위험 전술형 상품입니다. 장기 보유 목적, 원금보존 성향, 상품 구조를 이해하지 못한 고객에게 적합하지 않을 수 있습니다.</p>
   <div class="action-board">
-    ${tactical.map(q => {
+    ${tactical.map((q, idx) => {
       const identity = formatEtfIdentity(q)
       const tradingValue = q.tradingValue !== undefined && q.tradingValue !== null ? compactKrwAmount(q.tradingValue) : '미확보'
       const premium = q.premiumDiscount !== null ? `${q.premiumDiscount > 0 ? '+' : ''}${q.premiumDiscount.toFixed(2)}%` : '미확보'
       const gap = q.dailyIndexGap !== undefined && q.dailyIndexGap !== null ? `${q.dailyIndexGap > 0 ? '+' : ''}${q.dailyIndexGap.toFixed(2)}%p` : '미확보'
+      const note = TACTICAL_WARNINGS[idx % TACTICAL_WARNINGS.length]
       return `<div class="action-panel">
         <div class="compact-head">
           <div class="compact-title">
@@ -1290,7 +1300,7 @@ function renderTacticalEtfWarning(quotes: EtfQuote[]): string {
           ${renderMetricItem('괴리율', premium)}
           ${renderMetricItem('지수대비', gap)}
         </div>
-        <div class="compact-note">지수는 오르는데 NAV 괴리가 벌어진다면, 수익률이 커 보여도 들어가기엔 이릅니다.</div>
+        <div class="compact-note">${e(note)}</div>
       </div>`
     }).join('')}
   </div>

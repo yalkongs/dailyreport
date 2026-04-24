@@ -211,14 +211,27 @@ function findMatches(text: string, patterns: RegExp[]): string[] {
 }
 
 function splitSentences(text: string): string[] {
-  return text.match(/[^.!?\n]+[.!?]?/g)?.map(s => s.trim()).filter(Boolean) ?? []
+  // P1+보강 (2026-04-24): 기존 /[^.!?\n]+[.!?]?/ 는 "-0.39" 의 decimal period
+  // 에서 문장을 잘라 "S&P500 -0." 같은 단편이 중복으로 오인됨. 문장 경계는
+  // .!? **다음이 공백/줄바꿈/문자열 끝** 일 때만 인정.
+  return text
+    .split(/(?<=[.!?])(?=\s|$)|\n+/)
+    .map(s => s.trim())
+    .filter(Boolean)
 }
 
 function duplicateSentences(text: string): string[] {
+  // P1+보강 [M2] (2026-04-24): 중복 검출 하한 18자 → 14자.
+  // Story Spine 1막과 간밤 시장 요약이 동일 문장을 반복 출력하는 사례 대응.
+  // 단, splitSentences 가 "97%, SLV -2." 같은 데이터 단편을 별개 sentence로
+  // 잘라낼 때 오탐 위험이 있음. 한글 4자 이상 포함된 sentence(즉, 실제 산문)
+  // 만 카운트해 데이터 fragment 오탐 방지.
   const counts = new Map<string, number>()
   for (const sentence of splitSentences(text)) {
-    const normalized = sentence.replace(/\s+/g, ' ')
-    if (normalized.length < 18) continue
+    const normalized = sentence.replace(/\s+/g, ' ').trim()
+    if (normalized.length < 14) continue
+    const koreanChars = (normalized.match(/[가-힣]/g) ?? []).length
+    if (koreanChars < 4) continue // 데이터 fragment (수치·티커만) 제외
     counts.set(normalized, (counts.get(normalized) ?? 0) + 1)
   }
   return [...counts.entries()].filter(([, count]) => count > 1).map(([sentence]) => sentence)
@@ -305,6 +318,16 @@ export function validateMorningReportQuality(
 
   if (/\b\d{6}\.(KS|KQ)\b/i.test(text)) {
     violations.push('국내 ETF는 "종목명 (6자리 코드)" 형식으로 표기해야 합니다')
+  }
+
+  // P1+보강 [H2] (2026-04-24): "종목명 공백 6자리" (괄호 누락) 도 차단.
+  // 예: "KODEX 반도체 091160" → "KODEX 반도체 (091160)" 로 쓸 것.
+  // 한국어·영문·숫자 뒤에 공백 + 6자리 숫자 + 닫는 괄호 없음 패턴.
+  const missingParens = text.match(/(?:[가-힣A-Za-z])\s+\d{6}(?!\)|\d|\.(KS|KQ))/g)
+  if (missingParens && missingParens.length > 0) {
+    violations.push(
+      `국내 ETF 코드는 반드시 괄호로 감싸야 합니다 "(6자리)": ${missingParens.slice(0, 3).join(', ')}`
+    )
   }
 
   if (report.todayWatch.items.length < 3) {
