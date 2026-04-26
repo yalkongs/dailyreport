@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-04-27",
+      "type": "morning",
+      "headline": "미 반도체가 4.67% 뛰었지만 원화 환율이 1,476원에 머뭅니다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-04-27",
+      "anomalyCount": 7,
+      "anomalyBreakdown": {
+        "premiumDiscount": 7
+      },
+      "createdAt": "2026-04-26T22:05:52.358Z"
+    },
+    {
       "date": "2026-04-24",
       "type": "morning",
       "headline": "반도체는 올랐지만 지수는 내렸습니다",
