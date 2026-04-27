@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-04-28",
+      "type": "morning",
+      "headline": "S&P500·나스닥 최고치, 반도체만 역행했습니다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-04-28",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-04-27T22:21:12.428Z"
+    },
+    {
       "date": "2026-04-27",
       "type": "morning",
       "headline": "미 반도체가 4.67% 뛰었지만 원화 환율이 1,476원에 머뭅니다",
