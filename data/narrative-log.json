@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-04-28",
+      "narrativeAngle": "global_domino",
+      "headline": "한국 시총 6000조 돌파, 워싱턴發 도미노",
+      "bigStoryTopic": "미국 증시는 소폭 상승에 그쳤지만, 한국은 2.15% 급등으로 코스피 6615포인트를 기록",
+      "walletTopics": [
+        "반도체 업체, 이중 수혜 구조 진입",
+        "정유업계, 원유 가격 안정으로 정제마진 개선",
+        "은행권, 금리 상승으로 순이자마진 기대",
+        "오늘의 자산별 매력도",
+        "금리 환경 변화와 자산 배분"
+      ],
+      "metaphors": [],
+      "lookingAhead": "미국 1분기 GDP 속보치 발표"
+    },
+    {
       "date": "2026-04-27",
       "narrativeAngle": "structural_lens",
       "headline": "3개월째 갇혀 있는 시장, 방향 찾기",
