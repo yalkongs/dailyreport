@@ -131,6 +131,11 @@ function baseHtml(title: string, date: string, type: string, body: string, metad
                      border-top: 3px solid var(--ink); border-bottom: 1px solid var(--line); padding: 11px 0 10px; margin-bottom: 16px; font-weight: 900; }
     .section-title::before { content: ""; width: 32px; height: 7px; background: var(--im-teal); border-radius: 6px; }
     .narrative { font-size: 16px; line-height: 1.85; color: #27302d; }
+    .big-picture { background: linear-gradient(180deg, #f5fbf9 0%, #ffffff 100%); border: 1px solid var(--line);
+                   border-left: 6px solid var(--im-teal); border-radius: 10px; padding: 22px 24px; }
+    .big-picture .section-title { border-top: 0; border-bottom: 1px dashed var(--line); padding: 0 0 8px; margin-bottom: 12px; }
+    .big-picture-meta { font-size: 12px; color: #6b746e; letter-spacing: 0.4px; margin-bottom: 12px; }
+    .big-picture-body { font-size: 16px; line-height: 1.95; color: #1a2421; letter-spacing: -0.1px; }
     .strategy-hero { background: var(--ink); border: 0; border-left: 8px solid var(--im-teal);
                      border-radius: 8px; padding: 24px; margin-bottom: 30px; color: #ffffff; box-shadow: 0 16px 32px rgba(0, 0, 0, 0.12); }
     .client-notice { background: var(--panel); border: 1px solid var(--line); border-top: 5px solid var(--im-graphite);
@@ -786,6 +791,20 @@ function renderTodayChecklist(report: MorningReport, quotes: EtfQuote[]): string
   </div>`
   }).join('')}
   </div>
+</div>`
+}
+
+// Plan B (2026-04-28): bigPicture — narrative spine 단락. 분석 렌즈·서사 앵글을
+// 결합해 Claude가 작성한 4~6문장. 누락 시 섹션 자체를 출력하지 않음
+// (Tier 1 fallback 시 narrativeNotes drop 으로 자연스럽게 사라짐).
+function renderBigPicture(report: MorningReport, data: CollectedData): string {
+  const text = report.narrativeNotes?.bigPicture?.trim()
+  if (!text) return ''
+  const angleLabel = data.narrativeAngle ? `서사 앵글: ${data.narrativeAngle.replace(/_/g, ' ')}` : '오늘의 큰 그림'
+  return `<div class="section big-picture">
+  <div class="section-title">Big Picture</div>
+  <div class="big-picture-meta">${e(angleLabel)} · 분석 렌즈: ${e(data.analysisLens)}</div>
+  <div class="big-picture-body">${renderReportText(text, data.quotes)}</div>
 </div>`
 }
 
@@ -1495,6 +1514,8 @@ export function renderMorningHtml(report: MorningReport, data: CollectedData, op
 </div>
 
 ${renderExecutiveSummary(strategy, data.quotes)}
+
+${renderBigPicture(report, data)}
 
 ${renderStoryOpening(report, data)}
 

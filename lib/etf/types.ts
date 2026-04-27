@@ -99,6 +99,9 @@ export interface CollectedData {
   // 최근 7일 헤드라인. 프롬프트에 주입하여 Claude가 동일·유사 문장 반복을 피하게 함.
   // optional — 비어있거나 undefined면 프롬프트에서 해당 블록 생략.
   recentHeadlines?: string[]
+  // Plan B (2026-04-28): 이야기 각도 — 같은 데이터·같은 렌즈라도 매일 다른
+  // 서사 관점이 적용되어 본문이 단편 나열에서 한 호흡 이야기로 바뀌도록.
+  narrativeAngle?: string
 }
 
 export type StrategyStance = '선호' | '관찰' | '중립' | '경계'
@@ -182,11 +185,15 @@ export interface MorningReport {
   // 모든 필드 optional: Claude가 누락/형식 오류일 경우 renderer 가 기존
   // Tier 1 하드코딩 문구로 자동 fallback. 최악 시나리오도 Tier 1 수준 유지.
   narrativeNotes?: {
-    // Story Spine — 오늘의 서사 3막
+    // Plan B (2026-04-28): bigPicture — 4~6문장의 자유 서술 단락.
+    // 분석 렌즈·서사 앵글을 결합해 오늘의 큰 그림을 한 호흡으로 풀어낸다.
+    // 슬롯 단편들의 병치를 보완하는, 이 리포트의 narrative spine.
+    bigPicture?: string
+    // Story Spine — 오늘의 서사 3막 (Plan B 에서 각 act 길이 확장)
     storySpine?: {
-      act1?: string  // 오늘의 주인공 ETF와 왜 주목받는가
-      act2?: string  // 주인공이 마주한 제약·변수
-      act3?: string  // 독자가 장 초반 무엇을 볼지
+      act1?: string  // 오늘의 주인공 ETF와 왜 주목받는가 (3~5문장)
+      act2?: string  // 주인공이 마주한 제약·변수 (3~5문장)
+      act3?: string  // 독자가 장 초반 무엇을 볼지 (3~5문장)
     }
     // Characters — 4개 ETF 페르소나, 왜 오늘 등장하는가
     characters?: {

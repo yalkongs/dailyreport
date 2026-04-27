@@ -61,6 +61,7 @@ export function normalizeMorningReportLanguage(report: MorningReport): MorningRe
   if (report.narrativeNotes) {
     const n = report.narrativeNotes
     normalized.narrativeNotes = {
+      bigPicture: neutralizeOptional(n.bigPicture),
       storySpine: n.storySpine && {
         act1: neutralizeOptional(n.storySpine.act1),
         act2: neutralizeOptional(n.storySpine.act2),

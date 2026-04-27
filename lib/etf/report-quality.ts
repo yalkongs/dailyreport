@@ -130,6 +130,9 @@ export function applySoftFixesInPlace(report: MorningReport): string[] {
 
   const notes = report.narrativeNotes
   if (notes) {
+    if (notes.bigPicture) {
+      notes.bigPicture = applySoftFix(notes.bigPicture)
+    }
     if (notes.storySpine) {
       notes.storySpine.act1 = applySoftFix(notes.storySpine.act1)
       notes.storySpine.act2 = applySoftFix(notes.storySpine.act2)
@@ -187,6 +190,7 @@ function flattenMorningReport(report: MorningReport): string {
   const notes = report.narrativeNotes
   if (notes) {
     core.push(
+      notes.bigPicture,
       notes.storySpine?.act1,
       notes.storySpine?.act2,
       notes.storySpine?.act3,

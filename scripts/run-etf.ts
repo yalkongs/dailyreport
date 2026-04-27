@@ -16,6 +16,7 @@ import {
   validateMorningReport,
 } from '../lib/etf/claude-client'
 import { selectAnalysisLens } from '../lib/etf/analysis-lens'
+import { selectNarrativeAngle } from '../lib/etf/narrative-angle'
 import { renderMorningHtml, saveReport, saveReportPreviewImage } from '../lib/etf/renderer'
 // NOTE: Only the error-notification path is imported. The success-path
 // Telegram send was moved to the GitHub Actions workflow so that the
@@ -32,6 +33,7 @@ import {
 import type { CollectedData, ReportMeta, MacroContext, AnomalyType } from '../lib/etf/types'
 
 const LENS_LOG_PATH = 'data/etf-lens-log.json'
+const ANGLE_LOG_PATH = 'data/etf-narrative-angle-log.json'
 
 async function main() {
   // Use KST timezone to correctly label reports (06:30 KST = 21:30 UTC prev day).
@@ -91,10 +93,12 @@ async function main() {
     process.exit(1)
   }
 
-  // Step 3: 분석 렌즈 선택
+  // Step 3: 분석 렌즈 + 서사 앵글 선택 (Plan B)
   const recentLenses = loadJson<string[]>(LENS_LOG_PATH, [])
   const analysisLens = selectAnalysisLens(recentLenses, { flows })
-  console.log(`[3/8] 분석 렌즈: ${analysisLens}`)
+  const recentAngles = loadJson<string[]>(ANGLE_LOG_PATH, [])
+  const narrativeAngle = selectNarrativeAngle(recentAngles)
+  console.log(`[3/8] 분석 렌즈: ${analysisLens} · 서사 앵글: ${narrativeAngle}`)
 
   // Step 4: 이상 탐지
   console.log('[4/8] 이상 탐지 중...')
@@ -120,6 +124,7 @@ async function main() {
     macro: macro.status === 'fulfilled' ? macro.value : {} as MacroContext,
     news: news.status === 'fulfilled' ? news.value : [],
     analysisLens,
+    narrativeAngle,
     recentHeadlines,
   }
 
@@ -193,6 +198,7 @@ async function main() {
   }
   updateReportsIndex(meta)
   saveJson(LENS_LOG_PATH, [...recentLenses, analysisLens].slice(-30))
+  saveJson(ANGLE_LOG_PATH, [...recentAngles, narrativeAngle].slice(-30))
 
   // Telegram send lives in .github/workflows/daily-report.yml (after
   // commit + push + Vercel redeploy). Running this script locally never
