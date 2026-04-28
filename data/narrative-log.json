@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-04-29",
+      "narrativeAngle": "job_perspective",
+      "headline": "유가 100달러, 직업마다 다른 명암",
+      "bigStoryTopic": "코스피는 6641포인트로 0.4% 상승했지만 코스닥은 0.9% 하락했습니다. WTI 원유가",
+      "walletTopics": [
+        "물류·운송업계, 연료비 급증으로 수익성 악화",
+        "정유·석유화학, 정제마진 개선으로 실적 호조",
+        "자동차업계, 원자재비 상승과 수요 둔화 이중고",
+        "고유가 시대의 자산 배분",
+        "실질수익률 관점에서 본 선택지"
+      ],
+      "metaphors": [],
+      "lookingAhead": "미국 빅테크 실적 발표"
+    },
+    {
       "date": "2026-04-28",
       "narrativeAngle": "global_domino",
       "headline": "한국 시총 6000조 돌파, 워싱턴發 도미노",
