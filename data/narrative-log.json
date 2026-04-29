@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-04-30",
+      "narrativeAngle": "data_anatomy",
+      "headline": "1,488원 해부학, 숫자 하나에 담긴 5가지 의미",
+      "bigStoryTopic": "한국 증시 세계 8위 등극. 원화 약세와 반도체 강세가 만든 패러독스를 분석합니다.",
+      "walletTopics": [
+        "반도체 업체, 환율·수요 이중 수혜 구조",
+        "정유·석유화학 업체, 원가 상승 이중고",
+        "항공사, 유가·환율 완벽한 역풍",
+        "오늘 자산별 매력도 진단",
+        "금리 4%대, 안전자산 vs 위험자산 저울질"
+      ],
+      "metaphors": [],
+      "lookingAhead": "빅테크 5개 기업 실적 발표"
+    },
+    {
       "date": "2026-04-29",
       "narrativeAngle": "job_perspective",
       "headline": "유가 100달러, 직업마다 다른 명암",
