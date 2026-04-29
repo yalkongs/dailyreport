@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-04-30",
+      "type": "morning",
+      "headline": "SOXX +2.57%, 선행과 확인 사이의 한 박자",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-04-30",
+      "anomalyCount": 21,
+      "anomalyBreakdown": {
+        "premiumDiscount": 21
+      },
+      "createdAt": "2026-04-29T22:21:53.882Z"
+    },
+    {
       "date": "2026-04-29",
       "type": "morning",
       "headline": "미 반도체가 밤사이 3.67% 빠졌지만 국내 반도체 ETF는 어제 올랐습니다",
