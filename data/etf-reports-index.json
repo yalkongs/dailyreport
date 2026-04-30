@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-05-01",
+      "type": "morning",
+      "headline": "S&P500·나스닥 사상 최고치, 사흘째 쌓이는 흐름인가 단발인가",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-05-01",
+      "anomalyCount": 6,
+      "anomalyBreakdown": {
+        "premiumDiscount": 6
+      },
+      "createdAt": "2026-04-30T22:23:21.635Z"
+    },
+    {
       "date": "2026-04-30",
       "type": "morning",
       "headline": "SOXX +2.57%, 선행과 확인 사이의 한 박자",
