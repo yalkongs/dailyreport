@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-05-01",
+      "narrativeAngle": "generation_wallet",
+      "headline": "같은 숫자, 다른 체감",
+      "bigStoryTopic": "한국 증시는 1.4% 하락했지만 미국 시장은 1% 상승했습니다. 세대별 지갑 속 온도계가 ",
+      "walletTopics": [
+        "반도체 업체, 환율 수혜 본격화",
+        "정유업계, 고유가 수혜 확대",
+        "항공업계, 유가와 환율 이중고",
+        "지금 뜨거운 자산, 차가운 자산",
+        "4% 금리 시대, 안전자산의 재조명"
+      ],
+      "metaphors": [],
+      "lookingAhead": "한국 증시 세계 8위 등극 의미"
+    },
+    {
       "date": "2026-04-30",
       "narrativeAngle": "data_anatomy",
       "headline": "1,488원 해부학, 숫자 하나에 담긴 5가지 의미",
