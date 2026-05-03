@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-05-04",
+      "type": "morning",
+      "headline": "QQQ +0.97% · SOXX +0.93%, 에너지만 홀로 역방향",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-05-04",
+      "anomalyCount": 6,
+      "anomalyBreakdown": {
+        "premiumDiscount": 6
+      },
+      "createdAt": "2026-05-03T22:16:20.178Z"
+    },
+    {
       "date": "2026-05-01",
       "type": "morning",
       "headline": "S&P500·나스닥 사상 최고치, 사흘째 쌓이는 흐름인가 단발인가",
