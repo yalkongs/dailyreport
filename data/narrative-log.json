@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-05-04",
+      "narrativeAngle": "hidden_variable",
+      "headline": "원유가 100달러, 누구는 웃고 누구는 운다",
+      "bigStoryTopic": "WTI 원유가 배럴당 101달러까지 올랐지만 3% 하락했습니다. 숨은 변수는 중국 수요 둔",
+      "walletTopics": [
+        "정유업계, 재고 평가손실 우려 완화",
+        "항공업계, 유류비 부담 소폭 완화",
+        "화학업계, 원료비 하락으로 마진 개선",
+        "오늘의 자산 매력도 진단",
+        "4% 금리 시대, 선택의 기준"
+      ],
+      "metaphors": [],
+      "lookingAhead": "중국 PMI 후속 지표 주목"
+    },
+    {
       "date": "2026-05-01",
       "narrativeAngle": "generation_wallet",
       "headline": "같은 숫자, 다른 체감",
