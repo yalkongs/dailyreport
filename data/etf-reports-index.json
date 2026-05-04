@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-05-05",
+      "type": "morning",
+      "headline": "코스피 최고치 경신 뒤, S&P500·나스닥은 소폭 후퇴",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-05-05",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-05-04T22:39:43.990Z"
+    },
+    {
       "date": "2026-05-04",
       "type": "morning",
       "headline": "QQQ +0.97% · SOXX +0.93%, 에너지만 홀로 역방향",
