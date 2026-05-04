@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-05-05",
+      "narrativeAngle": "supply_chain",
+      "headline": "한국 증시 5% 급등, 외국인이 몰린 까닭",
+      "bigStoryTopic": "코스피 6936포인트 돌파로 미국 대비 압도적 강세. 달러 강세에도 원화 자산 매력도가 살",
+      "walletTopics": [
+        "반도체 기업들, 환율과 수요 증가 이중 수혜",
+        "정유업계, 고유가와 정제마진 개선으로 호황",
+        "항공업계, 유가 상승과 환율 약세 이중고",
+        "오늘의 자산 매력도 진단",
+        "4% 금리 시대, 안전자산의 재조명"
+      ],
+      "metaphors": [],
+      "lookingAhead": "미국 4월 ISM 서비스업 지수 발표"
+    },
+    {
       "date": "2026-05-04",
       "narrativeAngle": "hidden_variable",
       "headline": "원유가 100달러, 누구는 웃고 누구는 운다",
