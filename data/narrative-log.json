@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-05-06",
+      "narrativeAngle": "historical_deja_vu",
+      "headline": "1986년 일본 재현, 코스피 7000 초읽기",
+      "bigStoryTopic": "40년 전 닛케이 광풍과 닮은꼴 한국 증시. 하지만 이번엔 다른 점 3가지가 있습니다.",
+      "walletTopics": [
+        "삼성전자·SK하이닉스, 1986년 일본 전철 피할 수 있을까",
+        "정유업계, 고유가의 이중 수혜 구조 완성",
+        "항공업계, 유가 안정화로 숨통 트이나",
+        "오늘의 투자 매력도 진단",
+        "4% 금리 시대, 선택의 기준"
+      ],
+      "metaphors": [],
+      "lookingAhead": "코스피 7000 돌파 여부"
+    },
+    {
       "date": "2026-05-05",
       "narrativeAngle": "supply_chain",
       "headline": "한국 증시 5% 급등, 외국인이 몰린 까닭",

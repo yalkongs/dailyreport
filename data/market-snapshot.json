@@ -1,7 +1,7 @@
 {
-  "date": "2026-05-05",
-  "dayOfWeek": "화",
-  "collectedAt": "2026-05-05T07:30:50+09:00",
+  "date": "2026-05-06",
+  "dayOfWeek": "수",
+  "collectedAt": "2026-05-06T07:29:55+09:00",
   "headline": "",
   "items": [
     {
@@ -20,51 +20,51 @@
     },
     {
       "name": "S&P 500",
-      "value": "7,200.75",
-      "change": "-0.41%",
-      "changePercent": -0.40621895,
-      "direction": "down"
-    },
-    {
-      "name": "나스닥",
-      "value": "25,067.8",
-      "change": "-0.19%",
-      "changePercent": -0.18572013,
-      "direction": "down"
-    },
-    {
-      "name": "다우존스",
-      "value": "48,941.9",
-      "change": "-1.13%",
-      "changePercent": -1.1260189,
-      "direction": "down"
-    },
-    {
-      "name": "원/달러",
-      "value": "1,476.15",
-      "change": "+0.34%",
-      "changePercent": 0.335143,
+      "value": "7,259.22",
+      "change": "+0.81%",
+      "changePercent": 0.8120017,
       "direction": "up"
     },
     {
-      "name": "WTI 원유",
-      "value": "$105.09",
-      "change": "-1.25%",
-      "changePercent": -1.2497668,
+      "name": "나스닥",
+      "value": "25,326.13",
+      "change": "+1.03%",
+      "changePercent": 1.0305021,
+      "direction": "up"
+    },
+    {
+      "name": "다우존스",
+      "value": "49,298.25",
+      "change": "+0.73%",
+      "changePercent": 0.72811145,
+      "direction": "up"
+    },
+    {
+      "name": "원/달러",
+      "value": "1,474.88",
+      "change": "-0.03%",
+      "changePercent": -0.029150056,
       "direction": "down"
     },
     {
+      "name": "WTI 원유",
+      "value": "$102.59",
+      "change": "+0.31%",
+      "changePercent": 0.31289694,
+      "direction": "up"
+    },
+    {
       "name": "금",
-      "value": "$4,531",
-      "change": "-0.05%",
-      "changePercent": -0.05073136,
+      "value": "$4,559.3",
+      "change": "-0.20%",
+      "changePercent": -0.20138328,
       "direction": "down"
     },
     {
       "name": "비트코인",
-      "value": "$80,232",
-      "change": "+1.34%",
-      "changePercent": 1.3438148,
+      "value": "$81,492",
+      "change": "+1.79%",
+      "changePercent": 1.7888705,
       "direction": "up"
     }
   ]
