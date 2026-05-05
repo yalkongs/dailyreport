@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-05-06",
+      "type": "morning",
+      "headline": "SOXX +4.47%, 개장 30분이 오늘의 온도계",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-05-06",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-05-05T22:35:46.943Z"
+    },
+    {
       "date": "2026-05-05",
       "type": "morning",
       "headline": "코스피 최고치 경신 뒤, S&P500·나스닥은 소폭 후퇴",
