@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-05-07",
+      "narrativeAngle": "other_side",
+      "headline": "코스피 7384, 막차 타려는 투자자들",
+      "bigStoryTopic": "한국 증시 6.5% 급등으로 미국을 앞질렀습니다. 달러 약세와 위험자산 선호가 만든 역전 ",
+      "walletTopics": [
+        "반도체 업체들, 환율 하락에도 주가 급등",
+        "은행주, 금리 하락 우려에도 상승세",
+        "정유업체들, 유가 안정화로 재고 부담 완화",
+        "오늘의 투자 매력도 진단",
+        "4% 금리 시대, 자금 배분 전략"
+      ],
+      "metaphors": [],
+      "lookingAhead": "미 연준 위원들 발언 집중"
+    },
+    {
       "date": "2026-05-06",
       "narrativeAngle": "historical_deja_vu",
       "headline": "1986년 일본 재현, 코스피 7000 초읽기",
