@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-05-08",
+      "type": "morning",
+      "headline": "SOXX -2.86%, 국내 반도체 ETF로 건너오는 무게",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-05-08",
+      "anomalyCount": 11,
+      "anomalyBreakdown": {
+        "premiumDiscount": 11
+      },
+      "createdAt": "2026-05-07T22:39:21.136Z"
+    },
+    {
       "date": "2026-05-07",
       "type": "morning",
       "headline": "SOXX +5%, GDX +7.73%… 보유자와 신규의 다른 풍경",
