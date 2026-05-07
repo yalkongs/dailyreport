@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-05-08",
+      "narrativeAngle": "global_domino",
+      "headline": "동서 엇갈린 도미노, 한국이 선택한 방향",
+      "bigStoryTopic": "미국이 0.4% 하락할 때 코스피는 1.4% 상승했습니다. 일본 5.6% 급등에 이은 아시",
+      "walletTopics": [
+        "반도체 업계, 원화 약세와 일본 랠리 이중 혜택",
+        "정유·화학 기업들, 고유가 복귀로 실적 개선 기대",
+        "항공업계, 유가 상승 부담 vs 환율 수혜 저울질",
+        "오늘의 자산 매력도",
+        "4% 금리 시대의 선택"
+      ],
+      "metaphors": [],
+      "lookingAhead": "미국 PPI 발표와 시장 반응"
+    },
+    {
       "date": "2026-05-07",
       "narrativeAngle": "other_side",
       "headline": "코스피 7384, 막차 타려는 투자자들",
