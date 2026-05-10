@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-05-11",
+      "narrativeAngle": "structural_lens",
+      "headline": "장기 구조 흐름이 일일 변동을 압도하는 시장",
+      "bigStoryTopic": "코스피 7498포인트 보합권, 나스닥 1.7% 상승. 숫자보다 중요한 건 3개월째 멈춰선 ",
+      "walletTopics": [
+        "반도체 기업들, 구조적 상승 사이클 지속",
+        "정유업계, 유가 안정화로 재고 리스크 완화",
+        "은행주, 금리 하락 우려에도 NIM 방어",
+        "구조적 관점에서 본 자산 매력도",
+        "4% 금리 시대, 선택의 기준"
+      ],
+      "metaphors": [],
+      "lookingAhead": "미국 CPI 발표 대기"
+    },
+    {
       "date": "2026-05-08",
       "narrativeAngle": "global_domino",
       "headline": "동서 엇갈린 도미노, 한국이 선택한 방향",
