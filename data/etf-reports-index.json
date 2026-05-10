@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-05-11",
+      "type": "morning",
+      "headline": "SOXX +5.67%, 사흘째 쌓이는 힘인가 하루짜리 반등인가",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-05-11",
+      "anomalyCount": 9,
+      "anomalyBreakdown": {
+        "premiumDiscount": 9
+      },
+      "createdAt": "2026-05-10T22:13:37.043Z"
+    },
+    {
       "date": "2026-05-08",
       "type": "morning",
       "headline": "SOXX -2.86%, 국내 반도체 ETF로 건너오는 무게",
