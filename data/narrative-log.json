@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-05-12",
+      "narrativeAngle": "time_travel",
+      "headline": "코스피 7822, 3개월 만에 46% 급등",
+      "bigStoryTopic": "작년 같은 기간 대비 200% 상승세. 미국 증시는 보합권에서 횡보하는 동안 한국은 독주 ",
+      "walletTopics": [
+        "반도체 업계, 환율과 AI 수요 동반 상승",
+        "정유·화학 기업, 고유가 시대 최대 수혜주",
+        "은행주, 금리 상승에도 NIM 개선 한계",
+        "오늘의 투자 매력도 진단",
+        "4% 금리 시대, 안전자산의 재평가"
+      ],
+      "metaphors": [],
+      "lookingAhead": "미국 CPI 발표 주목"
+    },
+    {
       "date": "2026-05-11",
       "narrativeAngle": "structural_lens",
       "headline": "장기 구조 흐름이 일일 변동을 압도하는 시장",
