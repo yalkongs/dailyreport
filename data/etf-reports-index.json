@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-05-12",
+      "type": "morning",
+      "headline": "SLV +6.83% · SOXX +2.39%, 반도체와 원자재만 달린 날",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-05-12",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-05-11T22:39:53.368Z"
+    },
+    {
       "date": "2026-05-11",
       "type": "morning",
       "headline": "SOXX +5.67%, 사흘째 쌓이는 힘인가 하루짜리 반등인가",
