@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-05-13",
+      "narrativeAngle": "hidden_variable",
+      "headline": "인플레 우려 뒤에 숨은 진짜 변수들",
+      "bigStoryTopic": "미국 CPI 상승과 유가 하락의 역설적 동조. 표면적 수치 너머 중앙은행 딜레마가 심화되고",
+      "walletTopics": [
+        "반도체 업계, 환율 상승에도 수출 단가 부담",
+        "정유업계, 고유가와 마진 압박의 딜레마",
+        "은행권, 금리 상승 기대감 vs 신용 리스크",
+        "인플레 우려 속 자산 매력도",
+        "4% 시대, 안전자산의 경쟁력"
+      ],
+      "metaphors": [],
+      "lookingAhead": "미국 소매판매 지표 발표"
+    },
+    {
       "date": "2026-05-12",
       "narrativeAngle": "time_travel",
       "headline": "코스피 7822, 3개월 만에 46% 급등",
@@ -452,24 +467,6 @@
         "블랙스완"
       ],
       "lookingAhead": "관세 협상 진전 여부가 관건"
-    },
-    {
-      "date": "2026-04-06",
-      "narrativeAngle": "supply_chain",
-      "headline": "중국 반도체 자급, 세계 시장 흔들다",
-      "bigStoryTopic": "중국 반도체 자급화 → 글로벌 공급망 재편",
-      "walletTopics": [
-        "반도체주 투자전략",
-        "중국 관련주 리스크",
-        "소비재·내수주 기회"
-      ],
-      "metaphors": [
-        "지각 변동",
-        "파도",
-        "칼날 위",
-        "무게 중심 이동"
-      ],
-      "lookingAhead": "단기 변동성, 구조 변화 주목"
     }
   ]
 }
