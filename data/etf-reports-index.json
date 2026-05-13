@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-05-14",
+      "type": "morning",
+      "headline": "SOXX +2.38%, S&P500 사상 최고치… 잠든 사이 벌어진 거리",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-05-14",
+      "anomalyCount": 15,
+      "anomalyBreakdown": {
+        "premiumDiscount": 15
+      },
+      "createdAt": "2026-05-13T22:48:36.017Z"
+    },
+    {
       "date": "2026-05-13",
       "type": "morning",
       "headline": "SOXX -3.15%, 선행과 확인 사이의 하루",
