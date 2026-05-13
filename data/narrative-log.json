@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-05-14",
+      "narrativeAngle": "data_anatomy",
+      "headline": "원/달러 1489원, 하나의 숫자가 말하는 6가지",
+      "bigStoryTopic": "환율 소폭 하락 속에서 코스피 7844포인트 2.6% 상승. 같은 수치도 업종별·투자자별로",
+      "walletTopics": [
+        "반도체 업체들, 환율 하락에도 수출 경쟁력 유지",
+        "정유업체들, 원유 100달러대 고점에서 마진 관리 고민",
+        "은행주, 금리 상승 기대감과 대손충당금 부담의 저울질",
+        "오늘의 자산 매력도 진단",
+        "4% 금리 시대의 자금 배분"
+      ],
+      "metaphors": [],
+      "lookingAhead": "미국 30년 국채 5% 돌파 파급효과"
+    },
+    {
       "date": "2026-05-13",
       "narrativeAngle": "hidden_variable",
       "headline": "인플레 우려 뒤에 숨은 진짜 변수들",
@@ -450,23 +465,6 @@
         "안전자산으로의 피난"
       ],
       "lookingAhead": "변동성 속 선택적 접근"
-    },
-    {
-      "date": "2026-04-01",
-      "narrativeAngle": "generation_wallet",
-      "headline": "美 관세폭탄, 글로벌 경제 흔들다",
-      "bigStoryTopic": "미국 상호관세 발표 → 글로벌 무역전쟁 우려",
-      "walletTopics": [
-        "글로벌 관세전쟁과 수출주 타격",
-        "안전자산 달러·금 급등",
-        "변동성 장세 대응 전략"
-      ],
-      "metaphors": [
-        "관세폭탄",
-        "무역전쟁",
-        "블랙스완"
-      ],
-      "lookingAhead": "관세 협상 진전 여부가 관건"
     }
   ]
 }
