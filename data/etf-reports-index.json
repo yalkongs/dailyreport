@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-05-15",
+      "type": "morning",
+      "headline": "S&P500 7,500선 돌파, USD/KRW 1,493의 두 얼굴",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-05-15",
+      "anomalyCount": 10,
+      "anomalyBreakdown": {
+        "premiumDiscount": 10
+      },
+      "createdAt": "2026-05-14T22:41:51.988Z"
+    },
+    {
       "date": "2026-05-14",
       "type": "morning",
       "headline": "SOXX +2.38%, S&P500 사상 최고치… 잠든 사이 벌어진 거리",
