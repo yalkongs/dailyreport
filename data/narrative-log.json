@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-05-15",
+      "narrativeAngle": "historical_deja_vu",
+      "headline": "1990년과 닮은 2026년, 다른 점 3가지",
+      "bigStoryTopic": "코스피 7981포인트 1.8% 상승. 36년 전 고금리·고인플레 시대와 유사하지만 주도주,",
+      "walletTopics": [
+        "반도체 기업들, 1990년과 다른 포지셔닝",
+        "정유·화학 업계, 고유가의 양면성",
+        "은행주, 금리 상승 수혜 vs 부실 우려",
+        "고금리 시대 자산 매력도 진단",
+        "4% 금리 시대의 자금 배분 전략"
+      ],
+      "metaphors": [],
+      "lookingAhead": "코스피 8000포인트 돌파 시도"
+    },
+    {
       "date": "2026-05-14",
       "narrativeAngle": "data_anatomy",
       "headline": "원/달러 1489원, 하나의 숫자가 말하는 6가지",
@@ -447,24 +462,6 @@
         "내 지갑은 어떻게"
       ],
       "lookingAhead": "변동성 속 기회 모색"
-    },
-    {
-      "date": "2026-04-02",
-      "narrativeAngle": "structural_lens",
-      "headline": "관세 전쟁, 시장을 뒤흔들다",
-      "bigStoryTopic": "트럼프 관세 정책 → 글로벌 시장 충격",
-      "walletTopics": [
-        "반도체 업종 타격",
-        "방어주 주목",
-        "달러 강세 지속"
-      ],
-      "metaphors": [
-        "시장을 뒤흔들다",
-        "폭풍의 눈",
-        "방어막",
-        "안전자산으로의 피난"
-      ],
-      "lookingAhead": "변동성 속 선택적 접근"
     }
   ]
 }
