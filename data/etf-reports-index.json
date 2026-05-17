@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-05-18",
+      "type": "morning",
+      "headline": "SOXX -4.06% · SLV -8.57%, 개장 30분이 오늘의 속도를 가른다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-05-18",
+      "anomalyCount": 15,
+      "anomalyBreakdown": {
+        "premiumDiscount": 15
+      },
+      "createdAt": "2026-05-17T22:22:05.191Z"
+    },
+    {
       "date": "2026-05-15",
       "type": "morning",
       "headline": "S&P500 7,500선 돌파, USD/KRW 1,493의 두 얼굴",
