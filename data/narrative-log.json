@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-05-18",
+      "narrativeAngle": "supply_chain",
+      "headline": "WTI 101달러, 전 세계 공급망이 흔들리다",
+      "bigStoryTopic": "유가 4.2% 급등으로 석유화학부터 물류까지 비용 체인이 시작됐습니다. 코스피는 6.1% ",
+      "walletTopics": [
+        "정유업체, 3개월 만에 최대 수혜 구간",
+        "석유화학업계, 마진 압박 본격화",
+        "물류·배송업계, 비용 전가 불가피",
+        "오늘의 자산 매력도",
+        "4% 금리 시대의 선택"
+      ],
+      "metaphors": [],
+      "lookingAhead": "미국 산업생산 지표 발표"
+    },
+    {
       "date": "2026-05-15",
       "narrativeAngle": "historical_deja_vu",
       "headline": "1990년과 닮은 2026년, 다른 점 3가지",
@@ -446,22 +461,6 @@
         "시장의 체온계"
       ],
       "lookingAhead": "단기 변동성, 장기 성장 전략"
-    },
-    {
-      "date": "2026-04-03",
-      "narrativeAngle": "global_domino",
-      "headline": "글로벌 시장 주요 동향",
-      "bigStoryTopic": "미국 관세 정책 → 글로벌 무역 긴장",
-      "walletTopics": [
-        "미국 주식 시장 변동성",
-        "채권 시장 안전자산 선호",
-        "달러 강세와 환율 영향"
-      ],
-      "metaphors": [
-        "시장의 맥박",
-        "내 지갑은 어떻게"
-      ],
-      "lookingAhead": "변동성 속 기회 모색"
     }
   ]
 }
