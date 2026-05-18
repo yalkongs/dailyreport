@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-05-19",
+      "narrativeAngle": "job_perspective",
+      "headline": "코스피 0.3% 상승, 원유 2% 하락의 속사정",
+      "bigStoryTopic": "유가 하락에도 정유업계는 딜레마, 환율 하락으로 수출업계엔 새로운 고민거리가 생겼습니다.",
+      "walletTopics": [
+        "정유업계, 마진 개선 기대감 vs 경기 둔화 우려",
+        "수출 제조업, 환율 하락으로 가격 경쟁력 고민",
+        "물류·배송업계, 유가 하락으로 운영비 절감",
+        "오늘의 투자 매력도 진단",
+        "4% 금리 시대의 자금 배분"
+      ],
+      "metaphors": [],
+      "lookingAhead": "미국 주택 관련 지표 발표"
+    },
+    {
       "date": "2026-05-18",
       "narrativeAngle": "supply_chain",
       "headline": "WTI 101달러, 전 세계 공급망이 흔들리다",
@@ -444,23 +459,6 @@
         "돌다리를 두드리며"
       ],
       "lookingAhead": "관세 협상 진전 여부 주목"
-    },
-    {
-      "date": "2026-04-07",
-      "narrativeAngle": "hidden_variable",
-      "headline": "원자재 한파, 경제 전선 이상",
-      "bigStoryTopic": "원자재 가격 급락 → 디플레이션 우려",
-      "walletTopics": [
-        "식료품비 하락",
-        "주유비 절감",
-        "금 투자 손실"
-      ],
-      "metaphors": [
-        "경제 전선 이상",
-        "원자재 한파",
-        "시장의 체온계"
-      ],
-      "lookingAhead": "단기 변동성, 장기 성장 전략"
     }
   ]
 }
