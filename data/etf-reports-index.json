@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-05-19",
+      "type": "morning",
+      "headline": "SOXX -2.49%, 방어가 공격을 앞선 밤",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-05-19",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-05-18T22:41:10.888Z"
+    },
+    {
       "date": "2026-05-18",
       "type": "morning",
       "headline": "SOXX -4.06% · SLV -8.57%, 개장 30분이 오늘의 속도를 가른다",
