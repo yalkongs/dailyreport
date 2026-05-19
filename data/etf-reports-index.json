@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-05-20",
+      "type": "morning",
+      "headline": "SPY -0.67% · 유가 100달러, 방어가 먼저인 아침",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-05-20",
+      "anomalyCount": 12,
+      "anomalyBreakdown": {
+        "premiumDiscount": 12
+      },
+      "createdAt": "2026-05-19T22:43:48.428Z"
+    },
+    {
       "date": "2026-05-19",
       "type": "morning",
       "headline": "SOXX -2.49%, 방어가 공격을 앞선 밤",
