@@ -17,6 +17,9 @@ export interface AntiRepetitionContext {
   recentLog: NarrativeLogEntry[];
   sideways: SidewaysAnalysis;
   deepDiveTopic: string | null;
+  // Phase 1 (2026-05-19): 시장 분위기별 가변 포맷 모드.
+  // 비어있으면 normal 동작 (기존 동작과 동일).
+  marketMode?: import("./market-mode").MarketModeAnalysis;
 }
 
 function buildSystemPrompt(): string {
@@ -204,15 +207,21 @@ function buildReportPrompt(data: MarketDataCollection, ctx: AntiRepetitionContex
   const sidewaysBlock = buildSidewaysBlock(ctx);
   const contextBlock = buildContextBlock(context);
 
+  // Phase 1: 시장 분위기 모드별 분량·구성 가이드.
+  const modeBlock = ctx.marketMode
+    ? `\n## 🎨 오늘의 리포트 모드: **${ctx.marketMode.mode}**\n${ctx.marketMode.reason}\n\n${require("./market-mode").describeModeForPrompt(ctx.marketMode.mode)}\n`
+    : "";
+
   return `아래 시장 데이터를 바탕으로 리포트 콘텐츠를 JSON 형식으로 생성하십시오.
 
-## ⚠️ 분량 요구사항 — 매우 중요
-- bigStory.content: paragraph 블록 최소 12개 이상, pullQuote 2~3개, dataCard 2~3개
+## ⚠️ 분량 요구사항 — **위 모드 가이드가 있으면 그것을 우선**
+- (기본/normal 모드 기준) bigStory.content: paragraph 블록 최소 12개 이상, pullQuote 2~3개, dataCard 2~3개
 - watchPoints: 3~4개
 - compass: 3개 소주제 (자산군별 온도계, 예금 vs 투자, 수급 동향)
 - soWhat: 5~6개
 - calendar: 경제 캘린더 데이터가 있으면 주요 일정 포함
 증권사 데일리 브리핑 수준의 깊이와 분량을 목표로 하십시오.
+${modeBlock}
 
 ## 날짜: ${data.date} (${data.dayOfWeek}요일)
 ## 수집 시각: ${data.collectedAt}
@@ -435,11 +444,12 @@ export async function generateReport(
     console.log(`📅 캘린더: 실제 경제 데이터에서 ${content.calendar.length}건 사용 (Claude 생성 대체)`);
   }
 
-  // 코드 템플릿으로 HTML 렌더링
+  // 코드 템플릿으로 HTML 렌더링 (Phase 1: 모드 전달)
   const historicalData = context?.historicalComparison ?? [];
-  const html = renderReport(content, data, historicalData);
+  const mode = (ctx ?? defaultCtx).marketMode?.mode;
+  const html = renderReport(content, data, historicalData, mode);
 
-  console.log(`✅ 리포트 렌더링 완료 (${html.length} bytes)`);
+  console.log(`✅ 리포트 렌더링 완료 (${html.length} bytes, 모드: ${mode ?? "n/a"})`);
   return { html, content };
 }
 

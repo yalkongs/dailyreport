@@ -358,21 +358,29 @@ function renderFooter(content: ReportContent): string {
 export function renderReport(
   content: ReportContent,
   data: MarketDataCollection,
-  historicalData: HistoricalComparison[]
+  historicalData: HistoricalComparison[],
+  mode?: "event" | "normal" | "quiet"
 ): string {
   const css = loadCSS();
+
+  // Phase 1 (2026-05-19): 모드별 섹션 가변 렌더링.
+  // - event:  bigStory(deep) + soWhat 만. watchPoints/compass 생략.
+  // - quiet:  bigStory(짧게) + watchPoints 만. compass/soWhat 생략.
+  // - normal: 현재 6섹션 모두.
+  const isEvent = mode === "event";
+  const isQuiet = mode === "quiet";
 
   const sections = [
     renderHead(content, data.date, css),
     renderCover(content, data.date, data.dayOfWeek),
     renderMarketPulse(data, historicalData),
     renderBigStory(content),
-    renderWatchPoints(content),
-    renderCompass(content),
-    renderSoWhat(content),
+    isEvent ? "" : renderWatchPoints(content),  // event: 생략
+    (isEvent || isQuiet) ? "" : renderCompass(content),  // event/quiet: 생략
+    isQuiet ? "" : renderSoWhat(content),  // quiet: 생략
     renderCalendar(content),
     renderFooter(content),
   ];
 
-  return sections.join("\n");
+  return sections.filter(Boolean).join("\n");
 }

@@ -7,6 +7,7 @@ import type { AntiRepetitionContext } from "../lib/claude-client";
 import type { ContextData } from "../lib/types";
 import { selectAngle } from "../lib/narrative-angles";
 import { analyzeSideways, selectDeepDiveTopic } from "../lib/sideways-detector";
+import { analyzeMarketMode } from "../lib/market-mode";
 import {
   getRecentEntries,
   saveNarrativeEntry,
@@ -222,6 +223,10 @@ async function main() {
   } else {
     console.log(`📈 시장 변동 감지 (평균 |변동률|: ${sideways.avgAbsChange.toFixed(2)}%)`);
   }
+
+  // Phase 1 (2026-05-19): 시장 분위기별 가변 포맷 모드.
+  const marketMode = analyzeMarketMode(marketData);
+  console.log(`🎨 리포트 모드: ${marketMode.mode} — ${marketMode.reason}`);
   console.log();
 
   // Step 4: Claude API로 리포트 생성
@@ -231,6 +236,7 @@ async function main() {
     recentLog,
     sideways,
     deepDiveTopic,
+    marketMode,
   };
   const { html, content: reportContent } = await generateReport(marketData, ctx, contextData);
   console.log();
