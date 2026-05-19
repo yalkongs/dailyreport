@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-05-20",
+      "narrativeAngle": "other_side",
+      "headline": "코스피 -3.3%, 원달러 1507원 돌파",
+      "bigStoryTopic": "외국인 매도와 환율 상승이 동시 출현. 하지만 수출 대기업과 정유업계에는 반사이익이 몰렸습",
+      "walletTopics": [
+        "반도체 기업들, 환율 상승으로 실적 개선 기대",
+        "정유업계, 고유가에도 마진 개선 신호",
+        "은행주, 금리 상승으로 예대마진 확대",
+        "오늘의 자산 매력도",
+        "4% 금리 시대의 선택"
+      ],
+      "metaphors": [],
+      "lookingAhead": "미국 금리 추가 상승 신호"
+    },
+    {
       "date": "2026-05-19",
       "narrativeAngle": "job_perspective",
       "headline": "코스피 0.3% 상승, 원유 2% 하락의 속사정",
@@ -442,23 +457,6 @@
         "불확실성의 안개"
       ],
       "lookingAhead": "협상 가능성과 시장 안정화 신호"
-    },
-    {
-      "date": "2026-04-08",
-      "narrativeAngle": "other_side",
-      "headline": "관세 공포 속, AI만 웃었다",
-      "bigStoryTopic": "트럼프 관세 → 시장 변동성 확대",
-      "walletTopics": [
-        "테슬라 급등",
-        "엔비디아 조정",
-        "엔화 투자 기회"
-      ],
-      "metaphors": [
-        "시장이 숨죽이고 있다",
-        "AI라는 구명보트",
-        "돌다리를 두드리며"
-      ],
-      "lookingAhead": "관세 협상 진전 여부 주목"
     }
   ]
 }
