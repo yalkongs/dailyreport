@@ -140,10 +140,16 @@ function buildContextBlock(context: ContextData | null): string {
   block += `아래 데이터는 시장 분석의 맥락을 제공합니다. 리포트 본문에 자연스럽게 녹여 활용하십시오.\n`;
 
   if (context.news.length > 0) {
-    block += `\n### 주요 뉴스 헤드라인\n`;
+    block += `\n### 주요 뉴스 헤드라인 (최신순, 발행 경과 시간 포함)\n`;
     for (const n of context.news) {
-      block += `- [${n.category}] ${n.title} (${n.source})\n`;
+      const ago = typeof n.publishedHoursAgo === "number"
+        ? `${Math.round(n.publishedHoursAgo)}h전`
+        : "시각미상";
+      block += `- [${n.category}|${ago}] ${n.title} (${n.source})\n`;
     }
+    block += `위 헤드라인 중 발행 경과 시간이 짧은(최근) 한국 시장 관련 뉴스를 우선 반영하십시오. `;
+    block += `특히 시총 상위 기업(삼성전자 등) 이벤트나 수급 변화는 오늘 국내 장 방향의 핵심 변수일 수 있습니다. `;
+    block += `단, 제목만 제공되므로 기사 본문 내용을 단정하지 말고 "~로 알려졌다" 수준으로만 인용하십시오.\n`;
   }
 
   if (context.economicCalendar.length > 0) {

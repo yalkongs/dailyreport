@@ -117,6 +117,9 @@ export interface NewsHeadline {
   source: string;
   category: "global" | "korea" | "economy";
   pubDate?: string;
+  // Phase 1.5 (2026-05-21): 발행 경과 시간(시간 단위). 신선도 정렬·표시용.
+  // pubDate 파싱 실패 시 undefined.
+  publishedHoursAgo?: number;
 }
 
 export interface EconomicEvent {
