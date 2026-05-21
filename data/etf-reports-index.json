@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-05-22",
+      "type": "morning",
+      "headline": "SOXX +0.85% 사흘째 반등, 원화 1,508원의 두 무게",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-05-22",
+      "anomalyCount": 8,
+      "anomalyBreakdown": {
+        "premiumDiscount": 8
+      },
+      "createdAt": "2026-05-21T22:53:00.169Z"
+    },
+    {
       "date": "2026-05-21",
       "type": "morning",
       "headline": "SOXX +4.74%, 체인의 두 번째 마디는 국내 거래대금",
