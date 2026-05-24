@@ -1,6 +1,14 @@
 {
   "reports": [
     {
+      "date": "2026-05-25",
+      "title": "2026-05-25 월요일 — 휴장 안내",
+      "headline": "오늘은 양국 시장 휴장",
+      "subline": "다음 영업일은 2026-05-26 입니다. 정규 리포트는 다음 영업일 오전 06:30 KST에 다시 발행됩니다.",
+      "generatedAt": "2026-05-24T22:15:58.751Z",
+      "filePath": "/home/runner/work/dailyreport/dailyreport/public/reports/2026-05-25.html"
+    },
+    {
       "date": "2026-05-22",
       "title": "iM AI Market Report - 2026-05-22",
       "headline": "코스피 8.4% 급등, 7800선 회복",
