@@ -222,6 +222,25 @@ function buildReportPrompt(data: MarketDataCollection, ctx: AntiRepetitionContex
     ? `\n## 🎨 오늘의 리포트 모드: **${ctx.marketMode.mode}**\n${ctx.marketMode.reason}\n\n${require("./market-mode").describeModeForPrompt(ctx.marketMode.mode)}\n`
     : "";
 
+  // Phase F1 (2026-05-24): 한국 매크로 캘린더 (주 1회 web_search 갱신 캐시).
+  // 캐시 없거나 이벤트 0건이면 빈 문자열 → 프롬프트 변화 없음 (graceful fallback).
+  const krMacroBlock = (() => {
+    const { getUpcomingKrMacroEvents, formatKrMacroEventLine } = require("./kr-macro-calendar");
+    const events = getUpcomingKrMacroEvents(data.date, 7);
+    if (!events || events.length === 0) return "";
+    const lines = events.map((e: import("./kr-macro-calendar").KrMacroEvent) =>
+      `  - ${formatKrMacroEventLine(e, data.date)}${e.description ? `\n      └ ${e.description}` : ""}`
+    ).join("\n");
+    return `\n## 🇰🇷 한국 주요 매크로 일정 (오늘~7일)
+${lines}
+
+위 일정은 web_search 기반 자동 수집 캐시이며 일부는 패턴 추정입니다. 각 항목의 description 에 출처·확실성 표기가 있습니다.
+- **오늘 발표 예정인 지표가 있으면** 본문 또는 watchPoints 에서 명시적으로 언급하십시오.
+- 한국은행 금통위·CPI 같은 ★★★★★ 이벤트는 본문 narrative 의 forward catalyst 로 부각.
+- 추정 일정(description 에 "추정" 표기) 은 "예정" 또는 "관례상 N월 N일 전후" 같은 완곡한 표현 사용.
+`;
+  })();
+
   // Phase C (2026-05-22): 단독 휴장 시 캘린더 컨텍스트 블록.
   // 양국 모두 정상이거나 calendarInfo 가 없으면 빈 문자열.
   const calendarBlock = (() => {
@@ -265,6 +284,7 @@ function buildReportPrompt(data: MarketDataCollection, ctx: AntiRepetitionContex
 증권사 데일리 브리핑 수준의 깊이와 분량을 목표로 하십시오.
 ${modeBlock}
 ${calendarBlock}
+${krMacroBlock}
 ## 날짜: ${data.date} (${data.dayOfWeek}요일)
 ## 수집 시각: ${data.collectedAt}
 ${antiRepetition}

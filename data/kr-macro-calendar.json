@@ -1,0 +1,55 @@
+{
+  "generatedAt": "2026-05-24T12:33:12.394Z",
+  "weekRangeStart": "2026-05-24",
+  "weekRangeEnd": "2026-06-07",
+  "events": [
+    {
+      "date": "2026-05-28",
+      "category": "bok_mpb",
+      "name": "한국은행 금융통화위원회 통화정책방향 결정회의",
+      "importance": 5,
+      "description": "2026년 5월 기준금리 결정 회의. 2026년 연간 8회 개최 중 5번째 통화정책방향 결정회의. 직전 회의(4월 10일)에서 기준금리 2.5% 동결.",
+      "source": "bok.or.kr"
+    },
+    {
+      "date": "2026-05-28",
+      "category": "other",
+      "name": "2026년 1/4분기 가계동향조사 결과 발표",
+      "importance": 2,
+      "description": "국가데이터처(구 통계청)의 2026년 1분기 가계동향조사 결과 공표. 가계 소득·지출 동향 파악.",
+      "source": "mods.go.kr"
+    },
+    {
+      "date": "2026-05-29",
+      "category": "industrial",
+      "name": "2026년 4월 산업활동동향 발표",
+      "importance": 3,
+      "description": "국가데이터처(구 통계청)의 4월 전산업생산·소매판매·설비투자 등 산업활동 지표 공표.",
+      "source": "mods.go.kr"
+    },
+    {
+      "date": "2026-06-01",
+      "category": "trade",
+      "name": "2026년 5월 수출입 동향 발표 (잠정)",
+      "importance": 3,
+      "description": "산업통상자원부의 5월 수출입 잠정치 발표. 매월 1일 전후 공표가 관례. 무역수지 및 수출 증감률 확인 가능. 정확 일자는 산업부 공표일정 확정 시 변동 가능.",
+      "source": "motie.go.kr"
+    },
+    {
+      "date": "2026-06-03",
+      "category": "cpi",
+      "name": "2026년 5월 소비자물가동향(CPI) 발표",
+      "importance": 5,
+      "description": "국가데이터처(구 통계청) 5월 CPI 공표. 직전 발표 패턴(4월 CPI → 5월 6일, 3월 CPI → 4월 2일) 기준 6월 초 발표 추정. 전년동월비 물가상승률 확인.",
+      "source": "mods.go.kr"
+    },
+    {
+      "date": "2026-06-11",
+      "category": "employment",
+      "name": "2026년 5월 고용동향 발표",
+      "importance": 4,
+      "description": "국가데이터처(구 통계청) 경제활동인구조사 기반 5월 고용동향 공표. 매월 중순 발표 관례 기준 추정 일자(5월 13일 공표 패턴 참고). 취업자수·실업률 포함.",
+      "source": "mods.go.kr"
+    }
+  ]
+}
