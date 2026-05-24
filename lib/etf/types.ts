@@ -105,6 +105,8 @@ export interface CollectedData {
   // Phase B (2026-05-22): 시장 캘린더 — 한국/미국 단독 휴장 시 프롬프트
   // 어댑테이션. 양국 휴장은 파이프라인이 short-circuit 하므로 여기로 안 옴.
   calendarInfo?: import('../market-calendar').MarketCalendarInfo
+  // Phase E1 (2026-05-24): ETF 모드 분기 (event/normal/quiet)
+  etfMode?: import('./etf-mode').EtfModeAnalysis
 }
 
 export type StrategyStance = '선호' | '관찰' | '중립' | '경계'

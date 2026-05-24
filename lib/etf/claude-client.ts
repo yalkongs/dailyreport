@@ -161,6 +161,42 @@ function buildMorningPrompt(data: CollectedData): string {
     ? `\n오늘의 서사 앵글: ${angleKey}\n앵글 가이드: ${describeAngle(angleKey)}\n`
     : ''
 
+  // Phase E1 (2026-05-24): ETF 모드 분기 가이드
+  const etfModeBlock = data.etfMode
+    ? `\n[ETF 모드: ${data.etfMode.mode}] ${data.etfMode.reason}\n${require('./etf-mode').describeEtfModeForPrompt(data.etfMode.mode)}\n`
+    : ''
+
+  // Phase E2 (2026-05-24): 최근 7일 헤드라인 anchor 분포 — 단조화 차단
+  const anchorHistoryBlock = (() => {
+    if (!data.recentHeadlines || data.recentHeadlines.length === 0) return ''
+    // 헤드라인 앞 부분에서 anchor (티커·지수명·환율) 추출
+    const anchorPatterns = [
+      'SOXX', 'SPY', 'QQQ', 'GDX', 'SLV', 'GLD', 'USO', 'TLT', 'IEF', 'HACK', 'ARKK',
+      '코스피', '코스닥', 'S&P500', '나스닥', '환율', 'USD/KRW', '원/달러', 'VIX',
+      'KODEX', 'TIGER',
+    ]
+    const counts = new Map<string, number>()
+    for (const h of data.recentHeadlines) {
+      // 첫 anchor 만 (헤드라인 prefix anchor 가 본 단조화 신호)
+      for (const p of anchorPatterns) {
+        if (h.startsWith(p) || h.includes(p)) {
+          counts.set(p, (counts.get(p) ?? 0) + 1)
+          break
+        }
+      }
+    }
+    if (counts.size === 0) return ''
+    const dist = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
+      .map(([k, v]) => `${k} ${v}회`).join(', ')
+    return `\n[헤드라인 anchor 다양화 — 최근 ${data.recentHeadlines.length}일 분포]
+${dist}
+- 위 분포에서 **3회 이상 등장한 anchor 는 오늘 사용을 피하십시오** — 단조화 차단.
+- 오늘 정말 압도적으로 큰 움직임이 그 anchor 라면 어쩔 수 없지만, 그렇지 않으면 다른
+  ETF/지수/환율/원자재를 anchor 로 골라 새 frame 을 시도하십시오.
+- 함의 절(뒤 절) 표현도 매일 다르게 — "선행과 확인 사이", "개장 30분의 가늠자" 같은
+  과거 사용 표현 그대로 반복 금지.\n`
+  })()
+
   // Phase C (2026-05-22): 단독 휴장 시 캘린더 블록 (양국 휴장은 파이프라인에서
   // short-circuit 되므로 여기 도달하지 않음).
   const cal = data.calendarInfo
@@ -185,7 +221,7 @@ function buildMorningPrompt(data: CollectedData): string {
   })()
 
   return `오늘 날짜: ${data.date}
-분석 렌즈: ${data.analysisLens}${angleBlock}${calendarBlock}
+분석 렌즈: ${data.analysisLens}${angleBlock}${etfModeBlock}${anchorHistoryBlock}${calendarBlock}
 
 [독자·발행 맥락 — 모든 문장 작성 시 전제]
 - 발행 시각: 매일 **06:30 KST** (한국 증시 개장 전). 독자는 막 잠에서 깬 한국 개인 투자자입니다.

@@ -17,6 +17,7 @@ import {
 } from '../lib/etf/claude-client'
 import { selectAnalysisLens } from '../lib/etf/analysis-lens'
 import { selectNarrativeAngle } from '../lib/etf/narrative-angle'
+import { analyzeEtfMode } from '../lib/etf/etf-mode'
 import { getMarketCalendarInfo, describeMarketCalendar } from '../lib/market-calendar'
 import { renderHolidayNoticeHtml, getHolidayNoticeText } from '../lib/holiday-notice'
 import { renderMorningHtml, saveReport, saveReportPreviewImage } from '../lib/etf/renderer'
@@ -155,7 +156,11 @@ async function main() {
     narrativeAngle,
     recentHeadlines,
     calendarInfo,
+    etfMode: undefined, // 아래에서 anomalies 산출 후 채움
   }
+  // Phase E1 (2026-05-24): ETF 모드 분기 (이상 탐지 건수·핵심 ETF 변동률 활용)
+  data.etfMode = analyzeEtfMode(data, anomalies)
+  console.log(`[4a/8] ETF 모드: ${data.etfMode.mode} — ${data.etfMode.reason}`)
 
   // Step 5: Claude 분석 (최대 2회 시도 + Tier 1 fallback)
   // P0 (2026-04-24): 기존 3회 재시도는 대증요법(패턴 좁히기)에 의존해 왔음.
