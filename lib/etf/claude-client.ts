@@ -161,8 +161,31 @@ function buildMorningPrompt(data: CollectedData): string {
     ? `\n오늘의 서사 앵글: ${angleKey}\n앵글 가이드: ${describeAngle(angleKey)}\n`
     : ''
 
+  // Phase C (2026-05-22): 단독 휴장 시 캘린더 블록 (양국 휴장은 파이프라인에서
+  // short-circuit 되므로 여기 도달하지 않음).
+  const cal = data.calendarInfo
+  const calendarBlock = (() => {
+    if (!cal || (!cal.isKrClosedOnly && !cal.isUsClosedOnly)) return ''
+    if (cal.isKrClosedOnly) {
+      return `\n[시장 캘린더 — 한국 휴장]
+- 오늘 한국 시장: 휴장 (${cal.krHolidayName ?? '주말'}). 직전 영업일 ${cal.krPrevTradingDay}, 다음 영업일 ${cal.krNextTradingDay}.
+- 미국 시장: 정상 (간밤 마감 데이터).
+- 한국 ETF (KODEX·TIGER 등) 데이터는 **직전 영업일 종가**입니다. "오늘 KODEX X는 ~" 같은 단정 금지. "휴장 전 마지막 거래 기준" 또는 직전 영업일 명시.
+- 헤드라인은 미국 ETF 중심 또는 휴장 자체를 명시 (예: "한국 휴장 속, 미 SOXX는 ~").
+- "오늘 09:00 개장" 류 표현 금지. 다음 영업일(${cal.krNextTradingDay})의 관전 포인트로 closingLine 을 닫으십시오.
+`
+    }
+    return `\n[시장 캘린더 — 미국 휴장]
+- 간밤 미국 시장: 휴장 (${cal.usHolidayName ?? '주말'}). 직전 영업일 ${cal.usPrevTradingDay}, 다음 영업일 ${cal.usNextTradingDay}.
+- 한국 시장: 정상 (오늘 개장).
+- SOXX·QQQ·SPY 등 미국 ETF 데이터는 **직전 영업일 종가**입니다. "간밤 SOXX 는 ~" 같은 단정 금지.
+- 헤드라인·본문은 한국 시장 중심으로. 미국 데이터는 "${cal.usHolidayName ?? '휴장'} 으로 어제는 거래 없음" 식으로 처리.
+- 환율·국내 ETF 수급·종목 뉴스에 비중을 더 두십시오.
+`
+  })()
+
   return `오늘 날짜: ${data.date}
-분석 렌즈: ${data.analysisLens}${angleBlock}
+분석 렌즈: ${data.analysisLens}${angleBlock}${calendarBlock}
 
 [독자·발행 맥락 — 모든 문장 작성 시 전제]
 - 발행 시각: 매일 **06:30 KST** (한국 증시 개장 전). 독자는 막 잠에서 깬 한국 개인 투자자입니다.

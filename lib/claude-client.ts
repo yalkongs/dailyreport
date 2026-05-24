@@ -222,6 +222,38 @@ function buildReportPrompt(data: MarketDataCollection, ctx: AntiRepetitionContex
     ? `\n## 🎨 오늘의 리포트 모드: **${ctx.marketMode.mode}**\n${ctx.marketMode.reason}\n\n${require("./market-mode").describeModeForPrompt(ctx.marketMode.mode)}\n`
     : "";
 
+  // Phase C (2026-05-22): 단독 휴장 시 캘린더 컨텍스트 블록.
+  // 양국 모두 정상이거나 calendarInfo 가 없으면 빈 문자열.
+  const calendarBlock = (() => {
+    const info = ctx.calendarInfo;
+    if (!info || (!info.isKrClosedOnly && !info.isUsClosedOnly)) return "";
+    if (info.isKrClosedOnly) {
+      return `\n## 🏖️ 시장 캘린더 — 한국 휴장
+- **오늘 한국 시장: 휴장 (${info.krHolidayName ?? "주말"})**
+- 한국 직전 영업일: ${info.krPrevTradingDay} / 다음 영업일: ${info.krNextTradingDay}
+- 미국 시장: 정상 (간밤 마감 데이터)
+
+**리포트 작성 시 반드시 반영하십시오**:
+1. 코스피·코스닥·원/달러 등 **한국 데이터는 직전 영업일(${info.krPrevTradingDay}) 종가**입니다. "오늘 코스피는 X로 마감했다" 같은 서술 금지. "직전 영업일(${info.krPrevTradingDay}) 마감 기준" 또는 "휴장 전 마지막 거래일" 명시.
+2. 헤드라인은 미국 중심 또는 휴장 자체를 명시. (예: "한국 휴장 속, 미 증시는 X")
+3. 한국 시장 관련 뉴스가 있어도 "오늘 장에서" 라고 쓰지 말 것.
+4. "다음 영업일(${info.krNextTradingDay})에 무엇을 살펴야 하는지" 를 한 단락 이상 포함.
+`;
+    }
+    // isUsClosedOnly
+    return `\n## 🏖️ 시장 캘린더 — 미국 휴장
+- **간밤 미국 시장: 휴장 (${info.usHolidayName ?? "주말"})**
+- 미국 직전 영업일: ${info.usPrevTradingDay} / 다음 영업일: ${info.usNextTradingDay}
+- 한국 시장: 정상 (오늘 개장)
+
+**리포트 작성 시 반드시 반영하십시오**:
+1. SPY·QQQ·VIX·미 10Y 등 **미국 데이터는 직전 영업일(${info.usPrevTradingDay}) 종가**입니다. "간밤 S&P500은 X로 마감" 같은 단정 금지. "직전 영업일 종가" 또는 "${info.usHolidayName ?? "휴장"} 으로 어제는 거래 없음" 명시.
+2. 헤드라인은 한국 중심으로. (예: "미 증시 휴장, 한국만의 흐름은 X")
+3. "간밤 해외 동향" 표현보다 "직전 거래일 마감 기준" 같은 정확한 표현 사용.
+4. 한국 시장 자체의 동인(외국인·기관 수급, 환율, 종목 뉴스)에 비중을 더 두십시오.
+`;
+  })();
+
   return `아래 시장 데이터를 바탕으로 리포트 콘텐츠를 JSON 형식으로 생성하십시오.
 
 ## ⚠️ 분량 요구사항 — **위 모드 가이드가 있으면 그것을 우선**
@@ -232,7 +264,7 @@ function buildReportPrompt(data: MarketDataCollection, ctx: AntiRepetitionContex
 - calendar: 경제 캘린더 데이터가 있으면 주요 일정 포함
 증권사 데일리 브리핑 수준의 깊이와 분량을 목표로 하십시오.
 ${modeBlock}
-
+${calendarBlock}
 ## 날짜: ${data.date} (${data.dayOfWeek}요일)
 ## 수집 시각: ${data.collectedAt}
 ${antiRepetition}
