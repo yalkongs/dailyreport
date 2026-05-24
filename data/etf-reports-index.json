@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-05-25",
+      "type": "morning",
+      "headline": "오늘은 양국 시장 휴장",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-05-25",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-05-24T22:17:46.107Z"
+    },
+    {
       "date": "2026-05-22",
       "type": "morning",
       "headline": "SOXX +0.85% 사흘째 반등, 원화 1,508원의 두 무게",
