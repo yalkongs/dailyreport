@@ -250,6 +250,16 @@ US 10Y: ${formatPromptNumber(data.macro.us10y, 2)}%
 WTI: ${formatPromptNumber(data.macro.wti, 1)}
 Gold: ${formatPromptNumber(data.macro.gold, 0)}
 
+${(() => {
+  // Phase F2 (2026-05-24): ETF 측 catalyst 자동 추출.
+  const { extractTopCatalysts, formatCatalystForPrompt } = require('../catalyst-extractor')
+  const catalysts = extractTopCatalysts(data.news, { topN: 3, minScore: 4 })
+  if (catalysts.length === 0) return ''
+  return `\n[🔥 오늘의 forward catalyst — 자동 추출 ${catalysts.length}건]\n` +
+    catalysts.map((c: { score: number; publishedHoursAgo?: number; title: string; source?: string }) => `- ${formatCatalystForPrompt(c)}`).join('\n') +
+    `\n위는 신선도·시총 상위 기업명·시장 이벤트 키워드로 자동 점수화된 한국 시장 forward catalyst 입니다. ` +
+    `bigPicture·overnightBrief.krImpact 등 본문에서 우선 반영하고, 헤드라인에도 가능하면 사건명 포함.\n`
+})()}
 [주요 뉴스 — 발행 N시간 경과 라벨 포함]
 ${data.news.slice(0, 6).map(n => {
   const ago = typeof n.publishedHoursAgo === 'number'
@@ -283,11 +293,16 @@ ${data.recentHeadlines.map(h => `- ${h}`).join('\n')}
 - overnightBrief.krImpact는 해외 ETF·환율·KRX 국내 ETF가 국내 개장에 미치는 연결만 씁니다.
 - usEtfHighlights.sectorNarrative는 섹터 흐름만 씁니다. 환율·괴리율·자금흐름 설명을 반복하지 마십시오.
 
-[cover.headline 작성 규칙 — 2026-04-29 압축·함의형 재설계]
+[cover.headline 작성 규칙 — 2026-04-29 압축·함의형 재설계 / 2026-05-24 F3 catalyst 의무화]
 
 이 헤드라인은 06:30 KST 한국 개인투자자가 가장 먼저 만나는 한 줄입니다.
 시장 리포트의 압축 헤드라인 ("유가 100달러, 직업마다 다른 명암" 같은 형태)
 처럼, **구체 수치·사실 + 함의·관점** 의 두 절 압축 구조를 우선합니다.
+
+**F3 (catalyst 의무화)**: 위 [🔥 오늘의 forward catalyst] 블록에 항목이 있으면
+앞 절 또는 뒤 절에 **사건명·기업명을 반드시 명시**하십시오. 가격 anchor 만으로
+구성하지 마십시오. 예: "SOXX +2.57%" 단독 → "삼성 노사 타결, SOXX 도 +2.57%" 처럼
+사건 + 시장 신호 2요소.
 
 기본 형태 — **두 절 압축형 (선호)**:
   앞 절 = **구체 수치·사건·종목** (concrete anchor — 14자 내외)

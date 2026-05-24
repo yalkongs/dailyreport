@@ -144,6 +144,19 @@ function buildContextBlock(context: ContextData | null): string {
   block += `아래 데이터는 시장 분석의 맥락을 제공합니다. 리포트 본문에 자연스럽게 녹여 활용하십시오.\n`;
 
   if (context.news.length > 0) {
+    // Phase F2 (2026-05-24): catalyst 자동 추출 — 상위 1~3건을 별도 강조 블록으로.
+    const { extractTopCatalysts, formatCatalystForPrompt } = require("./catalyst-extractor");
+    const catalysts = extractTopCatalysts(context.news, { topN: 3, minScore: 4 });
+    if (catalysts.length > 0) {
+      block += `\n### 🔥 오늘의 forward catalyst (자동 추출 — 상위 ${catalysts.length}건)\n`;
+      for (const c of catalysts) {
+        block += `- ${formatCatalystForPrompt(c)}\n`;
+      }
+      block += `위 catalyst 는 신선도·시총 상위 기업명·시장 이벤트 키워드로 자동 점수화되어 추출된 것입니다.\n`;
+      block += `**오늘 한국 장 방향을 움직일 가능성이 가장 큰 변수**일 수 있으므로 본문·헤드라인에 우선적으로 반영하십시오.\n`;
+      block += `(다만 제목만 제공되므로 기사 본문 내용을 단정하지 말고 "~로 알려졌다·전해졌다" 수준으로 인용)\n`;
+    }
+
     block += `\n### 주요 뉴스 헤드라인 (최신순, 발행 경과 시간 포함)\n`;
     for (const n of context.news) {
       const ago = typeof n.publishedHoursAgo === "number"
@@ -151,9 +164,7 @@ function buildContextBlock(context: ContextData | null): string {
         : "시각미상";
       block += `- [${n.category}|${ago}] ${n.title} (${n.source})\n`;
     }
-    block += `위 헤드라인 중 발행 경과 시간이 짧은(최근) 한국 시장 관련 뉴스를 우선 반영하십시오. `;
-    block += `특히 시총 상위 기업(삼성전자 등) 이벤트나 수급 변화는 오늘 국내 장 방향의 핵심 변수일 수 있습니다. `;
-    block += `단, 제목만 제공되므로 기사 본문 내용을 단정하지 말고 "~로 알려졌다" 수준으로만 인용하십시오.\n`;
+    block += `위 헤드라인 중 발행 경과 시간이 짧은(최근) 한국 시장 관련 뉴스를 우선 반영하십시오.\n`;
   }
 
   if (context.economicCalendar.length > 0) {
@@ -302,7 +313,7 @@ ${JSON.stringify(data, null, 2)}
 \`\`\`typescript
 {
   "cover": {
-    "headline": string,   // 오늘 시장을 관통하는 핵심 한 줄 (15~25자)
+    "headline": string,   // 오늘 시장을 관통하는 핵심 한 줄 (15~25자). Phase F3 (2026-05-24): 위 [오늘의 forward catalyst] 블록에 항목이 있으면 헤드라인에 **사건명·원인** 을 반드시 포함. "코스피 +6.48%" 같은 가격만 표기 금지, "삼성 노사 타결, 코스피 +6.48%" 처럼 사건+수치 2요소.
     "subline": string     // 헤드라인을 보충하는 1~2문장
   },
   "bigStory": {
