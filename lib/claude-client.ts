@@ -20,6 +20,10 @@ export interface AntiRepetitionContext {
   // Phase 1 (2026-05-19): 시장 분위기별 가변 포맷 모드.
   // 비어있으면 normal 동작 (기존 동작과 동일).
   marketMode?: import("./market-mode").MarketModeAnalysis;
+  // Phase B (2026-05-22): 시장 캘린더 정보 — 한국/미국 단독 휴장 시 Claude
+  // 프롬프트에서 활용. 양국 휴장은 파이프라인이 이미 short-circuit 하므로
+  // 여기로 흘러오지 않음. 비어있으면 모든 시장 정상 가정 (기존 동작).
+  calendarInfo?: import("./market-calendar").MarketCalendarInfo;
 }
 
 function buildSystemPrompt(): string {

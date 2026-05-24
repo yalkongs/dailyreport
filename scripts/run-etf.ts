@@ -17,6 +17,8 @@ import {
 } from '../lib/etf/claude-client'
 import { selectAnalysisLens } from '../lib/etf/analysis-lens'
 import { selectNarrativeAngle } from '../lib/etf/narrative-angle'
+import { getMarketCalendarInfo, describeMarketCalendar } from '../lib/market-calendar'
+import { renderHolidayNoticeHtml, getHolidayNoticeText } from '../lib/holiday-notice'
 import { renderMorningHtml, saveReport, saveReportPreviewImage } from '../lib/etf/renderer'
 // NOTE: Only the error-notification path is imported. The success-path
 // Telegram send was moved to the GitHub Actions workflow so that the
@@ -73,6 +75,32 @@ async function main() {
     }
   }
 
+  // Phase B (2026-05-22): 시장 캘린더 체크 — 양국 휴장이면 최소 안내 리포트만.
+  const calendarInfo = getMarketCalendarInfo(date)
+  console.log(`[0c/8] 시장 캘린더: ${describeMarketCalendar(calendarInfo)}`)
+  if (calendarInfo.isDualClosed) {
+    console.log(`🏖️ 양국 동시 휴장 감지 — Claude 호출 생략, 안내 리포트만 발행합니다.`)
+    const notice = getHolidayNoticeText(calendarInfo)
+    const noticeHtml = renderHolidayNoticeHtml({ date, reportType: 'etf', info: calendarInfo })
+    const htmlPath = path.resolve(process.cwd(), 'public', 'etf-reports', `${date}.html`)
+    fs.writeFileSync(htmlPath, noticeHtml, 'utf-8')
+    console.log(`  저장: ${htmlPath}`)
+
+    const meta: ReportMeta = {
+      date,
+      type: 'morning',
+      headline: notice.headline,
+      url: `${(process.env.ETF_PUBLIC_BASE_URL?.trim() || 'https://dailyreport-eta.vercel.app').replace(/\/$/, '')}/etf-reports/${date}`,
+      anomalyCount: 0,
+      anomalyBreakdown: {},
+      createdAt: new Date().toISOString(),
+    }
+    updateReportsIndex(meta)
+    await saveReportPreviewImage(date, notice.headline, notice.subline)
+    console.log(`✅ ETF 휴장 안내 완료 — 다음 영업일: 한국 ${calendarInfo.krNextTradingDay} / 미국 ${calendarInfo.usNextTradingDay}`)
+    return
+  }
+
   // Step 1: 데이터 수집 (병렬)
   console.log('[1/8] 데이터 수집 중...')
   const [etfData, macro, news] = await Promise.allSettled([
@@ -126,6 +154,7 @@ async function main() {
     analysisLens,
     narrativeAngle,
     recentHeadlines,
+    calendarInfo,
   }
 
   // Step 5: Claude 분석 (최대 2회 시도 + Tier 1 fallback)

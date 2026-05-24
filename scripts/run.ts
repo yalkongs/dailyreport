@@ -8,6 +8,8 @@ import type { ContextData } from "../lib/types";
 import { selectAngle } from "../lib/narrative-angles";
 import { analyzeSideways, selectDeepDiveTopic } from "../lib/sideways-detector";
 import { analyzeMarketMode } from "../lib/market-mode";
+import { getMarketCalendarInfo, describeMarketCalendar } from "../lib/market-calendar";
+import { renderHolidayNoticeHtml, getHolidayNoticeText } from "../lib/holiday-notice";
 import {
   getRecentEntries,
   saveNarrativeEntry,
@@ -158,6 +160,41 @@ async function main() {
   }
   console.log();
 
+  // Phase B (2026-05-22): 시장 캘린더 체크 — 양국 휴장이면 최소 안내 리포트만.
+  console.log("━━━ Step 1c: 시장 캘린더 체크 ━━━");
+  const calendarInfo = getMarketCalendarInfo(marketData.date);
+  console.log(`📅 ${describeMarketCalendar(calendarInfo)}`);
+  if (calendarInfo.isDualClosed) {
+    console.log(`🏖️ 양국 동시 휴장 감지 — Claude 호출 생략, 안내 리포트만 발행합니다.`);
+    const notice = getHolidayNoticeText(calendarInfo);
+    const noticeHtml = renderHolidayNoticeHtml({ date: marketData.date, reportType: "market", info: calendarInfo });
+    const htmlPath = path.join(REPORTS_DIR, `${marketData.date}.html`);
+    fs.writeFileSync(htmlPath, noticeHtml, "utf-8");
+    console.log(`💾 안내 리포트 저장: ${htmlPath}`);
+
+    // 인덱스 업데이트 — 워크플로가 헤드라인을 읽어 Telegram caption 으로 사용
+    const idx = loadIndex();
+    const existingI = idx.reports.findIndex(r => r.date === marketData.date);
+    const meta: ReportMeta = {
+      date: marketData.date,
+      title: `${marketData.date} ${marketData.dayOfWeek}요일 — 휴장 안내`,
+      headline: notice.headline,
+      subline: notice.subline,
+      generatedAt: new Date().toISOString(),
+      filePath: htmlPath,
+    };
+    if (existingI >= 0) idx.reports[existingI] = meta;
+    else idx.reports.unshift(meta);
+    fs.writeFileSync(INDEX_PATH, JSON.stringify(idx, null, 2) + "\n", "utf-8");
+    console.log(`📁 인덱스 업데이트: ${meta.headline}`);
+
+    // PNG 프리뷰 (Telegram sendPhoto 용)
+    await saveMarketPreviewImage(marketData.date, notice.headline, notice.subline);
+    console.log(`✅ 휴장 안내 파이프라인 완료 — 다음 영업일: 한국 ${calendarInfo.krNextTradingDay} / 미국 ${calendarInfo.usNextTradingDay}`);
+    process.exit(0);
+  }
+  console.log();
+
   // Step 1b: 컨텍스트 데이터 수집 (kill switch 지원)
   let contextData: ContextData | null = null;
   if (process.env.DISABLE_CONTEXT === "true") {
@@ -237,6 +274,7 @@ async function main() {
     sideways,
     deepDiveTopic,
     marketMode,
+    calendarInfo,
   };
   const { html, content: reportContent } = await generateReport(marketData, ctx, contextData);
   console.log();
