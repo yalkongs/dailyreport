@@ -296,6 +296,10 @@ ${lines}
 ${modeBlock}
 ${calendarBlock}
 ${krMacroBlock}
+${(() => {
+  const { getWeekdayRole, describeWeekdayRhythm } = require("./weekday-rhythm");
+  return describeWeekdayRhythm(getWeekdayRole(data.date), "market");
+})()}
 ## 날짜: ${data.date} (${data.dayOfWeek}요일)
 ## 수집 시각: ${data.collectedAt}
 ${antiRepetition}

@@ -220,8 +220,12 @@ ${dist}
 `
   })()
 
+  // Phase E3 (2026-05-24): 요일 리듬 (월·금 특별 톤)
+  const { getWeekdayRole, describeWeekdayRhythm } = require('../weekday-rhythm')
+  const weekdayBlock = describeWeekdayRhythm(getWeekdayRole(data.date), 'etf')
+
   return `오늘 날짜: ${data.date}
-분석 렌즈: ${data.analysisLens}${angleBlock}${etfModeBlock}${anchorHistoryBlock}${calendarBlock}
+분석 렌즈: ${data.analysisLens}${angleBlock}${etfModeBlock}${anchorHistoryBlock}${calendarBlock}${weekdayBlock}
 
 [독자·발행 맥락 — 모든 문장 작성 시 전제]
 - 발행 시각: 매일 **06:30 KST** (한국 증시 개장 전). 독자는 막 잠에서 깬 한국 개인 투자자입니다.
