@@ -1519,12 +1519,12 @@ ${renderBigPicture(report, data)}
 
 ${renderStoryOpening(report, data)}
 
-${renderStorySpine(report, data)}
-
+${/* Phase E4 (2026-05-24): renderStorySpine 제거 — overnightBrief/sectorNarrative 와 순수 중복.
+     Story Spine 의 3막 narrative 는 storyCard(renderStoryOpening) 내 act 노트로 이미 표시됨. */ ''}
 ${renderStoryCharacters(report, data)}
 
-${renderStoryResolution(report, data)}
-
+${/* Phase E4: renderStoryResolution 제거 — checklist 와 시나리오 의미 중복.
+     resolutions 시나리오는 bigPicture·checklist 안에 흡수. */ ''}
 ${renderTodayChecklist(report, data.quotes)}
 
 ${renderDomesticActionBoard(data.quotes)}
