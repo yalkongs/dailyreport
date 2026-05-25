@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-05-26",
+      "type": "morning",
+      "headline": "삼성 노조 투표율 87%, SOXX +2.41%… 섹터마다 다른 아침",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-05-26",
+      "anomalyCount": 7,
+      "anomalyBreakdown": {
+        "premiumDiscount": 7
+      },
+      "createdAt": "2026-05-25T22:38:44.112Z"
+    },
+    {
       "date": "2026-05-25",
       "type": "morning",
       "headline": "오늘은 양국 시장 휴장",
