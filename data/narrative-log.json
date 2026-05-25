@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-05-26",
+      "narrativeAngle": "global_domino",
+      "headline": "美-이란 협상 진전설, 유가 6% 급락 여파",
+      "bigStoryTopic": "WTI 90달러대 복귀로 인플레 압력 완화. 코스피는 0.41% 상승하며 7800선을 재탈",
+      "walletTopics": [
+        "정유업계, 마진 축소 vs 수요 회복 저울질",
+        "물류·배송업계, 운송비 절감 효과 본격화",
+        "항공업계, 유류비 절감으로 실적 개선 기대",
+        "유가 급락 이후 자산 매력도",
+        "4% 금리 시대의 선택"
+      ],
+      "metaphors": [],
+      "lookingAhead": "이란 핵 협상 후속 뉴스 흐름"
+    },
+    {
       "date": "2026-05-22",
       "narrativeAngle": "hidden_variable",
       "headline": "코스피 8.4% 급등, 7800선 회복",
@@ -434,23 +449,6 @@
       ],
       "metaphors": [],
       "lookingAhead": "중국 1분기 GDP 발표"
-    },
-    {
-      "date": "2026-04-13",
-      "narrativeAngle": "job_perspective",
-      "headline": "기름값 올라도 농부만 웃는다",
-      "bigStoryTopic": "원유 급등 → 업종별 희비",
-      "walletTopics": [
-        "택배비 인상",
-        "커피값 상승",
-        "농산물 가격"
-      ],
-      "metaphors": [
-        "농부만 웃는다",
-        "수송비 걱정하는 택배 기사",
-        "원두비 계산하는 카페 사장"
-      ],
-      "lookingAhead": "유가 변동성 지속 관찰"
     }
   ]
 }
