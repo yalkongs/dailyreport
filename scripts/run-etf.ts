@@ -19,7 +19,7 @@ import { selectAnalysisLens } from '../lib/etf/analysis-lens'
 import { selectNarrativeAngle } from '../lib/etf/narrative-angle'
 import { analyzeEtfMode } from '../lib/etf/etf-mode'
 import { getMarketCalendarInfo, describeMarketCalendar } from '../lib/market-calendar'
-import { renderHolidayNoticeHtml, getHolidayNoticeText } from '../lib/holiday-notice'
+// (2026-05-25) holiday-notice 임포트 제거 — 한국 휴장 시 silent skip 정책으로 변경.
 import { renderMorningHtml, saveReport, saveReportPreviewImage } from '../lib/etf/renderer'
 // NOTE: Only the error-notification path is imported. The success-path
 // Telegram send was moved to the GitHub Actions workflow so that the
@@ -76,29 +76,16 @@ async function main() {
     }
   }
 
-  // Phase B (2026-05-22): 시장 캘린더 체크 — 양국 휴장이면 최소 안내 리포트만.
+  // Phase B (2026-05-22) → 2026-05-25 정책 변경: **한국 휴장이면 완전 silent skip**.
+  // 한국 고객 대상이라 한국 장 안 열리는 날 ETF 리포트 발송은 노이즈. Telegram 침묵.
+  // 파일 미생성 → 워크플로 Telegram step 자동 skip.
   const calendarInfo = getMarketCalendarInfo(date)
   console.log(`[0c/8] 시장 캘린더: ${describeMarketCalendar(calendarInfo)}`)
-  if (calendarInfo.isDualClosed) {
-    console.log(`🏖️ 양국 동시 휴장 감지 — Claude 호출 생략, 안내 리포트만 발행합니다.`)
-    const notice = getHolidayNoticeText(calendarInfo)
-    const noticeHtml = renderHolidayNoticeHtml({ date, reportType: 'etf', info: calendarInfo })
-    const htmlPath = path.resolve(process.cwd(), 'public', 'etf-reports', `${date}.html`)
-    fs.writeFileSync(htmlPath, noticeHtml, 'utf-8')
-    console.log(`  저장: ${htmlPath}`)
-
-    const meta: ReportMeta = {
-      date,
-      type: 'morning',
-      headline: notice.headline,
-      url: `${(process.env.ETF_PUBLIC_BASE_URL?.trim() || 'https://dailyreport-eta.vercel.app').replace(/\/$/, '')}/etf-reports/${date}`,
-      anomalyCount: 0,
-      anomalyBreakdown: {},
-      createdAt: new Date().toISOString(),
-    }
-    updateReportsIndex(meta)
-    await saveReportPreviewImage(date, notice.headline, notice.subline)
-    console.log(`✅ ETF 휴장 안내 완료 — 다음 영업일: 한국 ${calendarInfo.krNextTradingDay} / 미국 ${calendarInfo.usNextTradingDay}`)
+  if (calendarInfo.krStatus !== 'open') {
+    const reason = calendarInfo.krHolidayName ?? '주말'
+    console.log(`🏖️ 한국 시장 휴장(${reason}) — ETF 리포트 미생성·미발송 (silent skip).`)
+    console.log(`   다음 한국 영업일: ${calendarInfo.krNextTradingDay}`)
+    console.log(`   미국 시장: ${calendarInfo.usStatus === 'open' ? '정상' : `휴장(${calendarInfo.usHolidayName ?? '주말'})`}`)
     return
   }
 
