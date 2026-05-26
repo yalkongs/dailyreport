@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-05-27",
+      "type": "morning",
+      "headline": "마이크론 급등·SOXX +6.10%, 금통위 첫 인상 신호가 오늘의 분기점",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-05-27",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-05-26T22:50:59.728Z"
+    },
+    {
       "date": "2026-05-26",
       "type": "morning",
       "headline": "삼성 노조 투표율 87%, SOXX +2.41%… 섹터마다 다른 아침",
