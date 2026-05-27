@@ -100,14 +100,36 @@ export function scoreCatalyst(news: CatalystInput): CatalystScored {
 /**
  * 뉴스 목록에서 상위 N개의 catalyst 선별.
  * threshold 미만 점수는 제외 (의미 없는 노이즈 차단).
+ *
+ * 2026-05-28 추가: recentHeadlines 가 주어지면, 그 안에 동일 기업명/이벤트
+ * 키워드가 이미 등장한 catalyst 는 점수 -3 패널티. 같은 사건이 며칠 연속
+ * 헤드라인을 차지하는 단조화 방지.
  */
 export function extractTopCatalysts(
   news: CatalystInput[],
-  options: { topN?: number; minScore?: number } = {},
+  options: { topN?: number; minScore?: number; recentHeadlines?: string[] } = {},
 ): CatalystScored[] {
-  const { topN = 3, minScore = 4 } = options;
+  const { topN = 3, minScore = 4, recentHeadlines = [] } = options;
+
+  // 최근 헤드라인에서 등장한 기업명·이벤트 키워드 집합
+  const recentText = recentHeadlines.join(" ");
+  const recentCompanies = TOP_KR_COMPANIES.filter((c) => recentText.includes(c));
+  const recentEvents = EVENT_KEYWORDS.filter((e) => recentText.includes(e));
+
   return news
-    .map(scoreCatalyst)
+    .map((n) => {
+      const c = scoreCatalyst(n);
+      // 최근 헤드라인과 겹치는 기업·이벤트가 있으면 패널티
+      const overlapCompany = recentCompanies.some((co) => n.title.includes(co));
+      const overlapEvent = recentEvents.some((ev) => n.title.includes(ev));
+      if (overlapCompany && overlapEvent) {
+        return { ...c, score: c.score - 3, signals: [...c.signals, "최근반복-3"] };
+      }
+      if (overlapCompany) {
+        return { ...c, score: c.score - 2, signals: [...c.signals, "최근기업-2"] };
+      }
+      return c;
+    })
     .filter((c) => c.score >= minScore)
     .sort((a, b) => b.score - a.score)
     .slice(0, topN);

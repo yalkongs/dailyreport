@@ -190,11 +190,14 @@ function buildMorningPrompt(data: CollectedData): string {
       .map(([k, v]) => `${k} ${v}회`).join(', ')
     return `\n[헤드라인 anchor 다양화 — 최근 ${data.recentHeadlines.length}일 분포]
 ${dist}
-- 위 분포에서 **3회 이상 등장한 anchor 는 오늘 사용을 피하십시오** — 단조화 차단.
-- 오늘 정말 압도적으로 큰 움직임이 그 anchor 라면 어쩔 수 없지만, 그렇지 않으면 다른
-  ETF/지수/환율/원자재를 anchor 로 골라 새 frame 을 시도하십시오.
-- 함의 절(뒤 절) 표현도 매일 다르게 — "선행과 확인 사이", "개장 30분의 가늠자" 같은
-  과거 사용 표현 그대로 반복 금지.\n`
+- 위 분포에서 **3회 이상 등장한 anchor 는 오늘 사용을 절대 피하십시오** — 단조화 차단.
+- escape clause 좁힘 (2026-05-28): 같은 anchor 를 다시 쓰려면 다음을 **모두** 충족해야 함:
+  (a) 오늘 |변동률| ≥ 5%  AND
+  (b) 오늘 시장에서 그 anchor 가 가장 큰 mover.
+  둘 다 만족 안 하면 무조건 다른 anchor (USO·GDX·SLV·환율·VIX·국내 ETF 등)를 골라
+  새 frame 을 만드십시오.
+- 함의 절(뒤 절) 표현도 매일 다르게 — "선행과 확인 사이", "개장 30분의 가늠자",
+  "섹터마다 다른 아침", "두 무게/두 얼굴" 같은 과거 사용 표현 그대로 반복 금지.\n`
   })()
 
   // Phase C (2026-05-22): 단독 휴장 시 캘린더 블록 (양국 휴장은 파이프라인에서
@@ -293,7 +296,12 @@ Gold: ${formatPromptNumber(data.macro.gold, 0)}
 ${(() => {
   // Phase F2 (2026-05-24): ETF 측 catalyst 자동 추출.
   const { extractTopCatalysts, formatCatalystForPrompt } = require('../catalyst-extractor')
-  const catalysts = extractTopCatalysts(data.news, { topN: 3, minScore: 4 })
+  // 2026-05-28: 최근 헤드라인 전달해 같은 catalyst 반복 패널티 적용
+  const catalysts = extractTopCatalysts(data.news, {
+    topN: 3,
+    minScore: 4,
+    recentHeadlines: data.recentHeadlines ?? [],
+  })
   if (catalysts.length === 0) return ''
   return `\n[🔥 오늘의 forward catalyst — 자동 추출 ${catalysts.length}건]\n` +
     catalysts.map((c: { score: number; publishedHoursAgo?: number; title: string; source?: string }) => `- ${formatCatalystForPrompt(c)}`).join('\n') +
@@ -343,6 +351,17 @@ ${data.recentHeadlines.map(h => `- ${h}`).join('\n')}
 앞 절 또는 뒤 절에 **사건명·기업명을 반드시 명시**하십시오. 가격 anchor 만으로
 구성하지 마십시오. 예: "SOXX +2.57%" 단독 → "삼성 노사 타결, SOXX 도 +2.57%" 처럼
 사건 + 시장 신호 2요소.
+
+**2026-05-28 framing 다양화 의무 (multi-day catalyst)**: 같은 catalyst (예: 삼성
+노사·미·이란 협상 등) 가 최근 3일 헤드라인에 이미 등장했으면, 오늘은 같은
+"사건명+가격%" template 을 반복하지 마십시오. 다음 중 하나의 다른 각도를 시도:
+  · 사건의 **다른 국면** (진전→타결→후속/조정/확산/정착)
+  · **부산물** (반도체→환율→채권 같은 파급 사슬)
+  · **시간축** (어제 vs 오늘, 이번 주 누적)
+  · **세대·직업·산업** 분리 시점
+같은 anchor (SOXX 등) 가 3일 연속이면 catalyst 가 같은 사건이라도 **secondary
+anchor 를 바꾸십시오** (SOXX → 환율·GDX·SLV·USO 등 오늘 의미 있게 움직인 다른
+지표). 이 framing 변화가 헤드라인의 매일성을 살립니다.
 
 기본 형태 — **두 절 압축형 (선호)**:
   앞 절 = **구체 수치·사건·종목** (concrete anchor — 14자 내외)
