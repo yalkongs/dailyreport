@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-05-28",
+      "narrativeAngle": "supply_chain",
+      "headline": "삼성전자 노사 타결로 코스피 2.25% 급등",
+      "bigStoryTopic": "임금협약 조인식 완료 소식에 반도체 업종 동반 상승. 다만 코스닥은 3.36% 하락하며 대",
+      "walletTopics": [
+        "반도체 업계, 노사 안정화로 글로벌 경쟁력 강화",
+        "석유화학 업계, 유가 상승으로 원료비 부담 가중",
+        "물류 업계, 연료비 상승으로 운송료 인상 불가피",
+        "오늘의 투자 매력도",
+        "4% 금리 시대의 자금 배분"
+      ],
+      "metaphors": [],
+      "lookingAhead": "한국은행 금통위 결정회의"
+    },
+    {
       "date": "2026-05-27",
       "narrativeAngle": "generation_wallet",
       "headline": "삼성전자 노사협상 영향, 코스피 +2.55% 상승",
@@ -434,21 +449,6 @@
       ],
       "metaphors": [],
       "lookingAhead": "미국 소매판매 지표 발표"
-    },
-    {
-      "date": "2026-04-15",
-      "narrativeAngle": "historical_deja_vu",
-      "headline": "2011년과 닮은꼴, 달리 흘러가는 이유",
-      "bigStoryTopic": "원유·금 동반 상승에도 시장이 웃는 이유는 15년 전과 다른 금리 환경 때문입니다. 코스피",
-      "walletTopics": [
-        "2011년식 에너지 쇼크는 없다",
-        "기술주가 시장 안정판 역할",
-        "한국 증시, 6000선이 새로운 베이스캠프",
-        "지금 뜨거운 자산, 차가운 자산",
-        "안전자산과 위험자산의 수익률 비교"
-      ],
-      "metaphors": [],
-      "lookingAhead": "중국 1분기 GDP 발표"
     }
   ]
 }
