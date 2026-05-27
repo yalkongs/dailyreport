@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-05-28",
+      "type": "morning",
+      "headline": "삼성전자 노조 재신임·SOXX -1.07%, 환율 1,500원의 두 얼굴",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-05-28",
+      "anomalyCount": 12,
+      "anomalyBreakdown": {
+        "premiumDiscount": 12
+      },
+      "createdAt": "2026-05-27T23:00:29.682Z"
+    },
+    {
       "date": "2026-05-27",
       "type": "morning",
       "headline": "마이크론 급등·SOXX +6.10%, 금통위 첫 인상 신호가 오늘의 분기점",
