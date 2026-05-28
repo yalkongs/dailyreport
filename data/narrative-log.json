@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "date": "2026-05-29",
+      "narrativeAngle": "job_perspective",
+      "headline": "SK하이닉스 지방 투자 확장, 지역별 수혜 온도차",
+      "bigStoryTopic": "인천 클러스터 조성 발표와 함께 반도체 관련 직종의 지역 이동이 본격화됩니다. 코스피는 0",
+      "walletTopics": [
+        "반도체 엔지니어링 직종, 지역 분산 기회 확대",
+        "은행권 여신 담당자, 리스크 관리 부담 가중",
+        "물류·배송업계, 유가 하락 수혜 본격화",
+        "오늘의 투자 온도",
+        "4% 금리 시대의 자금 배분"
+      ],
+      "metaphors": [],
+      "lookingAhead": "4월 산업활동동향 발표"
+    },
+    {
       "date": "2026-05-28",
       "narrativeAngle": "supply_chain",
       "headline": "삼성전자 노사 타결로 코스피 2.25% 급등",
@@ -434,21 +449,6 @@
       ],
       "metaphors": [],
       "lookingAhead": "미국 소매판매와 산업생산 지표"
-    },
-    {
-      "date": "2026-04-16",
-      "narrativeAngle": "structural_lens",
-      "headline": "시장은 흔들리지 않는다",
-      "bigStoryTopic": "미국 은행주 실적 선방에도 불구하고 채권금리는 상승했습니다. 투자자들이 읽는 시장 신호는 ",
-      "walletTopics": [
-        "반도체 업종 실적 재평가 시점",
-        "수출기업 환율 헤지 전략 점검 필요",
-        "금리 상승기 은행주 투자 전략",
-        "투자 매력도 진단",
-        "수익률 비교 분석"
-      ],
-      "metaphors": [],
-      "lookingAhead": "미국 소매판매 지표 발표"
     }
   ]
 }
