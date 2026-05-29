@@ -56,7 +56,7 @@ function kospiProxyChange(quotes: EtfQuote[]): number | null {
   return changes.reduce((a, b) => a + Math.abs(b), 0) / changes.length;
 }
 
-export function analyzeEtfMode(data: CollectedData, anomalies: Anomaly[] = []): EtfModeAnalysis {
+export function analyzeEtfMode(data: CollectedData, anomalies: Anomaly[] = [], failedSources: string[] = []): EtfModeAnalysis {
   const soxx = findChange(data.quotes, "SOXX");
   const spy = findChange(data.quotes, "SPY");
   // 주: USD/KRW 변동률은 별도 데이터원이 필요해 현재 모드 판정에 미사용.
@@ -98,7 +98,8 @@ export function analyzeEtfMode(data: CollectedData, anomalies: Anomaly[] = []): 
   }
 
   // ─── quiet 판정 ──────────────────────
-  if (coreAvgAbs < QUIET_THRESHOLDS.avgMax && anomalyCount <= QUIET_THRESHOLDS.anomMax) {
+  // KRX 실패면 낮은 anomalyCount가 데이터 누락 탓일 수 있어 quiet 강등 보류.
+  if (coreAvgAbs < QUIET_THRESHOLDS.avgMax && anomalyCount <= QUIET_THRESHOLDS.anomMax && !failedSources.includes('krx-nav')) {
     return {
       mode: "quiet",
       reason: `잠잠: 핵심 ETF 평균 |Δ| ${coreAvgAbs.toFixed(2)}% / 이상 탐지 ${anomalyCount}건`,
@@ -120,7 +121,7 @@ export function describeEtfModeForPrompt(mode: EtfMode): string {
 - bigPicture 는 **8~12문장** 으로 깊게 (평소 4~6 보다 길게).
 - storySpine 3막은 각 act 4~6문장 으로 (평소 3~5).
 - characters 카드는 각 4~5문장 으로 강조.
-- 헤드라인은 사건의 무게가 즉시 전달되도록 단정형 + 구체 수치 + 사건명.
+- 헤드라인은 [제목 작성 규칙]을 따르되, 사건의 무게가 즉시 전달되도록 씁니다 (수치만 나열 지양).
 - closingLine 은 다음 영업일 관전 포인트로 닫음.`;
     case "quiet":
       return `오늘은 **잠잠한 모드** 입니다. 시장 변동이 매우 작고 이상 신호도 드뭅니다.
