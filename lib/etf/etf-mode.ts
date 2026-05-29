@@ -130,12 +130,11 @@ export function describeEtfModeForPrompt(mode: EtfMode): string {
 - bigPicture 는 **3~4문장** 으로 짧게. 무리해서 채우지 마십시오.
 - storySpine 3막은 각 act 2~3문장 으로 축약.
 - characters 는 2~3개만 유지 (warning 카드는 생략 가능).
-- resolutions 도 1~2 시나리오로 축약.
 - closingLine 에 **"다음 영업일 또는 이번 주 후반에 살펴볼 자리"** 미리보기 포함.
 - 헤드라인은 차분한 톤. 횡보 자체를 명시하는 것도 좋음.`;
     case "normal":
     default:
       return `오늘은 **표준 모드** 입니다. 일상적 ETF 흐름이며 평소 분량 유지.
-- bigPicture 4~6문장, storySpine 각 3~5문장, characters 3~4문장, resolutions 2~3문장.`;
+- bigPicture 4~6문장, storySpine 각 3~5문장, characters 3~4문장.`;
   }
 }

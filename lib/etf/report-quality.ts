@@ -144,11 +144,6 @@ export function applySoftFixesInPlace(report: MorningReport): string[] {
       notes.characters.alternative = applySoftFix(notes.characters.alternative)
       notes.characters.warning = applySoftFix(notes.characters.warning)
     }
-    if (notes.resolutions) {
-      notes.resolutions.connect = applySoftFix(notes.resolutions.connect)
-      notes.resolutions.delay = applySoftFix(notes.resolutions.delay)
-      notes.resolutions.overheat = applySoftFix(notes.resolutions.overheat)
-    }
     if (notes.checklist) {
       notes.checklist.actions = applyToStringArray(notes.checklist.actions)
       notes.checklist.avoids = applyToStringArray(notes.checklist.avoids)
@@ -198,9 +193,6 @@ function flattenMorningReport(report: MorningReport): string {
       notes.characters?.gate,
       notes.characters?.alternative,
       notes.characters?.warning,
-      notes.resolutions?.connect,
-      notes.resolutions?.delay,
-      notes.resolutions?.overheat,
       ...(notes.checklist?.actions ?? []),
       ...(notes.checklist?.avoids ?? []),
       ...(notes.strategyProse ?? []).flatMap(s => [s.rationale, s.actionGuide, s.avoid]),

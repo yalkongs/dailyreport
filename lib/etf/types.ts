@@ -207,15 +207,6 @@ export interface MorningReport {
       alternative?: string
       warning?: string
     }
-    // Resolutions — Phase E4 (2026-05-24) 이후 deprecated.
-    // 시나리오 사고는 bigPicture·checklist 안으로 흡수. 타입은 백워드 호환 위해 유지하되
-    // 프롬프트·렌더러에서 더 이상 요청·표시하지 않음.
-    /** @deprecated Phase E4 이후 사용 안 함. bigPicture·checklist 로 통합. */
-    resolutions?: {
-      connect?: string
-      delay?: string
-      overheat?: string
-    }
     // Checklist — 오늘 특별히 지킬/피할 것
     checklist?: {
       actions?: string[]

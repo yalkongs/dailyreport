@@ -73,11 +73,6 @@ export function normalizeMorningReportLanguage(report: MorningReport): MorningRe
         alternative: neutralizeOptional(n.characters.alternative),
         warning: neutralizeOptional(n.characters.warning),
       },
-      resolutions: n.resolutions && {
-        connect: neutralizeOptional(n.resolutions.connect),
-        delay: neutralizeOptional(n.resolutions.delay),
-        overheat: neutralizeOptional(n.resolutions.overheat),
-      },
       checklist: n.checklist && {
         actions: n.checklist.actions?.map(s => neutralizeInvestmentLanguage(s)),
         avoids: n.checklist.avoids?.map(s => neutralizeInvestmentLanguage(s)),

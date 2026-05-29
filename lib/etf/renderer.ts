@@ -1015,40 +1015,6 @@ function renderCharacterCard(q: EtfQuote, role: string, note: string, quotes: Et
 </div>`
 }
 
-function renderStoryResolution(report: MorningReport, data: CollectedData): string {
-  const characters = selectStoryCharacters(data.quotes)
-  const success = uniqueQuotes([characters.primary, characters.gate]).map(q => formatEtfIdentity(q).plain).join(' · ')
-  const delay = characters.alternative ? formatEtfIdentity(characters.alternative).plain : '장기채·배당 ETF'
-  const overheat = characters.warning ? formatEtfIdentity(characters.warning).plain : '레버리지·인버스 ETF'
-
-  // Tier 2: Claude resolutions 우선, 없으면 Tier 1 하드코딩 fallback
-  const r = report.narrativeNotes?.resolutions
-  const connectNote = r?.connect?.trim() || '해외 흐름이 국내 거래로 전해지면 지켜볼 만한 상품으로 올라갑니다.'
-  const delayNote = r?.delay?.trim() || '해외 신호가 국내까지 닿지 않는다면 오늘은 대안에 더 주목합니다.'
-  const overheatNote = r?.overheat?.trim() || '괴리 확대·얇은 호가·환율 재상승이 겹친다면 한발 물러서는 게 맞습니다.'
-
-  return `<div class="section">
-  <div class="section-title">How The Story Resolves</div>
-  <div class="resolution-grid">
-    <div class="resolution-row">
-      <div><span class="resolution-label stance-prefer">연결 확인</span></div>
-      <div class="action-text">${renderReportText(success || '국내 성장 ETF', data.quotes)}</div>
-      <div class="action-text">${renderReportText(connectNote, data.quotes)}</div>
-    </div>
-    <div class="resolution-row">
-      <div><span class="resolution-label stance-watch">확인 보류</span></div>
-      <div class="action-text">${renderReportText(delay, data.quotes)}</div>
-      <div class="action-text">${renderReportText(delayNote, data.quotes)}</div>
-    </div>
-    <div class="resolution-row">
-      <div><span class="resolution-label stance-caution">과열 경계</span></div>
-      <div class="action-text">${renderReportText(overheat, data.quotes)}</div>
-      <div class="action-text">${renderReportText(overheatNote, data.quotes)}</div>
-    </div>
-  </div>
-</div>`
-}
-
 function uniqueQuotes(quotes: Array<EtfQuote | undefined>): EtfQuote[] {
   const seen = new Set<string>()
   const out: EtfQuote[] = []
