@@ -62,8 +62,8 @@ export interface EtfEvidence {
 }
 export function analyzeEtfEvidence(
   data: CollectedData,
-  anomalies: Anomaly[],
-  recentHeadlines: string[],
+  anomalyCount: number,
+  failedSources: string[] = [],
 ): EtfEvidence
 ```
 - `catalyst-extractor.extractTopCatalysts(data.news, {topN:1, recentHeadlines})`로 최상위 catalyst 점수.
