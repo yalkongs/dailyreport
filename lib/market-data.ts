@@ -235,6 +235,9 @@ const HISTORICAL_SYMBOLS = [
   { symbol: "CL=F", nameKo: "WTI 원유" },
   { symbol: "GC=F", nameKo: "금" },
   { symbol: "BTC-USD", nameKo: "비트코인" },
+  { symbol: "BZ=F", nameKo: "브렌트유" },
+  { symbol: "SI=F", nameKo: "은" },
+  { symbol: "ETH-USD", nameKo: "이더리움" },
 ];
 
 export async function collectHistoricalData(): Promise<HistoricalComparison[]> {
