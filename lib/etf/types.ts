@@ -107,6 +107,10 @@ export interface CollectedData {
   calendarInfo?: import('../market-calendar').MarketCalendarInfo
   // Phase E1 (2026-05-24): ETF 모드 분기 (event/normal/quiet)
   etfMode?: import('./etf-mode').EtfModeAnalysis
+  // Layer 0 (2026-05-29): 수집 실패 소스 목록 (프롬프트 노출·tier 반영용).
+  failedSources?: string[]
+  // Layer 0 (2026-05-29): 근거 충분성 tier (헤드라인 규칙이 소비).
+  etfEvidence?: import('./etf-evidence').EtfEvidence
 }
 
 export type StrategyStance = '선호' | '관찰' | '중립' | '경계'

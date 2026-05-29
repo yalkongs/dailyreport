@@ -18,6 +18,7 @@ import {
 import { selectAnalysisLens } from '../lib/etf/analysis-lens'
 import { selectNarrativeAngle } from '../lib/etf/narrative-angle'
 import { analyzeEtfMode } from '../lib/etf/etf-mode'
+import { analyzeEtfEvidence } from '../lib/etf/etf-evidence'
 import { getMarketCalendarInfo, describeMarketCalendar } from '../lib/market-calendar'
 // (2026-05-25) holiday-notice 임포트 제거 — 한국 휴장 시 silent skip 정책으로 변경.
 import { renderMorningHtml, saveReport, saveReportPreviewImage } from '../lib/etf/renderer'
@@ -100,6 +101,14 @@ async function main() {
   const { quotes, flows, investorFlows } = etfData.status === 'fulfilled'
     ? etfData.value : { quotes: [], flows: [], investorFlows: [] }
 
+  // Layer 0: 수집 실패 소스 기록 (allSettled rejection + KRX nav 전량 null)
+  const failedSources: string[] = []
+  if (etfData.status === 'rejected') failedSources.push('etf-quotes')
+  if (macro.status === 'rejected') failedSources.push('macro')
+  if (news.status === 'rejected') failedSources.push('news')
+  const krQuotes = quotes.filter(q => q.market === 'KR')
+  if (krQuotes.length > 0 && krQuotes.every(q => q.nav === null)) failedSources.push('krx-nav')
+
   // Step 2: 데이터 검증
   console.log('[2/8] 데이터 검증 중...')
   try {
@@ -143,11 +152,14 @@ async function main() {
     narrativeAngle,
     recentHeadlines,
     calendarInfo,
+    failedSources,
     etfMode: undefined, // 아래에서 anomalies 산출 후 채움
   }
   // Phase E1 (2026-05-24): ETF 모드 분기 (이상 탐지 건수·핵심 ETF 변동률 활용)
-  data.etfMode = analyzeEtfMode(data, anomalies)
+  data.etfMode = analyzeEtfMode(data, anomalies, failedSources)
+  data.etfEvidence = analyzeEtfEvidence(data, anomalies.length, failedSources)
   console.log(`[4a/8] ETF 모드: ${data.etfMode.mode} — ${data.etfMode.reason}`)
+  console.log(`[4b/8] 근거 tier: ${data.etfEvidence.tier} — ${data.etfEvidence.reason}`)
 
   // Step 5: Claude 분석 (최대 2회 시도 + Tier 1 fallback)
   // P0 (2026-04-24): 기존 3회 재시도는 대증요법(패턴 좁히기)에 의존해 왔음.
