@@ -9,6 +9,7 @@ import { selectAngle } from "../lib/narrative-angles";
 import { analyzeSideways, selectDeepDiveTopic } from "../lib/sideways-detector";
 import { analyzeMarketMode } from "../lib/market-mode";
 import { getMarketCalendarInfo, describeMarketCalendar } from "../lib/market-calendar";
+import { analyzeEvidenceConfidence } from "../lib/evidence-confidence";
 // (2026-05-25) holiday-notice 임포트 제거 — 한국 휴장 시 안내 발송 없이 silent skip 정책으로 변경.
 import {
   getRecentEntries,
@@ -245,6 +246,11 @@ async function main() {
   // Phase 1 (2026-05-19): 시장 분위기별 가변 포맷 모드.
   const marketMode = analyzeMarketMode(marketData);
   console.log(`🎨 리포트 모드: ${marketMode.mode} — ${marketMode.reason}`);
+
+  // Layer 0: 근거 충분성 판정 (제목 은유의 토대)
+  const recentHeadlines = recentLog.map((e) => e.headline).filter(Boolean);
+  const evidence = analyzeEvidenceConfidence(contextData, recentHeadlines);
+  console.log(`🧭 근거 tier: ${evidence.tier} — ${evidence.reason}`);
   console.log();
 
   // Step 4: Claude API로 리포트 생성
@@ -256,6 +262,7 @@ async function main() {
     deepDiveTopic,
     marketMode,
     calendarInfo,
+    evidence,
   };
   const { html, content: reportContent } = await generateReport(marketData, ctx, contextData);
   console.log();

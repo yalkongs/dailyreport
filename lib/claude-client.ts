@@ -32,6 +32,8 @@ export interface AntiRepetitionContext {
   // 프롬프트에서 활용. 양국 휴장은 파이프라인이 이미 short-circuit 하므로
   // 여기로 흘러오지 않음. 비어있으면 모든 시장 정상 가정 (기존 동작).
   calendarInfo?: import("./market-calendar").MarketCalendarInfo;
+  // Layer 0 (2026-05-29): 근거 충분성 tier. 비어있으면 hollow 로 간주(보수적).
+  evidence?: import("./evidence-confidence").EvidenceConfidence;
 }
 
 function buildSystemPrompt(): string {
