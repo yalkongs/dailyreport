@@ -34,7 +34,7 @@ const EVENT_THRESHOLDS = {
   spy: 2.0,          // SPY |Δ| ≥ 2%
   kospi: 2.0,        // KOSPI proxy |Δ| ≥ 2%
   vix: 25,           // VIX ≥ 25
-  anomalies: 10,     // 이상 탐지 ≥ 10건
+  anomalies: 5,      // 유의미 이상 탐지(괴리율 제외) ≥ 5건. 초안값 — 운영 보정 대상.
 } as const;
 
 const QUIET_THRESHOLDS = {
@@ -64,6 +64,8 @@ export function analyzeEtfMode(data: CollectedData, anomalies: Anomaly[] = [], f
   const vix = data.macro?.vix ?? null;
   const kospiProxy = kospiProxyChange(data.quotes);
   const anomalyCount = anomalies.length;
+  // B4 (2026-05-29): 괴리율은 일상적 NAV 갭으로 흔해 mode를 왜곡 → 유의미 이상치만 트리거에 사용.
+  const significantAnomalies = anomalies.filter(a => a.type !== "premiumDiscount").length;
 
   const coreAbs = [soxx, spy].filter((v): v is number => typeof v === "number").map(Math.abs);
   const coreAvgAbs = coreAbs.length > 0
@@ -86,8 +88,8 @@ export function analyzeEtfMode(data: CollectedData, anomalies: Anomaly[] = [], f
   if (vix !== null && vix >= EVENT_THRESHOLDS.vix) {
     eventTriggers.push(`VIX ${vix.toFixed(2)}`);
   }
-  if (anomalyCount >= EVENT_THRESHOLDS.anomalies) {
-    eventTriggers.push(`이상 탐지 ${anomalyCount}건`);
+  if (significantAnomalies >= EVENT_THRESHOLDS.anomalies) {
+    eventTriggers.push(`유의미 이상 ${significantAnomalies}건`);
   }
   if (eventTriggers.length > 0) {
     return {
@@ -99,17 +101,17 @@ export function analyzeEtfMode(data: CollectedData, anomalies: Anomaly[] = [], f
 
   // ─── quiet 판정 ──────────────────────
   // KRX 실패면 낮은 anomalyCount가 데이터 누락 탓일 수 있어 quiet 강등 보류.
-  if (coreAvgAbs < QUIET_THRESHOLDS.avgMax && anomalyCount <= QUIET_THRESHOLDS.anomMax && !failedSources.includes('krx-nav')) {
+  if (coreAvgAbs < QUIET_THRESHOLDS.avgMax && significantAnomalies <= QUIET_THRESHOLDS.anomMax && !failedSources.includes('krx-nav')) {
     return {
       mode: "quiet",
-      reason: `잠잠: 핵심 ETF 평균 |Δ| ${coreAvgAbs.toFixed(2)}% / 이상 탐지 ${anomalyCount}건`,
+      reason: `잠잠: 핵심 ETF 평균 |Δ| ${coreAvgAbs.toFixed(2)}% / 유의미 이상 ${significantAnomalies}건(전체 ${anomalyCount})`,
       metrics,
     };
   }
 
   return {
     mode: "normal",
-    reason: `표준: 핵심 ETF 평균 |Δ| ${coreAvgAbs.toFixed(2)}% / 이상 탐지 ${anomalyCount}건`,
+    reason: `표준: 핵심 ETF 평균 |Δ| ${coreAvgAbs.toFixed(2)}% / 유의미 이상 ${significantAnomalies}건(전체 ${anomalyCount})`,
     metrics,
   };
 }
