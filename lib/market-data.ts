@@ -59,7 +59,7 @@ const FOREX_PAIRS = [
   { symbol: "DX-Y.NYB", name: "DXY", nameKo: "달러인덱스" },
 ];
 
-const COMMODITIES = [
+export const COMMODITIES = [
   { symbol: "CL=F", name: "WTI Crude Oil", nameKo: "WTI 원유" },
   { symbol: "BZ=F", name: "Brent Crude Oil", nameKo: "브렌트유" },
   { symbol: "GC=F", name: "Gold", nameKo: "금" },
@@ -73,7 +73,7 @@ const BONDS = [
   { symbol: "^TYX", name: "US 30Y Treasury", nameKo: "미국 30년물" },
 ];
 
-const CRYPTO = [
+export const CRYPTO = [
   { symbol: "BTC-USD", name: "Bitcoin", nameKo: "비트코인" },
   { symbol: "ETH-USD", name: "Ethereum", nameKo: "이더리움" },
 ];
@@ -224,7 +224,7 @@ export async function collectVix(): Promise<{ value: number; change: number; cha
 }
 
 /** 과거 시계열 비교 데이터 수집 — 모든 주요 지표 */
-const HISTORICAL_SYMBOLS = [
+export const HISTORICAL_SYMBOLS = [
   { symbol: "^KS11", nameKo: "코스피" },
   { symbol: "^KQ11", nameKo: "코스닥" },
   { symbol: "^GSPC", nameKo: "S&P 500" },
