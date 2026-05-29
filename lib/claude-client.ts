@@ -8,16 +8,9 @@ import type {
   ReportContent,
 } from "./types";
 import { renderReport } from "./report-renderer";
+import { BANNED_METAPHORS } from "./banned-metaphors";
 
 const client = new Anthropic();
-
-// 금지 비유 단일 소스 — 시스템 프롬프트 지시(buildSystemPrompt)와
-// 출력 검사기(sanitizeBannedExpressions)가 동일 목록을 공유한다.
-const BANNED_METAPHORS = [
-  "폭풍의 눈", "폭풍전야", "양날의 검", "나비효과", "뇌관", "불씨", "신호탄",
-  "혈관", "안전자산으로의 피난", "블랙스완", "퍼펙트 스톰",
-  "시한폭탄", "도화선", "화약고", "판도라의 상자", "좌표를 찍",
-];
 
 // --- 반복 방지 컨텍스트 ---
 export interface AntiRepetitionContext {
