@@ -230,6 +230,7 @@ export interface ReportContent {
   cover: {
     headline: string;
     subline: string;
+    imageKeywords?: string[]; // 제목/본문 핵심 이미지·은유 단어 (반복 회피 로그용). 사실 모드면 빈 배열.
   };
   bigStory: {
     content: ReportContentBlock[];

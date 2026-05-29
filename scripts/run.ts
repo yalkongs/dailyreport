@@ -332,7 +332,7 @@ async function main() {
       headline: reportContent.cover.headline,
       bigStoryTopic: reportContent.cover.subline.substring(0, 50),
       walletTopics: [...soWhatTopics.slice(0, 3), ...compassTopics.slice(0, 2)],
-      metaphors: [], // JSON 모드에서는 별도 추출 불필요
+      metaphors: reportContent.cover.imageKeywords ?? [],
       lookingAhead,
     };
 
