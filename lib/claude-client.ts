@@ -11,6 +11,14 @@ import { renderReport } from "./report-renderer";
 
 const client = new Anthropic();
 
+// 금지 비유 단일 소스 — 시스템 프롬프트 지시(buildSystemPrompt)와
+// 출력 검사기(sanitizeBannedExpressions)가 동일 목록을 공유한다.
+const BANNED_METAPHORS = [
+  "폭풍의 눈", "폭풍전야", "양날의 검", "나비효과", "뇌관", "불씨", "신호탄",
+  "혈관", "안전자산으로의 피난", "블랙스완", "퍼펙트 스톰",
+  "시한폭탄", "도화선", "화약고", "판도라의 상자", "좌표를 찍",
+];
+
 // --- 반복 방지 컨텍스트 ---
 export interface AntiRepetitionContext {
   angle: NarrativeAngle;
@@ -51,7 +59,7 @@ JSON 내의 텍스트에서 강조가 필요한 수치는 <strong> 태그로 감
 
 ### 절대 하지 말 것
 - ❌ 구어체 금지: "~거든요", "~했어요", "~잖아요", "~하죠" 사용 금지
-- ❌ AI가 쓴 티가 나는 뻔한 비유 금지: "혈관", "폭풍전야", "양날의 검", "나비효과", "뇌관", "불씨", "신호탄" 등
+- ❌ AI가 쓴 티가 나는 뻔한 비유 금지: ${BANNED_METAPHORS.map((m) => `"${m}"`).join(", ")} 등
 - ❌ 감정 조장 금지: "공포", "폭락", "대혼란", "충격" 같은 선정적 표현 금지
 - ❌ 근거 없는 추론 금지: 데이터에서 직접 도출할 수 없는 예측이나 인과관계를 만들어내지 말 것
 - ❌ 문장을 장식적으로 부풀리지 말 것. 정보가 없는 문장은 쓰지 말 것.
@@ -291,7 +299,7 @@ ${lines}
 ## ⚠️ 분량 요구사항 — **위 모드 가이드가 있으면 그것을 우선**
 - (기본/normal 모드 기준) bigStory.content: paragraph 블록 최소 12개 이상, pullQuote 2~3개, dataCard 2~3개
 - watchPoints: 3~4개
-- compass: 3개 소주제 (자산군별 온도계, 예금 vs 투자, 수급 동향)
+- compass: 3개 소주제 (자산군별 온도계, 예금·적금 vs 투자, 오늘의 맥락 1개 — 아래 compass 작성 규칙의 [A]/[B]/[C] 중 택1)
 - soWhat: 5~6개
 - calendar: 경제 캘린더 데이터가 있으면 주요 일정 포함
 증권사 데일리 브리핑 수준의 깊이와 분량을 목표로 하십시오.
@@ -319,7 +327,9 @@ ${JSON.stringify(data, null, 2)}
 \`\`\`typescript
 {
   "cover": {
-    "headline": string,   // 오늘 시장을 관통하는 핵심 한 줄 (15~25자). Phase F3 (2026-05-24): 위 [오늘의 forward catalyst] 블록에 항목이 있으면 헤드라인에 **사건명·원인** 을 반드시 포함. "코스피 +6.48%" 같은 가격만 표기 금지, "삼성 노사 타결, 코스피 +6.48%" 처럼 사건+수치 2요소. **2026-05-28 framing 다양화 의무**: 같은 catalyst(예: 삼성 노사)가 최근 3일 헤드라인에 이미 등장했으면 오늘은 그 사건의 **국면·단계**를 명시적으로 다르게 표현하라 (예: 진전→타결→후속/확산/정착, 발화→파급→조정). 같은 "사건명+가격 X%" template 반복 금지. 가능하면 catalyst를 부제로 옮기고 헤드라인은 **오늘의 새로운 각도** (앵글이 시사하는 관점, 다음 변수, 산업·세대·지역별 함의 등)로.
+    "headline": string,   // 오늘 시장을 관통하는 핵심 한 줄 (15~25자).
+    //   [기본] 위 [오늘의 forward catalyst] 블록에 항목이 있으면 헤드라인에 **사건명·원인**을 반영하되, 가격만 표기("코스피 +6.48%")는 금지하고 **사건+수치 2요소**로 ("삼성 노사 타결, 코스피 +6.48%").
+    //   [반복 회피 — 기본보다 우선] 단, 같은 catalyst(예: 삼성 노사)가 최근 3일 헤드라인에 이미 등장했다면 아래 둘 중 하나로 다양화하라: (a) 그 사건의 **국면·단계**를 다르게 표현(진전→타결→후속/확산/정착, 발화→파급→조정), 또는 (b) catalyst를 **부제로 내리고** 헤드라인은 **오늘의 새로운 각도**(앵글이 시사하는 관점·다음 변수·산업/세대/지역별 함의)로. 어느 경우든 같은 "사건명+가격 X%" template 반복은 금지.
     "subline": string     // 헤드라인을 보충하는 1~2문장
   },
   "bigStory": {
@@ -554,12 +564,6 @@ function formatCalendarDate(dateStr: string): string {
 
 /** 금지된 표현을 감지하고 로그 (JSON에서는 제거하지 않고 경고만) */
 function sanitizeBannedExpressions(text: string): void {
-  const BANNED_METAPHORS = [
-    "폭풍의 눈", "폭풍전야", "양날의 검", "나비효과", "뇌관", "불씨", "신호탄",
-    "혈관", "안전자산으로의 피난", "블랙스완", "퍼펙트 스톰",
-    "시한폭탄", "도화선", "화약고", "판도라의 상자", "좌표를 찍",
-  ];
-
   const bannedFound: string[] = [];
   for (const metaphor of BANNED_METAPHORS) {
     if (text.includes(metaphor)) {
