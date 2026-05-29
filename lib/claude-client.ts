@@ -147,6 +147,22 @@ bigStory 섹션을 일일 해설 대신 **딥다이브 에세이**로 전환하�
 `;
 }
 
+function buildEvidenceBlock(ctx: AntiRepetitionContext): string {
+  const ev = ctx.evidence;
+  if (!ev) return "";
+  const cat = ev.topCatalyst
+    ? `[점수 ${ev.topCatalystScore}] ${ev.topCatalyst.title}`
+    : "없음 — 강한 forward catalyst 부재";
+  const failed = ev.failedSources.length > 0 ? ev.failedSources.join(", ") : "없음";
+  return `\n## 오늘의 근거 상태 (tier: ${ev.tier})
+- 뉴스: ${ev.newsCount}건 (신선 ${ev.freshCount}건)
+- 최상위 catalyst: ${cat}
+- 실패한 데이터 소스: ${failed}
+
+이 근거 상태는 아래 [제목 작성 규칙]의 tier 종속 동작을 결정합니다.
+`;
+}
+
 function buildContextBlock(context: ContextData | null, ctx?: AntiRepetitionContext): string {
   if (!context) return "";
 
@@ -238,6 +254,7 @@ function buildContextBlock(context: ContextData | null, ctx?: AntiRepetitionCont
 function buildReportPrompt(data: MarketDataCollection, ctx: AntiRepetitionContext, context: ContextData | null = null): string {
   const antiRepetition = buildAntiRepetitionBlock(ctx);
   const sidewaysBlock = buildSidewaysBlock(ctx);
+  const evidenceBlock = buildEvidenceBlock(ctx);
   const contextBlock = buildContextBlock(context, ctx);
 
   // Phase 1: 시장 분위기 모드별 분량·구성 가이드.
@@ -316,6 +333,7 @@ ${(() => {
 ## 수집 시각: ${data.collectedAt}
 ${antiRepetition}
 ${sidewaysBlock}
+${evidenceBlock}
 ${contextBlock}
 ## 시장 데이터
 \`\`\`json
