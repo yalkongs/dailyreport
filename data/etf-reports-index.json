@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-05-29",
+      "type": "morning",
+      "headline": "나스닥 기술주 강세·ARKK +3.93%, 한국으로 옮겨붙는 속도를 재는 금요일",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-05-29",
+      "anomalyCount": 10,
+      "anomalyBreakdown": {
+        "premiumDiscount": 10
+      },
+      "createdAt": "2026-05-28T22:56:40.312Z"
+    },
+    {
       "date": "2026-05-28",
       "type": "morning",
       "headline": "삼성전자 노조 재신임·SOXX -1.07%, 환율 1,500원의 두 얼굴",
