@@ -22,7 +22,6 @@ export interface EtfModeAnalysis {
   metrics: {
     soxxChange: number | null;
     spyChange: number | null;
-    usdKrwChange: number | null;
     kospiProxy: number | null;   // 핵심 한국 ETF 평균 |Δ|
     vix: number | null;
     anomalyCount: number;
@@ -33,7 +32,6 @@ export interface EtfModeAnalysis {
 const EVENT_THRESHOLDS = {
   soxx: 3.0,         // SOXX |Δ| ≥ 3%
   spy: 2.0,          // SPY |Δ| ≥ 2%
-  usdKrw: 1.0,       // USD/KRW |Δ| ≥ 1%
   kospi: 2.0,        // KOSPI proxy |Δ| ≥ 2%
   vix: 25,           // VIX ≥ 25
   anomalies: 10,     // 이상 탐지 ≥ 10건
@@ -61,9 +59,8 @@ function kospiProxyChange(quotes: EtfQuote[]): number | null {
 export function analyzeEtfMode(data: CollectedData, anomalies: Anomaly[] = []): EtfModeAnalysis {
   const soxx = findChange(data.quotes, "SOXX");
   const spy = findChange(data.quotes, "SPY");
-  const usdKrw = data.macro?.usdKrw ? null : null; // macro change는 별도 데이터원 — 일단 보수적으로 미사용
-  // 위 usdKrw 는 안정성 위해 별도 처리. macro context 에 변동률이 없을 수 있어
-  // 데이터원 추가 작업 전까지는 null 처리. (안전 fallback)
+  // 주: USD/KRW 변동률은 별도 데이터원이 필요해 현재 모드 판정에 미사용.
+  // 데이터원 확보 시 event 트리거에 추가 (현재는 SOXX·SPY·KOSPI proxy·VIX·이상탐지로 판정).
   const vix = data.macro?.vix ?? null;
   const kospiProxy = kospiProxyChange(data.quotes);
   const anomalyCount = anomalies.length;
@@ -73,7 +70,7 @@ export function analyzeEtfMode(data: CollectedData, anomalies: Anomaly[] = []): 
     ? coreAbs.reduce((a, b) => a + b, 0) / coreAbs.length
     : 0;
 
-  const metrics = { soxxChange: soxx, spyChange: spy, usdKrwChange: usdKrw, kospiProxy, vix, anomalyCount, coreAvgAbs };
+  const metrics = { soxxChange: soxx, spyChange: spy, kospiProxy, vix, anomalyCount, coreAvgAbs };
 
   // ─── event 우선 ──────────────────────
   const eventTriggers: string[] = [];
