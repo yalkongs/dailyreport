@@ -38,7 +38,7 @@ const noiseNews: NewsHeadline = {
 test("strong: 고점수 catalyst + 신선", () => {
   const r = analyzeEvidenceConfidence(ctx([strongNews]));
   assert.equal(r.tier, "strong");
-  assert.ok(r.topCatalystScore >= 7);
+  assert.equal(r.topCatalystScore, 12); // 신선도+5 · 기업+3 · 이벤트(노사·타결)+4
   assert.equal(r.freshCount, 1);
 });
 
@@ -66,5 +66,35 @@ test("hollow: news 소스 실패 (catalyst 있어도)", () => {
 
 test("context null → hollow", () => {
   const r = analyzeEvidenceConfidence(null);
+  assert.equal(r.tier, "hollow");
+});
+
+test("thin: 고점수지만 stale (freshCount 0)", () => {
+  // "삼성전자 노사 협상 타결" 20h전 → 신선도+1·기업+3·이벤트+4 = 8 (>=7) 이지만
+  // freshCount 0 이라 strong 조건(freshCount>=1) 미충족 → thin.
+  const staleStrong: NewsHeadline = {
+    title: "삼성전자 노사 협상 타결",
+    source: "x",
+    category: "korea",
+    publishedHoursAgo: 20,
+  };
+  const r = analyzeEvidenceConfidence(ctx([staleStrong]));
+  assert.equal(r.tier, "thin");
+  assert.ok(r.topCatalystScore >= 7);
+  assert.equal(r.freshCount, 0);
+});
+
+test("hollow: recentHeadlines 오버랩 패널티로 catalyst 탈락", () => {
+  // "기아 리콜 사태 확산" 20h전 → 신선도+1·기업+3·이벤트(리콜)+2 = 6.
+  const news: NewsHeadline = {
+    title: "기아 리콜 사태 확산",
+    source: "x",
+    category: "korea",
+    publishedHoursAgo: 20,
+  };
+  // 패널티 없으면 score 6 → catalyst 유지 → thin
+  assert.equal(analyzeEvidenceConfidence(ctx([news])).tier, "thin");
+  // 최근 헤드라인에 기업+이벤트 동시 등장 → -3 → 3 < minScore(4) → catalyst 0건 → hollow
+  const r = analyzeEvidenceConfidence(ctx([news]), ["어제 기아 리콜 관련 보도"]);
   assert.equal(r.tier, "hollow");
 });
