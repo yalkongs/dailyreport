@@ -60,12 +60,19 @@ test('retention 슬라이스 — 한도 초과 시 가장 오래된 것 제거',
   }
 })
 
-test('기본 path는 data/etf-evidence-log.json, 기본 retention 60', () => {
+test('기본 retention 60 — 61건 입력 시 가장 오래된 1건이 잘림', () => {
   const p = tmpPath()
   try {
-    appendEtfEvidenceLog(entry('2026-05-30'), { path: p })
+    for (let i = 1; i <= 61; i++) {
+      appendEtfEvidenceLog(
+        { ...entry('2026-05-30'), date: `day-${String(i).padStart(3, '0')}` },
+        { path: p }, // retentionDays 생략 → 기본 60 사용
+      )
+    }
     const stored = JSON.parse(fs.readFileSync(p, 'utf-8')) as EtfEvidenceLogEntry[]
-    assert.equal(stored.length, 1)
+    assert.equal(stored.length, 60)
+    assert.equal(stored[0].date, 'day-002') // 가장 오래된 day-001이 잘림
+    assert.equal(stored[59].date, 'day-061')
   } finally {
     fs.rmSync(p, { force: true })
   }
