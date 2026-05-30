@@ -114,6 +114,22 @@ function formatPromptNumber(value: number | null | undefined, digits = 0): strin
   })
 }
 
+// B6 (2026-05-30): macro 블록 — failedSources에 'macro' 있으면 머리에 경고.
+// 평소 단일 지표 null(예: ^MOVE)은 진짜 부재이므로 라벨링 안 함(블록 단위 처리).
+export function buildMacroBlock(macro: import('./types').MacroContext, failedSources: string[] | undefined): string {
+  const warn = failedSources?.includes('macro')
+    ? '⚠️ 거시 데이터 수집 실패 — 아래 수치는 신뢰할 수 없습니다(직전 영업일 기준으로도 보지 마십시오).\n'
+    : ''
+  return `[거시 지표]
+${warn}USD/KRW: ${formatPromptNumber(macro.usdKrw, 0)}
+VIX: ${formatPromptNumber(macro.vix, 2)}
+MOVE: ${formatPromptNumber(macro.moveIndex, 2)}
+공포탐욕: ${formatPromptNumber(macro.fearGreed, 0)}
+US 10Y: ${formatPromptNumber(macro.us10y, 2)}%
+WTI: ${formatPromptNumber(macro.wti, 1)}
+Gold: ${formatPromptNumber(macro.gold, 0)}`
+}
+
 function formatPromptEtf(q: Pick<CollectedData['quotes'][number], 'ticker' | 'name' | 'market'>): string {
   if (q.market === 'KR') {
     return `${q.name} (${q.ticker.replace(/\.(KS|KQ)$/i, '')})`
@@ -259,14 +275,7 @@ ${topUs.slice(-5).reverse().map(q => `${formatPromptEtf(q)}: ${q.changePercent?.
 하위: ${topKr.slice(-5).reverse().map(q => `${formatPromptEtf(q)} ${q.changePercent?.toFixed(2)}%`).join(' / ') || 'N/A'}
 거래대금 상위: ${topKr.filter(q => q.tradingValue !== undefined && q.tradingValue !== null).sort((a, b) => (b.tradingValue ?? 0) - (a.tradingValue ?? 0)).slice(0, 5).map(q => `${formatPromptEtf(q)} ${formatPromptNumber(q.tradingValue, 0)}원`).join(' / ') || 'N/A'}
 
-[거시 지표]
-USD/KRW: ${formatPromptNumber(data.macro.usdKrw, 0)}
-VIX: ${formatPromptNumber(data.macro.vix, 2)}
-MOVE: ${formatPromptNumber(data.macro.moveIndex, 2)}
-공포탐욕: ${formatPromptNumber(data.macro.fearGreed, 0)}
-US 10Y: ${formatPromptNumber(data.macro.us10y, 2)}%
-WTI: ${formatPromptNumber(data.macro.wti, 1)}
-Gold: ${formatPromptNumber(data.macro.gold, 0)}
+${buildMacroBlock(data.macro, data.failedSources)}
 
 ${(() => {
   // Phase F2 (2026-05-24): ETF 측 catalyst 자동 추출.
