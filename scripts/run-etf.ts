@@ -19,6 +19,7 @@ import { selectAnalysisLens } from '../lib/etf/analysis-lens'
 import { selectNarrativeAngle } from '../lib/etf/narrative-angle'
 import { analyzeEtfMode } from '../lib/etf/etf-mode'
 import { analyzeEtfEvidence } from '../lib/etf/etf-evidence'
+import { appendEtfEvidenceLog } from '../lib/etf/etf-evidence-log'
 import { getMarketCalendarInfo, describeMarketCalendar } from '../lib/market-calendar'
 // (2026-05-25) holiday-notice 임포트 제거 — 한국 휴장 시 silent skip 정책으로 변경.
 import { renderMorningHtml, saveReport, saveReportPreviewImage } from '../lib/etf/renderer'
@@ -232,6 +233,19 @@ async function main() {
   updateReportsIndex(meta)
   saveJson(LENS_LOG_PATH, [...recentLenses, analysisLens].slice(-30))
   saveJson(ANGLE_LOG_PATH, [...recentAngles, narrativeAngle].slice(-30))
+
+  // B5 (2026-05-30): tier·mode·신호 일별 로그 적재 — 임계값 운영 보정용
+  appendEtfEvidenceLog({
+    date,
+    tier: data.etfEvidence?.tier ?? 'hollow',
+    mode: data.etfMode?.mode ?? 'normal',
+    newsCount: data.etfEvidence?.newsCount ?? 0,
+    freshCount: data.etfEvidence?.freshCount ?? 0,
+    topCatalystScore: data.etfEvidence?.topCatalystScore ?? 0,
+    anomalyCount: anomalies.length,
+    anomalyBreakdown: breakdown,
+    failedSources: data.failedSources ?? [],
+  })
 
   // Telegram send lives in .github/workflows/daily-report.yml (after
   // commit + push + Vercel redeploy). Running this script locally never
