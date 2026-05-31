@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-06-01",
+      "type": "morning",
+      "headline": "GLD +1.05%, 금의 무게가 선행한 월요일 아침",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-06-01",
+      "anomalyCount": 13,
+      "anomalyBreakdown": {
+        "premiumDiscount": 13
+      },
+      "createdAt": "2026-05-31T22:39:05.725Z"
+    },
+    {
       "date": "2026-05-29",
       "type": "morning",
       "headline": "나스닥 기술주 강세·ARKK +3.93%, 한국으로 옮겨붙는 속도를 재는 금요일",

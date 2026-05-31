@@ -1,0 +1,15 @@
+[
+  {
+    "date": "2026-06-01",
+    "tier": "thin",
+    "mode": "quiet",
+    "newsCount": 5,
+    "freshCount": 4,
+    "topCatalystScore": 6,
+    "anomalyCount": 13,
+    "anomalyBreakdown": {
+      "premiumDiscount": 13
+    },
+    "failedSources": []
+  }
+]
