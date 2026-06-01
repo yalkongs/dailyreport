@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-06-02",
+      "type": "morning",
+      "headline": "KOSPI 4.86% 급등, 방어주는 뒤로 밀렸다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-06-02",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-06-01T22:58:57.509Z"
+    },
+    {
       "date": "2026-06-01",
       "type": "morning",
       "headline": "GLD +1.05%, 금의 무게가 선행한 월요일 아침",
