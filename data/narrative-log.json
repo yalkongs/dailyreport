@@ -1,6 +1,25 @@
 {
   "entries": [
     {
+      "date": "2026-06-02",
+      "narrativeAngle": "structural_lens",
+      "headline": "코스피, 삼성전자 합의 뒤에 숨은 반도체 진짜 서사",
+      "bigStoryTopic": "코스피는 3.68% 급등해 8788선을 기록했습니다. 삼성전자 노사 협상 타결 소식이 촉매",
+      "walletTopics": [
+        "반도체 장비업계, 한국·일본 동반 수혜 구조",
+        "정유업계, 유가 안정으로 마진 관리 가능권",
+        "은행권, 금리 상승으로 NIM 개선 지속",
+        "AI 투자 열풍 속 자산 배분",
+        "4% 금리 시대, 선택의 기준"
+      ],
+      "metaphors": [
+        "숨은",
+        "진짜 서사",
+        "뒤에"
+      ],
+      "lookingAhead": "삼성전자 HBM 양산 일정 주목"
+    },
+    {
       "date": "2026-06-01",
       "narrativeAngle": "data_anatomy",
       "headline": "성과급 법정 공방의 양면, 코스피 8000선 갱신",
@@ -438,21 +457,6 @@
       ],
       "metaphors": [],
       "lookingAhead": "한국은행 금통위 의사록 발표"
-    },
-    {
-      "date": "2026-04-20",
-      "narrativeAngle": "time_travel",
-      "headline": "시간축을 넓히면 다른 시장이 보입니다",
-      "bigStoryTopic": "WTI 원유 9% 반락과 미국 주식 전면 상승. 1년 전과 비교하면 지금의 숫자가 완전히 ",
-      "walletTopics": [
-        "정유·석유화학 기업 실적 개선 기대",
-        "항공·물류업계 연쇄 수혜",
-        "인플레이션 둔화로 소비 회복 기대",
-        "지금 뜨거운 자산, 차가운 자산",
-        "실질수익률로 본 자산 배분"
-      ],
-      "metaphors": [],
-      "lookingAhead": "유가 급락 수혜주 물색"
     }
   ]
 }
