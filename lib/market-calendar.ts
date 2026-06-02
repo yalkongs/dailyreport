@@ -40,54 +40,61 @@ interface Holiday {
   name: string;
 }
 
-// 한국 (KRX) 휴일 — 음력 기반은 매년 양력 환산 필요
-// 출처 교차검증: calendarlabs KRX 2026(표준 공휴일) + 서울경제 2026 증시
-// 휴장 보도(선거·제헌절 등 한국 특수일). 2026-06-02 핫픽스로 누락 5건 추가
-// (05-01·06-03·07-17·08-17·10-05). 07-17 제헌절은 2026 공휴일 부활 보도 기준 —
-// sub-project A에서 KRX 공식 공지(KIND)와 재확인 필요.
-const KR_HOLIDAYS_2026: Holiday[] = [
-  { date: "2026-01-01", name: "신정" },
-  // 설날: 음력 1/1 = 양력 2026-02-17 (화)
-  { date: "2026-02-16", name: "설날 연휴 (전일)" },
-  { date: "2026-02-17", name: "설날" },
-  { date: "2026-02-18", name: "설날 연휴 (익일)" },
-  // 삼일절 3/1 일요일 → 3/2 대체공휴일
-  { date: "2026-03-02", name: "삼일절 대체공휴일" },
-  { date: "2026-05-01", name: "근로자의 날" },            // KRX 휴장 (금)
-  { date: "2026-05-05", name: "어린이날" },
-  // 부처님오신날: 음력 4/8 = 양력 2026-05-24 (일) → 5/25 대체공휴일
-  { date: "2026-05-25", name: "부처님오신날 대체공휴일" },
-  { date: "2026-06-03", name: "제9회 전국동시지방선거" },  // 임시공휴일·KRX 휴장 (수)
-  { date: "2026-07-17", name: "제헌절" },                  // 2026 공휴일 부활·KRX 휴장 (금)
-  // 광복절 8/15 토요일 → 8/17 대체공휴일
-  { date: "2026-08-17", name: "광복절 대체공휴일" },
-  // 추석: 음력 8/15 = 양력 2026-09-25 (금). 9/24~26 연휴 (대체 없음 — 토요일은 대체 X)
-  { date: "2026-09-24", name: "추석 연휴 (전일)" },
-  { date: "2026-09-25", name: "추석" },
-  // 개천절 10/3 토요일 → 10/5 대체공휴일
-  { date: "2026-10-05", name: "개천절 대체공휴일" },
-  { date: "2026-10-09", name: "한글날" },
-  { date: "2026-12-25", name: "성탄절" },
-  { date: "2026-12-31", name: "KRX 연말 폐장일" },
-];
+// 한국 (KRX) 휴일 — 음력/선거/임시공휴일은 계산 불가하므로 매년 연말
+// 공식 KRX 휴장 공고로 다음 해를 추가한다. 연 추가 = 아래 맵에 `2027: [...]` 키 추가.
+// 데이터 없는 연도는 isYearCovered()가 false → 파이프라인이 exit(1)로 발송을 막는다.
+//
+// 2026 출처 교차검증: calendarlabs KRX 2026 + 서울경제 2026 증시 휴장 보도.
+const KR_HOLIDAYS: Record<number, Holiday[]> = {
+  2026: [
+    { date: "2026-01-01", name: "신정" },
+    // 설날: 음력 1/1 = 양력 2026-02-17 (화)
+    { date: "2026-02-16", name: "설날 연휴 (전일)" },
+    { date: "2026-02-17", name: "설날" },
+    { date: "2026-02-18", name: "설날 연휴 (익일)" },
+    // 삼일절 3/1 일요일 → 3/2 대체공휴일
+    { date: "2026-03-02", name: "삼일절 대체공휴일" },
+    { date: "2026-05-01", name: "근로자의 날" },
+    { date: "2026-05-05", name: "어린이날" },
+    // 부처님오신날: 음력 4/8 = 양력 2026-05-24 (일) → 5/25 대체공휴일
+    { date: "2026-05-25", name: "부처님오신날 대체공휴일" },
+    { date: "2026-06-03", name: "제9회 전국동시지방선거" },
+    { date: "2026-07-17", name: "제헌절" },
+    // 광복절 8/15 토요일 → 8/17 대체공휴일
+    { date: "2026-08-17", name: "광복절 대체공휴일" },
+    // 추석: 음력 8/15 = 양력 2026-09-25 (금). 9/24~26 연휴 (대체 없음 — 토요일은 대체 X)
+    { date: "2026-09-24", name: "추석 연휴 (전일)" },
+    { date: "2026-09-25", name: "추석" },
+    // 개천절 10/3 토요일 → 10/5 대체공휴일
+    { date: "2026-10-05", name: "개천절 대체공휴일" },
+    { date: "2026-10-09", name: "한글날" },
+    { date: "2026-12-25", name: "성탄절" },
+    { date: "2026-12-31", name: "KRX 연말 폐장일" },
+  ],
+};
 
-// 미국 (NYSE) 휴일
-const US_HOLIDAYS_2026: Holiday[] = [
-  { date: "2026-01-01", name: "New Year's Day" },
-  { date: "2026-01-19", name: "Martin Luther King Jr. Day" },  // 1월 셋째 월요일
-  { date: "2026-02-16", name: "Presidents' Day" },              // 2월 셋째 월요일
-  { date: "2026-04-03", name: "Good Friday" },                  // Easter 4/5 의 전 금요일
-  { date: "2026-05-25", name: "Memorial Day" },                 // 5월 마지막 월요일
-  { date: "2026-06-19", name: "Juneteenth" },
-  { date: "2026-07-03", name: "Independence Day (observed)" },  // 7/4가 토요일 → 7/3 관측
-  { date: "2026-09-07", name: "Labor Day" },                    // 9월 첫 월요일
-  { date: "2026-11-26", name: "Thanksgiving" },                 // 11월 넷째 목요일
-  { date: "2026-12-25", name: "Christmas" },
-  // 조기 폐장(11/27, 12/24)은 종가 있으므로 정상 영업일 처리.
-];
+// 미국 (NYSE) 휴일 — 규칙(n번째 월요일·observed)으로 매년 도출 가능하나,
+// 현재는 정적 유지. 연 추가 = `2027: [...]` 키 추가.
+const US_HOLIDAYS: Record<number, Holiday[]> = {
+  2026: [
+    { date: "2026-01-01", name: "New Year's Day" },
+    { date: "2026-01-19", name: "Martin Luther King Jr. Day" },  // 1월 셋째 월요일
+    { date: "2026-02-16", name: "Presidents' Day" },              // 2월 셋째 월요일
+    { date: "2026-04-03", name: "Good Friday" },                  // Easter 4/5 의 전 금요일
+    { date: "2026-05-25", name: "Memorial Day" },                 // 5월 마지막 월요일
+    { date: "2026-06-19", name: "Juneteenth" },
+    { date: "2026-07-03", name: "Independence Day (observed)" },  // 7/4가 토요일 → 7/3 관측
+    { date: "2026-09-07", name: "Labor Day" },                    // 9월 첫 월요일
+    { date: "2026-11-26", name: "Thanksgiving" },                 // 11월 넷째 목요일
+    { date: "2026-12-25", name: "Christmas" },
+    // 조기 폐장(11/27, 12/24)은 종가 있으므로 정상 영업일 처리.
+  ],
+};
 
-const KR_HOLIDAY_MAP = new Map(KR_HOLIDAYS_2026.map(h => [h.date, h.name]));
-const US_HOLIDAY_MAP = new Map(US_HOLIDAYS_2026.map(h => [h.date, h.name]));
+function lookupHoliday(table: Record<number, Holiday[]>, date: string): string | undefined {
+  const year = Number(date.slice(0, 4));
+  return table[year]?.find(h => h.date === date)?.name;
+}
 
 // ─── 날짜 헬퍼 ────────────────────────────────────────
 
@@ -113,7 +120,7 @@ function addDays(date: string, n: number): string {
 function getKrStatus(date: string): { status: MarketStatus; name?: string } {
   const dow = dayOfWeek(date);
   if (dow === 0 || dow === 6) return { status: "closed_weekend" };
-  const name = KR_HOLIDAY_MAP.get(date);
+  const name = lookupHoliday(KR_HOLIDAYS, date);
   if (name) return { status: "closed_holiday", name };
   return { status: "open" };
 }
@@ -121,7 +128,7 @@ function getKrStatus(date: string): { status: MarketStatus; name?: string } {
 function getUsStatus(date: string): { status: MarketStatus; name?: string } {
   const dow = dayOfWeek(date);
   if (dow === 0 || dow === 6) return { status: "closed_weekend" };
-  const name = US_HOLIDAY_MAP.get(date);
+  const name = lookupHoliday(US_HOLIDAYS, date);
   if (name) return { status: "closed_holiday", name };
   return { status: "open" };
 }
