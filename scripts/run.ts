@@ -8,7 +8,7 @@ import type { ContextData } from "../lib/types";
 import { selectAngle } from "../lib/narrative-angles";
 import { analyzeSideways, selectDeepDiveTopic } from "../lib/sideways-detector";
 import { analyzeMarketMode } from "../lib/market-mode";
-import { getMarketCalendarInfo, describeMarketCalendar } from "../lib/market-calendar";
+import { getMarketCalendarInfo, describeMarketCalendar, isYearCovered } from "../lib/market-calendar";
 import { analyzeEvidenceConfidence } from "../lib/evidence-confidence";
 // (2026-05-25) holiday-notice 임포트 제거 — 한국 휴장 시 안내 발송 없이 silent skip 정책으로 변경.
 import {
@@ -134,6 +134,20 @@ async function main() {
   console.log("━━━ Step 1: 시장 데이터 수집 ━━━");
   const marketData = await collectAllMarketData();
   console.log();
+
+  // Step 1-guard: 휴일 데이터 커버리지 — 데이터가 낡으면(연도 미커버) 조용한 오발송
+  // 대신 큰 소리로 실패한다. exit(1) → GitHub 스케줄 실패 → repo 소유자 자동 이메일.
+  // (정상 휴장 skip은 아래 Step 1c에서 exit(0) — exit 코드로 구분된다.)
+  {
+    const year = Number(marketData.date.slice(0, 4));
+    if (!isYearCovered(year, "kr")) {
+      console.error(`❌ ${year}년 KR 휴일 데이터 없음 — lib/market-calendar.ts 갱신 필요. 안전을 위해 발송 중단.`);
+      process.exit(1);
+    }
+    if (!isYearCovered(year, "us")) {
+      console.warn(`⚠️ ${year}년 US 휴일 데이터 없음 — 미국 휴장 가드레일 저하(별 sub-project B). 발송은 계속.`);
+    }
+  }
 
   // Step 1a: 중복 실행 방지 가드 — 오늘 자 리포트가 이미 있으면 종료
   // (GitHub Actions 크론 지연·수동 실행 충돌로 인한 중복 생성/텔레그램 재발송 방지)
