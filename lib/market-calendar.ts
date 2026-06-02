@@ -9,9 +9,10 @@
 //   - 미국(NYSE): New Year's Day·MLK Day·Memorial Day·Independence Day·
 //     Thanksgiving·Christmas 등 + 토·일 자동 휴장.
 //
-// 매년 12월에 다음 해 휴일 목록을 갱신해야 함 (TODO 항목).
-// 음력 기반 한국 휴일(설날·추석·부처님오신날)은 매년 양력 날짜가 달라지므로
-// 특히 사전 검증 필요.
+// 매년 연말 공식 KRX 휴장 공고로 다음 해를 추가한다(아래 KR_HOLIDAYS/US_HOLIDAYS
+// 맵에 연도 키 추가). 갱신을 놓치면 isYearCovered()가 false → 파이프라인이 exit(1)로
+// 발송을 막는다(조용한 오발송 방지). 음력 기반 한국 휴일(설날·추석·부처님오신날)은
+// 매년 양력 날짜가 달라지므로 특히 사전 검증 필요.
 //
 // 순수 함수 모듈. 외부 API 호출 없음. 결정적.
 
