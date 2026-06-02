@@ -80,6 +80,14 @@ BTC/ETH/KRW=X/JPY=X/CL=F/GC=F 등은 ~24h 거래라 06:40 KST 시점 **실시간
 `run.ts:210-224` 해시는 KR+US+forex만, KR 개장일에만 도달 → 사실상 never trip, EU/JP/crypto stale 못 잡음.
 `marketState`/`regularMarketTime`을 어디서도 안 읽음 → 겨울 US +30분 정착을 검증 없이 신뢰(latent).
 
+### M5. in-pipeline 운영자 알림이 프로덕션에서 무동작 (dead no-op) → sub-project F
+`lib/etf/telegram.ts:32-36`(sendError)는 `TELEGRAM_BOT_TOKEN/CHAT_ID` env 의존이나, 워크플로 생성
+스텝(market 생성 `daily-report.yml:74-80`, ETF 생성 `:182-186`)엔 그 env가 없음(TELEGRAM은 발송 전용
+스텝에만). 따라서 `run-etf.ts`의 `sendError(...)` 호출은 전부 token 없이 조용히 return → **파이프라인
+내부 에러가 운영자에게 안 감**(GH Actions 로그에만 남음). run.ts(market)엔 알림 호출 자체가 없음.
+README "검증 실패 시 Telegram 침묵 방지" 의도가 실제로는 미실현. **별건 F로 분리** — 1차 신호는
+exit(1)→GitHub 네이티브 실패 이메일, Telegram push가 필요하면 생성 스텝 env 배선 + run.ts 알림 추가.
+
 ---
 
 ## 🟢 LOW (latent — 전부 `TZ=Asia/Seoul`로 가려짐, 비-KST 실행시 깨짐. 패턴 일관성 위해 통합 가치)
@@ -110,6 +118,12 @@ BTC/ETH/KRW=X/JPY=X/CL=F/GC=F 등은 ~24h 거래라 06:40 KST 시점 **실시간
 | **C** | 데이터 신선도 태깅 (M3 24h 상품 라벨 + M4 marketState/해시) | P2 | — |
 | **D** | FRED 경제캘린더 쿼리(H3) — 단독, timezone 무관 | P1 | — |
 | **E** | 로컬시간 날짜 하드닝(LOW) — 정리성, TZ-safe 통일 | P3 | — |
+| **F** | 운영자 알림·관측성 (M5 dead sendError) — 생성 스텝 env 배선 + market 알림 | P2 | — |
 
-권장 순서: **A(긴급) → B·D 병행 → C → E**. 단, 06-03이 내일이라 A의 데이터 패치는
-정식 spec 전 **즉시 핫픽스**가 필요할 수 있음.
+권장 순서: **A(긴급) → B·D 병행 → C·F → E**.
+
+### 진행 현황 (2026-06-02)
+- **URGENT 06-03**: ✅ 핫픽스 배포 완료 (main `0fae252` — 2026 KR 휴일 5건 추가).
+- **A**: 브레인스토밍 진행 중. 결정 — 유지모델=수동연도갱신+안전망, 안전망동작=발송차단+운영자알림.
+  알림 채널은 advisor 권고로 **exit(1)→GitHub 실패 이메일**(zero-wiring) 방향, 사용자 재확인 대기.
+- 테스트 러너: `node:test` + `node:assert/strict`, `tsx` 실행 (CI 테스트 스텝 없음·수동).
