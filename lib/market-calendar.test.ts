@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { getMarketCalendarInfo } from "./market-calendar";
+import { getMarketCalendarInfo, isYearCovered } from "./market-calendar";
 
 // 2026 KR 휴장일 — 핫픽스 추가분 포함 전수
 const KR_CLOSED_2026 = [
@@ -31,4 +31,14 @@ test("주말은 closed_weekend (양국)", () => {
   // 2026-06-06 토, 06-07 일
   assert.equal(getMarketCalendarInfo("2026-06-06").krStatus, "closed_weekend");
   assert.equal(getMarketCalendarInfo("2026-06-07").usStatus, "closed_weekend");
+});
+
+test("isYearCovered: 2026은 양국 모두 true", () => {
+  assert.equal(isYearCovered(2026, "kr"), true);
+  assert.equal(isYearCovered(2026, "us"), true);
+});
+
+test("isYearCovered: 데이터 없는 연도는 false", () => {
+  assert.equal(isYearCovered(2099, "kr"), false);
+  assert.equal(isYearCovered(2099, "us"), false);
 });

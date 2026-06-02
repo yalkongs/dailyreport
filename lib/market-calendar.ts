@@ -187,6 +187,15 @@ export function getMarketCalendarInfo(date: string): MarketCalendarInfo {
 }
 
 /**
+ * 해당 연도의 휴일 데이터가 존재하는지. false면 데이터가 낡은 것 —
+ * 호출 측(run.ts/run-etf.ts)이 발송을 막고 exit(1)을 내야 한다.
+ */
+export function isYearCovered(year: number, market: "kr" | "us"): boolean {
+  const table = market === "kr" ? KR_HOLIDAYS : US_HOLIDAYS;
+  return table[year] !== undefined;
+}
+
+/**
  * 사람이 읽기 좋은 한 줄 요약 (로깅·프롬프트용).
  */
 export function describeMarketCalendar(info: MarketCalendarInfo): string {
