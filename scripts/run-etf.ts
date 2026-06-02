@@ -20,7 +20,7 @@ import { selectNarrativeAngle } from '../lib/etf/narrative-angle'
 import { analyzeEtfMode } from '../lib/etf/etf-mode'
 import { analyzeEtfEvidence } from '../lib/etf/etf-evidence'
 import { appendEtfEvidenceLog } from '../lib/etf/etf-evidence-log'
-import { getMarketCalendarInfo, describeMarketCalendar } from '../lib/market-calendar'
+import { getMarketCalendarInfo, describeMarketCalendar, isYearCovered } from '../lib/market-calendar'
 // (2026-05-25) holiday-notice 임포트 제거 — 한국 휴장 시 silent skip 정책으로 변경.
 import { renderMorningHtml, saveReport, saveReportPreviewImage } from '../lib/etf/renderer'
 // NOTE: Only the error-notification path is imported. The success-path
@@ -52,6 +52,19 @@ async function main() {
   }
   const date = override || new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
   console.log(`\n=== ETF Morning Pipeline: ${date}${override ? ' (override)' : ''} ===\n`)
+
+  // 휴일 데이터 커버리지 안전망 — run.ts와 동일 정책. 미커버 = 데이터 낡음 → exit(1).
+  // 정상 휴장 skip(아래 krStatus !== 'open')은 return → exit(0)으로 구분된다.
+  {
+    const year = Number(date.slice(0, 4))
+    if (!isYearCovered(year, 'kr')) {
+      console.error(`❌ ${year}년 KR 휴일 데이터 없음 — lib/market-calendar.ts 갱신 필요. 안전을 위해 ETF 발송 중단.`)
+      process.exit(1)
+    }
+    if (!isYearCovered(year, 'us')) {
+      console.warn(`⚠️ ${year}년 US 휴일 데이터 없음 — 미국 휴장 가드레일 저하(별 sub-project B). 발송은 계속.`)
+    }
+  }
 
   // Step 0: 중복 실행 방지 가드 — 같은 날짜 ETF 리포트가 이미 있으면 종료
   // (GH Actions 크론 지연 + 수동 트리거 겹침 같은 상황에서 두 번째 실행을
