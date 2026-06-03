@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-06-04",
+      "type": "morning",
+      "headline": "코스피 4.87% 급등, 간밤 미 증시는 반대로 흘렀다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-06-04",
+      "anomalyCount": 8,
+      "anomalyBreakdown": {
+        "premiumDiscount": 8
+      },
+      "createdAt": "2026-06-03T22:35:28.209Z"
+    },
+    {
       "date": "2026-06-02",
       "type": "morning",
       "headline": "KOSPI 4.86% 급등, 방어주는 뒤로 밀렸다",
