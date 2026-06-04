@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-06-05",
+      "type": "morning",
+      "headline": "브로드컴 쇼크, 반도체만 눌렀다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-06-05",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-06-04T23:01:48.407Z"
+    },
+    {
       "date": "2026-06-04",
       "type": "morning",
       "headline": "코스피 4.87% 급등, 간밤 미 증시는 반대로 흘렀다",
