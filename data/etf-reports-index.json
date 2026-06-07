@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-06-08",
+      "type": "morning",
+      "headline": "반도체만 10% 무너진 월요일, 방어주는 조용히 제 자리를 지켰다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-06-08",
+      "anomalyCount": 14,
+      "anomalyBreakdown": {
+        "premiumDiscount": 14
+      },
+      "createdAt": "2026-06-07T22:45:30.043Z"
+    },
+    {
       "date": "2026-06-05",
       "type": "morning",
       "headline": "브로드컴 쇼크, 반도체만 눌렀다",
