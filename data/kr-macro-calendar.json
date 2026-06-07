@@ -1,54 +1,46 @@
 {
-  "generatedAt": "2026-05-31T15:20:06.871Z",
-  "weekRangeStart": "2026-06-01",
-  "weekRangeEnd": "2026-06-15",
+  "generatedAt": "2026-06-07T15:26:05.297Z",
+  "weekRangeStart": "2026-06-08",
+  "weekRangeEnd": "2026-06-22",
   "events": [
-    {
-      "date": "2026-06-02",
-      "category": "cpi",
-      "name": "2026년 5월 소비자물가동향 발표",
-      "importance": 5,
-      "description": "국가데이터처(구 통계청)가 매월 초 전월 CPI를 발표. 4월 발표일이 5월 6일이었던 패턴 기준, 5월분은 6월 초 발표 예상. 정확 날짜 공식 확인 필요.",
-      "source": "kostat.go.kr / mods.go.kr"
-    },
-    {
-      "date": "2026-06-11",
-      "category": "futures_expiry",
-      "name": "KOSPI200 선물·옵션 월물 만기일",
-      "importance": 2,
-      "description": "KRX 규정상 주가지수 선물·옵션 만기일은 매월 둘째 목요일. 2026년 6월 둘째 목요일은 6월 11일.",
-      "source": "krx.co.kr (규정 기준 산출)"
-    },
     {
       "date": "2026-06-11",
       "category": "employment",
       "name": "2026년 5월 고용동향 발표",
       "importance": 4,
-      "description": "국가데이터처가 매월 중순 전월 고용동향을 발표. 4월분이 5월 13일 발표된 패턴 기준, 5월분은 6월 둘째 주 발표 예상. 정확 날짜 공식 확인 필요.",
+      "description": "국가데이터처(구 통계청) 발표. 6월 주요통계 공표일정에 6월11일로 명시. 경제활동인구조사 기반 취업자수·실업률 등 포함.",
       "source": "mods.go.kr"
     },
     {
-      "date": "2026-06-25",
+      "date": "2026-06-12",
+      "category": "futures_expiry",
+      "name": "KOSPI200 선물·옵션 월물 만기일",
+      "importance": 2,
+      "description": "KRX 규정상 주가지수 선물·옵션 월물 만기는 매월 둘째 목요일. 2026년 6월 둘째 목요일은 6월12일. 프로그램 매매 변동성 확대 가능.",
+      "source": "krx.co.kr (규정 기반 산출)"
+    },
+    {
+      "date": "2026-06-18",
       "category": "bok_mpb",
       "name": "한국은행 금융통화위원회 금융안정회의",
       "importance": 3,
-      "description": "2026년 6월 금통위는 기준금리 결정 없는 금융안정회의. 6월은 금융안정회의 개최월(3·6·9·12월). 구체 날짜는 한국은행 공식 발표 첨부파일 기준이며, 6월 넷째 목요일(25일) 추정.",
+      "description": "2026년 금융안정회의는 3·6·9·12월 개최. 6월 금융안정회의 정확 날짜는 BOK 공식 첨부파일로만 확인 가능(공개 미확인). 금통위 정기회의 패턴(둘째·넷째 목요일) 기준 추정일 6월18일(셋째 목요일 포함 가능성 있음). 추측 포함.",
       "source": "bok.or.kr"
     },
     {
-      "date": "2026-06-30",
-      "category": "trade",
-      "name": "2026년 5월 수출입동향 발표",
-      "importance": 3,
-      "description": "산업통상자원부가 매월 말일 익월 초에 전월 무역수지(수출입동향)를 발표. 통상 월 말일 발표 패턴 기준 추정.",
-      "source": "산업통상자원부 (motie.go.kr)"
+      "date": "2026-06-18",
+      "category": "other",
+      "name": "2025년 하반기 지역별고용조사 맞벌이·1인 가구 취업 현황 발표",
+      "importance": 1,
+      "description": "국가데이터처 6월 주요통계 공표일정에 6월18일로 명시.",
+      "source": "mods.go.kr"
     },
     {
       "date": "2026-06-30",
       "category": "industrial",
       "name": "2026년 5월 산업활동동향 발표",
       "importance": 3,
-      "description": "국가데이터처가 매월 말일 전전월 산업활동동향(광공업생산·소매판매·설비투자 등)을 발표. 4월분이 5월 29일 발표된 패턴 기준, 5월분은 6월 말 발표 예상. 정확 날짜 공식 확인 필요.",
+      "description": "국가데이터처 6월 주요통계 공표일정에 6월30일로 명시. 생산·소비·투자 등 실물경기 종합지표.",
       "source": "mods.go.kr"
     }
   ]
