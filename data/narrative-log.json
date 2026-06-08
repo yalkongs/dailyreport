@@ -1,6 +1,25 @@
 {
   "entries": [
     {
+      "date": "2026-06-09",
+      "narrativeAngle": "supply_chain",
+      "headline": "코스피 8.3% 급락, SK하이닉스 성과급이 그린 AI 승자의 아이러니",
+      "bigStoryTopic": "코스피는 8.29% 급락하며 7484선을 기록했습니다. SK하이닉스가 1억5000만원 성과",
+      "walletTopics": [
+        "반도체 — AI 승자의 완전한 분리",
+        "중소형주 — 자금 이탈의 가속화",
+        "환율 — 1530원선의 새로운 균형점",
+        "극단적 쏠림 현상이 만든 투자 지형",
+        "4% 금리 시대, 안정성의 재조명"
+      ],
+      "metaphors": [
+        "성과급",
+        "아이러니",
+        "승자"
+      ],
+      "lookingAhead": "5월 고용동향 발표"
+    },
+    {
       "date": "2026-06-08",
       "narrativeAngle": "historical_deja_vu",
       "headline": "젠슨 황 방문 셋째 날, 삼성 파운드리가 그린 흑자 로드맵",
@@ -454,21 +473,6 @@
       ],
       "metaphors": [],
       "lookingAhead": "미국 1분기 GDP 발표"
-    },
-    {
-      "date": "2026-04-24",
-      "narrativeAngle": "historical_deja_vu",
-      "headline": "2000년 닷컴버블과 지금, 닮은 듯 다른 3가지",
-      "bigStoryTopic": "코스피 0.9% 상승으로 6475포인트를 기록했지만 미국은 일제히 하락했습니다. 24년 전",
-      "walletTopics": [
-        "2000년과 달리, 이번엔 중국 변수가 있습니다",
-        "항공주의 딜레마, 유가 vs 여행 수요",
-        "금리 4%대 진입, 부동산 PF 리스크 재점화",
-        "리스크 자산 선별 매물 출현",
-        "실질수익률 개선으로 예금 매력도 상승"
-      ],
-      "metaphors": [],
-      "lookingAhead": "Fed 정책 회의록 공개"
     }
   ]
 }
