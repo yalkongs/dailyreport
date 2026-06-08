@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-06-09",
+      "type": "morning",
+      "headline": "SOXX +5.87%, 반도체 신호가 서울에 닿기까지",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-06-09",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-06-08T23:00:20.579Z"
+    },
+    {
       "date": "2026-06-08",
       "type": "morning",
       "headline": "반도체만 10% 무너진 월요일, 방어주는 조용히 제 자리를 지켰다",
