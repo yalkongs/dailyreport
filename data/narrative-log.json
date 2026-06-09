@@ -1,6 +1,25 @@
 {
   "entries": [
     {
+      "date": "2026-06-10",
+      "narrativeAngle": "hidden_variable",
+      "headline": "코스피 8% 급등, 호남 반도체 공장이 그린 상승 지도",
+      "bigStoryTopic": "삼성전자와 SK하이닉스의 호남 패키징 공장 검토 소식이 시장을 자극했습니다. 코스피는 8.",
+      "walletTopics": [
+        "반도체 업계 — 지역 분산 투자의 새로운 국면",
+        "건설업계 — 대규모 인프라 투자 수혜 기대",
+        "지방 부동산 — 산업용지 중심 상승 압력",
+        "오늘의 자산별 매력도",
+        "4% 금리 시대, 선택의 기준"
+      ],
+      "metaphors": [
+        "지도",
+        "상승",
+        "호남"
+      ],
+      "lookingAhead": "고용동향 발표 예정"
+    },
+    {
       "date": "2026-06-09",
       "narrativeAngle": "supply_chain",
       "headline": "코스피 8.3% 급락, SK하이닉스 성과급이 그린 AI 승자의 아이러니",
@@ -458,21 +477,6 @@
       ],
       "metaphors": [],
       "lookingAhead": "미국 1분기 GDP 속보치 발표"
-    },
-    {
-      "date": "2026-04-27",
-      "narrativeAngle": "structural_lens",
-      "headline": "3개월째 갇혀 있는 시장, 방향 찾기",
-      "bigStoryTopic": "코스피 6475포인트, 나스닥 2만4천선. 높은 수준이지만 3개월째 같은 자리를 맴돌고 있",
-      "walletTopics": [
-        "정유·석유화학 업체 실적 개선 기대",
-        "반도체 업체 환율 수혜 본격화",
-        "항공·물류업계 연료비 부담 가중",
-        "지금 뜨거운 자산, 차가운 자산",
-        "실질수익률로 본 자산 배분"
-      ],
-      "metaphors": [],
-      "lookingAhead": "미국 1분기 GDP 발표"
     }
   ]
 }
