@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-06-11",
+      "type": "morning",
+      "headline": "SOXX -3.67%, 반도체 충격이 서울 개장문을 두드립니다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-06-11",
+      "anomalyCount": 8,
+      "anomalyBreakdown": {
+        "premiumDiscount": 8
+      },
+      "createdAt": "2026-06-10T23:13:57.741Z"
+    },
+    {
       "date": "2026-06-10",
       "type": "morning",
       "headline": "삼성 AI 대전환 선언, 반도체 ETF는 간밤 역풍을 먼저 소화해야 합니다",
