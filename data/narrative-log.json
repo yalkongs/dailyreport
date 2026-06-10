@@ -1,6 +1,25 @@
 {
   "entries": [
     {
+      "date": "2026-06-11",
+      "narrativeAngle": "generation_wallet",
+      "headline": "AI 투자 피로감, 3세대 지갑이 다르게 읽는 시장 신호",
+      "bigStoryTopic": "코스피 4.52%, S&P500 1.62% 하락. 삼성전자 M&A 모색 소식에도 반도체주 ",
+      "walletTopics": [
+        "20대 직장인 - 하락장을 투자 기회로 활용",
+        "40대 가장 - 포트폴리오 재조정 시점",
+        "60대 은퇴자 - 4% 예금 금리의 수혜",
+        "현재 시점 자산별 매력도",
+        "4% 금리 시대, 세대별 선택 기준"
+      ],
+      "metaphors": [
+        "3세대 지갑",
+        "AI 피로감",
+        "세대별 해석"
+      ],
+      "lookingAhead": "5월 고용동향 발표"
+    },
+    {
       "date": "2026-06-10",
       "narrativeAngle": "hidden_variable",
       "headline": "코스피 8% 급등, 호남 반도체 공장이 그린 상승 지도",
@@ -462,21 +481,6 @@
       ],
       "metaphors": [],
       "lookingAhead": "미국 빅테크 실적 발표"
-    },
-    {
-      "date": "2026-04-28",
-      "narrativeAngle": "global_domino",
-      "headline": "한국 시총 6000조 돌파, 워싱턴發 도미노",
-      "bigStoryTopic": "미국 증시는 소폭 상승에 그쳤지만, 한국은 2.15% 급등으로 코스피 6615포인트를 기록",
-      "walletTopics": [
-        "반도체 업체, 이중 수혜 구조 진입",
-        "정유업계, 원유 가격 안정으로 정제마진 개선",
-        "은행권, 금리 상승으로 순이자마진 기대",
-        "오늘의 자산별 매력도",
-        "금리 환경 변화와 자산 배분"
-      ],
-      "metaphors": [],
-      "lookingAhead": "미국 1분기 GDP 속보치 발표"
     }
   ]
 }
