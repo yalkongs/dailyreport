@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# report render test artifacts (local dev only — real reports are YYYY-MM-DD.html / -preview.png)
+public/reports/*-test*.html
+public/reports/*-test*.png
+public/etf-reports/*-test*.html
+public/etf-reports/*-test*.png
