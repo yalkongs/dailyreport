@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const headline = report?.headline || "iM AI Market Report";
   const subline = report?.subline || "매일 아침 전달되는 글로벌 금융 시장 리포트";
-  const ogImageUrl = `/api/og?date=${date}`;
+  const ogImageUrl = `https://dailyreport-eta.vercel.app/reports/${date}-preview.png`;
 
   return {
     title: `${headline} - iM AI Market Report`,
@@ -32,8 +32,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       images: [
         {
           url: ogImageUrl,
-          width: 600,
-          height: 900,
+          width: 1080,
+          height: 1350,
           alt: headline,
         },
       ],

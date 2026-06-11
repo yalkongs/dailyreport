@@ -16,6 +16,7 @@ import {
   saveNarrativeEntry,
 } from "../lib/narrative-memory";
 import { saveMarketPreviewImage } from "../lib/market/preview";
+import { decodeHtmlEntities } from "../lib/html-entities";
 import type { ReportsIndex, ReportMeta, MarketSnapshot, MarketSnapshotItem, MarketDataCollection } from "../lib/types";
 
 const REPORTS_DIR = path.join(process.cwd(), "public", "reports");
@@ -46,9 +47,11 @@ function extractHeadlineFromHtml(html: string): { headline: string; subline: str
     || html.match(/<h1[^>]*>([^<]+)<\/h1>/);
   const sublineMatch = html.match(/class="cover-subline"[^>]*>([^<]+)/)
     || html.match(/class="[^"]*subline[^"]*"[^>]*>([^<]+)/);
+  // 정규식 추출값은 HTML 엔티티(&amp; 등)가 그대로 남으므로 디코드한다.
+  // (미디코드 시 reports-index.json·프리뷰 PNG에 "S&amp;P"로 노출됨)
   return {
-    headline: headlineMatch?.[1]?.trim() || "iM AI Market Report",
-    subline: sublineMatch?.[1]?.trim() || "",
+    headline: decodeHtmlEntities(headlineMatch?.[1]?.trim() || "iM AI Market Report"),
+    subline: decodeHtmlEntities(sublineMatch?.[1]?.trim() || ""),
   };
 }
 
@@ -326,7 +329,8 @@ async function main() {
     const previewPath = await saveMarketPreviewImage(reportDate, headline, subline);
     console.log(`🖼️  프리뷰 이미지: ${previewPath}`);
   } catch (err) {
-    // 프리뷰 실패는 치명적 아님 — 기존 /api/og 폴백이 워크플로에 남아있다면 그걸로 처리
+    // 프리뷰 실패는 치명적 아님 — 단 og:image가 이 정적 PNG를 직접 가리키므로
+    // 실패 시 링크 프리뷰가 빈다(워크플로 배포검증이 발송 전 자산 존재를 보장).
     console.warn(`⚠️  프리뷰 이미지 생성 실패 (계속 진행):`, err);
   }
   console.log();

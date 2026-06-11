@@ -111,9 +111,31 @@ jobs:
           git commit -m "Daily Market Report - ${REPORT_DATE} (KST)"
           git push
 
-      - name: Wait for Vercel deployment
+      - name: Wait for Vercel deployment (poll commit status until success)
         if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true && inputs.dry_run != 'true'
-        run: sleep 60
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 고정 sleep 대신 실제 배포 완료를 확인한 뒤 텔레그램을 보낸다.
+          # (content-type=image/png 확인만으론 부족 — 미배포 시 og:image fallback이
+          #  /api/og(과거 그린)를 같은 png로 반환해 깨진 카드가 나갔던 인시던트.)
+          # Vercel은 push된 커밋의 commit status(context=Vercel)로 배포 결과를 보고한다.
+          # 이 폴링이 job을 직렬화해 다음 job의 push가 이 배포를 취소하는 race도 막는다.
+          SHA=$(git rev-parse HEAD)
+          echo "Vercel 배포 대기: ${GITHUB_REPOSITORY}@${SHA}"
+          for i in $(seq 1 60); do
+            STATE=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/status" \
+              --jq '[.statuses[] | select(.context == "Vercel")] | (first.state // "pending")' \
+              2>/dev/null || echo "pending")
+            echo "  [${i}/60] Vercel: ${STATE}"
+            case "${STATE}" in
+              success) echo "✅ Vercel 배포 완료 — 텔레그램 발송 진행"; exit 0 ;;
+              failure|error) echo "::error::Vercel 배포 실패(${STATE}) — 텔레그램 발송 중단"; exit 1 ;;
+            esac
+            sleep 10
+          done
+          echo "::error::Vercel 배포가 10분 내 미완료 — 깨진 카드 방지 위해 발송 중단"
+          exit 1
 
       - name: Send Telegram notification
         if: ${{ (inputs.resend_telegram_only == true || inputs.resend_telegram_only == 'true') || (steps.changes.outputs.changed == 'true' && inputs.dry_run != true && inputs.dry_run != 'true') }}
@@ -228,9 +250,31 @@ jobs:
           git commit -m "ETF Daily Report - ${REPORT_DATE} (KST)"
           git push
 
-      - name: Wait for Vercel deployment
+      - name: Wait for Vercel deployment (poll commit status until success)
         if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true && inputs.dry_run != 'true'
-        run: sleep 60
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 고정 sleep 대신 실제 배포 완료를 확인한 뒤 텔레그램을 보낸다.
+          # (content-type=image/png 확인만으론 부족 — 미배포 시 og:image fallback이
+          #  /api/og(과거 그린)를 같은 png로 반환해 깨진 카드가 나갔던 인시던트.)
+          # Vercel은 push된 커밋의 commit status(context=Vercel)로 배포 결과를 보고한다.
+          # 이 폴링이 job을 직렬화해 다음 job의 push가 이 배포를 취소하는 race도 막는다.
+          SHA=$(git rev-parse HEAD)
+          echo "Vercel 배포 대기: ${GITHUB_REPOSITORY}@${SHA}"
+          for i in $(seq 1 60); do
+            STATE=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/status" \
+              --jq '[.statuses[] | select(.context == "Vercel")] | (first.state // "pending")' \
+              2>/dev/null || echo "pending")
+            echo "  [${i}/60] Vercel: ${STATE}"
+            case "${STATE}" in
+              success) echo "✅ Vercel 배포 완료 — 텔레그램 발송 진행"; exit 0 ;;
+              failure|error) echo "::error::Vercel 배포 실패(${STATE}) — 텔레그램 발송 중단"; exit 1 ;;
+            esac
+            sleep 10
+          done
+          echo "::error::Vercel 배포가 10분 내 미완료 — 깨진 카드 방지 위해 발송 중단"
+          exit 1
 
       - name: Send ETF Telegram notification
         if: ${{ (inputs.resend_telegram_only == true || inputs.resend_telegram_only == 'true') || (steps.changes.outputs.changed == 'true' && inputs.dry_run != true && inputs.dry_run != 'true') }}

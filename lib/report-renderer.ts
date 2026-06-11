@@ -66,13 +66,13 @@ function renderHead(content: ReportContent, date: string, css: string): string {
 <meta property="og:title" content="${headline}">
 <meta property="og:description" content="${subline}">
 <meta property="og:type" content="article">
-<meta property="og:image" content="https://dailyreport-eta.vercel.app/api/og?date=${date}">
-<meta property="og:image:width" content="600">
-<meta property="og:image:height" content="900">
+<meta property="og:image" content="https://dailyreport-eta.vercel.app/reports/${date}-preview.png">
+<meta property="og:image:width" content="1080">
+<meta property="og:image:height" content="1350">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${headline}">
 <meta name="twitter:description" content="${subline}">
-<meta name="twitter:image" content="https://dailyreport-eta.vercel.app/api/og?date=${date}">
+<meta name="twitter:image" content="https://dailyreport-eta.vercel.app/reports/${date}-preview.png">
 <style>
 ${css}
 </style>
