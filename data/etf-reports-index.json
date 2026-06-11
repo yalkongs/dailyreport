@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-06-12",
+      "type": "morning",
+      "headline": "반도체가 한 주를 뒤집은 금요일, 무게중심은 어디로 기울었나",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-06-12",
+      "anomalyCount": 15,
+      "anomalyBreakdown": {
+        "premiumDiscount": 15
+      },
+      "createdAt": "2026-06-11T23:12:14.487Z"
+    },
+    {
       "date": "2026-06-11",
       "type": "morning",
       "headline": "SOXX -3.67%, 반도체 충격이 서울 개장문을 두드립니다",
