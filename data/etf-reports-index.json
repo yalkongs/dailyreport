@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-06-15",
+      "type": "morning",
+      "headline": "달러 1,519원, 같은 숫자가 두 개의 얼굴을 가집니다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-06-15",
+      "anomalyCount": 15,
+      "anomalyBreakdown": {
+        "premiumDiscount": 15
+      },
+      "createdAt": "2026-06-14T22:43:37.168Z"
+    },
+    {
       "date": "2026-06-12",
       "type": "morning",
       "headline": "반도체가 한 주를 뒤집은 금요일, 무게중심은 어디로 기울었나",
