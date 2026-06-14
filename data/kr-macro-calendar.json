@@ -1,46 +1,46 @@
 {
-  "generatedAt": "2026-06-07T15:26:05.297Z",
-  "weekRangeStart": "2026-06-08",
-  "weekRangeEnd": "2026-06-22",
+  "generatedAt": "2026-06-14T15:51:03.625Z",
+  "weekRangeStart": "2026-06-15",
+  "weekRangeEnd": "2026-06-29",
   "events": [
     {
-      "date": "2026-06-11",
-      "category": "employment",
-      "name": "2026년 5월 고용동향 발표",
+      "date": "2026-06-17",
+      "category": "other",
+      "name": "미국 FOMC 금리 결정 (한국시간 6/18 새벽)",
       "importance": 4,
-      "description": "국가데이터처(구 통계청) 발표. 6월 주요통계 공표일정에 6월11일로 명시. 경제활동인구조사 기반 취업자수·실업률 등 포함.",
-      "source": "mods.go.kr"
+      "description": "미국 연방공개시장위원회(FOMC) 6월 회의(6/16~17, 미국시간) 결과 발표. 점도표(dot plot) 및 경제전망(SEP) 포함. 한국 금리·환율·증시에 직접 영향. 한국시간 기준 6월 18일(목) 새벽 3시경 발표.",
+      "source": "federalreserve.gov / tmsstory.co.kr"
     },
     {
-      "date": "2026-06-12",
+      "date": "2026-06-19",
       "category": "futures_expiry",
-      "name": "KOSPI200 선물·옵션 월물 만기일",
+      "name": "KOSPI200 선물·옵션 분기 만기일",
       "importance": 2,
-      "description": "KRX 규정상 주가지수 선물·옵션 월물 만기는 매월 둘째 목요일. 2026년 6월 둘째 목요일은 6월12일. 프로그램 매매 변동성 확대 가능.",
-      "source": "krx.co.kr (규정 기반 산출)"
+      "description": "6월 셋째 금요일로 KOSPI200 주가지수 선물·옵션 분기 만기일(쿼드러플위칭데이). 주식·선물·옵션·ETF 동시 만기로 변동성 확대 가능성. KRX 정기 일정 기준.",
+      "source": "krx.co.kr"
     },
     {
-      "date": "2026-06-18",
+      "date": "2026-06-23",
+      "category": "other",
+      "name": "한국은행 소비자심리지수(CCSI) 발표",
+      "importance": 2,
+      "description": "한국은행이 매월 말 발표하는 소비자동향조사(소비자심리지수). 6월 23일(화) 발표 예정. 가계의 경기 및 소비 심리를 반영하는 선행 지표.",
+      "source": "month2k.com / bok.or.kr"
+    },
+    {
+      "date": "2026-06-25",
       "category": "bok_mpb",
       "name": "한국은행 금융통화위원회 금융안정회의",
       "importance": 3,
-      "description": "2026년 금융안정회의는 3·6·9·12월 개최. 6월 금융안정회의 정확 날짜는 BOK 공식 첨부파일로만 확인 가능(공개 미확인). 금통위 정기회의 패턴(둘째·넷째 목요일) 기준 추정일 6월18일(셋째 목요일 포함 가능성 있음). 추측 포함.",
+      "description": "2026년 6월 금융통화위원회 금융안정회의(금융안정 상황 점검 회의). 정확한 날짜는 한국은행 공식 첨부파일 기준 미확인(추정 일정). 의사록은 7월 10일(금) 앞당겨 공개 예정. 기준금리 결정 회의 아님.",
       "source": "bok.or.kr"
-    },
-    {
-      "date": "2026-06-18",
-      "category": "other",
-      "name": "2025년 하반기 지역별고용조사 맞벌이·1인 가구 취업 현황 발표",
-      "importance": 1,
-      "description": "국가데이터처 6월 주요통계 공표일정에 6월18일로 명시.",
-      "source": "mods.go.kr"
     },
     {
       "date": "2026-06-30",
       "category": "industrial",
       "name": "2026년 5월 산업활동동향 발표",
       "importance": 3,
-      "description": "국가데이터처 6월 주요통계 공표일정에 6월30일로 명시. 생산·소비·투자 등 실물경기 종합지표.",
+      "description": "국가데이터처(구 통계청)가 발표하는 5월 산업활동동향. 광공업 생산, 소매판매, 설비투자 등 포함. 6월 주요통계 공표일정에 공식 확인된 일정.",
       "source": "mods.go.kr"
     }
   ]
