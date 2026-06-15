@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-06-16",
+      "type": "morning",
+      "headline": "나스닥 3% 랠리, 그 힘이 며칠짜리인지가 오늘의 질문입니다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-06-16",
+      "anomalyCount": 17,
+      "anomalyBreakdown": {
+        "premiumDiscount": 17
+      },
+      "createdAt": "2026-06-15T23:13:31.779Z"
+    },
+    {
       "date": "2026-06-15",
       "type": "morning",
       "headline": "달러 1,519원, 같은 숫자가 두 개의 얼굴을 가집니다",
