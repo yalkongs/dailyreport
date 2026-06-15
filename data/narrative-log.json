@@ -1,6 +1,25 @@
 {
   "entries": [
     {
+      "date": "2026-06-16",
+      "narrativeAngle": "job_perspective",
+      "headline": "원유가 내려앉은 자리에 주가가 올라섰다",
+      "bigStoryTopic": "미·이란 잠정 합의 소식에 코스피가 하루 만에 <strong>5.20%</strong> 급",
+      "walletTopics": [
+        "항공·물류 업종 — 원유 하락의 시차 효과를 계산하십시오",
+        "수출 중소 제조업 — 환율 1514원의 지형",
+        "자동차 부품 업계 — 현대차 목표가 상향의 낙수 효과",
+        "원유 하락 이후, 자산별 온도 재조정",
+        "4%대 금리 시대, 오늘 급등장에서 예금의 위치"
+      ],
+      "metaphors": [
+        "원유 하락",
+        "지정학 해빙",
+        "주가 역전"
+      ],
+      "lookingAhead": "FOMC 금리 결정 — 점도표가 말하는 것"
+    },
+    {
       "date": "2026-06-15",
       "narrativeAngle": "other_side",
       "headline": "새만금에서 보스턴까지, 현대차가 그린 로봇 고속도로",
@@ -474,21 +493,6 @@
       ],
       "metaphors": [],
       "lookingAhead": "중국 PMI 후속 지표 주목"
-    },
-    {
-      "date": "2026-05-01",
-      "narrativeAngle": "generation_wallet",
-      "headline": "같은 숫자, 다른 체감",
-      "bigStoryTopic": "한국 증시는 1.4% 하락했지만 미국 시장은 1% 상승했습니다. 세대별 지갑 속 온도계가 ",
-      "walletTopics": [
-        "반도체 업체, 환율 수혜 본격화",
-        "정유업계, 고유가 수혜 확대",
-        "항공업계, 유가와 환율 이중고",
-        "지금 뜨거운 자산, 차가운 자산",
-        "4% 금리 시대, 안전자산의 재조명"
-      ],
-      "metaphors": [],
-      "lookingAhead": "한국 증시 세계 8위 등극 의미"
     }
   ]
 }
