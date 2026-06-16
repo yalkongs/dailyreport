@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-06-17",
+      "type": "morning",
+      "headline": "반도체가 빠진 자리, 금과 건설이 채운 하루",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-06-17",
+      "anomalyCount": 4,
+      "anomalyBreakdown": {
+        "premiumDiscount": 4
+      },
+      "createdAt": "2026-06-16T23:06:30.716Z"
+    },
+    {
       "date": "2026-06-16",
       "type": "morning",
       "headline": "나스닥 3% 랠리, 그 힘이 며칠짜리인지가 오늘의 질문입니다",
