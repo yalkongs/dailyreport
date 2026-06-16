@@ -1,6 +1,25 @@
 {
   "entries": [
     {
+      "date": "2026-06-17",
+      "narrativeAngle": "supply_chain",
+      "headline": "삼성이 AI로 사람을 재는 동안, 코스피는 8700선을 넘었다",
+      "bigStoryTopic": "코스피가 전일 대비 <strong>+2.11%</strong> 상승하며 <strong>8,",
+      "walletTopics": [
+        "삼성전자 AI 도입 → 반도체 내부 수요 체인의 변화",
+        "TSMC 파업 움직임 → 글로벌 파운드리 공급망 리스크",
+        "원유 30% 급락의 산업 체인 경로",
+        "지금 어느 자산이 유리한가",
+        "4% 금리 시대, 선택의 좌표"
+      ],
+      "metaphors": [
+        "AI 성과지표",
+        "산업 체인",
+        "재편"
+      ],
+      "lookingAhead": "FOMC 6월 금리 결정 및 점도표 발표"
+    },
+    {
       "date": "2026-06-16",
       "narrativeAngle": "job_perspective",
       "headline": "원유가 내려앉은 자리에 주가가 올라섰다",
@@ -478,21 +497,6 @@
       ],
       "metaphors": [],
       "lookingAhead": "미국 4월 ISM 서비스업 지수 발표"
-    },
-    {
-      "date": "2026-05-04",
-      "narrativeAngle": "hidden_variable",
-      "headline": "원유가 100달러, 누구는 웃고 누구는 운다",
-      "bigStoryTopic": "WTI 원유가 배럴당 101달러까지 올랐지만 3% 하락했습니다. 숨은 변수는 중국 수요 둔",
-      "walletTopics": [
-        "정유업계, 재고 평가손실 우려 완화",
-        "항공업계, 유류비 부담 소폭 완화",
-        "화학업계, 원료비 하락으로 마진 개선",
-        "오늘의 자산 매력도 진단",
-        "4% 금리 시대, 선택의 기준"
-      ],
-      "metaphors": [],
-      "lookingAhead": "중국 PMI 후속 지표 주목"
     }
   ]
 }
