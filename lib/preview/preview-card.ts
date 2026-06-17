@@ -13,6 +13,7 @@
 import * as fs from 'fs'
 import sharp from 'sharp'
 import { loadBrandLogoDataUri } from './brand-logo'
+import { stripEmphasisTags } from '../html-entities'
 
 export const PREVIEW_WIDTH = 1080
 export const PREVIEW_HEIGHT = 1350
@@ -67,8 +68,10 @@ function wrapText(text: string, maxChars: number, maxLines: number): string[] {
 
 export function renderPreviewCardSvg(data: PreviewCardData): string {
   const logoDataUri = loadBrandLogoDataUri()
-  const titleLines = wrapText(data.headline, 15, 4)
-  const sublineLines = wrapText(data.subline, 26, 3)
+  // 방어: 본문 강조용 <strong> 등이 headline/subline에 섞여 들어오면 SVG text에
+  // 리터럴로 박힌다(이미지는 HTML 못 그림). escapeXml 전에 강조 태그를 벗긴다.
+  const titleLines = wrapText(stripEmphasisTags(data.headline), 15, 4)
+  const sublineLines = wrapText(stripEmphasisTags(data.subline), 26, 3)
   const titleStartY = 600
   const sublineStartY = titleStartY + titleLines.length * 78 + 66
 

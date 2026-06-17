@@ -15,6 +15,7 @@ import type {
   ReportCompassSection,
 } from "./types";
 import { buildSparklineMap } from "./chart-generator";
+import { stripEmphasisTags } from "./html-entities";
 
 // --- 유틸리티 ---
 
@@ -54,8 +55,11 @@ function loadCSS(): string {
 // --- 섹션 렌더러들 ---
 
 function renderHead(content: ReportContent, date: string, css: string): string {
-  const headline = escapeHtml(content.cover.headline);
-  const subline = escapeHtml(content.cover.subline);
+  // headline·subline 모두 <strong> 강조 태그 제거 후 escape. 메타(title·description)는
+  // 평문이어야 하고, 이 평문이 run.ts 추출을 거쳐 reports-index·프리뷰 이미지로도
+  // 흐른다. 프롬프트(:448)는 헤드라인에도 핵심 수치를 허용하므로 헤드라인도 대상.
+  const headline = escapeHtml(stripEmphasisTags(content.cover.headline));
+  const subline = escapeHtml(stripEmphasisTags(content.cover.subline));
 
   return `<!DOCTYPE html>
 <html lang="ko">
@@ -89,8 +93,8 @@ function renderCover(content: ReportContent, date: string, dayOfWeek: string): s
 <div class="report-container">
     <section class="cover">
         <div class="cover-date">${dateStr}</div>
-        <h1 class="cover-headline">${escapeHtml(content.cover.headline)}</h1>
-        <p class="cover-subline">${escapeHtml(content.cover.subline)}</p>
+        <h1 class="cover-headline">${escapeHtml(stripEmphasisTags(content.cover.headline))}</h1>
+        <p class="cover-subline">${escapeHtml(stripEmphasisTags(content.cover.subline))}</p>
         <div class="cover-byline">iM AI Analyst</div>
     </section>`;
 }
