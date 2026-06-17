@@ -1,6 +1,14 @@
 {
   "reports": [
     {
+      "date": "2026-06-18",
+      "title": "iM AI Market Report - 2026-06-18",
+      "headline": "연준이 금리를 올린 밤, 달러는 올랐고 나머지는 내려앉았다",
+      "subline": "6월 FOMC 결과 발표 이후 미국 10년물 국채 금리가 <strong>4.46%</strong>로 뛰었습니다. S&P 500은 <strong>-1.21%</strong>, 원/달러 환율은 장중 <strong>1,525원</strong>대로 올라섰습니다. 오늘 한국 개장은 이 긴장을 그대로 흡수합니다.",
+      "generatedAt": "2026-06-18T06:43:57+09:00",
+      "filePath": "/reports/2026-06-18.html"
+    },
+    {
       "date": "2026-06-17",
       "title": "iM AI Market Report - 2026-06-17",
       "headline": "삼성이 AI로 사람을 재는 동안, 코스피는 8700선을 넘었다",
@@ -441,5 +449,5 @@
       "subline": "유가 급등이 석유화학부터 배터리까지, 산업 체인을 따라 흘러가는 하루"
     }
   ],
-  "lastUpdated": "2026-06-17T08:02:30+09:00"
+  "lastUpdated": "2026-06-18T06:43:57+09:00"
 }
