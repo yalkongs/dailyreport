@@ -29,3 +29,17 @@ export function decodeHtmlEntities(input: string): string {
   out = out.split("&amp;").join("&");
   return out;
 }
+
+/**
+ * 인라인 강조 태그(<strong> 등)를 제거해 평문으로 만든다.
+ *
+ * 프롬프트(claude-client.ts)는 본문 텍스트에서 핵심 수치를 <strong>로 감싸도록
+ * 지시한다. 이 마크업은 **웹 본문 볼드 렌더 전용**이며, 그 외 소비자
+ * (서브라인·OG 프리뷰 이미지·메타 description·reports-index)는 HTML을 그리지
+ * 못해 태그가 리터럴로 노출된다(2026-06-16 Sonnet 4.6 전환 후 서브라인에서 발생).
+ * 평문 컨텍스트로 보내기 전 이 함수로 강조 태그만 벗긴다. 태그 외 stray '<'·'>'는
+ * 건드리지 않으므로(부등호 등 보존) 호출부의 escapeHtml/escapeXml이 안전하게 처리.
+ */
+export function stripEmphasisTags(input: string): string {
+  return input.replace(/<\/?(?:strong|b|em|i|u|mark)(?:\s[^>]*)?>/gi, "");
+}
