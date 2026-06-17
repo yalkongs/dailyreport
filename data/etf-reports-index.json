@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-06-18",
+      "type": "morning",
+      "headline": "SOXX +1.44%, S&P500은 반대로 흘렀습니다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-06-18",
+      "anomalyCount": 4,
+      "anomalyBreakdown": {
+        "premiumDiscount": 4
+      },
+      "createdAt": "2026-06-17T21:50:18.784Z"
+    },
+    {
       "date": "2026-06-17",
       "type": "morning",
       "headline": "반도체가 빠진 자리, 금과 건설이 채운 하루",
