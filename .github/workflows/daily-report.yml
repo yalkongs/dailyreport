@@ -8,8 +8,13 @@ name: Generate Daily Market Report
 
 on:
   schedule:
-    # KST 06:30 (월~금) = UTC 21:30 (일~목)
-    - cron: '30 21 * * 0-4'
+    # 늦은 백업 트리거 — KST 07:30 (월~금) = UTC 22:30 (일~목).
+    # 정시 트리거는 cron-job.org(06:40 KST)가 workflow_dispatch로 담당.
+    # cron-job.org가 죽은 날에만 이 백업이 의미 있음. 06:40 발화와 시각이
+    # 분리돼 push 충돌 레이스가 원천 차단됨 (README "아침 트리거" 참조).
+    # ⚠️ 자정(24:00 UTC) 넘기면 UTC 요일이 하루 밀려 0-4(=KST 월~금) 매핑이
+    #    깨진다. 22:30 UTC는 안전. 이후 수정 시 이 경계를 반드시 지킬 것.
+    - cron: '30 22 * * 0-4'
   workflow_dispatch:
     inputs:
       dry_run:

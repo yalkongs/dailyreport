@@ -162,12 +162,52 @@
 8. **GitHub Actions**: 변경 커밋 → push → Vercel 재배포 → Telegram sendPhoto
 
 ### 트리거 옵션
-- 정상 스케줄: 매일 06:30 KST 월~금 자동
+- **정시 트리거 (주): cron-job.org → `workflow_dispatch`.** 매일 06:40 KST(월~금)에
+  외부 cron 서비스가 GitHub dispatch API를 호출 → 워크플로가 수 초 내 시작 →
+  두 리포트 07:00 직전 도착. (아래 "아침 트리거" 참조)
+- **백업 (보조): GitHub `schedule` cron.** `30 22 * * 0-4`(07:30 KST 목표). GitHub
+  `schedule`는 정시 보장이 없어 만성 지연(+60~84분)되므로 백업으로만 둔다.
+  cron-job.org가 죽은 날에만 발화하며, 06:40 정시 발화와 시각이 분리돼 push
+  충돌이 없다. 평소엔 중복 가드가 종료시켜 Telegram step까지 자동 skip.
 - `workflow_dispatch` 수동 옵션:
   - `dry_run` (Telegram 발송 안 함)
   - `force_regenerate` (오늘자 이미 있어도 재생성)
   - `only` (market / etf / both)
   - `resend_telegram_only` (생성 스킵, Telegram만 재발송)
+
+### 아침 트리거 (cron-job.org → GitHub workflow_dispatch)
+
+정시 발화는 repo **밖**(외부 cron 계정 + GitHub 토큰)에 산다. 새 기기·6개월 뒤
+복구 시 아래가 유일한 흔적이다. 설계 전문: [`docs/superpowers/specs/2026-06-02-morning-trigger-reliability-design.md`](./docs/superpowers/specs/2026-06-02-morning-trigger-reliability-design.md).
+
+**cron-job.org 작업 설정**
+
+| 항목 | 값 |
+|------|-----|
+| URL | `https://api.github.com/repos/yalkongs/dailyreport/actions/workflows/260067407/dispatches` |
+| Method | `POST` |
+| Headers | `Authorization: Bearer <PAT>` · `Accept: application/vnd.github+json` · `X-GitHub-Api-Version: 2022-11-28` |
+| Body | `{"ref":"main"}` (inputs 생략 → only=both·dry_run=false 기본값) |
+| Schedule | 월~금 **06:40**, **timezone = Asia/Seoul** |
+| 성공 판정 | HTTP **204 No Content** |
+| 실패 알림 | 이메일 알림 활성화 (필수) |
+
+- 워크플로는 파일명이 아니라 **ID `260067407`** 로 지정 → 파일명이 바뀌어도 안 깨짐.
+
+**⚠️ Timezone 규약 (핵심 함정).** cron-job.org는 작업 tz를 **Asia/Seoul**로,
+요일도 **KST 기준 월~금**으로 둔다. GitHub의 "UTC 일~목(`0-4`)" 환산을 그대로
+쓰면 안 된다 — UTC로 두면 06:40 UTC = **15:40 KST(오후)** 발화 참사. GitHub
+`schedule` 백업은 반대로 항상 UTC(`30 22 * * 0-4`).
+
+**GitHub Fine-grained PAT.** Repository = `dailyreport` 단 하나, Permissions =
+**Actions: Read and write**(+Metadata read 자동). 만료일 설정(예: 1년) 후 여기에 기록:
+`만료일: ____`. 보관 위치 = cron-job.org 작업의 `Authorization` 헤더. 이 토큰으로
+가능한 건 "이 워크플로 트리거"뿐(Contents 권한 없어 파일 수정·secret 탈취 불가).
+유출 시 최대 피해 = 워크플로 반복 실행(Actions 분·Anthropic 크레딧 소모).
+
+**⚠️ 컷오버 순서.** 백업 cron을 `30 21`(06:30)→`30 22`(07:30)로 미루는 변경은
+cron-job.org가 라이브로 검증된 **뒤에야** main에 머지한다. 먼저 미루면 공백기에
+백업만 ~08:30에 떠서 현재(~07:30)보다 늦어진다.
 
 ---
 
