@@ -1,6 +1,25 @@
 {
   "entries": [
     {
+      "date": "2026-06-19",
+      "narrativeAngle": "data_anatomy",
+      "headline": "이석희가 인텔로 간 날, 코스피는 9000을 넘어섰다",
+      "bigStoryTopic": "코스피가 <strong>+2.25%</strong> 오르며 <strong>9,063</st",
+      "walletTopics": [
+        "원/달러 1,538원 해부 — 같은 숫자, 다섯 개의 의미",
+        "이석희 인텔 합류 — 반도체 인맥 지도의 재편",
+        "금·은 동반 급락 — 위험 선호의 전환을 숫자로 읽다",
+        "지금 어느 자산이 어느 온도인가",
+        "9,000 코스피 앞에서 예금의 자리"
+      ],
+      "metaphors": [
+        "인사이동",
+        "9000선",
+        "반도체 인맥"
+      ],
+      "lookingAhead": "KOSPI200 분기 만기일 — 장 후반 변동성 점검"
+    },
+    {
       "date": "2026-06-18",
       "narrativeAngle": "structural_lens",
       "headline": "연준이 금리를 올린 밤, 달러는 올랐고 나머지는 내려앉았다",
@@ -486,21 +505,6 @@
       ],
       "metaphors": [],
       "lookingAhead": "미 연준 위원들 발언 집중"
-    },
-    {
-      "date": "2026-05-06",
-      "narrativeAngle": "historical_deja_vu",
-      "headline": "1986년 일본 재현, 코스피 7000 초읽기",
-      "bigStoryTopic": "40년 전 닛케이 광풍과 닮은꼴 한국 증시. 하지만 이번엔 다른 점 3가지가 있습니다.",
-      "walletTopics": [
-        "삼성전자·SK하이닉스, 1986년 일본 전철 피할 수 있을까",
-        "정유업계, 고유가의 이중 수혜 구조 완성",
-        "항공업계, 유가 안정화로 숨통 트이나",
-        "오늘의 투자 매력도 진단",
-        "4% 금리 시대, 선택의 기준"
-      ],
-      "metaphors": [],
-      "lookingAhead": "코스피 7000 돌파 여부"
     }
   ]
 }
