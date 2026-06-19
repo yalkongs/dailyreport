@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-06-19",
+      "type": "morning",
+      "headline": "반도체가 코스피를 9,300선 위로 끌어올린 금요일",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-06-19",
+      "anomalyCount": 14,
+      "anomalyBreakdown": {
+        "premiumDiscount": 14
+      },
+      "createdAt": "2026-06-19T00:16:04.218Z"
+    },
+    {
       "date": "2026-06-18",
       "type": "morning",
       "headline": "SOXX +1.44%, S&P500은 반대로 흘렀습니다",
