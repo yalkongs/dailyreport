@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-06-22",
+      "type": "morning",
+      "headline": "SOXX +6.62%, 반도체가 주말을 삼켰습니다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-06-22",
+      "anomalyCount": 14,
+      "anomalyBreakdown": {
+        "premiumDiscount": 14
+      },
+      "createdAt": "2026-06-21T21:48:15.754Z"
+    },
+    {
       "date": "2026-06-19",
       "type": "morning",
       "headline": "반도체가 코스피를 9,300선 위로 끌어올린 금요일",
