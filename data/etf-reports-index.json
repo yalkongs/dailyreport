@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-06-23",
+      "type": "morning",
+      "headline": "HBM4가 10억 달러를 찍은 밤, 반도체만 미 증시를 역행했습니다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-06-23",
+      "anomalyCount": 10,
+      "anomalyBreakdown": {
+        "premiumDiscount": 10
+      },
+      "createdAt": "2026-06-22T23:25:41.923Z"
+    },
+    {
       "date": "2026-06-22",
       "type": "morning",
       "headline": "SOXX +6.62%, 반도체가 주말을 삼켰습니다",

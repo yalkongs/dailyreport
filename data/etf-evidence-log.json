@@ -193,5 +193,18 @@
       "premiumDiscount": 14
     },
     "failedSources": []
+  },
+  {
+    "date": "2026-06-23",
+    "tier": "strong",
+    "mode": "normal",
+    "newsCount": 6,
+    "freshCount": 5,
+    "topCatalystScore": 8,
+    "anomalyCount": 10,
+    "anomalyBreakdown": {
+      "premiumDiscount": 10
+    },
+    "failedSources": []
   }
 ]
