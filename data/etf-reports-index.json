@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-06-24",
+      "type": "morning",
+      "headline": "반도체가 미국에서 8% 무너진 밤, 국내 반도체 ETF는 반대로 올랐습니다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-06-24",
+      "anomalyCount": 10,
+      "anomalyBreakdown": {
+        "premiumDiscount": 10
+      },
+      "createdAt": "2026-06-23T22:15:31.181Z"
+    },
+    {
       "date": "2026-06-23",
       "type": "morning",
       "headline": "HBM4가 10억 달러를 찍은 밤, 반도체만 미 증시를 역행했습니다",
