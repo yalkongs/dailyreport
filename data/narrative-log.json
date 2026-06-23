@@ -1,6 +1,25 @@
 {
   "entries": [
     {
+      "date": "2026-06-24",
+      "narrativeAngle": "global_domino",
+      "headline": "서울이 혼자 10% 무너진 날",
+      "bigStoryTopic": "코스피가 하루 만에 <strong>-9.99%</strong> 급락하며 <strong>8,",
+      "walletTopics": [
+        "삼성전자·SK하이닉스 보유자: 낙폭의 원점을 확인하십시오",
+        "코스닥 중소형주 보유자: 1개월 낙폭은 이미 24%",
+        "MSCI 선진지수 불발: 외국인 수급의 단기 이탈 점검",
+        "지금 어느 자산이 어느 온도에 있나",
+        "변동성 장세에서 예금의 무게가 달라진다"
+      ],
+      "metaphors": [
+        "도미노",
+        "낙차",
+        "격차"
+      ],
+      "lookingAhead": "MSCI 선진지수 관찰대상국 등재 불발의 수급 파장"
+    },
+    {
       "date": "2026-06-23",
       "narrativeAngle": "time_travel",
       "headline": "나스닥이 빠진 밤, 코스피는 오히려 9100을 넘었다",
@@ -498,21 +517,6 @@
       ],
       "metaphors": [],
       "lookingAhead": "미국 CPI 발표 주목"
-    },
-    {
-      "date": "2026-05-11",
-      "narrativeAngle": "structural_lens",
-      "headline": "장기 구조 흐름이 일일 변동을 압도하는 시장",
-      "bigStoryTopic": "코스피 7498포인트 보합권, 나스닥 1.7% 상승. 숫자보다 중요한 건 3개월째 멈춰선 ",
-      "walletTopics": [
-        "반도체 기업들, 구조적 상승 사이클 지속",
-        "정유업계, 유가 안정화로 재고 리스크 완화",
-        "은행주, 금리 하락 우려에도 NIM 방어",
-        "구조적 관점에서 본 자산 매력도",
-        "4% 금리 시대, 선택의 기준"
-      ],
-      "metaphors": [],
-      "lookingAhead": "미국 CPI 발표 대기"
     }
   ]
 }
