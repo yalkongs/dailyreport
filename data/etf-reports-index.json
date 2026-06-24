@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-06-25",
+      "type": "morning",
+      "headline": "코스피가 10% 내려앉은 날, 채권만 올랐습니다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-06-25",
+      "anomalyCount": 20,
+      "anomalyBreakdown": {
+        "premiumDiscount": 20
+      },
+      "createdAt": "2026-06-24T21:47:45.008Z"
+    },
+    {
       "date": "2026-06-24",
       "type": "morning",
       "headline": "반도체가 미국에서 8% 무너진 밤, 국내 반도체 ETF는 반대로 올랐습니다",
