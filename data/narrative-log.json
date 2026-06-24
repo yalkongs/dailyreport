@@ -1,6 +1,25 @@
 {
   "entries": [
     {
+      "date": "2026-06-25",
+      "narrativeAngle": "supply_chain",
+      "headline": "원유가 바닥을 찍는 동안 코스피는 3% 올라섰다",
+      "bigStoryTopic": "24일 코스피가 <strong>+3.26%</strong> 급등하며 <strong>8,47",
+      "walletTopics": [
+        "석유화학 보유자: 원가 체인의 변화를 계산하십시오",
+        "항공주 보유자: 연료비 절감 효과를 시간축으로 확인하십시오",
+        "SK하이닉스 보유자: ADR 상장의 수급 구조를 이해하십시오",
+        "지금 어느 자산이 어느 온도에 있나",
+        "4%대 금리 환경, 예금의 무게가 달라진다"
+      ],
+      "metaphors": [
+        "원유 하락",
+        "코스피 반등",
+        "산업 체인"
+      ],
+      "lookingAhead": "SK하이닉스 나스닥 ADR 상장 준비 일정"
+    },
+    {
       "date": "2026-06-24",
       "narrativeAngle": "global_domino",
       "headline": "서울이 혼자 10% 무너진 날",
@@ -502,21 +521,6 @@
       ],
       "metaphors": [],
       "lookingAhead": "미국 소매판매 지표 발표"
-    },
-    {
-      "date": "2026-05-12",
-      "narrativeAngle": "time_travel",
-      "headline": "코스피 7822, 3개월 만에 46% 급등",
-      "bigStoryTopic": "작년 같은 기간 대비 200% 상승세. 미국 증시는 보합권에서 횡보하는 동안 한국은 독주 ",
-      "walletTopics": [
-        "반도체 업계, 환율과 AI 수요 동반 상승",
-        "정유·화학 기업, 고유가 시대 최대 수혜주",
-        "은행주, 금리 상승에도 NIM 개선 한계",
-        "오늘의 투자 매력도 진단",
-        "4% 금리 시대, 안전자산의 재평가"
-      ],
-      "metaphors": [],
-      "lookingAhead": "미국 CPI 발표 주목"
     }
   ]
 }
