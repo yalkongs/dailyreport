@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-06-26",
+      "type": "morning",
+      "headline": "반도체가 미 증시를 들어올린 밤, 같은 숫자가 두 얼굴로 나뉜 아침",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-06-26",
+      "anomalyCount": 12,
+      "anomalyBreakdown": {
+        "premiumDiscount": 12
+      },
+      "createdAt": "2026-06-25T21:50:13.624Z"
+    },
+    {
       "date": "2026-06-25",
       "type": "morning",
       "headline": "코스피가 10% 내려앉은 날, 채권만 올랐습니다",
