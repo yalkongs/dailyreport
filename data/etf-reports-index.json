@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-06-29",
+      "type": "morning",
+      "headline": "반도체가 미국에서 무너진 주말, 국내는 반대로 달렸습니다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-06-29",
+      "anomalyCount": 14,
+      "anomalyBreakdown": {
+        "premiumDiscount": 14
+      },
+      "createdAt": "2026-06-28T21:52:24.089Z"
+    },
+    {
       "date": "2026-06-26",
       "type": "morning",
       "headline": "반도체가 미 증시를 들어올린 밤, 같은 숫자가 두 얼굴로 나뉜 아침",
