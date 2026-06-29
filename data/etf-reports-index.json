@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-06-30",
+      "type": "morning",
+      "headline": "SOXX +4.14%, 반도체는 달렸고 금은 내려앉았습니다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-06-30",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-06-29T21:51:59.621Z"
+    },
+    {
       "date": "2026-06-29",
       "type": "morning",
       "headline": "반도체가 미국에서 무너진 주말, 국내는 반대로 달렸습니다",
