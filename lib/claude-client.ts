@@ -10,6 +10,7 @@ import type {
 import { renderReport } from "./report-renderer";
 import { BANNED_METAPHORS } from "./banned-metaphors";
 import { renderVoiceExemplars } from "./voice-exemplars";
+import { buildTemporalFramingBlock } from "./temporal-framing";
 
 const client = new Anthropic();
 
@@ -279,10 +280,10 @@ ${lines}
   })();
 
   // Phase C (2026-05-22): 단독 휴장 시 캘린더 컨텍스트 블록.
-  // 양국 모두 정상이거나 calendarInfo 가 없으면 빈 문자열.
+  // Phase D (2026-06-29): 정상 개장일에도 시점 프레이밍 블록 상시 주입.
   const calendarBlock = (() => {
     const info = ctx.calendarInfo;
-    if (!info || (!info.isKrClosedOnly && !info.isUsClosedOnly)) return "";
+    if (!info) return "";
     if (info.isKrClosedOnly) {
       return `\n## 🏖️ 시장 캘린더 — 한국 휴장
 - **오늘 한국 시장: 휴장 (${info.krHolidayName ?? "주말"})**
@@ -296,8 +297,8 @@ ${lines}
 4. "다음 영업일(${info.krNextTradingDay})에 무엇을 살펴야 하는지" 를 한 단락 이상 포함.
 `;
     }
-    // isUsClosedOnly
-    return `\n## 🏖️ 시장 캘린더 — 미국 휴장
+    if (info.isUsClosedOnly) {
+      return `\n## 🏖️ 시장 캘린더 — 미국 휴장
 - **간밤 미국 시장: 휴장 (${info.usHolidayName ?? "주말"})**
 - 미국 직전 영업일: ${info.usPrevTradingDay} / 다음 영업일: ${info.usNextTradingDay}
 - 한국 시장: 정상 (오늘 개장)
@@ -308,6 +309,10 @@ ${lines}
 3. "간밤 해외 동향" 표현보다 "직전 거래일 마감 기준" 같은 정확한 표현 사용.
 4. 한국 시장 자체의 동인(외국인·기관 수급, 환율, 종목 뉴스)에 비중을 더 두십시오.
 `;
+    }
+    if (info.isDualClosed) return ""; // 양국 휴장(cron 미발화) — 비목표
+    // 양국 정상: 개장 전 시점 프레이밍 상시 주입 (신규)
+    return buildTemporalFramingBlock(info, "market");
   })();
 
   return `아래 시장 데이터를 바탕으로 리포트 콘텐츠를 JSON 형식으로 생성하십시오.
