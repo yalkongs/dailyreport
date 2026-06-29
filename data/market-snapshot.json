@@ -1,71 +1,71 @@
 {
-  "date": "2026-06-29",
-  "dayOfWeek": "월",
-  "collectedAt": "2026-06-29T06:40:57+09:00",
+  "date": "2026-06-30",
+  "dayOfWeek": "화",
+  "collectedAt": "2026-06-30T06:40:45+09:00",
   "headline": "",
   "items": [
     {
       "name": "코스피",
-      "value": "8,411.21",
-      "change": "-5.81%",
-      "changePercent": -5.812681,
+      "value": "8,394.65",
+      "change": "-0.20%",
+      "changePercent": -0.196875,
       "direction": "down"
     },
     {
       "name": "코스닥",
-      "value": "851.37",
-      "change": "-4.10%",
-      "changePercent": -4.104482,
-      "direction": "down"
-    },
-    {
-      "name": "S&P 500",
-      "value": "7,354.02",
-      "change": "-0.05%",
-      "changePercent": -0.04716574,
-      "direction": "down"
-    },
-    {
-      "name": "나스닥",
-      "value": "25,297.62",
-      "change": "-0.24%",
-      "changePercent": -0.24048024,
-      "direction": "down"
-    },
-    {
-      "name": "다우존스",
-      "value": "51,876.11",
-      "change": "-0.09%",
-      "changePercent": -0.08569274,
-      "direction": "down"
-    },
-    {
-      "name": "원/달러",
-      "value": "1,535.11",
-      "change": "-0.61%",
-      "changePercent": -0.6066764,
-      "direction": "down"
-    },
-    {
-      "name": "WTI 원유",
-      "value": "$69.23",
-      "change": "-3.74%",
-      "changePercent": -3.7402601,
-      "direction": "down"
-    },
-    {
-      "name": "금",
-      "value": "$4,096.3",
-      "change": "+1.20%",
-      "changePercent": 1.2031748,
+      "value": "920.57",
+      "change": "+8.13%",
+      "changePercent": 8.1280775,
       "direction": "up"
     },
     {
-      "name": "비트코인",
-      "value": "$59,605",
-      "change": "-0.83%",
-      "changePercent": -0.8272198,
+      "name": "S&P 500",
+      "value": "7,440.43",
+      "change": "+1.18%",
+      "changePercent": 1.1750057,
+      "direction": "up"
+    },
+    {
+      "name": "나스닥",
+      "value": "25,820.15",
+      "change": "+2.07%",
+      "changePercent": 2.06552,
+      "direction": "up"
+    },
+    {
+      "name": "다우존스",
+      "value": "52,182.74",
+      "change": "+0.59%",
+      "changePercent": 0.59107924,
+      "direction": "up"
+    },
+    {
+      "name": "원/달러",
+      "value": "1,540.65",
+      "change": "+0.37%",
+      "changePercent": 0.36807975,
+      "direction": "up"
+    },
+    {
+      "name": "WTI 원유",
+      "value": "$70.42",
+      "change": "+1.72%",
+      "changePercent": 1.7189004,
+      "direction": "up"
+    },
+    {
+      "name": "금",
+      "value": "$4,030.5",
+      "change": "-1.61%",
+      "changePercent": -1.606323,
       "direction": "down"
+    },
+    {
+      "name": "비트코인",
+      "value": "$60,373",
+      "change": "+1.73%",
+      "changePercent": 1.7277162,
+      "direction": "up"
     }
   ]
 }
