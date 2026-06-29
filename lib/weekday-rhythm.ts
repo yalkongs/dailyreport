@@ -32,10 +32,11 @@ export function getWeekdayRole(date: string | Date): WeekdayRole {
  */
 export function describeWeekdayRhythm(role: WeekdayRole, reportType: "market" | "etf"): string {
   if (role === "monday_setup") {
-    const extra = reportType === "market"
-      ? "주말 사이 발생한 해외 뉴스·정책 변화를 본문 앞부분에서 한 단락으로 정리하고, 이번 주 관전 포인트(주요 발표·결정 일정) 를 watchPoints 또는 caleandar 에서 강조."
-      : "주말 사이 미국·유럽 시장 변동과 환율 야간 흐름을 bigPicture 첫 문장에 녹이고, 이번 주 관전 ETF군(반도체·환노출·채권 등 중 한 그룹) 을 closingLine 으로 명시."
-    return `\n[요일 리듬 — 월요일 셋업]\n- 오늘은 한 주의 첫 영업일입니다. ${extra}\n- 헤드라인은 "주말 뒤 시작" 의 의미가 묻어나도록.\n`
+    if (reportType === "market") {
+      return `\n[요일 리듬 — 월요일 셋업]\n- 오늘은 한 주의 첫 영업일이며, 지수 데이터는 지난 금요일 종가 기준이고 오늘 한국 장은 아직 개장 전입니다.\n- 주말 사이 발생한 해외 뉴스·정책 변화는 "오늘 개장 시 반영될 변수 / 이번 주 관전 포인트"로 서술하십시오. 직전 종가가 이미 반영한 원인처럼 쓰지 마십시오.\n- 이번 주 관전 포인트(주요 발표·결정 일정)를 watchPoints 또는 calendar 에서 강조.\n- 헤드라인은 "한 주의 시작" 톤이되, 일어나지 않은 오늘 장의 움직임을 단정하지 마십시오.\n`
+    }
+    // etf — overnight 브리핑 설계와 정합(주말 해외 흐름이 주된 데이터). 현행 유지.
+    return `\n[요일 리듬 — 월요일 셋업]\n- 오늘은 한 주의 첫 영업일입니다. 주말 사이 미국·유럽 시장 변동과 환율 야간 흐름을 bigPicture 첫 문장에 녹이고, 이번 주 관전 ETF군(반도체·환노출·채권 등 중 한 그룹) 을 closingLine 으로 명시.\n- 헤드라인은 "주말 뒤 시작" 의 의미가 묻어나도록.\n`
   }
   if (role === "friday_recap") {
     const extra = reportType === "market"
