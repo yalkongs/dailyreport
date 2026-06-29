@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { getMarketCalendarInfo, isYearCovered } from "./market-calendar";
+import { getMarketCalendarInfo, isYearCovered, describeSessionRecency } from "./market-calendar";
 
 // 2026 KR 휴장일 — 핫픽스 추가분 포함 전수
 const KR_CLOSED_2026 = [
@@ -41,4 +41,25 @@ test("isYearCovered: 2026은 양국 모두 true", () => {
 test("isYearCovered: 데이터 없는 연도는 false", () => {
   assert.equal(isYearCovered(2099, "kr"), false);
   assert.equal(isYearCovered(2099, "us"), false);
+});
+
+test("describeSessionRecency: 화요일(갭1) → KR '전 거래일', US '간밤'", () => {
+  const info = getMarketCalendarInfo("2026-06-30"); // 화, prev=06-29(월)
+  const kr = describeSessionRecency("2026-06-30", info.krPrevTradingDay, "kr");
+  assert.equal(kr.gapDays, 1);
+  assert.match(kr.phrase, /전 거래일/);
+  const us = describeSessionRecency("2026-06-30", info.usPrevTradingDay, "us");
+  assert.equal(us.gapDays, 1);
+  assert.match(us.phrase, /간밤/);
+});
+
+test("describeSessionRecency: 월요일(갭3) → 양쪽 '지난 금요일', '간밤' 불포함", () => {
+  const info = getMarketCalendarInfo("2026-06-29"); // 월, prev=06-26(금)
+  const kr = describeSessionRecency("2026-06-29", info.krPrevTradingDay, "kr");
+  assert.equal(kr.gapDays, 3);
+  assert.match(kr.phrase, /지난 금요일/);
+  const us = describeSessionRecency("2026-06-29", info.usPrevTradingDay, "us");
+  assert.equal(us.gapDays, 3);
+  assert.match(us.phrase, /지난 금요일/);
+  assert.doesNotMatch(us.phrase, /간밤/);
 });

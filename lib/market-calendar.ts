@@ -212,3 +212,38 @@ export function describeMarketCalendar(info: MarketCalendarInfo): string {
       : `미국 휴장(${info.usHolidayName})`;
   return `${krLabel} · ${usLabel}`;
 }
+
+const KR_WEEKDAY = ["일", "월", "화", "수", "목", "금", "토"];
+
+function koreanWeekday(date: string): string {
+  return KR_WEEKDAY[dayOfWeek(date)];
+}
+
+function calendarDaysBetween(from: string, to: string): number {
+  const [fy, fm, fd] = from.split("-").map(Number);
+  const [ty, tm, td] = to.split("-").map(Number);
+  return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86400000);
+}
+
+/**
+ * 리포트 날짜와 직전 영업일 사이의 '시점 표현'을 결정한다.
+ * gap=1(어제) → 간밤/전 거래일, gap>1(주말·연휴) → 실제 요일 명시.
+ * 결정론적 순수 함수 (TZ 무관).
+ */
+export function describeSessionRecency(
+  reportDate: string,
+  prevTradingDay: string,
+  market: "kr" | "us"
+): { gapDays: number; phrase: string; weekday: string } {
+  const gapDays = calendarDaysBetween(prevTradingDay, reportDate);
+  const weekday = koreanWeekday(prevTradingDay);
+  let phrase: string;
+  if (gapDays === 1) {
+    phrase = market === "kr"
+      ? `전 거래일(어제, ${prevTradingDay})`
+      : `간밤(${prevTradingDay} 현지 마감)`;
+  } else {
+    phrase = `지난 ${weekday}요일(${prevTradingDay})`;
+  }
+  return { gapDays, phrase, weekday };
+}
