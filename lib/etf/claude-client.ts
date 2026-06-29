@@ -7,6 +7,7 @@ import { normalizeMorningReportLanguage } from './report-language'
 import { buildMorningNarrativePlan } from './morning-report-plan'
 import { describeAngle, ETF_NARRATIVE_ANGLES, type EtfNarrativeAngle } from './narrative-angle'
 import { renderVoiceExemplars } from '../voice-exemplars'
+import { buildTemporalFramingBlock } from '../temporal-framing'
 
 // Lazy initialization: env vars may not be loaded at module parse time
 let _client: Anthropic | null = null
@@ -187,7 +188,7 @@ function buildMorningPrompt(data: CollectedData): string {
   // short-circuit 되므로 여기 도달하지 않음).
   const cal = data.calendarInfo
   const calendarBlock = (() => {
-    if (!cal || (!cal.isKrClosedOnly && !cal.isUsClosedOnly)) return ''
+    if (!cal) return ''
     if (cal.isKrClosedOnly) {
       return `\n[시장 캘린더 — 한국 휴장]
 - 오늘 한국 시장: 휴장 (${cal.krHolidayName ?? '주말'}). 직전 영업일 ${cal.krPrevTradingDay}, 다음 영업일 ${cal.krNextTradingDay}.
@@ -197,13 +198,17 @@ function buildMorningPrompt(data: CollectedData): string {
 - "오늘 09:00 개장" 류 표현 금지. 다음 영업일(${cal.krNextTradingDay})의 관전 포인트로 closingLine 을 닫으십시오.
 `
     }
-    return `\n[시장 캘린더 — 미국 휴장]
+    if (cal.isUsClosedOnly) {
+      return `\n[시장 캘린더 — 미국 휴장]
 - 간밤 미국 시장: 휴장 (${cal.usHolidayName ?? '주말'}). 직전 영업일 ${cal.usPrevTradingDay}, 다음 영업일 ${cal.usNextTradingDay}.
 - 한국 시장: 정상 (오늘 개장).
 - SOXX·QQQ·SPY 등 미국 ETF 데이터는 **직전 영업일 종가**입니다. "간밤 SOXX 는 ~" 같은 단정 금지.
 - 헤드라인·본문은 한국 시장 중심으로. 미국 데이터는 "${cal.usHolidayName ?? '휴장'} 으로 어제는 거래 없음" 식으로 처리.
 - 환율·국내 ETF 수급·종목 뉴스에 비중을 더 두십시오.
 `
+    }
+    if (cal.isDualClosed) return ''
+    return buildTemporalFramingBlock(cal, 'etf')
   })()
 
   // Phase E3 (2026-05-24): 요일 리듬 (월·금 특별 톤)
