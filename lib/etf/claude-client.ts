@@ -189,25 +189,9 @@ function buildMorningPrompt(data: CollectedData): string {
   const cal = data.calendarInfo
   const calendarBlock = (() => {
     if (!cal) return ''
-    if (cal.isKrClosedOnly) {
-      return `\n[시장 캘린더 — 한국 휴장]
-- 오늘 한국 시장: 휴장 (${cal.krHolidayName ?? '주말'}). 직전 영업일 ${cal.krPrevTradingDay}, 다음 영업일 ${cal.krNextTradingDay}.
-- 미국 시장: 정상 (간밤 마감 데이터).
-- 한국 ETF (KODEX·TIGER 등) 데이터는 **직전 영업일 종가**입니다. "오늘 KODEX X는 ~" 같은 단정 금지. "휴장 전 마지막 거래 기준" 또는 직전 영업일 명시.
-- 헤드라인은 미국 ETF 중심 또는 휴장 자체를 명시 (예: "한국 휴장 속, 미 SOXX는 ~").
-- "오늘 09:00 개장" 류 표현 금지. 다음 영업일(${cal.krNextTradingDay})의 관전 포인트로 closingLine 을 닫으십시오.
-`
-    }
-    if (cal.isUsClosedOnly) {
-      return `\n[시장 캘린더 — 미국 휴장]
-- 간밤 미국 시장: 휴장 (${cal.usHolidayName ?? '주말'}). 직전 영업일 ${cal.usPrevTradingDay}, 다음 영업일 ${cal.usNextTradingDay}.
-- 한국 시장: 정상 (오늘 개장).
-- SOXX·QQQ·SPY 등 미국 ETF 데이터는 **직전 영업일 종가**입니다. "간밤 SOXX 는 ~" 같은 단정 금지.
-- 헤드라인·본문은 한국 시장 중심으로. 미국 데이터는 "${cal.usHolidayName ?? '휴장'} 으로 어제는 거래 없음" 식으로 처리.
-- 환율·국내 ETF 수급·종목 뉴스에 비중을 더 두십시오.
-`
-    }
-    if (cal.isDualClosed) return ''
+    // KR 휴장·양국 휴장은 파이프라인 short-circuit(생성 전 skip) — 도달 시 방어적 빈 문자열.
+    if (cal.isKrClosedOnly || cal.isDualClosed) return ''
+    // 정상일 + 미국 단독 휴장 모두 단일 시점 소스가 처리(갭 인지 + US 휴일 맥락 흡수).
     return buildTemporalFramingBlock(cal, 'etf')
   })()
 

@@ -281,37 +281,13 @@ ${lines}
 
   // Phase C (2026-05-22): 단독 휴장 시 캘린더 컨텍스트 블록.
   // Phase D (2026-06-29): 정상 개장일에도 시점 프레이밍 블록 상시 주입.
+  // Phase E (2026-06-30): US 단독 휴장도 buildTemporalFramingBlock으로 통합 — 시점 가드 단일 소스.
   const calendarBlock = (() => {
     const info = ctx.calendarInfo;
     if (!info) return "";
-    if (info.isKrClosedOnly) {
-      return `\n## 🏖️ 시장 캘린더 — 한국 휴장
-- **오늘 한국 시장: 휴장 (${info.krHolidayName ?? "주말"})**
-- 한국 직전 영업일: ${info.krPrevTradingDay} / 다음 영업일: ${info.krNextTradingDay}
-- 미국 시장: 정상 (간밤 마감 데이터)
-
-**리포트 작성 시 반드시 반영하십시오**:
-1. 코스피·코스닥·원/달러 등 **한국 데이터는 직전 영업일(${info.krPrevTradingDay}) 종가**입니다. "오늘 코스피는 X로 마감했다" 같은 서술 금지. "직전 영업일(${info.krPrevTradingDay}) 마감 기준" 또는 "휴장 전 마지막 거래일" 명시.
-2. 헤드라인은 아래 [제목 작성 규칙]을 따르되, 한국 휴장 사실 또는 미국 중심 관점이 드러나도록 하십시오.
-3. 한국 시장 관련 뉴스가 있어도 "오늘 장에서" 라고 쓰지 말 것.
-4. "다음 영업일(${info.krNextTradingDay})에 무엇을 살펴야 하는지" 를 한 단락 이상 포함.
-`;
-    }
-    if (info.isUsClosedOnly) {
-      return `\n## 🏖️ 시장 캘린더 — 미국 휴장
-- **간밤 미국 시장: 휴장 (${info.usHolidayName ?? "주말"})**
-- 미국 직전 영업일: ${info.usPrevTradingDay} / 다음 영업일: ${info.usNextTradingDay}
-- 한국 시장: 정상 (오늘 개장)
-
-**리포트 작성 시 반드시 반영하십시오**:
-1. SPY·QQQ·VIX·미 10Y 등 **미국 데이터는 직전 영업일(${info.usPrevTradingDay}) 종가**입니다. "간밤 S&P500은 X로 마감" 같은 단정 금지. "직전 영업일 종가" 또는 "${info.usHolidayName ?? "휴장"} 으로 어제는 거래 없음" 명시.
-2. 헤드라인은 아래 [제목 작성 규칙]을 따르되, 한국 시장 중심 관점이 드러나도록 하십시오.
-3. "간밤 해외 동향" 표현보다 "직전 거래일 마감 기준" 같은 정확한 표현 사용.
-4. 한국 시장 자체의 동인(외국인·기관 수급, 환율, 종목 뉴스)에 비중을 더 두십시오.
-`;
-    }
-    if (info.isDualClosed) return ""; // 양국 휴장(cron 미발화) — 비목표
-    // 양국 정상: 개장 전 시점 프레이밍 상시 주입 (신규)
+    // KR 휴장·양국 휴장은 run.ts가 생성 전 silent skip — 도달 시 방어적 빈 문자열.
+    if (info.isKrClosedOnly || info.isDualClosed) return "";
+    // 정상일 + 미국 단독 휴장 모두 단일 시점 소스가 처리(갭 인지 + US 휴일 맥락 흡수).
     return buildTemporalFramingBlock(info, "market");
   })();
 

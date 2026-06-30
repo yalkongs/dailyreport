@@ -26,3 +26,25 @@ test("etf 변형은 경량 — KR 단정 가드는 생략(베이스라인 보유
   assert.match(block, /지난 금요일/);       // 갭 보강은 포함
   assert.doesNotMatch(block, /오늘 코스피/); // market 전용 KR 가드는 미포함
 });
+
+// 캘린더 B (2026-06-30): US 단독 휴장 시에도 시점 블록이 KR 개장 전 가드를 유지.
+test("market US단독휴장(MLK 월 2026-01-19): KR 개장 전 가드 + US 휴장 맥락 동시", () => {
+  const info = getMarketCalendarInfo("2026-01-19"); // 월, MLK(US 휴장)·KR 개장
+  assert.equal(info.isUsClosedOnly, true);
+  const block = buildTemporalFramingBlock(info, "market");
+  assert.match(block, /오늘 밤 새 미국 세션이 없습니다/);  // US 휴일 맥락 흡수
+  assert.match(block, /지난 금요일\(2026-01-16\)/);        // KR 데이터 갭 인지(월요일)
+  assert.match(block, /오늘 코스피/);                       // KR 개장 전 단정 금지 (잔여 핵심)
+});
+
+test("market 정상일(화 06-30)은 US 휴장 맥락 미포함(회귀 가드)", () => {
+  const info = getMarketCalendarInfo("2026-06-30");
+  const block = buildTemporalFramingBlock(info, "market");
+  assert.doesNotMatch(block, /오늘 밤 새 미국 세션이 없습니다/);
+});
+
+test("etf US단독휴장: US 휴장 맥락 포함", () => {
+  const info = getMarketCalendarInfo("2026-01-19");
+  const block = buildTemporalFramingBlock(info, "etf");
+  assert.match(block, /미국 세션이 없습니다/);
+});
