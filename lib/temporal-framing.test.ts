@@ -48,3 +48,16 @@ test("etf US단독휴장: US 휴장 맥락 포함", () => {
   const block = buildTemporalFramingBlock(info, "etf");
   assert.match(block, /미국 세션이 없습니다/);
 });
+
+// 캘린더 C (2026-06-30): 24h 상품(환율·원자재·암호화폐)은 종가 아닌 실시간 시세.
+test("market: 24h 상품 실시간 안내 + 원/달러를 한국 지수 종가로 안 묶음", () => {
+  const block = buildTemporalFramingBlock(getMarketCalendarInfo("2026-06-30"), "market");
+  assert.match(block, /24시간/);                 // 24h 상품 실시간 안내
+  assert.match(block, /실시간 시세/);
+  assert.doesNotMatch(block, /원\/달러 등/);      // 원/달러를 종가 목록에서 제외
+});
+
+test("etf: 24h 상품 실시간 안내 포함", () => {
+  const block = buildTemporalFramingBlock(getMarketCalendarInfo("2026-06-30"), "etf");
+  assert.match(block, /24시간|실시간 시세/);
+});
