@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-07-01",
+      "type": "morning",
+      "headline": "방어주가 물러선 자리, 반도체가 상반기를 닫았습니다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-01",
+      "anomalyCount": 11,
+      "anomalyBreakdown": {
+        "premiumDiscount": 11
+      },
+      "createdAt": "2026-06-30T21:49:57.504Z"
+    },
+    {
       "date": "2026-06-30",
       "type": "morning",
       "headline": "SOXX +4.14%, 반도체는 달렸고 금은 내려앉았습니다",
