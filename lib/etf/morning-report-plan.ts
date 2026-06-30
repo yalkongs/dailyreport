@@ -1,6 +1,7 @@
 // lib/morning-report-plan.ts
 import type { CollectedData, EtfQuote, MorningStrategyInput } from './types'
 import { buildMorningStrategyInput } from './morning-strategy'
+import { dayOfWeek as weekdayIndex } from '../market-calendar'
 
 export interface MorningWatchPlan {
   title: string
@@ -50,7 +51,7 @@ export function buildMorningNarrativePlan(
 
   // Today Watch 1 지시문 회전 — 매일 같은 "해외 → 국내 거래대금" 프레임
   // 대신 요일마다 다른 관점(외국인 수급 / 섹터 순환 / 거래량 급증 등)을 섞어 다양성 확보.
-  const dayOfWeek = new Date(`${data.date}T00:00:00+09:00`).getDay() // 0=Sun..6=Sat
+  const dayOfWeek = weekdayIndex(data.date) // 0=Sun..6=Sat (TZ-safe)
   const domesticOpenInstructions = [
     '해외 선행 지수 대비 국내 반도체 ETF의 장 초반 거래대금이 얼마나 따라오는지 씁니다.',
     '외국인 수급과 국내 주요 ETF 거래 흐름이 어떻게 엇갈리거나 일치하는지 씁니다.',

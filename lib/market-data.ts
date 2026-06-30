@@ -1,4 +1,5 @@
 import YahooFinance from "yahoo-finance2";
+import { koreanWeekday } from "./market-calendar";
 import type {
   MarketIndex,
   ForexData,
@@ -190,10 +191,6 @@ async function fetchCrypto(
   return { data, errors };
 }
 
-function getKoreanDayOfWeek(date: Date): string {
-  const days = ["일", "월", "화", "수", "목", "금", "토"];
-  return days[date.getDay()];
-}
 
 function getEffectiveDate(): { now: Date; dateStr: string } {
   const testDate = process.env.TEST_DATE; // YYYY-MM-DD
@@ -339,7 +336,7 @@ export async function collectAllMarketData(): Promise<MarketDataCollection> {
   return {
     collectedAt: toKSTString(now),
     date: dateStr,
-    dayOfWeek: getKoreanDayOfWeek(now),
+    dayOfWeek: koreanWeekday(dateStr),
     koreaStocks: korea.data,
     usStocks: us.data,
     europeStocks: europe.data,

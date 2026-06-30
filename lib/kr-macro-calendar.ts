@@ -13,6 +13,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import { koreanWeekday } from "./market-calendar";
 
 export type KrMacroCategory =
   | "bok_mpb"       // 한국은행 금통위
@@ -99,7 +100,7 @@ export function getUpcomingKrMacroEvents(
 export function formatKrMacroEventLine(e: KrMacroEvent, todayDate?: string): string {
   const stars = "★".repeat(e.importance) + "☆".repeat(5 - e.importance);
   const md = e.date.slice(5).replace("-", "/"); // 05-30 → 05/30
-  const dow = ["일", "월", "화", "수", "목", "금", "토"][new Date(e.date + "T00:00:00+09:00").getDay()];
+  const dow = koreanWeekday(e.date);
   const todayMarker = e.date === todayDate ? " (오늘)" : "";
   const desc = e.description ? ` — ${e.description}` : "";
   return `${md}(${dow}) ${stars} ${e.name}${todayMarker}${desc}`;

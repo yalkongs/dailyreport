@@ -100,7 +100,8 @@ function lookupHoliday(table: Record<number, Holiday[]>, date: string): string |
 // ─── 날짜 헬퍼 ────────────────────────────────────────
 
 // YYYY-MM-DD → 0(Sun) ~ 6(Sat). UTC 기준이지만 날짜 string 만 보므로 TZ 안전.
-function dayOfWeek(date: string): number {
+// (캘린더 E) export — 로컬 getDay() 쓰던 곳들의 TZ-safe 단일 소스.
+export function dayOfWeek(date: string): number {
   const [y, m, d] = date.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
 }
@@ -215,7 +216,8 @@ export function describeMarketCalendar(info: MarketCalendarInfo): string {
 
 const KR_WEEKDAY = ["일", "월", "화", "수", "목", "금", "토"];
 
-function koreanWeekday(date: string): string {
+// (캘린더 E) export — "일"~"토" 한국어 요일 TZ-safe 단일 소스.
+export function koreanWeekday(date: string): string {
   return KR_WEEKDAY[dayOfWeek(date)];
 }
 
