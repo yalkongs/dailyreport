@@ -28,7 +28,6 @@ import { renderMorningHtml, saveReport, saveReportPreviewImage } from '../lib/et
 // message is dispatched AFTER git push + Vercel redeploy — otherwise
 // the link preview would scrape a 404 and Telegram caches that as
 // "no preview card" for the URL.
-import { sendError } from '../lib/etf/telegram'
 import {
   validateData,
   updateReportsIndex,
@@ -128,7 +127,8 @@ async function main() {
   try {
     validateData(quotes)
   } catch (e) {
-    await sendError('데이터 검증', e)
+    // 운영자 알림 = exit(1) → GitHub 스케줄 실패 자동 이메일(zero-wiring).
+    console.error('[error] 데이터 검증 실패:', e)
     process.exit(1)
   }
 
@@ -211,7 +211,7 @@ async function main() {
       console.log('  ✓ Tier 1 fallback 성공 — narrativeNotes 없이 발송합니다')
     } catch (fallbackErr) {
       console.error('[error] Tier 1 fallback도 실패:', (fallbackErr as Error).message)
-      await sendError('Claude API (fallback 실패)', lastError)
+      console.error('[error] 원인:', lastError)
       process.exit(1)
     }
   }
@@ -267,8 +267,8 @@ async function main() {
   console.log('(Telegram 발송은 워크플로의 별도 step에서 처리됨)')
 }
 
-main().catch(async (e) => {
+main().catch((e) => {
+  // 운영자 알림 = 비정상 종료(exit 1) → GitHub 네이티브 실패 이메일.
   console.error('파이프라인 오류:', e)
-  await sendError('ETF Pipeline', e)
   process.exit(1)
 })
