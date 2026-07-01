@@ -4,16 +4,21 @@
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
 
 :root {
-  --navy: #0A2F5C;
-  --teal: #00796B;
+  /* iM금융 CI 리프레시 (2026-07-01): 민트+라임. 레이아웃 무변경, 색만.
+     값은 ETF 렌더러(etf/renderer.ts)의 기존 iM 팔레트에 정확히 정렬 — 두 리포트 팔레트 통일.
+     --navy = 다크 잉크(제목·강조 텍스트·다크 배경), --teal = iM 민트(장식 액센트). */
+  --navy: #161B1D;        /* ETF --ink 정렬 — 제목/강조 텍스트, 캘린더 헤더 배경 */
+  --teal: #00BFA5;        /* ETF --im-teal — iM 민트, 밑줄/보더/채움 액센트 */
+  --mint-deep: #008F7F;   /* ETF --im-teal-deep — 헤더 그라데이션 끝·소형 액센트 텍스트 */
+  --lime: #84D96B;        /* ETF --im-mint — 라이트 그린 포인트 */
   --slate: #8B9DAF;
-  --bg: #F7F8FA;
+  --bg: #F5F7F3;          /* ETF --paper — 페이퍼 오프화이트 */
   --card-bg: #FFFFFF;
-  --text: #1A1A2E;
+  --text: #1A2421;        /* ETF 본문 톤 near-black */
   --text-sub: #5A6577;
   --border: #E2E8F0;
-  --up: #D32F2F;
-  --down: #1565C0;
+  --up: #D32F2F;          /* 상승 빨강 (한국식·기능색 유지) */
+  --down: #1565C0;        /* 하락 파랑 (유지) */
   --up-bg: rgba(211, 47, 47, 0.06);
   --down-bg: rgba(21, 101, 192, 0.06);
 }
@@ -38,7 +43,7 @@
 
 /* ===== 1. COVER ===== */
 .cover {
-  background: linear-gradient(135deg, #0A2F5C 0%, #00796B 100%);
+  background: linear-gradient(135deg, #00BFA5 0%, #008F7F 100%);
   color: #FFFFFF;
   padding: 48px 32px 40px;
   border-radius: 0 0 24px 24px;
@@ -89,7 +94,7 @@
   left: 0;
   width: 40px;
   height: 3px;
-  background: var(--teal);
+  background: linear-gradient(90deg, var(--teal), var(--lime));
   border-radius: 2px;
 }
 
@@ -173,7 +178,7 @@
   border-left: 4px solid var(--teal);
   padding: 20px 24px;
   margin: 32px 0;
-  background: rgba(0,121,107,0.04);
+  background: rgba(0,191,165,0.05);
   border-radius: 0 12px 12px 0;
   font-size: 18px;
   line-height: 1.7;
@@ -182,7 +187,7 @@
 
 .data-card {
   background: var(--card-bg);
-  border: 1px solid rgba(10,47,92,0.12);
+  border: 1px solid rgba(10,61,51,0.14);
   border-radius: 14px;
   padding: 20px 24px;
   margin: 28px 0;
@@ -222,8 +227,8 @@
   font-weight: 600;
   padding: 3px 10px;
   border-radius: 20px;
-  background: rgba(0,121,107,0.1);
-  color: var(--teal);
+  background: rgba(0,191,165,0.12);
+  color: var(--mint-deep);
   margin-bottom: 8px;
 }
 .watch-card .watch-title {
@@ -249,7 +254,7 @@
 .compass-box .compass-label {
   font-size: 13px;
   font-weight: 600;
-  color: var(--teal);
+  color: var(--mint-deep);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 12px;
@@ -289,14 +294,14 @@
 /* ===== SO WHAT ===== */
 .sowhat-card {
   background: var(--card-bg);
-  border: 1px solid rgba(0,121,107,0.15);
+  border: 1px solid rgba(0,191,165,0.18);
   border-radius: 14px;
   padding: 20px 24px;
   margin-bottom: 12px;
 }
 .sowhat-card:first-child {
   border-left: 4px solid var(--teal);
-  background: rgba(0,121,107,0.03);
+  background: rgba(0,191,165,0.04);
 }
 .sowhat-card .sowhat-title {
   font-size: 16px;
@@ -332,7 +337,7 @@
   color: var(--text);
 }
 .calendar-table tr:nth-child(even) td {
-  background: rgba(10,47,92,0.02);
+  background: rgba(10,61,51,0.025);
 }
 .calendar-table .stars { color: #F59E0B; }
 
