@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-07-02",
+      "type": "morning",
+      "headline": "반도체가 6% 무너진 밤, 통신과 금융이 그 자리를 채웠습니다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-02",
+      "anomalyCount": 11,
+      "anomalyBreakdown": {
+        "premiumDiscount": 11
+      },
+      "createdAt": "2026-07-01T21:52:44.897Z"
+    },
+    {
       "date": "2026-07-01",
       "type": "morning",
       "headline": "방어주가 물러선 자리, 반도체가 상반기를 닫았습니다",
