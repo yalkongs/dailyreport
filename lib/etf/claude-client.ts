@@ -288,10 +288,14 @@ ${data.news.slice(0, 6).map(n => {
   const ago = typeof n.publishedHoursAgo === 'number'
     ? `${Math.round(n.publishedHoursAgo)}h전`
     : 'age 불명'
-  return `- [${ago}] ${n.title} (${n.source}, ${n.url})`
+  const cat = n.category ? `${n.category}|` : ''
+  const snip = n.snippet ? `\n    ↳ ${n.snippet}` : ''
+  return `- [${cat}${ago}] ${n.title} (${n.source}, ${n.url})${snip}`
 }).join('\n')}
 - **24시간 초과 기사는 "배경 맥락"으로만 활용**하고, 현재 상황·오늘의 전개로 단정하지 마십시오.
 - 뉴스 내용이 어제 한국 증시 마감 이후의 전개인지, 그 이전의 전개인지 발행 시각으로 판단하여 쓰십시오.
+- **[semiconductor]** 태그는 삼성·SK하이닉스 등 국내 반도체에 영향을 주는 국제 뉴스·리서치(NVIDIA·TSMC·Micron·HBM·메모리 가격·수출규제)입니다. 국내 ETF와의 연결고리를 짚어 활용하십시오.
+- **해외 뉴스·리서치 인용 규칙:** ① 해외 기관·매체發 주장·전망은 반드시 **출처(기관/매체명)를 문장에 드러내** 인용(출처 없는 전망·수치 날조 금지). ② 리서치·전망을 **특정 종목·ETF 매수·매도 권유로 번역 금지** — 사실·방향성만. ③ 제공된 제목·요약(↳)의 **사실만** 인용, 원문 문단 복제·창작 금지.
 ${data.recentHeadlines && data.recentHeadlines.length > 0 ? `
 [최근 ETF 리포트 헤드라인 — 절대 반복·유사 표현 금지]
 ${data.recentHeadlines.map(h => `- ${h}`).join('\n')}

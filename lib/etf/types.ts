@@ -74,6 +74,10 @@ export interface NewsItem {
   // P0 (2026-04-24): 발행 시각 기준 경과 시간.
   // Claude 프롬프트에 전달되어 "24h 초과 기사는 배경 맥락으로만" 지시.
   publishedHoursAgo?: number
+  // Tier A A1 (2026-07-02): 뉴스 카테고리 — 국제 반도체 시그널 최소 노출 보장용.
+  category?: 'korea' | 'global' | 'economy' | 'semiconductor'
+  // Tier A A1 (2026-07-02): 실질 요약 소스(연합뉴스)의 기사 리드 발췌.
+  snippet?: string
 }
 
 // 이상 탐지 결과

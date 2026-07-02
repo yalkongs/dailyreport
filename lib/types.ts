@@ -115,11 +115,14 @@ export interface SidewaysAnalysis {
 export interface NewsHeadline {
   title: string;
   source: string;
-  category: "global" | "korea" | "economy";
+  category: "global" | "korea" | "economy" | "semiconductor";
   pubDate?: string;
   // Phase 1.5 (2026-05-21): 발행 경과 시간(시간 단위). 신선도 정렬·표시용.
   // pubDate 파싱 실패 시 undefined.
   publishedHoursAgo?: number;
+  // Tier A A1 (2026-07-02): 실질 요약을 담는 소스(연합뉴스)의 기사 리드 발췌.
+  // Google News 등 description이 링크 마크업뿐인 소스는 미설정.
+  snippet?: string;
 }
 
 export interface EconomicEvent {
