@@ -826,7 +826,7 @@ function renderStoryOpening(report: MorningReport, data: CollectedData): string 
 
   return `<div class="story-card">
   <div class="hero-kicker">Story of the Day</div>
-  <div class="story-title">오늘의 초점은 ${renderReportText(report.cover.headline, data.quotes)}</div>
+  <div class="story-title">오늘의 초점 · ${renderReportText(report.cover.headline, data.quotes)}</div>
   <div class="story-body">${renderReportText(report.cover.subline, data.quotes)} ${e('이 리포트는 선행 신호, 환율 변수, 상품별 실행 조건 순서로 읽습니다.')}</div>
   <div class="story-acts">
     <div class="story-act">
