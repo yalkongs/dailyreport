@@ -189,8 +189,14 @@ function buildContextBlock(context: ContextData | null, ctx?: AntiRepetitionCont
         ? `${Math.round(n.publishedHoursAgo)}h전`
         : "시각미상";
       block += `- [${n.category}|${ago}] ${n.title} (${n.source})\n`;
+      if (n.snippet) block += `    ↳ ${n.snippet}\n`;
     }
     block += `위 헤드라인 중 발행 경과 시간이 짧은(최근) 한국 시장 관련 뉴스를 우선 반영하십시오.\n`;
+    block += `\n[semiconductor] 태그는 삼성전자·SK하이닉스 등 한국 반도체에 영향을 주는 국제 뉴스·리서치(NVIDIA·TSMC·Micron·HBM·메모리 가격·수출규제)입니다. 한국 시장과의 연결고리를 짚어 활용하십시오.\n`;
+    block += `\n**해외 뉴스·리서치 인용 규칙:**\n`;
+    block += `- 해외 기관·매체發 주장·전망은 반드시 **출처(기관/매체명)를 문장에 드러내** 인용하십시오("TrendForce에 따르면", "마이크론 실적 발표에서" 등). 출처 없는 전망·수치를 지어내지 마십시오.\n`;
+    block += `- 리서치·전망을 **특정 종목 매수·매도 권유로 번역하지 마십시오.** 사실·방향성만 전달합니다.\n`;
+    block += `- 제공된 제목·짧은 요약(↳)의 **사실만** 인용하고, 기사 원문 문단을 지어내거나 복제하지 마십시오.\n`;
   }
 
   if (context.economicCalendar.length > 0) {
