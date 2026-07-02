@@ -95,7 +95,7 @@ const FEEDS: { url: string; category: NewsHeadline["category"]; source: string }
 // (Google News description 은 링크 마크업뿐이라 무가치 → 제외.)
 const SNIPPET_SOURCES = new Set(["연합뉴스 경제", "연합뉴스 마켓"]);
 const SNIPPET_MAX_LEN = 240;
-const MIN_SEMICONDUCTOR = 2; // 국제 반도체 뉴스 최소 노출 보장(신선도에 밀리지 않도록)
+const MIN_SEMICONDUCTOR = 2; // 국제 반도체 뉴스 우선 노출(신선도 윈도 내 항목이 있으면 예약; 윈도 밖이면 best-effort — 예약 0)
 
 const MAX_PER_FEED = 5;
 const MAX_AGE_HOURS = 48;

@@ -89,7 +89,7 @@ const MAX_PER_SOURCE = 3
 // Tier A A1 (2026-07-02): description 이 실질 리드를 담는 소스만 snippet 발췌.
 const SNIPPET_SOURCES = new Set(['연합뉴스'])
 const SNIPPET_MAX_LEN = 240
-const MIN_SEMICONDUCTOR = 2 // 국제 반도체 뉴스 최소 노출 보장
+const MIN_SEMICONDUCTOR = 2 // 국제 반도체 뉴스 우선 노출(신선도 윈도 내 항목이 있으면 예약; 윈도 밖이면 best-effort)
 
 // P0 (2026-04-24): 48시간 초과 기사 제외 + publishedHoursAgo 주입.
 // 4/23 호르무즈 건처럼 4~6일 전 trending 기사가 "현재 상황"으로 인용되는
