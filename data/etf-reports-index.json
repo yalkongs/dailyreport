@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-07-03",
+      "type": "morning",
+      "headline": "SOXX 5.57% 급락, 금·광산주만 역주행한 한 주",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-03",
+      "anomalyCount": 8,
+      "anomalyBreakdown": {
+        "premiumDiscount": 8
+      },
+      "createdAt": "2026-07-02T21:53:03.726Z"
+    },
+    {
       "date": "2026-07-02",
       "type": "morning",
       "headline": "반도체가 6% 무너진 밤, 통신과 금융이 그 자리를 채웠습니다",
