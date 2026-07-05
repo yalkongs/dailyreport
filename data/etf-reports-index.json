@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-07-06",
+      "type": "morning",
+      "headline": "삼성전자 2분기 85조 전망, 반도체 ETF는 역주행",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-06",
+      "anomalyCount": 22,
+      "anomalyBreakdown": {
+        "premiumDiscount": 22
+      },
+      "createdAt": "2026-07-05T21:53:09.269Z"
+    },
+    {
       "date": "2026-07-03",
       "type": "morning",
       "headline": "SOXX 5.57% 급락, 금·광산주만 역주행한 한 주",
