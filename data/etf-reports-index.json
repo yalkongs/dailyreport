@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-07-08",
+      "type": "morning",
+      "headline": "SOXX 5% 붕괴, 에너지·바이오가 메운 미 증시",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-08",
+      "anomalyCount": 8,
+      "anomalyBreakdown": {
+        "premiumDiscount": 8
+      },
+      "createdAt": "2026-07-07T21:53:05.924Z"
+    },
+    {
       "date": "2026-07-07",
       "type": "morning",
       "headline": "SOXX +2.68%, 국내 반도체는 전일 역주행",
