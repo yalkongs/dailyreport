@@ -349,5 +349,18 @@
       "premiumDiscount": 8
     },
     "failedSources": []
+  },
+  {
+    "date": "2026-07-09",
+    "tier": "thin",
+    "mode": "event",
+    "newsCount": 8,
+    "freshCount": 4,
+    "topCatalystScore": 6,
+    "anomalyCount": 19,
+    "anomalyBreakdown": {
+      "premiumDiscount": 19
+    },
+    "failedSources": []
   }
 ]

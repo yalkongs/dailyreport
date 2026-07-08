@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-07-09",
+      "type": "morning",
+      "headline": "SOXX +1.87%, 코스피 -4.87% 낙차를 앞에 두고",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-09",
+      "anomalyCount": 19,
+      "anomalyBreakdown": {
+        "premiumDiscount": 19
+      },
+      "createdAt": "2026-07-08T21:48:15.521Z"
+    },
+    {
       "date": "2026-07-08",
       "type": "morning",
       "headline": "SOXX 5% 붕괴, 에너지·바이오가 메운 미 증시",
