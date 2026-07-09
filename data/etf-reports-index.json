@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-07-10",
+      "type": "morning",
+      "headline": "SOXX 3.5% 반등, 환율 1,507원이 가른 두 얼굴",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-10",
+      "anomalyCount": 10,
+      "anomalyBreakdown": {
+        "premiumDiscount": 10
+      },
+      "createdAt": "2026-07-09T21:50:20.857Z"
+    },
+    {
       "date": "2026-07-09",
       "type": "morning",
       "headline": "SOXX +1.87%, 코스피 -4.87% 낙차를 앞에 두고",
