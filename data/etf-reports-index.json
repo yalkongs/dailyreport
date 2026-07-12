@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-07-13",
+      "type": "morning",
+      "headline": "미 증시 소폭 상승, 반도체만 제자리",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-13",
+      "anomalyCount": 16,
+      "anomalyBreakdown": {
+        "premiumDiscount": 16
+      },
+      "createdAt": "2026-07-12T21:50:28.129Z"
+    },
+    {
       "date": "2026-07-10",
       "type": "morning",
       "headline": "SOXX 3.5% 반등, 환율 1,507원이 가른 두 얼굴",
