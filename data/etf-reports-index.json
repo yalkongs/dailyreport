@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-07-15",
+      "type": "morning",
+      "headline": "코스피 시총 1,386조 증발 다음 날, SOXX는 2.58% 올랐다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-15",
+      "anomalyCount": 13,
+      "anomalyBreakdown": {
+        "premiumDiscount": 13
+      },
+      "createdAt": "2026-07-14T21:50:27.682Z"
+    },
+    {
       "date": "2026-07-14",
       "type": "morning",
       "headline": "SOXX -4.77%·코스피 급락, 에너지만 역주행",
