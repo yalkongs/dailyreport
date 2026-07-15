@@ -50,7 +50,9 @@ jobs:
   market:
     if: ${{ inputs.only != 'etf' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # 15분: JSON 파싱 안전망(claude-client.ts)이 최대 3회 재생성할 여유 확보.
+    # 정상 실행은 ~4~5분이라 평소엔 영향 없음.
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository

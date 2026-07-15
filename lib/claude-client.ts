@@ -469,9 +469,15 @@ export async function generateReport(
 
   console.log(`🤖 Claude API로 리포트 콘텐츠(JSON) 생성 중... (앵글: ${defaultCtx.angle.name})`);
 
+  // 안전망: API 과부하(529)뿐 아니라 **JSON 파싱 실패도 재생성(re-roll)** 으로 처리.
+  // 모델이 낸 JSON이 한 번 삐끗해도(예: 문자열 값 안 이스케이프 안 된 큰따옴표) 그날
+  // 마켓 리포트 전체가 사망하지 않도록. ETF의 report-quality 재시도와 동형의 보호.
   const maxRetries = 3;
-  let rawJson = "";
+  let content: ReportContent | null = null;
+  let lastParseErr: unknown = null;
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    let rawJson = "";
     try {
       const stream = await client.messages.stream({
         model: "claude-sonnet-4-6",
@@ -491,7 +497,6 @@ export async function generateReport(
         throw new Error("Claude API 응답에 텍스트 블록이 없습니다");
       }
       rawJson = textBlock.text.trim();
-      break;
     } catch (err: unknown) {
       const status = (err as { status?: number }).status;
       if (status === 529 && attempt < maxRetries) {
@@ -501,27 +506,34 @@ export async function generateReport(
       }
       throw err;
     }
-  }
-  if (!rawJson) throw new Error("Claude API 호출 실패");
 
-  // JSON 파싱 — 마크다운 펜스 제거
-  if (rawJson.startsWith("```json")) {
-    rawJson = rawJson.slice(7);
-  } else if (rawJson.startsWith("```")) {
-    rawJson = rawJson.slice(3);
-  }
-  if (rawJson.endsWith("```")) {
-    rawJson = rawJson.slice(0, -3);
-  }
-  rawJson = rawJson.trim();
+    // 마크다운 펜스 제거
+    if (rawJson.startsWith("```json")) {
+      rawJson = rawJson.slice(7);
+    } else if (rawJson.startsWith("```")) {
+      rawJson = rawJson.slice(3);
+    }
+    if (rawJson.endsWith("```")) {
+      rawJson = rawJson.slice(0, -3);
+    }
+    rawJson = rawJson.trim();
 
-  let content: ReportContent;
-  try {
-    content = JSON.parse(rawJson) as ReportContent;
-  } catch (parseErr) {
-    console.error("❌ JSON 파싱 실패. 원문 길이:", rawJson.length);
-    console.error("❌ 처음 200자:", rawJson.substring(0, 200));
-    throw new Error(`Claude JSON 파싱 실패: ${parseErr}`);
+    try {
+      content = JSON.parse(rawJson) as ReportContent;
+      break; // 파싱 성공
+    } catch (parseErr) {
+      lastParseErr = parseErr;
+      console.error(`❌ JSON 파싱 실패 (시도 ${attempt}/${maxRetries}). 원문 길이:`, rawJson.length);
+      console.error("❌ 처음 200자:", rawJson.substring(0, 200));
+      if (attempt < maxRetries) {
+        console.log(`♻️ JSON 파싱 실패 — 같은 입력으로 재생성 시도 (${attempt + 1}/${maxRetries})...`);
+      }
+      // continue: 다음 attempt 에서 재생성
+    }
+  }
+
+  if (!content) {
+    throw new Error(`Claude JSON 파싱 실패 (${maxRetries}회 시도): ${lastParseErr}`);
   }
 
   // JSON 콘텐츠 후처리: 금지 표현 검사
