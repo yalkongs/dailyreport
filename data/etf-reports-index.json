@@ -1,6 +1,48 @@
 {
   "reports": [
     {
+      "date": "2026-07-16",
+      "type": "morning",
+      "headline": "물가 둔화에 S&P500 올랐지만, 반도체만 역주행",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-16",
+      "anomalyCount": 11,
+      "anomalyBreakdown": {
+        "premiumDiscount": 11
+      },
+      "createdAt": "2026-07-15T21:51:30.114Z"
+    },
+    {
+      "date": "2026-07-15",
+      "type": "morning",
+      "headline": "코스피 시총 1,386조 증발 다음 날, SOXX는 2.58% 올랐다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-15",
+      "anomalyCount": 13,
+      "anomalyBreakdown": {
+        "premiumDiscount": 13
+      },
+      "createdAt": "2026-07-14T21:50:27.682Z"
+    },
+    {
+      "date": "2026-07-14",
+      "type": "morning",
+      "headline": "SOXX -4.77%·코스피 급락, 에너지만 역주행",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-14",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-07-13T21:52:51.297Z"
+    },
+    {
+      "date": "2026-07-13",
+      "type": "morning",
+      "headline": "미 증시 소폭 상승, 반도체만 제자리",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-13",
+      "anomalyCount": 16,
+      "anomalyBreakdown": {
+        "premiumDiscount": 16
+      },
+      "createdAt": "2026-07-12T21:50:28.129Z"
+    },
+    {
       "date": "2026-07-10",
       "type": "morning",
       "headline": "SOXX 3.5% 반등, 환율 1,507원이 가른 두 얼굴",

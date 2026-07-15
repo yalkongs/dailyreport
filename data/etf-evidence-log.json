@@ -375,5 +375,57 @@
       "premiumDiscount": 10
     },
     "failedSources": []
+  },
+  {
+    "date": "2026-07-13",
+    "tier": "thin",
+    "mode": "quiet",
+    "newsCount": 8,
+    "freshCount": 5,
+    "topCatalystScore": 6,
+    "anomalyCount": 16,
+    "anomalyBreakdown": {
+      "premiumDiscount": 16
+    },
+    "failedSources": []
+  },
+  {
+    "date": "2026-07-14",
+    "tier": "thin",
+    "mode": "event",
+    "newsCount": 8,
+    "freshCount": 4,
+    "topCatalystScore": 6,
+    "anomalyCount": 0,
+    "anomalyBreakdown": {},
+    "failedSources": [
+      "krx-nav"
+    ]
+  },
+  {
+    "date": "2026-07-15",
+    "tier": "thin",
+    "mode": "event",
+    "newsCount": 8,
+    "freshCount": 5,
+    "topCatalystScore": 5,
+    "anomalyCount": 13,
+    "anomalyBreakdown": {
+      "premiumDiscount": 13
+    },
+    "failedSources": []
+  },
+  {
+    "date": "2026-07-16",
+    "tier": "thin",
+    "mode": "normal",
+    "newsCount": 8,
+    "freshCount": 8,
+    "topCatalystScore": 6,
+    "anomalyCount": 11,
+    "anomalyBreakdown": {
+      "premiumDiscount": 11
+    },
+    "failedSources": []
   }
 ]
