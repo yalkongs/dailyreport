@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-07-16",
+      "type": "morning",
+      "headline": "물가 둔화에 S&P500 올랐지만, 반도체만 역주행",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-16",
+      "anomalyCount": 11,
+      "anomalyBreakdown": {
+        "premiumDiscount": 11
+      },
+      "createdAt": "2026-07-15T21:51:30.114Z"
+    },
+    {
       "date": "2026-07-15",
       "type": "morning",
       "headline": "코스피 시총 1,386조 증발 다음 날, SOXX는 2.58% 올랐다",
