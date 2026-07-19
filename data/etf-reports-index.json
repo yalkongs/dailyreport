@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-07-20",
+      "type": "morning",
+      "headline": "코스피 6.66% 급락, 에너지만 역방향",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-20",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-07-19T21:47:38.886Z"
+    },
+    {
       "date": "2026-07-16",
       "type": "morning",
       "headline": "물가 둔화에 S&P500 올랐지만, 반도체만 역주행",
