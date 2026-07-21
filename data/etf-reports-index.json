@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-07-22",
+      "type": "morning",
+      "headline": "SOXX 5.45% 급등, 한은 금리인상이 가른 오늘의 셈법",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-22",
+      "anomalyCount": 5,
+      "anomalyBreakdown": {
+        "premiumDiscount": 5
+      },
+      "createdAt": "2026-07-21T21:47:59.553Z"
+    },
+    {
       "date": "2026-07-21",
       "type": "morning",
       "headline": "코스피 4.57% 급락 다음 날, 미 증시는 엇갈렸다",
