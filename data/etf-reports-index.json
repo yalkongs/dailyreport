@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-07-23",
+      "type": "morning",
+      "headline": "코스피 3.92% 급등, 달러는 두 얼굴",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-23",
+      "anomalyCount": 12,
+      "anomalyBreakdown": {
+        "premiumDiscount": 12
+      },
+      "createdAt": "2026-07-22T21:46:21.659Z"
+    },
+    {
       "date": "2026-07-22",
       "type": "morning",
       "headline": "SOXX 5.45% 급등, 한은 금리인상이 가른 오늘의 셈법",
