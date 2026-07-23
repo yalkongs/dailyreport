@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-07-24",
+      "type": "morning",
+      "headline": "S&P500·나스닥 동반 하락, 방어 우위 사흘째",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-24",
+      "anomalyCount": 11,
+      "anomalyBreakdown": {
+        "premiumDiscount": 11
+      },
+      "createdAt": "2026-07-23T21:49:29.065Z"
+    },
+    {
       "date": "2026-07-23",
       "type": "morning",
       "headline": "코스피 3.92% 급등, 달러는 두 얼굴",
