@@ -11,6 +11,9 @@ import { renderReport } from "./report-renderer";
 import { BANNED_METAPHORS } from "./banned-metaphors";
 import { renderVoiceExemplars } from "./voice-exemplars";
 import { buildTemporalFramingBlock } from "./temporal-framing";
+// R2·R3 (2026-07-22): 시점·출처 정합 검사(파싱 직후 문자열 레벨 soft fix).
+import { checkAndFixTemporal } from "./temporal-consistency";
+import { softFixUnquotableSources, countCitationPhrases, QUOTABLE_SOURCES } from "./quotable-sources";
 
 const client = new Anthropic();
 
@@ -197,6 +200,7 @@ function buildContextBlock(context: ContextData | null, ctx?: AntiRepetitionCont
     block += `- 해외 기관·매체發 주장·전망은 반드시 **출처(기관/매체명)를 문장에 드러내** 인용하십시오("TrendForce에 따르면", "마이크론 실적 발표에서" 등). 출처 없는 전망·수치를 지어내지 마십시오.\n`;
     block += `- 리서치·전망을 **특정 종목 매수·매도 권유로 번역하지 마십시오.** 사실·방향성만 전달합니다.\n`;
     block += `- 제공된 제목·짧은 요약(↳)의 **사실만** 인용하고, 기사 원문 문단을 지어내거나 복제하지 마십시오.\n`;
+    block += `- **본문에 매체명을 인용할 수 있는 것은 다음뿐**: ${QUOTABLE_SOURCES.join(", ")}. 그 외 매체(블로그·소형 외신 등) 기사는 내용은 쓰되 매체명 대신 '외신'으로 지칭하십시오.\n`;
   }
 
   if (context.economicCalendar.length > 0) {
@@ -518,9 +522,9 @@ export async function generateReport(
     }
     rawJson = rawJson.trim();
 
+    let parsed: ReportContent;
     try {
-      content = JSON.parse(rawJson) as ReportContent;
-      break; // 파싱 성공
+      parsed = JSON.parse(rawJson) as ReportContent;
     } catch (parseErr) {
       lastParseErr = parseErr;
       console.error(`❌ JSON 파싱 실패 (시도 ${attempt}/${maxRetries}). 원문 길이:`, rawJson.length);
@@ -528,8 +532,48 @@ export async function generateReport(
       if (attempt < maxRetries) {
         console.log(`♻️ JSON 파싱 실패 — 같은 입력으로 재생성 시도 (${attempt + 1}/${maxRetries})...`);
       }
-      // continue: 다음 attempt 에서 재생성
+      continue; // 다음 attempt 에서 재생성
     }
+
+    // R2·R3 (2026-07-22): 파싱 성공 직후 정합성 검사. 파싱 검증 완료된 JSON 문자열에
+    // 시점·출처 soft fix 적용 후 re-parse. 교정 문자열은 JSON 메타문자 미포함이 보장됨.
+    {
+      const reportDate = data.date;
+      const todaySources = (context?.news ?? []).map((n) => n.source);
+      const canonical = JSON.stringify(parsed);
+      const temporal = checkAndFixTemporal(canonical, reportDate);
+      const sourceFix = softFixUnquotableSources(temporal.fixed, todaySources);
+      const softFixes = [...temporal.softFixes, ...sourceFix.softFixes];
+      if (softFixes.length > 0) {
+        console.log(`🩹 정합성 soft fix ${softFixes.length}건: ${softFixes.join(", ")}`);
+        parsed = JSON.parse(sourceFix.fixed) as ReportContent;
+      }
+      if (sourceFix.warnings.length > 0) {
+        console.log(`⚠️ 비승인 출처 잔존: ${sourceFix.warnings.join(", ")}`);
+      }
+
+      const hardViolations = [...temporal.violations];
+      const citationCount = countCitationPhrases(sourceFix.fixed);
+      if (citationCount >= 8) {
+        hardViolations.push(`"에 따르면" 인용 ${citationCount}회 과다`);
+      } else if (citationCount >= 5) {
+        console.log(`⚠️ "에 따르면" 인용 ${citationCount}회 (허용 한도 이하)`);
+      }
+
+      if (hardViolations.length > 0 && attempt < maxRetries) {
+        // ETF 와 달리 market 엔 Tier 1 fallback 이 없으므로, 남은 재시도가 있으면 re-roll.
+        console.log(`♻️ 정합성 위반 ${hardViolations.length}건 — 재생성 (${attempt + 1}/${maxRetries}): ${hardViolations.join(", ")}`);
+        lastParseErr = new Error(`정합성 위반: ${hardViolations.join(", ")}`);
+        continue;
+      }
+      if (hardViolations.length > 0) {
+        // maxRetries 소진 — "품질 낮아도 전송 > 침묵" 원칙으로 마지막 콘텐츠 발송 진행.
+        console.log(`⚠️ 정합성 위반 잔존(발송 진행): ${hardViolations.join(", ")}`);
+      }
+    }
+
+    content = parsed;
+    break; // 파싱·정합성 통과(또는 재시도 소진)
   }
 
   if (!content) {

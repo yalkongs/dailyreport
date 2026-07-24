@@ -15,6 +15,10 @@
 // 외부 호출자(claude-client, run-etf)는 기존 호출만으로 새 구조의 이점을 얻음.
 
 import type { CollectedData, MorningReport, MorningStrategyInput } from './types'
+// 정합성 검사 (2026-07-22): R1 카드-산문 / R2 시점 / R3 출처 인용.
+import { checkCharacterProseConsistency } from './story-characters'
+import { checkAndFixTemporal } from '../temporal-consistency'
+import { softFixUnquotableSources, countCitationPhrases } from '../quotable-sources'
 
 // ─── Hard patterns: 진짜 투자 권유 ─────────────────────────────────────
 const INVESTMENT_ADVICE_PATTERNS = [
@@ -257,6 +261,42 @@ function findUnqualifiedAmbiguousWords(text: string): string[] {
   return [...new Set(hits)].slice(0, 3)
 }
 
+export interface ConsistencySoftFixResult {
+  softFixes: string[]
+  warnings: string[]
+  temporalViolations: string[]
+  citationCount: number
+}
+
+/**
+ * R2·R3 (2026-07-22): 시점·출처 정합을 JSON 문자열 레벨에서 soft fix.
+ * report 전체를 JSON.stringify → temporal fix + source fix → re-parse 후 report 를
+ * in-place 로 교체(field-by-field 매핑 코드 없이 전 필드 반영). 교정 문자열은
+ * checkAndFixTemporal·softFixUnquotableSources 가 JSON 메타문자 미포함을 보장하므로
+ * re-parse 는 항상 성공한다. temporal hard violation·인용 빈도는 반환해 호출부가 판정.
+ */
+export function applyConsistencySoftFixesInPlace(
+  report: MorningReport,
+  reportDate: string,
+  todaySources: string[]
+): ConsistencySoftFixResult {
+  const json = JSON.stringify(report)
+  const temporal = checkAndFixTemporal(json, reportDate)
+  const source = softFixUnquotableSources(temporal.fixed, todaySources)
+  if (source.fixed !== json) {
+    const reparsed = JSON.parse(source.fixed) as MorningReport
+    const mutable = report as unknown as Record<string, unknown>
+    for (const key of Object.keys(mutable)) delete mutable[key]
+    Object.assign(report, reparsed)
+  }
+  return {
+    softFixes: [...temporal.softFixes, ...source.softFixes],
+    warnings: source.warnings,
+    temporalViolations: temporal.violations,
+    citationCount: countCitationPhrases(source.fixed),
+  }
+}
+
 export function validateMorningReportQuality(
   report: MorningReport,
   data: CollectedData,
@@ -268,8 +308,34 @@ export function validateMorningReportQuality(
     console.log(`  [soft-fix] 자동 교정 ${fixesApplied.length}건 적용: ${fixesApplied.join(', ')}`)
   }
 
+  // R2·R3: 시점·출처 정합 soft fix (data.date·data.news 에서 앵커·소스 목록 유도).
+  const consistency = applyConsistencySoftFixesInPlace(
+    report,
+    data.date,
+    data.news.map(n => n.source)
+  )
+  if (consistency.softFixes.length > 0) {
+    console.log(`  [soft-fix] 정합성 교정 ${consistency.softFixes.length}건: ${consistency.softFixes.join(', ')}`)
+  }
+  if (consistency.warnings.length > 0) {
+    console.log(`  [soft-warn] 비승인 출처 잔존: ${consistency.warnings.join(', ')}`)
+  }
+
   const text = flattenMorningReport(report)
   const violations: string[] = []
+
+  // R2: 시점-요일-상대시제 창 밖·불능은 hard violation.
+  violations.push(...consistency.temporalViolations)
+
+  // R3: "에 따르면" 인용 빈도 — 8회 이상 hard, 5회 이상 soft-warn.
+  if (consistency.citationCount >= 8) {
+    violations.push(`"에 따르면" 인용이 ${consistency.citationCount}회로 과다합니다 (출처 의존 서술 축소 필요)`)
+  } else if (consistency.citationCount >= 5) {
+    console.log(`  [soft-warn] "에 따르면" 인용 ${consistency.citationCount}회 (허용 한도 이하)`)
+  }
+
+  // R1: Characters 카드-산문 정합 (data.quotes 로 배정 재계산).
+  violations.push(...checkCharacterProseConsistency(report, data.quotes))
 
   const adviceMatches = findMatches(text, INVESTMENT_ADVICE_PATTERNS)
   if (adviceMatches.length > 0) {

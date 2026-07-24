@@ -1,6 +1,10 @@
 // lib/claude-client.ts
 import Anthropic from '@anthropic-ai/sdk'
-import type { CollectedData, MorningReport } from './types'
+import type { CollectedData, EtfQuote, MorningReport } from './types'
+// R1 (2026-07-22): Characters 카드 배정을 프롬프트에 주입(렌더러·검증과 동일 소스).
+import { selectStoryCharacters } from './story-characters'
+// R3 (2026-07-22): 본문에 이름 인용 가능한 매체 화이트리스트.
+import { QUOTABLE_SOURCES } from '../quotable-sources'
 import { buildMorningStrategyInput } from './morning-strategy'
 import { validateMorningReportQuality } from './report-quality'
 import { normalizeMorningReportLanguage } from './report-language'
@@ -145,6 +149,26 @@ function formatPromptTicker(ticker: string, quotes: CollectedData['quotes']): st
   if (quote) return formatPromptEtf(quote)
   if (/\.(KS|KQ)$/i.test(ticker)) return ticker.replace(/\.(KS|KQ)$/i, '')
   return ticker
+}
+
+// R1 (2026-07-22): Characters 카드 배정 주입. 렌더러가 렌더 시점에 selectStoryCharacters
+// 로 고르는 4장의 ETF를 프롬프트에 명시해 산문이 카드와 어긋나지 않게 한다. 슬롯이
+// undefined면 기존 일반 지시를 유지. 데이터성 지시(배정 ETF명·코드)만 추가하고 톤 지시는
+// 넣지 않는다. 앵무새 반복 방지를 위해 "1회 명시 후 자연스럽게" 한 줄만 덧붙인다.
+function buildCharactersInstruction(quotes: EtfQuote[]): string {
+  const c = selectStoryCharacters(quotes)
+  const line = (slot: string, assigned: EtfQuote | undefined, roleHint: string): string => {
+    if (!assigned) return `  ${slot}: ${roleHint}`
+    const code = assigned.ticker.replace(/\.(KS|KQ)$/i, '')
+    return `  ${slot}: **${assigned.name} (${code})** — 이 ETF를 다룰 것. ${roleHint} (종목명·코드는 1회 명시 후 자연스럽게)`
+  }
+  return [
+    'narrativeNotes.characters (각 3~4문장 — 아래 배정된 ETF를 슬롯별로 그대로 다룰 것)',
+    line('primary', c.primary, '오늘의 주인공 ETF가 왜 오늘 주목되는지. 오늘 수치 기반으로.'),
+    line('gate', c.gate, '환율 영향을 받는 ETF가 왜 게이트 역할을 하는지. USD/KRW 수준 반영.'),
+    line('alternative', c.alternative, '대안 ETF가 오늘 주도주가 아닌 이유. 장기채·배당·채권 중 하나.'),
+    line('warning', c.warning, '레버리지·인버스를 오늘 경계해야 하는 이유. 변동성 수치 근거.'),
+  ].join('\n')
 }
 
 function buildMorningPrompt(data: CollectedData): string {
@@ -296,6 +320,7 @@ ${data.news.slice(0, 6).map(n => {
 - 뉴스 내용이 어제 한국 증시 마감 이후의 전개인지, 그 이전의 전개인지 발행 시각으로 판단하여 쓰십시오.
 - **[semiconductor]** 태그는 삼성·SK하이닉스 등 국내 반도체에 영향을 주는 국제 뉴스·리서치(NVIDIA·TSMC·Micron·HBM·메모리 가격·수출규제)입니다. 국내 ETF와의 연결고리를 짚어 활용하십시오.
 - **해외 뉴스·리서치 인용 규칙:** ① 해외 기관·매체發 주장·전망은 반드시 **출처(기관/매체명)를 문장에 드러내** 인용(출처 없는 전망·수치 날조 금지). ② 리서치·전망을 **특정 종목·ETF 매수·매도 권유로 번역 금지** — 사실·방향성만. ③ 제공된 제목·요약(↳)의 **사실만** 인용, 원문 문단 복제·창작 금지.
+- **본문에 매체명을 인용할 수 있는 것은 다음뿐**: ${QUOTABLE_SOURCES.join(', ')}. 그 외 매체(블로그·소형 외신 등) 기사는 내용은 쓰되 매체명 대신 '외신'으로 지칭하십시오.
 ${data.recentHeadlines && data.recentHeadlines.length > 0 ? `
 [최근 ETF 리포트 헤드라인 — 절대 반복·유사 표현 금지]
 ${data.recentHeadlines.map(h => `- ${h}`).join('\n')}
@@ -401,11 +426,7 @@ narrativeNotes.storySpine (3개 act, 각 2~3문장 — Phase E4 에서 축약)
   · 이 3막은 story-card 시각 요소(짧은 노트 1~2문장)로만 표시됩니다. 별도 deep section
     은 제거되었습니다. bigPicture 가 longform, storySpine 은 카드 라벨로만 활용.
 
-narrativeNotes.characters (각 3~4문장)
-  primary: 오늘의 주인공 ETF (예: 반도체 ETF)가 왜 오늘 주목되는지. 오늘 수치 기반으로.
-  gate: 환율 영향을 받는 ETF가 왜 게이트 역할을 하는지. USD/KRW 수준 반영.
-  alternative: 대안 ETF가 오늘 주도주가 아닌 이유. 장기채·배당·채권 중 하나.
-  warning: 레버리지·인버스를 오늘 경계해야 하는 이유. 변동성 수치 근거.
+${buildCharactersInstruction(data.quotes)}
 
 (Phase E4: narrativeNotes.resolutions 슬롯 제거됨. 시나리오 사고는 위 bigPicture
 중반과 아래 checklist 의 actions/avoids 에 흡수.)

@@ -17,6 +17,8 @@ import {
   reportPreviewTitle,
   reportRouteUrl,
 } from './report-preview'
+// R1 (2026-07-22): 선택 로직은 story-characters.ts로 이동(렌더러·프롬프트·검증 공유).
+import { isTacticalEtf, selectStoryCharacters } from './story-characters'
 
 export function escapeHtml(s: string): string {
   return s
@@ -391,23 +393,22 @@ function renderEtfCard(q: EtfQuote): string {
   const pct = q.changePercent
   const pctStr = pct !== null ? `${pct > 0 ? '+' : ''}${pct.toFixed(2)}%` : '미확보'
   const cls = pct !== null && pct >= 0 ? 'change-up' : 'change-down'
-  const price = q.price !== null ? q.price.toLocaleString('ko-KR', { maximumFractionDigits: 2 }) : '미확보'
-  const volume = q.volume !== null ? q.volume.toLocaleString('ko-KR') : '미확보'
   const estimatedTradingValue = q.tradingValue !== undefined
     ? q.tradingValue
     : q.price !== null && q.volume !== null
       ? q.price * q.volume
       : null
-  const metrics = [
-    renderMetricItem('가격', price),
-    renderMetricItem('거래량', volume),
-    estimatedTradingValue !== null ? renderMetricItem(q.market === 'US' ? '추정거래대금(USD)' : '거래대금(원)', formatAmountForQuote(q, estimatedTradingValue)) : '',
-    q.aum !== null ? renderMetricItem(q.market === 'KR' ? '순자산(원)' : 'AUM(USD)', formatAmountForQuote(q, q.aum)) : q.market === 'KR' ? renderMetricItem('순자산(원)', '미확보') : '',
-    q.market === 'US' ? renderMetricItem('유동성', inferLiquidity(q)) : '',
-    q.market === 'US' && q.prev20AvgVolume !== null ? renderMetricItem('평균거래량', q.prev20AvgVolume.toLocaleString('ko-KR')) : '',
-    q.nav !== null ? renderMetricItem('NAV', q.nav.toLocaleString('ko-KR', { maximumFractionDigits: 2 })) : '',
-    q.premiumDiscount !== null ? renderMetricItem('괴리율', `${q.premiumDiscount > 0 ? '+' : ''}${q.premiumDiscount.toFixed(2)}%`) : '',
-  ].filter(Boolean).slice(0, 6).join('')
+  const hasUsVolume = q.market === 'US' && q.volume !== null && q.volume > 0
+  const metrics = metricItemsHtml([
+    { label: '가격', value: q.price !== null ? q.price.toLocaleString('ko-KR', { maximumFractionDigits: 2 }) : null },
+    { label: '거래량', value: q.volume !== null ? q.volume.toLocaleString('ko-KR') : null },
+    { label: q.market === 'US' ? '추정거래대금(USD)' : '거래대금(원)', value: estimatedTradingValue !== null ? formatAmountForQuote(q, estimatedTradingValue) : null },
+    { label: q.market === 'KR' ? '순자산(원)' : 'AUM(USD)', value: q.aum !== null ? formatAmountForQuote(q, q.aum) : null },
+    { label: '유동성', value: hasUsVolume ? inferLiquidity(q) : null },
+    { label: '평균거래량', value: q.market === 'US' && q.prev20AvgVolume !== null ? q.prev20AvgVolume.toLocaleString('ko-KR') : null },
+    { label: 'NAV', value: q.nav !== null ? q.nav.toLocaleString('ko-KR', { maximumFractionDigits: 2 }) : null },
+    { label: '괴리율', value: q.premiumDiscount !== null ? `${q.premiumDiscount > 0 ? '+' : ''}${q.premiumDiscount.toFixed(2)}%` : null },
+  ], 6)
   const bars = [
     renderMetricBar('등락률', q.changePercent, 8, '%'),
     q.premiumDiscount !== null ? renderMetricBar('괴리율', q.premiumDiscount, 1.5, '%') : '',
@@ -434,6 +435,17 @@ function renderEtfCard(q: EtfQuote): string {
 
 function renderMetricItem(label: string, value: string): string {
   return `<div class="metric-item"><div class="metric-label">${e(label)}</div><div class="metric-value">${e(value)}</div></div>`
+}
+
+// R4 (2026-07-22): 미확보(null) 메트릭은 '미확보' 표기 대신 항목 자체를 생략한다.
+// value가 null인 항목은 렌더하지 않고, 남은 항목만 max 개까지 이어붙인다(0개면 '').
+export function metricItemsHtml(
+  entries: Array<{ label: string; value: string | null }>,
+  max?: number
+): string {
+  const items = entries.filter((entry): entry is { label: string; value: string } => entry.value !== null)
+  const limited = typeof max === 'number' ? items.slice(0, max) : items
+  return limited.map(entry => renderMetricItem(entry.label, entry.value)).join('')
 }
 
 function inferLiquidity(q: EtfQuote): string {
@@ -464,10 +476,6 @@ function inferEtfTag(q: EtfQuote): string {
   if (/채권|bond|국채|tlt|ief|shy/.test(name)) return '채권'
   if (/금|gold|원유|oil|commodity|원자재/.test(name)) return '원자재'
   return '지수'
-}
-
-function isTacticalEtf(q: EtfQuote): boolean {
-  return /레버리지|인버스|2x|선물인버스|inverse/i.test(q.name)
 }
 
 function formatEtfIdentity(q: EtfQuote): { primary: string; secondary: string; plain: string } {
@@ -915,36 +923,6 @@ function normalizeWhitespace(text: string): string {
   return text.replace(/\s+/g, ' ').trim()
 }
 
-interface StoryCharacters {
-  primary: EtfQuote | undefined
-  gate: EtfQuote | undefined
-  alternative: EtfQuote | undefined
-  warning: EtfQuote | undefined
-}
-
-function selectStoryCharacters(quotes: EtfQuote[]): StoryCharacters {
-  const kr = quotes.filter(q => q.market === 'KR')
-  const primary = findQuoteByName(kr, /반도체|AI|소프트웨어|바이오/) ??
-    kr.filter(q => !isTacticalEtf(q) && q.changePercent !== null)
-      .sort((a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0))[0]
-  const gatePool = kr.filter(q => q !== primary)
-  const gate = gatePool.find(q => q.name === 'TIGER 미국나스닥100') ??
-    gatePool.find(q => q.name === 'TIGER 미국S&P500') ??
-    findQuoteByName(gatePool, /미국나스닥100|미국S&P500|미국S&amp;P500/) ??
-    findQuoteByName(kr.filter(q => q !== primary), /미국/) ??
-    primary
-  const alternative = findQuoteByName(kr.filter(q => q !== primary && q !== gate), /국채|장기채|채권|TLT/) ??
-    findQuoteByName(kr.filter(q => q !== primary && q !== gate), /배당|커버드콜/) ??
-    kr.find(q => !isTacticalEtf(q) && q !== primary && q !== gate)
-  const warning = kr.find(q => isTacticalEtf(q) && /레버리지/.test(q.name)) ?? kr.find(isTacticalEtf)
-
-  return { primary, gate, alternative, warning }
-}
-
-function findQuoteByName(quotes: EtfQuote[], pattern: RegExp): EtfQuote | undefined {
-  return quotes.find(q => pattern.test(q.name))
-}
-
 function shortReportText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text
   const sentenceEnd = findSentenceEndBefore(text, maxLength)
@@ -993,14 +971,15 @@ function renderStoryCharacters(report: MorningReport, data: CollectedData): stri
 
 function renderCharacterCard(q: EtfQuote, role: string, note: string, quotes: EtfQuote[]): string {
   const identity = formatEtfIdentity(q)
-  const change = q.changePercent !== null ? `${q.changePercent > 0 ? '+' : ''}${q.changePercent.toFixed(2)}%` : '미확보'
+  // R4 (2026-07-22): 등락률 미확보 시 '미확보' 배지 대신 배지 자체를 생략.
+  const changeStr = q.changePercent !== null ? `${q.changePercent > 0 ? '+' : ''}${q.changePercent.toFixed(2)}%` : null
   const moveClass = q.changePercent !== null && q.changePercent >= 0 ? 'change-up' : 'change-down'
-  const metrics = [
-    q.changePercent !== null ? renderMetricItem('등락률', change) : '',
-    q.tradingValue !== undefined && q.tradingValue !== null ? renderMetricItem('거래대금', compactKrwAmount(q.tradingValue)) : '',
-    q.premiumDiscount !== null ? renderMetricItem('괴리율', `${q.premiumDiscount > 0 ? '+' : ''}${q.premiumDiscount.toFixed(2)}%`) : '',
-    q.nav !== null ? renderMetricItem('NAV', q.nav.toLocaleString('ko-KR', { maximumFractionDigits: 2 })) : '',
-  ].filter(Boolean).slice(0, 3).join('')
+  const metrics = metricItemsHtml([
+    { label: '등락률', value: changeStr },
+    { label: '거래대금', value: q.tradingValue !== undefined && q.tradingValue !== null ? compactKrwAmount(q.tradingValue) : null },
+    { label: '괴리율', value: q.premiumDiscount !== null ? `${q.premiumDiscount > 0 ? '+' : ''}${q.premiumDiscount.toFixed(2)}%` : null },
+    { label: 'NAV', value: q.nav !== null ? q.nav.toLocaleString('ko-KR', { maximumFractionDigits: 2 }) : null },
+  ], 3)
 
   return `<div class="character-card">
   <div class="character-head">
@@ -1008,7 +987,7 @@ function renderCharacterCard(q: EtfQuote, role: string, note: string, quotes: Et
       <div class="character-role">${e(role)}</div>
       ${renderEtfLink(q.ticker, `<div class="character-name">${e(identity.primary)}</div><div class="character-code">${e(identity.secondary)}</div>`, 'etf-link character-link')}
     </div>
-    <div class="character-move ${moveClass}">${e(change)}</div>
+    ${changeStr !== null ? `<div class="character-move ${moveClass}">${e(changeStr)}</div>` : ''}
   </div>
   ${metrics ? `<div class="metric-grid character-metrics">${metrics}</div>` : ''}
   <div class="watch-body">${renderReportText(note, quotes)}</div>
@@ -1271,9 +1250,12 @@ function renderTacticalEtfWarning(quotes: EtfQuote[]): string {
   <div class="action-board">
     ${tactical.map((q, idx) => {
       const identity = formatEtfIdentity(q)
-      const tradingValue = q.tradingValue !== undefined && q.tradingValue !== null ? compactKrwAmount(q.tradingValue) : '미확보'
-      const premium = q.premiumDiscount !== null ? `${q.premiumDiscount > 0 ? '+' : ''}${q.premiumDiscount.toFixed(2)}%` : '미확보'
-      const gap = q.dailyIndexGap !== undefined && q.dailyIndexGap !== null ? `${q.dailyIndexGap > 0 ? '+' : ''}${q.dailyIndexGap.toFixed(2)}%p` : '미확보'
+      // R4 (2026-07-22): 미확보 메트릭은 항목 생략. 셋 다 없으면 metric-grid 자체를 생략.
+      const metrics = metricItemsHtml([
+        { label: '거래대금(원)', value: q.tradingValue !== undefined && q.tradingValue !== null ? compactKrwAmount(q.tradingValue) : null },
+        { label: '괴리율', value: q.premiumDiscount !== null ? `${q.premiumDiscount > 0 ? '+' : ''}${q.premiumDiscount.toFixed(2)}%` : null },
+        { label: '지수대비', value: q.dailyIndexGap !== undefined && q.dailyIndexGap !== null ? `${q.dailyIndexGap > 0 ? '+' : ''}${q.dailyIndexGap.toFixed(2)}%p` : null },
+      ])
       const note = TACTICAL_WARNINGS[idx % TACTICAL_WARNINGS.length]
       return `<div class="action-panel">
         <div class="compact-head">
@@ -1283,11 +1265,7 @@ function renderTacticalEtfWarning(quotes: EtfQuote[]): string {
           </div>
           <span class="compact-change ${q.changePercent !== null && q.changePercent >= 0 ? 'change-up' : 'change-down'}">${e(fmtQuoteMove(q))}</span>
         </div>
-        <div class="metric-grid">
-          ${renderMetricItem('거래대금(원)', tradingValue)}
-          ${renderMetricItem('괴리율', premium)}
-          ${renderMetricItem('지수대비', gap)}
-        </div>
+        ${metrics ? `<div class="metric-grid">${metrics}</div>` : ''}
         <div class="compact-note">${e(note)}</div>
       </div>`
     }).join('')}
