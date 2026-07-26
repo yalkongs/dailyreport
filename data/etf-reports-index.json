@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-07-27",
+      "type": "morning",
+      "headline": "반도체 4% 이상 꺾인 월요일, 금·원자재가 균형추",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-27",
+      "anomalyCount": 7,
+      "anomalyBreakdown": {
+        "premiumDiscount": 7
+      },
+      "createdAt": "2026-07-26T21:48:04.028Z"
+    },
+    {
       "date": "2026-07-24",
       "type": "morning",
       "headline": "S&P500·나스닥 동반 하락, 방어 우위 사흘째",
