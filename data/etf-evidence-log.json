@@ -505,5 +505,18 @@
       "premiumDiscount": 7
     },
     "failedSources": []
+  },
+  {
+    "date": "2026-07-28",
+    "tier": "thin",
+    "mode": "normal",
+    "newsCount": 8,
+    "freshCount": 5,
+    "topCatalystScore": 8,
+    "anomalyCount": 0,
+    "anomalyBreakdown": {},
+    "failedSources": [
+      "krx-nav"
+    ]
   }
 ]
