@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-07-29",
+      "type": "morning",
+      "headline": "반도체 쇼크, 국내 개장문 앞에 서다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-29",
+      "anomalyCount": 12,
+      "anomalyBreakdown": {
+        "premiumDiscount": 12
+      },
+      "createdAt": "2026-07-28T21:47:54.142Z"
+    },
+    {
       "date": "2026-07-28",
       "type": "morning",
       "headline": "에너지 8% 밀릴 때 로보틱스·소비재는 올라 — 미 증시 섹터 분리",
