@@ -1,6 +1,25 @@
 {
   "entries": [
     {
+      "date": "2026-07-29",
+      "narrativeAngle": "structural_lens",
+      "headline": "코스피 10.84% 붕괴, SK하이닉스 실적이 답해야 할 것들",
+      "bigStoryTopic": "전 거래일(2026-07-28) 코스피가 <strong>-10.84%</strong>로 6",
+      "walletTopics": [
+        "SK하이닉스 보유 투자자: 실적 숫자보다 '언어'를 보십시오",
+        "코스피 급락, 패닉 매도와 기회 구분이 필요한 시점",
+        "유가 하락, 가계보다 산업 체인을 먼저 보십시오",
+        "급락 이후, 각 자산의 자리",
+        "실질금리, 지금 예금이 주는 것"
+      ],
+      "metaphors": [
+        "붕괴",
+        "시험대",
+        "검증"
+      ],
+      "lookingAhead": "SK하이닉스 실적 발표 — HBM 수요 전망이 핵심"
+    },
+    {
       "date": "2026-07-28",
       "narrativeAngle": "hidden_variable",
       "headline": "SK하이닉스 ADR, 공모가 아래로 밀렸다",
@@ -549,25 +568,6 @@
         "재편"
       ],
       "lookingAhead": "FOMC 6월 금리 결정 및 점도표 발표"
-    },
-    {
-      "date": "2026-06-16",
-      "narrativeAngle": "job_perspective",
-      "headline": "원유가 내려앉은 자리에 주가가 올라섰다",
-      "bigStoryTopic": "미·이란 잠정 합의 소식에 코스피가 하루 만에 <strong>5.20%</strong> 급",
-      "walletTopics": [
-        "항공·물류 업종 — 원유 하락의 시차 효과를 계산하십시오",
-        "수출 중소 제조업 — 환율 1514원의 지형",
-        "자동차 부품 업계 — 현대차 목표가 상향의 낙수 효과",
-        "원유 하락 이후, 자산별 온도 재조정",
-        "4%대 금리 시대, 오늘 급등장에서 예금의 위치"
-      ],
-      "metaphors": [
-        "원유 하락",
-        "지정학 해빙",
-        "주가 역전"
-      ],
-      "lookingAhead": "FOMC 금리 결정 — 점도표가 말하는 것"
     }
   ]
 }
