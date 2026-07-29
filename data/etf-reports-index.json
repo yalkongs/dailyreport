@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-07-30",
+      "type": "morning",
+      "headline": "SOXX 5% 이상 급락, 반도체 쇼크 오늘 국내 개장대로 직행",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-30",
+      "anomalyCount": 16,
+      "anomalyBreakdown": {
+        "premiumDiscount": 16
+      },
+      "createdAt": "2026-07-29T21:47:38.886Z"
+    },
+    {
       "date": "2026-07-29",
       "type": "morning",
       "headline": "반도체 쇼크, 국내 개장문 앞에 서다",
