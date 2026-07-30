@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-07-31",
+      "type": "morning",
+      "headline": "SOXX 8.5% 폭발, 위험자산이 한 주를 가져갔다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-07-31",
+      "anomalyCount": 13,
+      "anomalyBreakdown": {
+        "premiumDiscount": 13
+      },
+      "createdAt": "2026-07-30T21:50:24.421Z"
+    },
+    {
       "date": "2026-07-30",
       "type": "morning",
       "headline": "SOXX 5% 이상 급락, 반도체 쇼크 오늘 국내 개장대로 직행",
