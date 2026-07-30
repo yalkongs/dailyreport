@@ -1,6 +1,25 @@
 {
   "entries": [
     {
+      "date": "2026-07-31",
+      "narrativeAngle": "time_travel",
+      "headline": "SK하이닉스 ADR 17% 뛰고, 코스피는 아직 5593",
+      "bigStoryTopic": "간밤(2026-07-30 현지 마감) 뉴욕 증시가 반도체·메모리 강세에 나스닥 <stron",
+      "walletTopics": [
+        "SK하이닉스 주주: 오늘 오전 시가가 ADR의 대답",
+        "수출 중소기업: 원화 1,421원, 한 달 전 1,541원과 얼마나 다른가",
+        "반도체 업종 투자자: TrendForce가 그린 2027년 DRAM 지형",
+        "이번 주 마지막 날, 자산별 현재 온도",
+        "연 3.63% 기준금리, 물가 3.2%가 만드는 방정식"
+      ],
+      "metaphors": [
+        "시간차",
+        "ADR 반등",
+        "코스피 격차"
+      ],
+      "lookingAhead": "SK하이닉스 국내 주가, ADR 랠리를 얼마나 받아내나"
+    },
+    {
       "date": "2026-07-30",
       "narrativeAngle": "job_perspective",
       "headline": "연준 동결, 증시는 채권과 함께 무너졌다",
@@ -549,25 +568,6 @@
         "반도체 인맥"
       ],
       "lookingAhead": "KOSPI200 분기 만기일 — 장 후반 변동성 점검"
-    },
-    {
-      "date": "2026-06-18",
-      "narrativeAngle": "structural_lens",
-      "headline": "연준이 금리를 올린 밤, 달러는 올랐고 나머지는 내려앉았다",
-      "bigStoryTopic": "6월 FOMC 결과 발표 이후 미국 10년물 국채 금리가 <strong>4.46%</str",
-      "walletTopics": [
-        "수출 제조업 — 환율 1,525원의 양면 구조",
-        "국내 금융주 — 금리 인상 기대의 수혜 후보",
-        "소상공인·자영업자 — 코로나 대출 연장과 금리 상승의 교차",
-        "FOMC 이후, 자산별 온도 재조정",
-        "4%대 금리 환경에서 예금의 재위치"
-      ],
-      "metaphors": [
-        "연준",
-        "달러 강세",
-        "금리 인상"
-      ],
-      "lookingAhead": "FOMC 결과가 코스피 외국인 수급에 미치는 첫 반응"
     }
   ]
 }
