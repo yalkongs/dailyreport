@@ -557,5 +557,18 @@
       "premiumDiscount": 13
     },
     "failedSources": []
+  },
+  {
+    "date": "2026-08-03",
+    "tier": "thin",
+    "mode": "quiet",
+    "newsCount": 8,
+    "freshCount": 4,
+    "topCatalystScore": 5,
+    "anomalyCount": 12,
+    "anomalyBreakdown": {
+      "premiumDiscount": 12
+    },
+    "failedSources": []
   }
 ]
