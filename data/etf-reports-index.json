@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-08-05",
+      "type": "morning",
+      "headline": "삼성 3D HBM 발표에 SOXX 6.8% 급등, 국내 반도체 ETF는 거꾸로",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-08-05",
+      "anomalyCount": 12,
+      "anomalyBreakdown": {
+        "premiumDiscount": 12
+      },
+      "createdAt": "2026-08-04T21:47:49.159Z"
+    },
+    {
       "date": "2026-08-04",
       "type": "morning",
       "headline": "코스피 9% 급락에도 미 증시는 올랐다",

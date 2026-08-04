@@ -583,5 +583,18 @@
     "failedSources": [
       "krx-nav"
     ]
+  },
+  {
+    "date": "2026-08-05",
+    "tier": "thin",
+    "mode": "event",
+    "newsCount": 8,
+    "freshCount": 7,
+    "topCatalystScore": 5,
+    "anomalyCount": 12,
+    "anomalyBreakdown": {
+      "premiumDiscount": 12
+    },
+    "failedSources": []
   }
 ]
