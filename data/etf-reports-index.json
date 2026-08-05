@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-08-06",
+      "type": "morning",
+      "headline": "금 4,308달러·원화 1,422원, 같은 환율의 두 얼굴",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-08-06",
+      "anomalyCount": 7,
+      "anomalyBreakdown": {
+        "premiumDiscount": 7
+      },
+      "createdAt": "2026-08-05T21:52:26.669Z"
+    },
+    {
       "date": "2026-08-05",
       "type": "morning",
       "headline": "삼성 3D HBM 발표에 SOXX 6.8% 급등, 국내 반도체 ETF는 거꾸로",
