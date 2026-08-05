@@ -1,6 +1,25 @@
 {
   "entries": [
     {
+      "date": "2026-08-06",
+      "narrativeAngle": "historical_deja_vu",
+      "headline": "코스피·닛케이, 일제히 3~4% 반등…금도 사상 최고 경신",
+      "bigStoryTopic": "전 거래일(2026-08-05) 코스피가 <strong>+3.76%</strong> 올라 ",
+      "walletTopics": [
+        "삼성·SK하이닉스 보유자: HBM 뉴스 두 개가 충돌하는 날",
+        "현대차·기아 주주: 리콜 50만9천대의 비용 셈법",
+        "코스피 급반등, 2024년 8월과 닮았지만 다른 점",
+        "급반등 이후, 자산별 온도 재점검",
+        "연 3.63% 기준금리, 지금 어디에 있나"
+      ],
+      "metaphors": [
+        "반등",
+        "데자뷰",
+        "금"
+      ],
+      "lookingAhead": "반도체 대형주: HBM 뉴스 가격 반영 여부"
+    },
+    {
       "date": "2026-08-05",
       "narrativeAngle": "global_domino",
       "headline": "호르무즈 협상 진전, 유가 6% 빠지고 S&P 500은 사상 최고",
@@ -549,25 +568,6 @@
         "산업 체인"
       ],
       "lookingAhead": "SK하이닉스 나스닥 ADR 상장 준비 일정"
-    },
-    {
-      "date": "2026-06-24",
-      "narrativeAngle": "global_domino",
-      "headline": "서울이 혼자 10% 무너진 날",
-      "bigStoryTopic": "코스피가 하루 만에 <strong>-9.99%</strong> 급락하며 <strong>8,",
-      "walletTopics": [
-        "삼성전자·SK하이닉스 보유자: 낙폭의 원점을 확인하십시오",
-        "코스닥 중소형주 보유자: 1개월 낙폭은 이미 24%",
-        "MSCI 선진지수 불발: 외국인 수급의 단기 이탈 점검",
-        "지금 어느 자산이 어느 온도에 있나",
-        "변동성 장세에서 예금의 무게가 달라진다"
-      ],
-      "metaphors": [
-        "도미노",
-        "낙차",
-        "격차"
-      ],
-      "lookingAhead": "MSCI 선진지수 관찰대상국 등재 불발의 수급 파장"
     }
   ]
 }
