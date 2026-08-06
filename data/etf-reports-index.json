@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-08-07",
+      "type": "morning",
+      "headline": "코스피 4% 급락 다음날, 미 증시는 소폭 하락 마감",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-08-07",
+      "anomalyCount": 8,
+      "anomalyBreakdown": {
+        "premiumDiscount": 8
+      },
+      "createdAt": "2026-08-06T21:58:25.260Z"
+    },
+    {
       "date": "2026-08-06",
       "type": "morning",
       "headline": "금 4,308달러·원화 1,422원, 같은 환율의 두 얼굴",
