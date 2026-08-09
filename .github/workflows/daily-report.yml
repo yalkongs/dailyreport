@@ -263,14 +263,17 @@ jobs:
       - name: Commit and push ETF report
         if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true && inputs.dry_run != 'true'
         run: |
-          # Pull any market-job commit that landed during this run so we
-          # don't race-fail on push.
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin main || true
           REPORT_DATE=${{ steps.etf.outputs.date }}
           git add public/etf-reports/ data/
           git commit -m "ETF Daily Report - ${REPORT_DATE} (KST)"
+          # Pull any market-job commit that landed during this run so we
+          # don't race-fail on push.
+          # ⚠️ commit **뒤**에 와야 한다. git add 앞에 있던 2026-04-18~2026-08-09
+          # 배치에서는 더러운 트리 때문에 매번 exit 128로 거부되고 `|| true`가
+          # 삼켜, 16주간 한 번도 실행되지 않았다.
+          git pull --rebase origin main || true
           git push
 
       - name: Wait for Vercel deployment (poll commit status until success)
