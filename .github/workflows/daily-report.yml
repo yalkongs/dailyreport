@@ -61,7 +61,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           # 재실행(re-run)은 트리거 시점 SHA를 잡는다. 그사이 etf job이 push해
           # main이 앞서가면 push가 non-fast-forward로 거부된다(2026-08-07 인시던트).
-          # etf job(:198)과 동일하게 항상 최신 main을 체크아웃한다.
+          # etf job과 동일하게 항상 최신 main을 체크아웃한다.
           ref: main
 
       - name: Setup Node.js
