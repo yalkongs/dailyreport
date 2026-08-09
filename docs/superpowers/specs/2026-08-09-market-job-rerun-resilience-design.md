@@ -208,6 +208,13 @@ push 실패 0건이라는 뜻일 뿐, rebase 분기는 한 번도 실행된 적�
 
 RED→GREEN이 확인됐다.
 
+**shallow clone 검증 (추가).** `actions/checkout`은 기본 `fetch-depth: 1`이라
+러너의 작업 트리는 shallow repo다. etf의 rebase가 한 번도 실행된 적이 없으므로
+이 환경에서의 동작은 미실증 상태였다. `git clone --depth 1`
+(`is-shallow-repository: true`, 로컬 커밋 1개)로 동일 시나리오를 돌린 결과
+`Successfully rebased` → push 성공. rebase가 필요로 하는 merge base가 fetch된
+tip으로 로컬에 존재하므로 shallow가 문제되지 않는다.
+
 ### 2. 첫 평일 라이브 확인
 
 - market job 로그: checkout이 main을 잡는지, rebase 라인이 no-op으로 통과하는지,
