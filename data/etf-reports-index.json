@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-08-10",
+      "type": "morning",
+      "headline": "코스피 5% 급락에도 미국 대표지수 ETF는 상승, 금·은이 수익률 상위 독식",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-08-10",
+      "anomalyCount": 10,
+      "anomalyBreakdown": {
+        "premiumDiscount": 10
+      },
+      "createdAt": "2026-08-09T21:47:38.982Z"
+    },
+    {
       "date": "2026-08-07",
       "type": "morning",
       "headline": "코스피 4% 급락 다음날, 미 증시는 소폭 하락 마감",
