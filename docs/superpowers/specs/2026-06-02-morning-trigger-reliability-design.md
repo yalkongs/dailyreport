@@ -196,8 +196,15 @@ schedule:
 
 ## 범위 밖 / 후속
 
-- 시장 job에 `git pull --rebase` 추가(ETF와 대칭) — fallback 시각 분리로
-  불필요해지나, 원하면 옵션 하드닝. 기본은 **하지 않음**.
+- ~~시장 job에 `git pull --rebase` 추가(ETF와 대칭) — fallback 시각 분리로
+  불필요해지나, 원하면 옵션 하드닝. 기본은 **하지 않음**.~~
+  > **⚠️ 2026-08-09 뒤집힘.** 2026-08-07 인시던트로 이 판단은 폐기됐다.
+  > 여기서 상정한 push 충돌은 "두 트리거의 동시 실행"뿐이었고, **같은 run
+  > 안에서 market이 죽고 etf만 성공해 main이 앞서가는 경로**는 상정하지
+  > 않았다. 시각 분리로는 이 경로를 막을 수 없다 — 실제로 재실행이
+  > non-fast-forward로 실패해 리포트가 4시간 늦게 나갔다. `git pull --rebase`와
+  > checkout `ref: main`을 둘 다 추가하기로 결정.
+  > 전문: [`2026-08-09-market-job-rerun-resilience-design.md`](./2026-08-09-market-job-rerun-resilience-design.md)
 - PAT 만료 리마인더 → 출시 후 `/schedule`로 만료 전 재발급 알림 설정 (만료일 기준).
 
 ## 별건 — 이번 작업과 무관한 기존 버그 (발견만, 여기서 안 고침)
