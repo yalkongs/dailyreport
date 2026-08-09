@@ -1,4 +1,4 @@
-# market job 재실행 복원력 — checkout `ref: main` + push 전 rebase
+# market job 재실행 복원력 — checkout `ref: main` + commit 후 rebase
 
 작성: 2026-08-09
 상태: 설계 승인됨 (구현 대기)
@@ -47,10 +47,10 @@ run의 etf job이 `3489a57`을 push해둔 상태라 로컬이 1커밋 뒤처졌�
 | | market job | etf job |
 |---|---|---|
 | checkout | `ref` 지정 없음 → 트리거 SHA 고정 (`daily-report.yml:58-61`) | `ref: main` → 항상 최신 (`:194-198`) |
-| push 전 | 없음 (`:114-120`) | `git pull --rebase origin main \|\| true` (`:261`) |
+| push 전 | 없음 (`:114-120`) | `git pull --rebase origin main \|\| true` (`:261`) — **단, 아래 참조: 이 줄은 실행된 적이 없다** |
 
-etf job에 있는 두 안전장치가 market job에는 둘 다 없다. 평소엔 market이 먼저
-push하니 드러나지 않다가, **market이 죽고 etf만 성공한** 이 순서에서 터졌다.
+평소엔 market이 먼저 push하니 드러나지 않다가, **market이 죽고 etf만 성공한**
+이 순서에서 터졌다.
 
 ### 원인 ③ 백업 cron 지연 (범위 밖)
 
@@ -58,25 +58,40 @@ push하니 드러나지 않다가, **market이 죽고 etf만 성공한** 이 순
 [`2026-06-02-morning-trigger-reliability-design.md`](./2026-06-02-morning-trigger-reliability-design.md)에
 이미 실측·문서화된 알려진 성질이다. 통제 밖.
 
-## 이 결정이 뒤집는 것
+## 설계 중 발견 — etf의 rebase는 16주간 죽어 있었다
 
-6/02 설계는 이 변경을 **명시적으로 "하지 않음"으로 닫아뒀다**:
+이 spec 초안은 "etf 패턴을 그대로 복사한다"였다. 검증 중 그 패턴 자체가
+**작동한 적이 없다**는 것이 드러났다.
 
-> **범위 밖 / 후속**: 시장 job에 `git pull --rebase` 추가(ETF와 대칭) —
-> fallback 시각 분리로 불필요해지나, 원하면 옵션 하드닝. 기본은 **하지 않음**.
+etf job(`:254-265`)에서 `git pull --rebase`는 `git add`/`git commit`보다
+**앞**에 있다. 그 시점의 작업 트리에는 수정된 `data/*.json`이 있고, git은
+거부한다:
 
-당시 근거는 "06:40 정시 발화와 22:30 백업은 **시각이 분리돼** 동시 실행 push
-충돌 레이스가 원천 제거된다"였다. 그 전제 자체는 지금도 유효하다.
+```
+error: cannot pull with rebase: You have unstaged changes.
+error: Please commit or stash them.
+exit=128
+```
 
-무너진 것은 전제가 아니라 **가정의 범위**다. 6/02 설계는 push 충돌을 오직
-"두 트리거의 동시 실행" 문제로만 봤고, **같은 run 안에서 market이 죽고 etf만
-성공해 main이 앞서가는 경로**는 상정하지 않았다. 시각 분리로는 이 경로를 막을
-수 없다. 6/02 문서 해당 항목에 뒤집힘 표기를 남긴다.
+`|| true`가 이 실패를 삼킨다. 더 결정적인 것은 push 스텝의 발동 조건이다 —
+`steps.changes.outputs.changed == 'true'`는 `git diff --quiet`의 실패, 즉
+**더러운 트리를 보장**한다. 스텝의 전제 조건이 rebase 실패를 보장하는 구조다.
+`rebase.autoStash`는 기본값 false(runner git 2.54)라 자동 구제도 없다.
+
+따라서:
+
+- etf가 16주간 무사고였던 것은 rebase 덕분이 아니다. attempt 1(21:58)에서
+  etf를 실제로 구한 것은 **`ref: main` 하나**다.
+- 초안의 "rebase = 2차 방어" 주장은 **거짓이었다**. 지금 위치에서는 아무것도
+  방어하지 않는다.
+
+이 발견으로 변경 범위가 market 2줄 → **market 2줄 + etf 1줄 이동**으로 늘었다.
 
 ## 목표 / 비목표
 
 **목표.** market job이 재실행되거나 로컬이 main보다 뒤처진 상태에서도 push가
 성공한다. 사람이 재실행 버튼을 눌렀을 때 그것이 실제로 복구 수단으로 작동한다.
+덧붙여, 두 job의 rebase 안전망이 **실제로 실행되는** 위치에 놓인다.
 
 **비목표.**
 - 러너 미배정 대응 (GitHub 인프라, 통제 밖)
@@ -85,13 +100,14 @@ push하니 드러나지 않다가, **market이 죽고 etf만 성공한** 이 순
 - `timeout-minutes` 조정 — **의도적으로 하지 않는다.** 러너를 못 잡는 상황에선
   조기 실패가 오히려 백업 cron에 자리를 넘겨주는 쪽이 낫다. 늘리면 실패를
   늦출 뿐이다.
-- 연산 파이프라인(`scripts/run.ts`) 변경 0줄
+- `|| true` 제거 — etf와의 동형성 우선 (아래 리스크 참조)
+- 연산 파이프라인(`scripts/run.ts`, `scripts/run-etf.ts`) 변경 0줄
 
 ## 변경 내용
 
-`.github/workflows/daily-report.yml`의 market job, 2줄.
+`.github/workflows/daily-report.yml` 3곳.
 
-### ① checkout에 `ref: main` (`:58-61`)
+### ① market checkout에 `ref: main` (`:58-61`)
 
 ```yaml
 - name: Checkout repository
@@ -101,21 +117,38 @@ push하니 드러나지 않다가, **market이 죽고 etf만 성공한** 이 순
     ref: main          # 재실행 시 트리거 SHA가 아닌 최신 main을 잡는다
 ```
 
-### ② push 전 rebase (`:114-120`)
+### ② market push 스텝에 rebase 추가 — **commit 뒤** (`:114-120`)
 
 ```yaml
-  git config user.email "github-actions[bot]@users.noreply.github.com"
+  git add public/reports/ data/
+  git commit -m "Daily Market Report - ${REPORT_DATE} (KST)"
   git pull --rebase origin main || true
-  REPORT_DATE=${{ steps.report.outputs.date }}
+  git push
 ```
 
-etf job(`:261`)과 **완전 동형**으로 맞춘다. `|| true`까지 그대로 복사한다.
+### ③ etf push 스텝의 rebase를 commit 뒤로 이동 (`:254-265`)
 
-## 왜 두 줄 다 필요한가
+```yaml
+  git add public/etf-reports/ data/
+  git commit -m "ETF Daily Report - ${REPORT_DATE} (KST)"
+  git pull --rebase origin main || true    # ← git config 직후에서 여기로 이동
+  git push
+```
 
-`ref: main`이 1차 방어다. 재실행이 최신 main에서 시작하므로 non-fast-forward가
-발생할 여지 자체가 사라진다. `git pull --rebase`는 2차 방어로, checkout 이후
-push 직전 사이에 새 커밋이 들어와도 흡수한다.
+etf 스텝 상단의 기존 주석("Pull any market-job commit that landed during this
+run so we don't race-fail on push")은 이동 후에야 비로소 사실이 된다.
+
+## 왜 두 장치가 다 필요한가
+
+**`ref: main`이 이번 인시던트의 실질적 해결책이다.** 재실행이 최신 main에서
+시작하므로 non-fast-forward가 발생할 여지 자체가 사라진다. 이것만으로 08-07
+시나리오는 완전히 막힌다.
+
+**commit 후 rebase는 다른 창을 막는다** — checkout과 push 사이(마켓 기준 약
+3~4분)에 다른 커밋이 main에 들어오는 경우. `ref: main`은 checkout 시점의
+스냅샷일 뿐이라 이 창을 못 막는다. 지금까지 이 창은 열려 있었고(rebase가 죽어
+있었으므로), 두 job의 push 시각이 Vercel 배포 폴링으로 직렬화된 덕에 우연히
+사고가 없었다.
 
 `ref: main`에는 부수 효과가 하나 더 있고 이게 실은 작지 않다. 재실행이 **최신
 데이터·코드**로 돌게 되면서 `scripts/run.ts`의 중복 실행 가드가 정상 작동한다.
@@ -137,36 +170,54 @@ push 직전 사이에 새 커밋이 들어와도 흡수한다.
 
 교집합 0개 → rebase 충돌은 사실상 발생하지 않는다.
 
-**검증된 패턴이다.** etf job은 `f6a6cc8`(2026-04-18, etfreport 흡수)에서 두
-안전장치를 함께 갖고 태어나 **약 16주간** 동일 구성으로 무사고 운영됐다.
+**`ref: main`은 16주간 검증됐다.** etf job이 `f6a6cc8`(2026-04-18) 이래 이
+설정으로 운영됐고, attempt 1에서 실제로 이 장치가 etf를 구했다.
 
-**정상 실행에는 no-op이다.** 트리거 SHA = main 최신이므로 checkout 결과가
-같고, rebase는 가져올 커밋이 없다.
+**rebase 배치에 대해서는 "검증됐다"고 말할 수 없다.** etf의 16주 무사고는
+push 실패 0건이라는 뜻일 뿐, rebase 분기는 한 번도 실행된 적이 없다. 올바른
+배치의 근거는 운영 이력이 아니라 아래 재현 실험이다.
+
+**정상 실행에는 사실상 no-op이다.** 트리거 SHA = main 최신이라 checkout 결과가
+같고, rebase는 가져올 커밋이 없어 즉시 통과한다.
 
 ## 리스크
 
-`|| true`가 rebase 실패를 삼킨다. 그 경우 push가 다시 거부되고 job은 실패한다.
-다만 **현재보다 나빠지지 않는다** — 지금도 같은 상황에서 실패한다. etf와의
-동형성을 우선한 선택이며, 두 job을 나란히 읽을 때 헷갈릴 여지를 없애는 값이
-실패 로그가 한 단계 덜 명확해지는 값보다 크다고 봤다.
+`|| true`는 rebase 실패를 계속 삼킨다. 실패 시 push가 거부되고 job이 실패한다
+— **현재보다 나빠지지는 않는다**(지금도 같은 상황에서 실패). 두 job을 나란히
+읽을 때 헷갈릴 여지를 없애는 값이, 실패 로그가 한 단계 덜 명확해지는 값보다
+크다고 봤다. 다만 이제 rebase가 실제로 실행되므로, 이 선택의 무게는 초안
+때보다 커졌다 — 첫 실전 rebase가 예상과 다르게 굴면 `|| true` 제거를 재검토한다.
 
 `ref: main`은 트리거 SHA가 아닌 최신 main의 워크플로로 도는 것을 뜻한다.
 트리거 직후 워크플로가 수정되면 새 버전이 실행된다. etf job이 이미 그렇게
 동작 중이므로 새로 생기는 위험이 아니다.
 
+**etf 변경은 살아있는 발송 경로를 건드린다.** 16주간 (죽은 채로) 안정적이던
+스텝이므로, 변경 후 첫 평일 etf 발송을 반드시 확인한다.
+
 ## 검증 계획
 
-워크플로 2줄 변경이라 단위 테스트가 없다. `dry_run=true`는 push 스텝을
-건너뛰므로(`:113`) rebase 경로를 타지 않고, 실제 인시던트 조건(러너 미배정)은
-재현할 수 없다. 따라서:
+### 1. 재현 실험 (완료 — 2026-08-09)
 
-1. **다음 평일 정상 실행 회귀 확인** — market job 로그에서 `git pull --rebase`
-   라인이 no-op으로 통과하는지, checkout이 main을 잡는지, push·Telegram이
-   평소대로 완료되는지 확인.
-2. 그 이후 재실행 상황이 실제로 생기면 그때가 진짜 검증이다.
+스크래치 bare repo로 두 순서를 비교했다. 워크플로 셸 로직의 등가물이다.
 
-정직하게 말해 이 spec의 가장 약한 부분이다. 근거는 "etf에서 약 16주간 검증된
-동일 구성을 그대로 복사한다"에 기댄다.
+| 순서 | 결과 |
+|---|---|
+| rebase → commit → push (현재) | rebase `exit=128` (`cannot pull with rebase: You have unstaged changes`) → `\|\| true`가 삼킴 → **push 거부** = 인시던트 재현 |
+| commit → rebase → push (변경안) | `Successfully rebased and updated refs/heads/main` → **push 성공**, 히스토리는 `market commit` → `etf commit` 순 선형 |
+
+RED→GREEN이 확인됐다.
+
+### 2. 첫 평일 라이브 확인
+
+- market job 로그: checkout이 main을 잡는지, rebase 라인이 no-op으로 통과하는지,
+  push·Telegram이 평소대로 완료되는지
+- **etf job 발송 확인** (③ 변경의 회귀 감시)
+
+### 3. 실전 재실행
+
+재실행 상황이 실제로 생기면 그때가 진짜 검증이다. 인위적으로 만들지 않는다
+(실제 리포트가 생성·발송되므로).
 
 ## 후속 후보 (이번에 안 함)
 
@@ -174,3 +225,4 @@ push 직전 사이에 새 커밋이 들어와도 흡수한다.
   1시간 47분이 걸렸다.
 - cron-job.org 2차 트리거(예: 07:40 KST) — GitHub `schedule` 백업의 만성 지연
   (그날 3시간)을 우회.
+- `|| true` 제거 — 첫 실전 rebase 관찰 후 재검토.
