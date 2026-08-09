@@ -59,6 +59,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          # 재실행(re-run)은 트리거 시점 SHA를 잡는다. 그사이 etf job이 push해
+          # main이 앞서가면 push가 non-fast-forward로 거부된다(2026-08-07 인시던트).
+          # etf job과 동일하게 항상 최신 main을 체크아웃한다.
+          ref: main
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -117,6 +121,11 @@ jobs:
           REPORT_DATE=${{ steps.report.outputs.date }}
           git add public/reports/ data/
           git commit -m "Daily Market Report - ${REPORT_DATE} (KST)"
+          # ⚠️ rebase는 반드시 commit **뒤**에 온다. git add 앞에 두면 작업 트리가
+          # 더러워 매번 "cannot pull with rebase: You have unstaged changes"(exit 128)로
+          # 거부되고 `|| true`가 이를 삼킨다 — 이 스텝의 발동 조건(changed=='true')이
+          # 더러운 트리를 보장하므로 구조적으로 실행 불가능해진다.
+          git pull --rebase origin main || true
           git push
 
       - name: Wait for Vercel deployment (poll commit status until success)
@@ -254,14 +263,17 @@ jobs:
       - name: Commit and push ETF report
         if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true && inputs.dry_run != 'true'
         run: |
-          # Pull any market-job commit that landed during this run so we
-          # don't race-fail on push.
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin main || true
           REPORT_DATE=${{ steps.etf.outputs.date }}
           git add public/etf-reports/ data/
           git commit -m "ETF Daily Report - ${REPORT_DATE} (KST)"
+          # Pull any market-job commit that landed during this run so we
+          # don't race-fail on push.
+          # ⚠️ commit **뒤**에 와야 한다. git add 앞에 있던 2026-04-18~2026-08-09
+          # 배치에서는 더러운 트리 때문에 매번 exit 128로 거부되고 `|| true`가
+          # 삼켜, 16주간 한 번도 실행되지 않았다.
+          git pull --rebase origin main || true
           git push
 
       - name: Wait for Vercel deployment (poll commit status until success)
