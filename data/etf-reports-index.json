@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-08-11",
+      "type": "morning",
+      "headline": "에너지 6%·반도체 -2.6%, 미 증시 섹터 명암 뚜렷",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-08-11",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-08-10T21:46:50.069Z"
+    },
+    {
       "date": "2026-08-10",
       "type": "morning",
       "headline": "코스피 5% 급락에도 미국 대표지수 ETF는 상승, 금·은이 수익률 상위 독식",
