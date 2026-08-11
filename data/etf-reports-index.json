@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-08-12",
+      "type": "morning",
+      "headline": "에너지·반도체 엇갈린 미 증시, 오늘 국내 개장 30분이 가른다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-08-12",
+      "anomalyCount": 6,
+      "anomalyBreakdown": {
+        "premiumDiscount": 6
+      },
+      "createdAt": "2026-08-11T21:49:43.266Z"
+    },
+    {
       "date": "2026-08-11",
       "type": "morning",
       "headline": "에너지 6%·반도체 -2.6%, 미 증시 섹터 명암 뚜렷",
