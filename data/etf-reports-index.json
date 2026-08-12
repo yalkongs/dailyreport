@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-08-13",
+      "type": "morning",
+      "headline": "7월 CPI 둔화에 SOXX 2.32% 반등…원화 환율이 변수",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-08-13",
+      "anomalyCount": 5,
+      "anomalyBreakdown": {
+        "premiumDiscount": 5
+      },
+      "createdAt": "2026-08-12T21:47:46.402Z"
+    },
+    {
       "date": "2026-08-12",
       "type": "morning",
       "headline": "에너지·반도체 엇갈린 미 증시, 오늘 국내 개장 30분이 가른다",
