@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-08-14",
+      "type": "morning",
+      "headline": "코스피 4% 급등 마감, 용인 클러스터 2.5조 투자 가속",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-08-14",
+      "anomalyCount": 8,
+      "anomalyBreakdown": {
+        "premiumDiscount": 8
+      },
+      "createdAt": "2026-08-13T21:50:23.572Z"
+    },
+    {
       "date": "2026-08-13",
       "type": "morning",
       "headline": "7월 CPI 둔화에 SOXX 2.32% 반등…원화 환율이 변수",
