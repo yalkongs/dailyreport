@@ -1,79 +1,31 @@
 {
-  "generatedAt": "2026-08-09T14:38:29.839Z",
-  "weekRangeStart": "2026-08-09",
-  "weekRangeEnd": "2026-08-23",
+  "generatedAt": "2026-08-16T14:27:12.697Z",
+  "weekRangeStart": "2026-08-16",
+  "weekRangeEnd": "2026-08-30",
   "events": [
     {
       "date": "2026-08-12",
       "category": "employment",
       "name": "2026년 7월 고용동향 발표",
       "importance": 4,
-      "description": "통계청(국가데이터처)의 7월 고용동향 공식 발표. 취업자 수, 실업률, 고용률 등 포함. 공식 공표일정 확인.",
+      "description": "통계청이 발표하는 2026년 7월 기준 경제활동인구조사 결과. 고용률·실업률 등 포함. 공식 공표일정(mods.go.kr PDF)에서 8월 12일(수) 확인.",
       "source": "mods.go.kr"
     },
     {
       "date": "2026-08-13",
-      "category": "other",
-      "name": "한국은행 2026년 7월 금융시장 동향 발표",
-      "importance": 2,
-      "description": "한국은행 2026년 7월 금융시장 동향 보도자료(12시 배포). 단기금융시장·채권·주식·외환시장 월간 동향 포함.",
-      "source": "bok.or.kr"
-    },
-    {
-      "date": "2026-08-13",
-      "category": "other",
-      "name": "한국은행 2026년 7월 이후 국제금융·외환시장 동향 발표",
-      "importance": 1,
-      "description": "한국은행 2026년 7월 이후 국제금융·외환시장 동향 보도자료(12시 배포).",
-      "source": "bok.or.kr"
-    },
-    {
-      "date": "2026-08-14",
-      "category": "trade",
-      "name": "한국은행 2026년 7월 수출입물가지수 및 무역지수(잠정) 발표",
-      "importance": 3,
-      "description": "한국은행이 발표하는 7월 수출입물가지수 및 무역지수 잠정치(6시 배포). 환율 및 원자재 가격 변동 영향을 반영한 물가 선행지표.",
-      "source": "bok.or.kr"
-    },
-    {
-      "date": "2026-08-14",
-      "category": "other",
-      "name": "한국은행 2026년 6월 통화 및 유동성 발표",
-      "importance": 2,
-      "description": "한국은행 6월 통화량(M1·M2) 및 유동성 지표 발표(12시 배포).",
-      "source": "bok.or.kr"
-    },
-    {
-      "date": "2026-08-14",
       "category": "futures_expiry",
-      "name": "KRX KOSPI200 선물·옵션 월물 만기일",
+      "name": "코스피200 선물·옵션 월물 만기일",
       "importance": 2,
-      "description": "8월 둘째 목요일(14일). KOSPI200 선물 및 옵션 8월 월물 동시 만기. 프로그램 매매 변동성 확대 가능성.",
-      "source": "krx.co.kr (관례적 일정 기준)"
-    },
-    {
-      "date": "2026-08-19",
-      "category": "other",
-      "name": "2026년 2/4분기 지역경제동향 발표",
-      "importance": 2,
-      "description": "국가데이터처(통계청) 발표. 2026년 2분기 지역경제동향 공표.",
-      "source": "mods.go.kr"
+      "description": "KRX 코스피200 선물 및 옵션의 8월 월물 최종 결제일. 매월 둘째 목요일 규정에 따라 2026년 8월 13일(목)에 해당. 프로그램 매매 수급 변동 유의.",
+      "source": "krx.co.kr"
     },
     {
       "date": "2026-08-27",
       "category": "bok_mpb",
       "name": "한국은행 금융통화위원회 통화정책방향 결정회의",
       "importance": 5,
-      "description": "2026년 8월 기준금리 결정회의. 2026년 연간 8차 회의 중 6번째. 기준금리 결정 후 총재 기자간담회 예정. 공식 확정 일정(한국은행 발표 기준 8월 27일).",
+      "description": "2026년 여섯 번째 기준금리 결정회의. 한국은행 공식 일정 및 복수 보도에서 8월 27일(목) 확인. 회의 결과는 당일 총재 기자간담회를 통해 발표되며, 의사록은 2주 후 첫 화요일 공개.",
       "source": "bok.or.kr"
-    },
-    {
-      "date": "2026-08-31",
-      "category": "industrial",
-      "name": "2026년 7월 산업활동동향 발표",
-      "importance": 3,
-      "description": "국가데이터처(통계청) 발표. 7월 광공업생산·소비·투자·서비스업생산 등 종합 경기지표. 공식 공표일정 확인.",
-      "source": "mods.go.kr"
     }
   ]
 }
