@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-08-18",
+      "type": "morning",
+      "headline": "무디스 성장률 3.5% 상향, 반도체가 국내 주도",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-08-18",
+      "anomalyCount": 14,
+      "anomalyBreakdown": {
+        "premiumDiscount": 14
+      },
+      "createdAt": "2026-08-17T21:59:02.036Z"
+    },
+    {
       "date": "2026-08-14",
       "type": "morning",
       "headline": "코스피 4% 급등 마감, 용인 클러스터 2.5조 투자 가속",
