@@ -50,9 +50,11 @@ jobs:
   market:
     if: ${{ inputs.only != 'etf' }}
     runs-on: ubuntu-latest
-    # 15분: JSON 파싱 안전망(claude-client.ts)이 최대 3회 재생성할 여유 확보.
+    # 20분: JSON 파싱 안전망(claude-client.ts)이 최대 3회 재생성할 여유 확보.
     # 정상 실행은 ~4~5분이라 평소엔 영향 없음.
-    timeout-minutes: 15
+    # 15→20 (2026-08-18): 글꼴 설치가 상한 5분을 다 쓰면 15분으론 리포트 생성
+    # 여유가 남지 않는다. 아래 글꼴 step 주석의 인시던트 참조.
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
@@ -74,9 +76,26 @@ jobs:
         run: npm ci
 
       - name: Install Korean fonts (runner has no CJK fonts by default)
+        # ⚠️ 2026-08-18 인시던트: `apt-get update`가 출력 한 줄 없이 ~14분 50초
+        # 멈춰 job의 timeout-minutes를 통째로 먹었다. 리포트 생성 step에
+        # 도달하지도 못한 채 job이 취소돼 그날 마켓 리포트가 발송되지 않았다.
+        # (같은 step이 3분 뒤 etf job에서는 15초에 끝났다 — 미러/네트워크 일시 장애.)
+        # 각 시도를 timeout으로 묶어 멈춘 미러를 죽이고 재시도한다. step 자체에도
+        # 상한을 둬, 최악의 경우에도 job 예산의 1/4만 쓰게 한다.
+        timeout-minutes: 5
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq fonts-noto-cjk
+          for i in 1 2 3; do
+            if sudo timeout -k 10 90 apt-get update -qq \
+               && sudo timeout -k 10 120 apt-get install -y -qq fonts-noto-cjk; then
+              break
+            fi
+            if [ "$i" = 3 ]; then
+              echo "::error::fonts-noto-cjk 설치 3회 실패 — CJK 글꼴 없이는 프리뷰 PNG가 깨진다"
+              exit 1
+            fi
+            echo "::warning::apt-get 지연/실패 — 재시도 ${i}/3"
+            sleep 10
+          done
           fc-cache -f
           fc-list :lang=ko | head -3
 
@@ -197,7 +216,8 @@ jobs:
     needs: market
     if: ${{ always() && inputs.only != 'market' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # 10→15 (2026-08-18): 글꼴 설치 상한 5분 + ETF 파이프라인 ~3분에 여유를 둔다.
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository
@@ -216,9 +236,22 @@ jobs:
         run: npm ci
 
       - name: Install Korean fonts (runner has no CJK fonts by default)
+        # market job의 같은 step과 동일한 방어 — 2026-08-18 인시던트 주석 참조.
+        # 이 job은 예산이 더 빠듯해(15분) 멈춘 apt에 오히려 더 취약하다.
+        timeout-minutes: 5
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq fonts-noto-cjk
+          for i in 1 2 3; do
+            if sudo timeout -k 10 90 apt-get update -qq \
+               && sudo timeout -k 10 120 apt-get install -y -qq fonts-noto-cjk; then
+              break
+            fi
+            if [ "$i" = 3 ]; then
+              echo "::error::fonts-noto-cjk 설치 3회 실패 — CJK 글꼴 없이는 프리뷰 PNG가 깨진다"
+              exit 1
+            fi
+            echo "::warning::apt-get 지연/실패 — 재시도 ${i}/3"
+            sleep 10
+          done
           fc-cache -f
 
       - name: Run ETF pipeline
