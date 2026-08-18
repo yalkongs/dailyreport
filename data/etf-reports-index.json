@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-08-19",
+      "type": "morning",
+      "headline": "SOXX -4.96%, 반도체 낙폭 사흘째 누적",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-08-19",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-08-18T21:49:59.283Z"
+    },
+    {
       "date": "2026-08-18",
       "type": "morning",
       "headline": "무디스 성장률 3.5% 상향, 반도체가 국내 주도",
