@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-08-21",
+      "type": "morning",
+      "headline": "코스피 6% 급등 주간, 미 증시는 반대로 마감",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-08-21",
+      "anomalyCount": 8,
+      "anomalyBreakdown": {
+        "premiumDiscount": 8
+      },
+      "createdAt": "2026-08-20T22:56:36.307Z"
+    },
+    {
       "date": "2026-08-20",
       "type": "morning",
       "headline": "금 4,581달러·GDX +9%, 반도체는 거꾸로",
