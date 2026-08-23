@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-08-24",
+      "type": "morning",
+      "headline": "코스피 6% 급등 주간 다음 월요일, 금·비트코인이 먼저 움직였다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-08-24",
+      "anomalyCount": 5,
+      "anomalyBreakdown": {
+        "premiumDiscount": 5
+      },
+      "createdAt": "2026-08-23T21:47:40.492Z"
+    },
+    {
       "date": "2026-08-21",
       "type": "morning",
       "headline": "코스피 6% 급등 주간, 미 증시는 반대로 마감",
