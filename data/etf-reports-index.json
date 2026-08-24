@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-08-25",
+      "type": "morning",
+      "headline": "반도체 직격, 방어주가 버텼다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-08-25",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-08-24T21:53:19.795Z"
+    },
+    {
       "date": "2026-08-24",
       "type": "morning",
       "headline": "코스피 6% 급등 주간 다음 월요일, 금·비트코인이 먼저 움직였다",
