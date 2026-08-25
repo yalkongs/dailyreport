@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-08-26",
+      "type": "morning",
+      "headline": "SK하이닉스 성과급 부결, 반도체 ETF 역풍 속 미 증시는 달랐다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-08-26",
+      "anomalyCount": 12,
+      "anomalyBreakdown": {
+        "premiumDiscount": 12
+      },
+      "createdAt": "2026-08-25T21:51:38.166Z"
+    },
+    {
       "date": "2026-08-25",
       "type": "morning",
       "headline": "반도체 직격, 방어주가 버텼다",
