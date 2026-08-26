@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-08-27",
+      "type": "morning",
+      "headline": "미 증시 숨 고르기, 한은 금리 결정이 오늘의 변수",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-08-27",
+      "anomalyCount": 9,
+      "anomalyBreakdown": {
+        "premiumDiscount": 9
+      },
+      "createdAt": "2026-08-26T21:48:39.568Z"
+    },
+    {
       "date": "2026-08-26",
       "type": "morning",
       "headline": "SK하이닉스 성과급 부결, 반도체 ETF 역풍 속 미 증시는 달랐다",
