@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-08-28",
+      "type": "morning",
+      "headline": "사이버보안이 끌고, 반도체가 받쳤다…미 나스닥 훈풍 국내로",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-08-28",
+      "anomalyCount": 7,
+      "anomalyBreakdown": {
+        "premiumDiscount": 7
+      },
+      "createdAt": "2026-08-27T21:54:22.489Z"
+    },
+    {
       "date": "2026-08-27",
       "type": "morning",
       "headline": "미 증시 숨 고르기, 한은 금리 결정이 오늘의 변수",
