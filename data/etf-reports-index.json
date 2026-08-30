@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-08-31",
+      "type": "morning",
+      "headline": "반도체 3% 이상 밀린 채 시작하는 월요일",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-08-31",
+      "anomalyCount": 10,
+      "anomalyBreakdown": {
+        "premiumDiscount": 10
+      },
+      "createdAt": "2026-08-30T21:52:30.403Z"
+    },
+    {
       "date": "2026-08-28",
       "type": "morning",
       "headline": "사이버보안이 끌고, 반도체가 받쳤다…미 나스닥 훈풍 국내로",
