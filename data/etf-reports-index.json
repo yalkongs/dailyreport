@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-09-01",
+      "type": "morning",
+      "headline": "원유·2차전지 뛰고 금·철강 빠진 8월 마지막 날",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-09-01",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-08-31T21:48:55.008Z"
+    },
+    {
       "date": "2026-08-31",
       "type": "morning",
       "headline": "반도체 3% 이상 밀린 채 시작하는 월요일",
