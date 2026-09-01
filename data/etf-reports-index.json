@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-09-02",
+      "type": "morning",
+      "headline": "유가 급등에 미 증시 일제 후퇴, 에너지만 역주행",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-09-02",
+      "anomalyCount": 10,
+      "anomalyBreakdown": {
+        "premiumDiscount": 10
+      },
+      "createdAt": "2026-09-01T21:47:36.153Z"
+    },
+    {
       "date": "2026-09-01",
       "type": "morning",
       "headline": "원유·2차전지 뛰고 금·철강 빠진 8월 마지막 날",
