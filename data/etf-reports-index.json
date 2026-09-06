@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-09-07",
+      "type": "morning",
+      "headline": "SOXX 3.5% 급등, 국내 반도체는 거꾸로 빠진 주말",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-09-07",
+      "anomalyCount": 6,
+      "anomalyBreakdown": {
+        "premiumDiscount": 6
+      },
+      "createdAt": "2026-09-06T21:47:59.004Z"
+    },
+    {
       "date": "2026-09-04",
       "type": "morning",
       "headline": "코스피 4% 급락에 인버스가 9% 뛴 금요일",
