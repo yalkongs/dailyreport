@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-09-08",
+      "type": "morning",
+      "headline": "SOXX 3.5% 급등, 국내 반도체로 불씨 옮겨붙나",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-09-08",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-09-07T21:50:20.402Z"
+    },
+    {
       "date": "2026-09-07",
       "type": "morning",
       "headline": "SOXX 3.5% 급등, 국내 반도체는 거꾸로 빠진 주말",
