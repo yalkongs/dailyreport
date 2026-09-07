@@ -1,21 +1,21 @@
 {
-  "date": "2026-09-07",
-  "dayOfWeek": "월",
-  "collectedAt": "2026-09-07T06:40:45+09:00",
+  "date": "2026-09-08",
+  "dayOfWeek": "화",
+  "collectedAt": "2026-09-08T06:40:51+09:00",
   "headline": "",
   "items": [
     {
       "name": "코스피",
-      "value": "6,687.21",
-      "change": "+1.64%",
-      "changePercent": 1.6373632,
+      "value": "6,995.39",
+      "change": "+4.61%",
+      "changePercent": 4.6085014,
       "direction": "up"
     },
     {
       "name": "코스닥",
-      "value": "813.5",
-      "change": "+2.95%",
-      "changePercent": 2.947315,
+      "value": "822.19",
+      "change": "+1.07%",
+      "changePercent": 1.0682241,
       "direction": "up"
     },
     {
@@ -41,9 +41,9 @@
     },
     {
       "name": "원/달러",
-      "value": "1,345.3",
-      "change": "-0.78%",
-      "changePercent": -0.7766392,
+      "value": "1,345.06",
+      "change": "-0.07%",
+      "changePercent": -0.06908956,
       "direction": "down"
     },
     {
@@ -62,9 +62,9 @@
     },
     {
       "name": "비트코인",
-      "value": "$79,899",
-      "change": "-0.02%",
-      "changePercent": -0.016854478,
+      "value": "$79,180",
+      "change": "-0.96%",
+      "changePercent": -0.9565249,
       "direction": "down"
     }
   ]
