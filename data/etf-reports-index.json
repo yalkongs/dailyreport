@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-09-09",
+      "type": "morning",
+      "headline": "코스피 5% 급등 다음 날, 미 증시는 뒷걸음",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-09-09",
+      "anomalyCount": 12,
+      "anomalyBreakdown": {
+        "premiumDiscount": 12
+      },
+      "createdAt": "2026-09-08T21:49:01.852Z"
+    },
+    {
       "date": "2026-09-08",
       "type": "morning",
       "headline": "SOXX 3.5% 급등, 국내 반도체로 불씨 옮겨붙나",
