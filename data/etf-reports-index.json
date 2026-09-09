@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-09-10",
+      "type": "morning",
+      "headline": "원자재 독주, S&P500·나스닥 뒷걸음",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-09-10",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-09-09T21:47:47.709Z"
+    },
+    {
       "date": "2026-09-09",
       "type": "morning",
       "headline": "코스피 5% 급등 다음 날, 미 증시는 뒷걸음",
