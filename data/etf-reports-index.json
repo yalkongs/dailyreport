@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-09-11",
+      "type": "morning",
+      "headline": "원유만 오른 금요일, 반도체·금·채권 나란히 밀려",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-09-11",
+      "anomalyCount": 5,
+      "anomalyBreakdown": {
+        "premiumDiscount": 5
+      },
+      "createdAt": "2026-09-10T21:50:17.448Z"
+    },
+    {
       "date": "2026-09-10",
       "type": "morning",
       "headline": "원자재 독주, S&P500·나스닥 뒷걸음",
