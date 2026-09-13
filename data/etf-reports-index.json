@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-09-14",
+      "type": "morning",
+      "headline": "대미투자 발표 임박, 반도체가 앞서 달렸다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-09-14",
+      "anomalyCount": 9,
+      "anomalyBreakdown": {
+        "premiumDiscount": 9
+      },
+      "createdAt": "2026-09-13T21:52:18.327Z"
+    },
+    {
       "date": "2026-09-11",
       "type": "morning",
       "headline": "원유만 오른 금요일, 반도체·금·채권 나란히 밀려",
