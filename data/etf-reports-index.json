@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-09-15",
+      "type": "morning",
+      "headline": "SOXX 5.6% 붕괴, 국내 반도체로 옮겨붙은 하루",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-09-15",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-09-14T21:52:29.443Z"
+    },
+    {
       "date": "2026-09-14",
       "type": "morning",
       "headline": "대미투자 발표 임박, 반도체가 앞서 달렸다",
