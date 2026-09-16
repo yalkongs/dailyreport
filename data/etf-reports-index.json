@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-09-17",
+      "type": "morning",
+      "headline": "FOMC 인상 기대에 반도체 선방, 에너지는 3% 이상 밀려",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-09-17",
+      "anomalyCount": 9,
+      "anomalyBreakdown": {
+        "premiumDiscount": 9
+      },
+      "createdAt": "2026-09-16T21:48:06.318Z"
+    },
+    {
       "date": "2026-09-16",
       "type": "morning",
       "headline": "코스피 3.65% 급락, 반도체 ETF 4~6% 밀린 날",
