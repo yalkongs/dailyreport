@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-09-18",
+      "type": "morning",
+      "headline": "SOXX 3.39% 급등, 한 주를 반도체가 닫다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-09-18",
+      "anomalyCount": 10,
+      "anomalyBreakdown": {
+        "premiumDiscount": 10
+      },
+      "createdAt": "2026-09-17T21:50:11.260Z"
+    },
+    {
       "date": "2026-09-17",
       "type": "morning",
       "headline": "FOMC 인상 기대에 반도체 선방, 에너지는 3% 이상 밀려",
