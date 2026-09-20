@@ -2,7 +2,7 @@
 // KRX OpenAPI가 전일 ETF 일별매매정보를 몇 시에 게시하는지 관측한다 (읽기 전용).
 // 파일을 쓰지 않고 로그만 남긴다. 결과는 `gh run view --log`로 읽는다.
 // 관측이 끝나면(3~5거래일) 이 스크립트와 워크플로의 krx-probe job을 제거한다.
-import { fetchJson } from "../lib/etf/fetcher";
+import { fetchWithTimeout } from "../lib/etf/fetcher";
 import { expectedKrxBasDd, probeDeadlinePassed } from "../lib/etf/krx-session";
 import { getMarketCalendarInfo } from "../lib/market-calendar";
 
@@ -30,20 +30,32 @@ async function main() {
 
   for (;;) {
     const now = kstNow();
-    const data = await fetchJson<{ OutBlock_1?: { BAS_DD: string }[] }>(URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", AUTH_KEY: authKey },
-      body: JSON.stringify({ basDd }),
-    });
-    const rows = data?.OutBlock_1 ?? [];
+    // fetchJson 은 HTTP 오류·타임아웃을 null 로 뭉개므로 쓰지 않는다 — 키 만료나 KRX 장애가
+    // "미게시"로 찍히면 게시 시각 관측 자체가 틀어진다. 조회 실패는 따로 기록한다.
+    let rows: { BAS_DD: string }[] = [];
+    let failure: string | null = null;
+    try {
+      const res = await fetchWithTimeout(URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", AUTH_KEY: authKey },
+        body: JSON.stringify({ basDd }),
+      });
+      if (!res.ok) failure = `HTTP ${res.status}`;
+      else rows = ((await res.json()) as { OutBlock_1?: { BAS_DD: string }[] })?.OutBlock_1 ?? [];
+    } catch (e) {
+      failure = (e as Error).message;
+    }
+    if (failure) {
+      console.log(`[krx-probe] 조회 실패 KST ${now.hhmmss} 요청=${basDd} — ${failure}`);
+    }
     if (rows.length > 0) {
       const rowDates = [...new Set(rows.map((r) => r.BAS_DD))].join(",");
       console.log(`[krx-probe] 게시 확인 KST ${now.hhmmss} 요청=${basDd} 응답 BAS_DD=${rowDates} ${rows.length}건`);
       return;
     }
-    console.log(`[krx-probe] 미게시 KST ${now.hhmmss} 요청=${basDd}`);
+    if (!failure) console.log(`[krx-probe] 미게시 KST ${now.hhmmss} 요청=${basDd}`);
     if (probeDeadlinePassed(now.hhmm)) {
-      console.log(`[krx-probe] 09:10 KST까지 미게시 — 관측 종료`);
+      console.log(`[krx-probe] 09:10 KST까지 게시 확인 못 함 — 관측 종료`);
       return;
     }
     await new Promise((r) => setTimeout(r, INTERVAL_MS));
