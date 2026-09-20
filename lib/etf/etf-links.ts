@@ -59,7 +59,7 @@ const US_GOOGLE_FINANCE_EXCHANGES: Record<string, string> = {
 
 export function googleFinanceQuoteUrl(ticker: string): string | null {
   const normalized = ticker.trim().toUpperCase()
-  const krMatch = normalized.match(/^(\d{6})(?:\.(?:KS|KQ))?$/)
+  const krMatch = normalized.match(/^([0-9][0-9A-Z]{5})(?:\.(?:KS|KQ))?$/)
   if (krMatch) return `${GOOGLE_FINANCE_BASE_URL}/${krMatch[1]}:KRX?hl=ko`
 
   const exchange = US_GOOGLE_FINANCE_EXCHANGES[normalized]

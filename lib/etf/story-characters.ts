@@ -55,7 +55,7 @@ function stripSpaces(s: string): string {
 
 function krCode(q: EtfQuote): string | null {
   const code = q.ticker.replace(/\.(KS|KQ)$/i, '')
-  return /^\d{6}$/.test(code) ? code : null
+  return /^[0-9][0-9A-Z]{5}$/.test(code) ? code : null
 }
 
 const CHARACTER_SLOTS: Array<keyof StoryCharacters> = ['primary', 'gate', 'alternative', 'warning']

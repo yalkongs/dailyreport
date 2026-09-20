@@ -667,7 +667,7 @@ function replaceKnownEtfTickers(text: string, quotes: EtfQuote[]): string {
     .filter(q => q.market === 'KR' && /\.(KS|KQ)$/i.test(q.ticker))
     .sort((a, b) => b.ticker.length - a.ticker.length)
     .reduce((next, quote) => next.replaceAll(quote.ticker, formatEtfIdentity(quote).plain), text)
-  return withKnownNames.replace(/\b(\d{6})\.(KS|KQ)\b/gi, '$1')
+  return withKnownNames.replace(/\b([0-9][0-9A-Z]{5})\.(KS|KQ)\b/gi, '$1')
 }
 
 function renderEtfChips(text: string, quotes: EtfQuote[]): string {
