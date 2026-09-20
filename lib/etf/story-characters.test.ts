@@ -87,3 +87,13 @@ test("narrativeNotes 없으면 검사 skip (Tier 1 fallback 경로)", () => {
   const violations = checkCharacterProseConsistency(report, QUOTES);
   assert.equal(violations.length, 0);
 });
+
+test("영문이 섞인 신형 코드(0098F0)만 있어도 통과", () => {
+  const quotes = [krQuote("0098F0.KS", "KODEX 원자력SMR", 5.0), ...QUOTES.slice(1)];
+  const cards = selectStoryCharacters(quotes);
+  assert.equal(cards.primary?.ticker, "0098F0.KS");
+  const report = reportWithCharacters({
+    characters: { primary: "0098F0 종목이 오늘 가장 크게 움직였습니다." },
+  } as MorningReport["narrativeNotes"]);
+  assert.equal(checkCharacterProseConsistency(report, quotes).length, 0);
+});

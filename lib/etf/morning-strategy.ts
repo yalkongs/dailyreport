@@ -232,7 +232,7 @@ function buildEtfGroupStrategies(data: CollectedData, scores: StrategyScore[]): 
   strategies.push({
     group: '반도체·AI ETF',
     stance: korea >= 2 || pct(quotes.get('SOXX')) !== null && (pct(quotes.get('SOXX')) ?? 0) >= 1 ? '선호' : volatility >= 2 ? '경계' : '관찰',
-    tickers: ['SOXX', 'BOTZ', 'ARKK', '091160.KS', '364970.KS'],
+    tickers: ['SOXX', 'BOTZ', 'ARKK', '091160.KS', '396500.KS'],
     rationale: '나스닥이 강해도 SOXX가 따라오지 않으면, 국내 반도체 ETF로 불씨가 옮겨가는 힘은 제한적입니다.',
     actionGuide: '개장 후 30분의 거래대금이 함께 늘어나는지 확인한 뒤에 접근하는 게 합리적입니다.',
     confirmSignal: 'SOXX와 QQQ가 모두 강하고, 국내 반도체 ETF 거래대금도 같이 커지는 조합이 가장 깨끗합니다.',
@@ -243,7 +243,7 @@ function buildEtfGroupStrategies(data: CollectedData, scores: StrategyScore[]): 
   strategies.push({
     group: '채권 ETF',
     stance: rates <= -1 ? '선호' : rates >= 1 ? '경계' : '중립',
-    tickers: ['SHY', 'IEF', 'TLT', 'BND', '114820.KS', '148070.KS'],
+    tickers: ['SHY', 'IEF', 'TLT', 'BND', '114260.KS', '148070.KS'],
     rationale: rates >= 1 ? '금리 부담이 남아있는 국면에서는 장기채 ETF의 가격 변동폭이 의외로 크게 벌어집니다.' : '금리 압력이 풀리기 시작하면 채권 ETF가 포트폴리오의 방어막 역할을 다시 맡게 됩니다.',
     actionGuide: rates >= 1 ? '금리 부담이 남아있는 동안엔 장기채보다 단기채 쪽에 무게를 두는 게 낫습니다.' : '미국 10년 금리가 실제로 내려오는 구간에 한해 장기채를 들여다봅니다.',
     confirmSignal: '미국 10년 금리가 내려오는 가운데 TLT가 오르는 그림이 나와야 신호가 유효합니다.',
@@ -254,7 +254,7 @@ function buildEtfGroupStrategies(data: CollectedData, scores: StrategyScore[]): 
   strategies.push({
     group: '금·원자재 ETF',
     stance: (pct(quotes.get('GLD')) ?? 0) >= 1 || (pct(quotes.get('SLV')) ?? 0) >= 1 ? '선호' : '관찰',
-    tickers: ['GLD', 'SLV', 'DBC', 'USO', '132030.KS', '261270.KS'],
+    tickers: ['GLD', 'SLV', 'DBC', 'USO', '132030.KS', '261220.KS'],
     rationale: '달러·실질금리·지정학 변수가 같은 방향으로 움직일 때, 금과 원자재 ETF의 전략적 의미가 커집니다.',
     actionGuide: '귀금속과 에너지는 서로 다른 논리로 움직입니다. "원자재"라는 한 단어로 묶어 쫓지 마세요.',
     confirmSignal: 'GLD·SLV와 USO·XLE가 같은 흐름을 만드는지 확인해야 그림이 선명해집니다.',
@@ -265,7 +265,7 @@ function buildEtfGroupStrategies(data: CollectedData, scores: StrategyScore[]): 
   strategies.push({
     group: '환노출 해외 ETF',
     stance: dollar >= 2 ? '관찰' : '중립',
-    tickers: ['360750.KS', '133690.KS', '441680.KS'],
+    tickers: ['360750.KS', '133690.KS', '390390.KS'],
     rationale: dollar >= 2 ? '달러가 강한 국면이라면 이미 들고 있는 몫에는 보탬이지만, 새로 담는 비용은 부담스러워집니다.' : '환율 부담이 크지 않다면 환율보다 지수 흐름을 먼저 놓고 봐도 괜찮습니다.',
     actionGuide: dollar >= 2 ? '보유분 평가엔 환율 효과를 반영하되, 새로 담는 결정은 한 박자 늦추는 게 합리적입니다.' : '환율보다 기초지수 방향이 오늘의 우선순위입니다.',
     confirmSignal: 'USD/KRW가 안정되고 기초지수까지 강해지는 조합이 만들어져야 편입 조건이 나아집니다.',
