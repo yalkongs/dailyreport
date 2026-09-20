@@ -14,11 +14,14 @@ function jobBlock(name: string): string {
   return next < 0 ? rest : rest.slice(0, next + 1);
 }
 
-test("krx-probe: schedule 이벤트에서만 돌고 다른 job과 의존이 없다", () => {
+test("krx-probe: 06:40 정시 dispatch(only=both)에서만 돌고 다른 job과 의존이 없다", () => {
   const job = jobBlock("krx-probe");
-  assert.match(job, /if: \$\{\{ github\.event_name == 'schedule' \}\}/);
+  assert.match(
+    job,
+    /if: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.only == 'both' && inputs\.dry_run != true && inputs\.dry_run != 'true' && inputs\.resend_telegram_only != true && inputs\.resend_telegram_only != 'true' \}\}/,
+  );
   assert.doesNotMatch(job, /needs:/);
-  assert.match(job, /timeout-minutes: 95/);
+  assert.match(job, /timeout-minutes: 170/);
   assert.match(job, /KRX_AUTH_KEY: \$\{\{ secrets\.KRX_AUTH_KEY \}\}/);
   assert.match(job, /npx tsx scripts\/probe-krx-publish\.ts/);
 });

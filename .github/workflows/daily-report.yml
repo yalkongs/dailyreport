@@ -386,14 +386,18 @@ jobs:
             --form-string "parse_mode=HTML"
 
   # KRX OpenAPI 전일 데이터 게시 시각 관측 (읽기 전용, 임시).
-  # 기존 백업 schedule(07:30 KST, 실제 발화 07:45~07:55)에 편승해 09:10 KST까지
+  # 매일 06:40 KST 정시 dispatch(cron-job.org, only=both)에 편승해 09:10 KST까지
   # 5분 간격으로 조회하고 로그만 남긴다. market·etf job과 무관하며 리포트에 영향이 없다.
+  # 백업 schedule에 편승하지 않는 이유: GitHub schedule 지연으로 2026-08-27 이후 실제
+  # 발화가 09:07~10:20 KST라 관측 구간(~09:10)이 통째로 지나간다.
+  # 수동 dispatch(dry_run·resend·only=market|etf)에서는 돌지 않는다.
   # 3~5거래일 관측 후 이 job과 scripts/probe-krx-publish.ts를 제거한다.
   # spec: docs/superpowers/specs/2026-09-20-etf-data-accuracy-design.md
   krx-probe:
-    if: ${{ github.event_name == 'schedule' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.only == 'both' && inputs.dry_run != true && inputs.dry_run != 'true' && inputs.resend_telegram_only != true && inputs.resend_telegram_only != 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 95
+    # 06:40 시작 → 09:10 마감 + 마지막 5분 대기 = 최대 ~155분.
+    timeout-minutes: 170
 
     steps:
       - name: Checkout repository
