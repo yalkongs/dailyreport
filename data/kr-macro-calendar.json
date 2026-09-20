@@ -1,47 +1,63 @@
 {
-  "generatedAt": "2026-09-13T17:21:31.272Z",
-  "weekRangeStart": "2026-09-14",
-  "weekRangeEnd": "2026-09-28",
+  "generatedAt": "2026-09-20T17:21:24.085Z",
+  "weekRangeStart": "2026-09-21",
+  "weekRangeEnd": "2026-10-05",
   "events": [
     {
-      "date": "2026-09-17",
-      "category": "futures_expiry",
-      "name": "코스피200 위클리옵션 만기",
-      "importance": 2,
-      "description": "KRX 코스피200 주간(위클리) 옵션 매주 목요일 만기. 9월 셋째 주 만기일.",
-      "source": "krx.co.kr"
-    },
-    {
-      "date": "2026-09-18",
-      "category": "other",
-      "name": "한국은행 소비자동향조사 (소비자심리지수, CSI) 발표",
+      "date": "2026-09-22",
+      "category": "bok_mpb",
+      "name": "한국은행 금융통화위원회 금융안정회의 (2026년 9월)",
       "importance": 3,
-      "description": "한국은행이 매월 셋째 주 금~넷째 주 초 발표하는 9월 소비자심리지수(CCSI). month2k 경제지표 달력 기준 '2026년 9월 집계 소비자심리지수 발표 예정' 확인. 정확 날짜는 한국은행 공표일정 참조 필요.",
-      "source": "bok.or.kr"
+      "description": "신현송 한국은행 총재 주재 금통위 본회의. 기준금리 결정 회의가 아닌 금융안정 상황 점검 회의(금융안정회의). 회의 후 '금융안정 상황(2026년 9월)' 보고서 발표(11시). 9월은 금융안정회의 개최월.",
+      "source": "newspim.com (이번주 국내 주요 금융일정 9.21~10.2), bok.or.kr"
     },
     {
-      "date": "2026-09-24",
-      "category": "futures_expiry",
-      "name": "코스피200 위클리옵션 만기",
-      "importance": 2,
-      "description": "KRX 코스피200 주간(위클리) 옵션 매주 목요일 만기. 9월 넷째 주 만기일.",
-      "source": "krx.co.kr"
-    },
-    {
-      "date": "2026-09-25",
+      "date": "2026-09-23",
       "category": "other",
-      "name": "한국은행 기업경기실사지수 (BSI) 발표",
-      "importance": 3,
-      "description": "한국은행이 매월 말 발표하는 9월 기업경기실사지수(BSI). month2k 경제지표 달력에서 '2026년 9월 집계 기업심리지수 발표 예정(한국)' 확인. 정확 날짜는 공표일정 참조 필요(추정일).",
-      "source": "bok.or.kr"
+      "name": "한국은행 2026년 9월 소비자동향조사 결과 발표",
+      "importance": 2,
+      "description": "소비자심리지수(CCSI) 등 가계의 경기·소비·금리 전망 포함. 08:00 ECOS 선공개 후 보도자료 배포(6시). 향후 소비 및 물가 기대 파악에 활용.",
+      "source": "newspim.com (이번주 국내 주요 금융일정 9.21~10.2), bok.or.kr"
+    },
+    {
+      "date": "2026-09-29",
+      "category": "other",
+      "name": "한국은행 2026년 9월 기업경기조사(BSI) 및 경제심리지수(ESI) 발표",
+      "importance": 2,
+      "description": "제조업·비제조업 업황 BSI 및 종합 경제심리지수(ESI) 발표(06시). 당월 경기 체감 선행 지표로 활용.",
+      "source": "newspim.com (이번주 국내 주요 금융일정 9.21~10.2), bok.or.kr"
+    },
+    {
+      "date": "2026-09-29",
+      "category": "bok_mpb",
+      "name": "한국은행 금통위 의사록 공개 (2026년 제17차, 9월 10일 개최)",
+      "importance": 2,
+      "description": "9월 10일 개최된 비통화정책방향(비통방) 금통위 의사록 공개(16시). 위원들의 경기·금융 안정 판단 확인 가능.",
+      "source": "newspim.com (이번주 국내 주요 금융일정 9.21~10.2)"
     },
     {
       "date": "2026-09-30",
-      "category": "industrial",
-      "name": "2026년 8월 산업활동동향 발표",
+      "category": "trade",
+      "name": "산업통상자원부 2026년 9월 수출입 동향 (잠정)",
       "importance": 3,
-      "description": "국가데이터처(구 통계청) 산업동향과가 발표하는 8월 산업생산·소매판매·설비투자 지표. 공식 보도계획표(mods.go.kr)에서 '2026년 8월 산업활동동향 9.30.(수)' 확인.",
-      "source": "mods.go.kr"
+      "description": "매월 말일 또는 익월 첫날 산업통상자원부가 전월 수출입 잠정치 발표. 9월분은 9월 30일 또는 10월 1일 발표 관행. 반도체·자동차 등 주력 품목 수출 증감률 주목.",
+      "source": "motir.go.kr (산업통상자원부) — 발표일 잠정, 관행 기준"
+    },
+    {
+      "date": "2026-10-01",
+      "category": "cpi",
+      "name": "통계청 2026년 9월 소비자물가동향 (CPI)",
+      "importance": 5,
+      "description": "통계청이 매월 초(전월 말~익월 2일 이내) 발표하는 소비자물가지수. 2026년 8월분은 9월 2일 발표 확인(mods.go.kr). 9월분은 10월 1일(목) 발표 예상. 한국은행 통화정책 핵심 참고 지표.",
+      "source": "mods.go.kr/ansk/file/schedule_2026.pdf, kostat.go.kr"
+    },
+    {
+      "date": "2026-10-08",
+      "category": "futures_expiry",
+      "name": "KRX 코스피200 주가지수 선물·옵션 월물 만기일 (10월)",
+      "importance": 2,
+      "description": "KRX 규정상 주가지수 선물·옵션 만기일은 매월 둘째 목요일. 2026년 10월 둘째 목요일은 10월 8일. 만기일 전후 프로그램 매매 집중으로 시장 변동성 확대 가능.",
+      "source": "krx.co.kr (KRX 파생상품시장 규정 — 만기일 산출 규칙 적용)"
     }
   ]
 }
