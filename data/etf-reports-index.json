@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-09-21",
+      "type": "morning",
+      "headline": "SOXX 2.7% 상승, 국내 반도체는 엇갈려",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-09-21",
+      "anomalyCount": 8,
+      "anomalyBreakdown": {
+        "premiumDiscount": 8
+      },
+      "createdAt": "2026-09-20T21:52:14.670Z"
+    },
+    {
       "date": "2026-09-18",
       "type": "morning",
       "headline": "SOXX 3.39% 급등, 한 주를 반도체가 닫다",
