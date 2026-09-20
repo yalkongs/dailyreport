@@ -173,10 +173,10 @@ export function applySoftFixesInPlace(report: MorningReport): string[] {
   return fixed
 }
 
-function flattenMorningReport(report: MorningReport): string {
+function flattenMorningReport(report: MorningReport, options: { includeCover?: boolean } = {}): string {
+  const includeCover = options.includeCover ?? true
   const core: (string | undefined)[] = [
-    report.cover.headline,
-    report.cover.subline,
+    ...(includeCover ? [report.cover.headline, report.cover.subline] : []),
     report.overnightBrief.narrative,
     report.overnightBrief.krImpact,
     report.usEtfHighlights.topMover.reason,
@@ -257,8 +257,35 @@ function findUnqualifiedAmbiguousWords(text: string): string[] {
       hits.push(`…${window.replace(/\n/g, ' ').trim()}…`)
     }
   }
-  // 중복 제거 + 최대 3건만 노출
-  return [...new Set(hits)].slice(0, 3)
+  return [...new Set(hits)]
+}
+
+const AMBIGUOUS_SAMPLE_LIMIT = 3 // 로그·위반 메시지에 노출할 표본 수
+
+/**
+ * '지수/증시/시장' 단독 표기 판정. 적용 범위 (2026-09-21):
+ *  - 커버(헤드라인·서브라인): 독자가 가장 먼저 보는 자리 — 한 건이라도 hard violation.
+ *  - 본문: 기록 전용. 문맥상 오해 여지가 없는 자연스러운 표현("해외 지수 추종 ETF",
+ *    "시장 주도권", "지수 상승분")까지 기각해 1회차 실패 68%·서사 없는 축소판 발송 28%를
+ *    만들던 '3회 이상 hard' 분기를 없앴다. 건수는 로그로 남겨 추후 점검한다.
+ */
+export function assessAmbiguousMarketWords(report: MorningReport): {
+  coverHits: string[]
+  bodyCount: number
+  bodySamples: string[]
+} {
+  // 헤드라인과 서브라인은 따로 본다 — 이어 붙이면 헤드라인의 '지수'가 서브라인 첫머리의
+  // '나스닥' 같은 수식어에 기대 통과한다(20자 창이 줄 경계를 넘음).
+  const coverHits = [
+    ...findUnqualifiedAmbiguousWords(report.cover.headline ?? ''),
+    ...findUnqualifiedAmbiguousWords(report.cover.subline ?? ''),
+  ].slice(0, AMBIGUOUS_SAMPLE_LIMIT)
+  const bodyHits = findUnqualifiedAmbiguousWords(flattenMorningReport(report, { includeCover: false }))
+  return {
+    coverHits,
+    bodyCount: bodyHits.length,
+    bodySamples: bodyHits.slice(0, AMBIGUOUS_SAMPLE_LIMIT),
+  }
 }
 
 export interface ConsistencySoftFixResult {
@@ -406,24 +433,16 @@ export function validateMorningReportQuality(
     violations.push('krImpact는 해외 ETF 또는 거시지표와 국내 ETF 실행 확인점을 직접 연결해야 합니다')
   }
 
-  // P3: 애매어 (지수/증시/시장 단독) — 한국 독자 오해 방지. 헤드라인/서브라인은
-  // 특히 엄격히. 본문에서는 시장 수식어가 20자 창 안에 없을 때만 경고.
-  const coverAmbiguous = findUnqualifiedAmbiguousWords(
-    `${report.cover.headline}\n${report.cover.subline}`
-  )
-  if (coverAmbiguous.length > 0) {
+  // P3: 애매어 (지수/증시/시장 단독) — 한국 독자 오해 방지.
+  // 커버는 hard, 본문은 기록 전용 (assessAmbiguousMarketWords 주석 참조).
+  const ambiguous = assessAmbiguousMarketWords(report)
+  if (ambiguous.coverHits.length > 0) {
     violations.push(
-      `커버(헤드라인/서브라인)에 시장이 특정되지 않은 '지수/증시/시장' 표현: ${coverAmbiguous.join(' | ')}`
+      `커버(헤드라인/서브라인)에 시장이 특정되지 않은 '지수/증시/시장' 표현: ${ambiguous.coverHits.join(' | ')}`
     )
   }
-  const bodyAmbiguous = findUnqualifiedAmbiguousWords(text)
-  if (bodyAmbiguous.length >= 3) {
-    // 본문 3회 이상 누적되면 hard violation — 체계적 오남용
-    violations.push(
-      `시장 특정 없이 '지수/증시/시장' 표현이 3회 이상: ${bodyAmbiguous.join(' | ')}`
-    )
-  } else if (bodyAmbiguous.length > 0) {
-    console.log(`  [soft-warn] 본문 애매어 ${bodyAmbiguous.length}건 (허용 한도 이하): ${bodyAmbiguous.join(' | ')}`)
+  if (ambiguous.bodyCount > 0) {
+    console.log(`  [soft-warn] 본문 애매어 ${ambiguous.bodyCount}건 (기록 전용): ${ambiguous.bodySamples.join(' | ')}`)
   }
 
   if (violations.length > 0) {
