@@ -384,3 +384,33 @@ jobs:
             --form-string "photo=${OG_IMAGE_URL}" \
             --form-string "caption=${MESSAGE}" \
             --form-string "parse_mode=HTML"
+
+  # KRX OpenAPI 전일 데이터 게시 시각 관측 (읽기 전용, 임시).
+  # 기존 백업 schedule(07:30 KST, 실제 발화 07:45~07:55)에 편승해 09:10 KST까지
+  # 5분 간격으로 조회하고 로그만 남긴다. market·etf job과 무관하며 리포트에 영향이 없다.
+  # 3~5거래일 관측 후 이 job과 scripts/probe-krx-publish.ts를 제거한다.
+  # spec: docs/superpowers/specs/2026-09-20-etf-data-accuracy-design.md
+  krx-probe:
+    if: ${{ github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Probe KRX publish time
+        env:
+          KRX_AUTH_KEY: ${{ secrets.KRX_AUTH_KEY }}
+        run: npx tsx scripts/probe-krx-publish.ts
