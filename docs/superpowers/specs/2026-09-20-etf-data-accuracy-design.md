@@ -52,15 +52,19 @@ KRX OpenAPI는 전일 데이터를 익영업일 08:00경 갱신한다고 알려�
 
 ### 1. KRX 게시 시각 관측 (먼저 배포, 리포트 무영향)
 
-`daily-report.yml`에 **schedule 이벤트에서만** 도는 job `krx-probe`를 추가한다. 기존 백업
-schedule(`30 22 * * 0-4`, 최근 실제 발화 07:47~07:54. GitHub 지연 시 더 늦을 수 있고, 그 경우
-"이미 게시됨"만 기록된다)에 편승하므로 새 cron·새 워크플로·cron-job.org
-작업이 필요 없다.
+`daily-report.yml`에 **06:40 KST 정시 dispatch(only=both)에서만** 도는 job `krx-probe`를 추가한다.
+새 cron·새 워크플로·cron-job.org 작업이 필요 없다.
+
+> 정정(2026-09-20): 처음엔 07:30 백업 schedule에 편승시켰으나, push 직후 실행 이력을 확인하니
+> GitHub schedule 지연으로 08-27 이후 백업의 실제 발화가 09:07~10:20 KST(심하면 12:25·15:12)였다.
+> 관측 구간(~09:10)이 통째로 지나가므로 정시 dispatch 편승으로 바꿨다. **이 지연은 Phase 2의
+> ETF 백업 cron(08:35 KST 의도)도 사실상 개장 후에 돌게 만든다 — Phase 2 착수 전에 백업 수단을
+> cron-job.org 2차 트리거로 바꿀지 재검토한다.**
 
 - `scripts/probe-krx-publish.ts`: `getPrevTradingDay(오늘, "kr")`를 basDd로 5분 간격 조회.
   행이 나오면 `[krx-probe] KST HH:MM:SS 요청=YYYYMMDD 응답 BAS_DD=… N건`을 출력하고 종료.
   09:10 KST까지 안 나오면 "미게시"를 출력하고 종료(exit 0 — 관측 실패가 빨간 배지를 만들지 않음).
-- 읽기 전용: 파일 쓰기·커밋·발송 없음. market·etf job과 `needs` 관계 없음. `timeout-minutes: 95`.
+- 읽기 전용: 파일 쓰기·커밋·발송 없음. market·etf job과 `needs` 관계 없음. `timeout-minutes: 170`(06:40 시작 → 09:10 마감).
 - 한국 휴장일이면 즉시 종료.
 - 3~5거래일 로그(`gh run view --log`)로 게시 시각 분포를 보고 발송 시각(08:10)을 확정한다.
   관측이 끝나면 이 job은 제거한다.
