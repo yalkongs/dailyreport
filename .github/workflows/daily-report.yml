@@ -44,7 +44,7 @@ env:
 
 permissions:
   contents: write
-  statuses: read   # 배포 검증 step이 commit status(context=Vercel)를 읽는다
+  statuses: write  # Vercel 배포 상태 읽기 + Telegram 발송 상태(telegram/market·etf) 기록
 
 jobs:
   market:
@@ -55,6 +55,11 @@ jobs:
     # 15→20 (2026-08-18): 글꼴 설치가 상한 5분을 다 쓰면 15분으론 리포트 생성
     # 여유가 남지 않는다. 아래 글꼴 step 주석의 인시던트 참조.
     timeout-minutes: 20
+    # 같은 종류의 job은 실행(run) 간에도 직렬로 — 정시·2차·3순위·수동 실행이 겹쳐도 뒤 실행이
+    # 앞 실행의 커밋과 발송 상태를 반드시 보게 한다. 진행 중 실행은 취소하지 않는다.
+    concurrency:
+      group: daily-report-market
+      cancel-in-progress: false
 
     steps:
       - name: Checkout repository
@@ -117,15 +122,6 @@ jobs:
           HEADLINE=$(node -e "const i=JSON.parse(require('fs').readFileSync('data/reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');console.log(r?.headline||'오늘의 시장 리포트')")
           echo "headline=${HEADLINE}" >> $GITHUB_OUTPUT
 
-      - name: Read today's market headline (resend mode)
-        id: read_today
-        if: ${{ inputs.resend_telegram_only == true || inputs.resend_telegram_only == 'true' }}
-        run: |
-          REPORT_DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
-          echo "date=${REPORT_DATE}" >> $GITHUB_OUTPUT
-          HEADLINE=$(node -e "const i=JSON.parse(require('fs').readFileSync('data/reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');console.log(r?.headline||'오늘의 시장 리포트')")
-          echo "headline=${HEADLINE}" >> $GITHUB_OUTPUT
-
       - name: Check for changes
         id: changes
         if: ${{ inputs.resend_telegram_only != true && inputs.resend_telegram_only != 'true' }}
@@ -147,8 +143,17 @@ jobs:
           git pull --rebase origin main || true
           git push
 
+      - name: Resolve delivery (보낼지 판정 — 발송 상태는 리포트 커밋의 commit status)
+        id: delivery
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANGED: ${{ steps.changes.outputs.changed }}
+          FORCE_RESEND: ${{ (inputs.resend_telegram_only == true || inputs.resend_telegram_only == 'true') && 'true' || 'false' }}
+          DRY_RUN: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && 'true' || 'false' }}
+        run: npx tsx scripts/delivery-state.ts resolve market
+
       - name: Wait for Vercel deployment (poll commit status until success)
-        if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true && inputs.dry_run != 'true'
+        if: steps.delivery.outputs.action == 'send'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -177,19 +182,27 @@ jobs:
           exit 1
 
       - name: Send Telegram notification
-        if: ${{ (inputs.resend_telegram_only == true || inputs.resend_telegram_only == 'true') || (steps.changes.outputs.changed == 'true' && inputs.dry_run != true && inputs.dry_run != 'true') }}
+        if: steps.delivery.outputs.action == 'send'
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          REPORT_DATE: ${{ steps.delivery.outputs.date }}
+          REPORT_SHA: ${{ steps.delivery.outputs.sha }}
+          HEADLINE: ${{ steps.delivery.outputs.headline }}
+          IS_RESEND: ${{ steps.delivery.outputs.resend }}
+          FORCE_RESEND: ${{ (inputs.resend_telegram_only == true || inputs.resend_telegram_only == 'true') && 'true' || 'false' }}
         run: |
-          set -x
-          REPORT_DATE="${{ steps.report.outputs.date || steps.read_today.outputs.date }}"
-          HEADLINE="${{ steps.report.outputs.headline || steps.read_today.outputs.headline }}"
+          # 발송 직전 재확인 — 수동 re-run·겹친 실행 방어. 사람의 명시적 재발송만 우회한다.
+          CURRENT=$(npx tsx scripts/delivery-state.ts status market "$REPORT_SHA" | tail -1)
+          if [ "$FORCE_RESEND" != "true" ] && [ "$CURRENT" != "none" ] && [ "$CURRENT" != "failure" ]; then
+            echo "발송 생략: 현재 status=${CURRENT} (success=이미 발송, pending·error=결과 불명)"
+            exit 0
+          fi
           REPORT_URL="https://dailyreport-eta.vercel.app/reports/${REPORT_DATE}"
           # Cache-bust only in resend mode — Telegram caches images by URL,
           # so we need a unique URL if the PNG on Vercel was updated after
           # a previous Telegram fetch.
-          IS_RESEND='${{ inputs.resend_telegram_only }}'
           if [ "$IS_RESEND" = "true" ]; then
             OG_IMAGE_URL="https://dailyreport-eta.vercel.app/reports/${REPORT_DATE}-preview.png?v=${GITHUB_RUN_ID}"
           else
@@ -206,11 +219,25 @@ jobs:
 
           # --form-string: value는 리터럴로 처리 (caption이 '<'로 시작하면
           # -F는 "파일에서 읽기"로 오해해 exit 26 낸다. 이모지 제거로 노출됨)
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto" \
+          # 발송 직전에 pending을 먼저 기록한다 — 발송 뒤 결과 기록에 실패해도 다음 실행이
+          # '결과 불명'으로 보고 재발송하지 않게. pending 기록에 실패하면 보내지 않는다.
+          npx tsx scripts/delivery-state.ts mark market "$REPORT_SHA" pending "Telegram 발송 시도 중"
+
+          RESPONSE=$(curl -s --max-time 30 -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto" \
             --form-string "chat_id=${TELEGRAM_CHAT_ID}" \
             --form-string "photo=${OG_IMAGE_URL}" \
             --form-string "caption=${MESSAGE}" \
-            --form-string "parse_mode=HTML"
+            --form-string "parse_mode=HTML" || true)
+
+          CLASSIFIED=$(printf '%s' "$RESPONSE" | npx tsx scripts/delivery-state.ts classify)
+          STATE=$(printf '%s\n' "$CLASSIFIED" | sed -n 1p)
+          DETAIL=$(printf '%s\n' "$CLASSIFIED" | sed -n 2p)
+          echo "Telegram: ${STATE} — ${DETAIL}"
+          npx tsx scripts/delivery-state.ts mark market "$REPORT_SHA" "$STATE" "$DETAIL"
+          if [ "$STATE" != "success" ]; then
+            echo "::error::Telegram 발송 ${STATE} — ${DETAIL}"
+            exit 1
+          fi
 
   etf:
     needs: market
@@ -218,6 +245,11 @@ jobs:
     runs-on: ubuntu-latest
     # 10→15 (2026-08-18): 글꼴 설치 상한 5분 + ETF 파이프라인 ~3분에 여유를 둔다.
     timeout-minutes: 15
+    # 같은 종류의 job은 실행(run) 간에도 직렬로 — 정시·2차·3순위·수동 실행이 겹쳐도 뒤 실행이
+    # 앞 실행의 커밋과 발송 상태를 반드시 보게 한다. 진행 중 실행은 취소하지 않는다.
+    concurrency:
+      group: daily-report-etf
+      cancel-in-progress: false
 
     steps:
       - name: Checkout repository
@@ -274,19 +306,6 @@ jobs:
           echo "anomaly_count=${ANOMALY_COUNT}" >> $GITHUB_OUTPUT
           echo "anomaly_breakdown=${ANOMALY_BREAKDOWN}" >> $GITHUB_OUTPUT
 
-      - name: Read today's ETF headline (resend mode)
-        id: read_etf_today
-        if: ${{ inputs.resend_telegram_only == true || inputs.resend_telegram_only == 'true' }}
-        run: |
-          REPORT_DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
-          echo "date=${REPORT_DATE}" >> $GITHUB_OUTPUT
-          HEADLINE=$(node -e "const i=JSON.parse(require('fs').readFileSync('data/etf-reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');console.log(r?.headline||'오늘의 ETF 리포트')")
-          ANOMALY_COUNT=$(node -e "const i=JSON.parse(require('fs').readFileSync('data/etf-reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');console.log(r?.anomalyCount||0)")
-          ANOMALY_BREAKDOWN=$(node -e "const L={premiumDiscount:'괴리율',trackingError:'추적오차',volumeSpike:'거래량',consecutiveSell:'매도'};const i=JSON.parse(require('fs').readFileSync('data/etf-reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');const b=r?.anomalyBreakdown||{};const s=Object.entries(b).filter(([,c])=>c>0).map(([t,c])=>(L[t]||t)+' '+c).join('/');console.log(s)")
-          echo "headline=${HEADLINE}" >> $GITHUB_OUTPUT
-          echo "anomaly_count=${ANOMALY_COUNT}" >> $GITHUB_OUTPUT
-          echo "anomaly_breakdown=${ANOMALY_BREAKDOWN}" >> $GITHUB_OUTPUT
-
       - name: Check for changes
         id: changes
         if: ${{ inputs.resend_telegram_only != true && inputs.resend_telegram_only != 'true' }}
@@ -309,8 +328,17 @@ jobs:
           git pull --rebase origin main || true
           git push
 
+      - name: Resolve delivery (보낼지 판정 — 발송 상태는 리포트 커밋의 commit status)
+        id: delivery
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANGED: ${{ steps.changes.outputs.changed }}
+          FORCE_RESEND: ${{ (inputs.resend_telegram_only == true || inputs.resend_telegram_only == 'true') && 'true' || 'false' }}
+          DRY_RUN: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && 'true' || 'false' }}
+        run: npx tsx scripts/delivery-state.ts resolve etf
+
       - name: Wait for Vercel deployment (poll commit status until success)
-        if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true && inputs.dry_run != 'true'
+        if: steps.delivery.outputs.action == 'send'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -339,16 +367,25 @@ jobs:
           exit 1
 
       - name: Send ETF Telegram notification
-        if: ${{ (inputs.resend_telegram_only == true || inputs.resend_telegram_only == 'true') || (steps.changes.outputs.changed == 'true' && inputs.dry_run != true && inputs.dry_run != 'true') }}
+        if: steps.delivery.outputs.action == 'send'
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          REPORT_DATE: ${{ steps.delivery.outputs.date }}
+          REPORT_SHA: ${{ steps.delivery.outputs.sha }}
+          HEADLINE: ${{ steps.delivery.outputs.headline }}
+          IS_RESEND: ${{ steps.delivery.outputs.resend }}
+          FORCE_RESEND: ${{ (inputs.resend_telegram_only == true || inputs.resend_telegram_only == 'true') && 'true' || 'false' }}
+          ANOMALY_COUNT: ${{ steps.delivery.outputs.anomaly_count }}
+          ANOMALY_BREAKDOWN: ${{ steps.delivery.outputs.anomaly_breakdown }}
         run: |
-          set -x
-          REPORT_DATE="${{ steps.etf.outputs.date || steps.read_etf_today.outputs.date }}"
-          HEADLINE="${{ steps.etf.outputs.headline || steps.read_etf_today.outputs.headline }}"
-          ANOMALY_COUNT="${{ steps.etf.outputs.anomaly_count || steps.read_etf_today.outputs.anomaly_count }}"
-          ANOMALY_BREAKDOWN="${{ steps.etf.outputs.anomaly_breakdown || steps.read_etf_today.outputs.anomaly_breakdown }}"
+          # 발송 직전 재확인 — 수동 re-run·겹친 실행 방어. 사람의 명시적 재발송만 우회한다.
+          CURRENT=$(npx tsx scripts/delivery-state.ts status etf "$REPORT_SHA" | tail -1)
+          if [ "$FORCE_RESEND" != "true" ] && [ "$CURRENT" != "none" ] && [ "$CURRENT" != "failure" ]; then
+            echo "발송 생략: 현재 status=${CURRENT} (success=이미 발송, pending·error=결과 불명)"
+            exit 0
+          fi
           REPORT_URL="https://dailyreport-eta.vercel.app/etf-reports/${REPORT_DATE}"
 
           # 날짜 포맷 (예: 4월 20일 월요일)
@@ -372,18 +409,31 @@ jobs:
           # Static preview PNG generated by scripts/run-etf.ts. We attach
           # it explicitly via sendPhoto so Telegram's preview cache trap
           # (cached "no preview" on first 404) cannot strike.
-          IS_RESEND='${{ inputs.resend_telegram_only }}'
           if [ "$IS_RESEND" = "true" ]; then
             OG_IMAGE_URL="https://dailyreport-eta.vercel.app/etf-reports/${REPORT_DATE}-preview.png?v=${GITHUB_RUN_ID}"
           else
             OG_IMAGE_URL="https://dailyreport-eta.vercel.app/etf-reports/${REPORT_DATE}-preview.png"
           fi
 
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto" \
+          # 발송 직전에 pending을 먼저 기록한다 — 발송 뒤 결과 기록에 실패해도 다음 실행이
+          # '결과 불명'으로 보고 재발송하지 않게. pending 기록에 실패하면 보내지 않는다.
+          npx tsx scripts/delivery-state.ts mark etf "$REPORT_SHA" pending "Telegram 발송 시도 중"
+
+          RESPONSE=$(curl -s --max-time 30 -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto" \
             --form-string "chat_id=${TELEGRAM_CHAT_ID}" \
             --form-string "photo=${OG_IMAGE_URL}" \
             --form-string "caption=${MESSAGE}" \
-            --form-string "parse_mode=HTML"
+            --form-string "parse_mode=HTML" || true)
+
+          CLASSIFIED=$(printf '%s' "$RESPONSE" | npx tsx scripts/delivery-state.ts classify)
+          STATE=$(printf '%s\n' "$CLASSIFIED" | sed -n 1p)
+          DETAIL=$(printf '%s\n' "$CLASSIFIED" | sed -n 2p)
+          echo "Telegram: ${STATE} — ${DETAIL}"
+          npx tsx scripts/delivery-state.ts mark etf "$REPORT_SHA" "$STATE" "$DETAIL"
+          if [ "$STATE" != "success" ]; then
+            echo "::error::Telegram 발송 ${STATE} — ${DETAIL}"
+            exit 1
+          fi
 
   # KRX OpenAPI 전일 데이터 게시 시각 관측 (읽기 전용, 임시).
   # 매일 06:40 KST 정시 dispatch(cron-job.org, only=both)에 편승해 09:10 KST까지
