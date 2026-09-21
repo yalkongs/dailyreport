@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 낙관론이 유가 자리를 차지했다 - iM AI Market Report</title>
+<meta property="og:title" content="AI 낙관론이 유가 자리를 차지했다">
+<meta property="og:description" content="간밤(2026-09-21 현지 마감) 나스닥이 +2.26%로 사상 최고치를 경신했습니다. 메타·인텔이 급등하고 WTI 원유는 -4.28% 빠지며 배럴당 91달러대로 내려앉았습니다. 인플레이션을 자극하던 변수 하나가 빠진 자리에, AI 기대감이 그대로 들어찼습니다.">
+<meta property="og:type" content="article">
+<meta property="og:image" content="https://dailyreport-eta.vercel.app/reports/2026-09-22-preview.png">
+<meta property="og:image:width" content="1080">
+<meta property="og:image:height" content="1350">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="AI 낙관론이 유가 자리를 차지했다">
+<meta name="twitter:description" content="간밤(2026-09-21 현지 마감) 나스닥이 +2.26%로 사상 최고치를 경신했습니다. 메타·인텔이 급등하고 WTI 원유는 -4.28% 빠지며 배럴당 91달러대로 내려앉았습니다. 인플레이션을 자극하던 변수 하나가 빠진 자리에, AI 기대감이 그대로 들어찼습니다.">
+<meta name="twitter:image" content="https://dailyreport-eta.vercel.app/reports/2026-09-22-preview.png">
+<style>
+/* iM AI Market Report — Standardized Template CSS */
+/* 이 파일은 Claude가 생성한 HTML에 자동 주입됩니다. Claude의 인라인 <style>은 제거됩니다. */
+
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
+:root {
+  /* iM금융 CI 리프레시 (2026-07-01): 민트+라임. 레이아웃 무변경, 색만.
+     값은 ETF 렌더러(etf/renderer.ts)의 기존 iM 팔레트에 정확히 정렬 — 두 리포트 팔레트 통일.
+     --navy = 다크 잉크(제목·강조 텍스트·다크 배경), --teal = iM 민트(장식 액센트). */
+  --navy: #161B1D;        /* ETF --ink 정렬 — 제목/강조 텍스트, 캘린더 헤더 배경 */
+  --teal: #00BFA5;        /* ETF --im-teal — iM 민트, 밑줄/보더/채움 액센트 */
+  --mint-deep: #008F7F;   /* ETF --im-teal-deep — 헤더 그라데이션 끝·소형 액센트 텍스트 */
+  --lime: #84D96B;        /* ETF --im-mint — 라이트 그린 포인트 */
+  --slate: #8B9DAF;
+  --bg: #F5F7F3;          /* ETF --paper — 페이퍼 오프화이트 */
+  --card-bg: #FFFFFF;
+  --text: #1A2421;        /* ETF 본문 톤 near-black */
+  --text-sub: #5A6577;
+  --border: #E2E8F0;
+  --up: #D32F2F;          /* 상승 빨강 (한국식·기능색 유지) */
+  --down: #1565C0;        /* 하락 파랑 (유지) */
+  --up-bg: rgba(211, 47, 47, 0.06);
+  --down-bg: rgba(21, 101, 192, 0.06);
+}
+
+
+.report-embed * { margin: 0; padding: 0; box-sizing: border-box; }
+
+.report-embed {
+  font-family: 'Pretendard Variable', 'Pretendard', -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  font-size: 16px;
+  line-height: 1.8;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.report-container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ===== 1. COVER ===== */
+.cover {
+  background: linear-gradient(135deg, #00BFA5 0%, #008F7F 100%);
+  color: #FFFFFF;
+  padding: 48px 32px 40px;
+  border-radius: 0 0 24px 24px;
+  margin: 0 -20px 48px;
+  position: relative;
+}
+.cover .cover-date {
+  font-size: 14px;
+  opacity: 0.85;
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+.cover .cover-headline {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+}
+.cover .cover-subline {
+  font-size: 16px;
+  opacity: 0.92;
+  line-height: 1.6;
+}
+.cover .cover-byline {
+  margin-top: 24px;
+  font-size: 13px;
+  opacity: 0.7;
+  font-weight: 500;
+}
+
+/* ===== 2. SECTION COMMON ===== */
+.section {
+  margin-bottom: 56px;
+}
+.section-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  position: relative;
+}
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--teal), var(--lime));
+  border-radius: 2px;
+}
+
+/* ===== 3. MARKET PULSE (히트맵) ===== */
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.pulse-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  transition: transform 0.15s;
+}
+.pulse-card:hover { transform: translateY(-1px); }
+.pulse-card .label {
+  font-size: 13px;
+  color: var(--slate);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+.pulse-card .value {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  text-align: right;
+}
+.pulse-card .change {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+  text-align: right;
+}
+.pulse-card .change.up { color: var(--up); }
+.pulse-card .change.down { color: var(--down); }
+.pulse-card .change.flat { color: var(--slate); }
+
+/* 히트맵 배경 강도 */
+.pulse-card.heat-up-1 { background: rgba(211,47,47,0.04); }
+.pulse-card.heat-up-2 { background: rgba(211,47,47,0.08); }
+.pulse-card.heat-up-3 { background: rgba(211,47,47,0.15); }
+.pulse-card.heat-up-4 { background: rgba(211,47,47,0.25); }
+.pulse-card.heat-up-5 { background: rgba(211,47,47,0.35); }
+.pulse-card.heat-down-1 { background: rgba(21,101,192,0.04); }
+.pulse-card.heat-down-2 { background: rgba(21,101,192,0.08); }
+.pulse-card.heat-down-3 { background: rgba(21,101,192,0.15); }
+.pulse-card.heat-down-4 { background: rgba(21,101,192,0.25); }
+.pulse-card.heat-down-5 { background: rgba(21,101,192,0.35); }
+
+/* ===== HISTORICAL CHART ===== */
+.chart-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  margin-top: 16px;
+}
+.chart-card .chart-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.chart-card svg { width: 100%; }
+
+/* ===== NARRATIVE ===== */
+.narrative p {
+  margin-bottom: 20px;
+  text-align: justify;
+}
+.narrative strong {
+  color: var(--navy);
+  font-weight: 700;
+}
+
+.pull-quote {
+  border-left: 4px solid var(--teal);
+  padding: 20px 24px;
+  margin: 32px 0;
+  background: rgba(0,191,165,0.05);
+  border-radius: 0 12px 12px 0;
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.data-card {
+  background: var(--card-bg);
+  border: 1px solid rgba(10,61,51,0.14);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin: 28px 0;
+}
+.data-card .data-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 12px;
+}
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.data-row:last-child { border-bottom: none; }
+.data-row .data-label { color: var(--text-sub); }
+.data-row .data-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== WATCH POINTS (관찰 포인트) ===== */
+.watch-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 12px;
+}
+.watch-card .watch-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(0,191,165,0.12);
+  color: var(--mint-deep);
+  margin-bottom: 8px;
+}
+.watch-card .watch-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.watch-card .watch-desc {
+  font-size: 14px;
+  color: var(--text-sub);
+  line-height: 1.7;
+}
+
+/* ===== COMPASS (투자 나침반) ===== */
+.compass-box {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+.compass-box .compass-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mint-deep);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+.compass-box .compass-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 12px;
+}
+.compass-box p {
+  font-size: 15px;
+  color: var(--text);
+  line-height: 1.75;
+  margin-bottom: 12px;
+}
+.compass-box p:last-child { margin-bottom: 0; }
+
+/* 온도계/게이지 바 */
+.gauge-bar {
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+.gauge-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+.gauge-fill.cautious { background: var(--down); }
+.gauge-fill.neutral { background: var(--slate); }
+.gauge-fill.positive { background: var(--teal); }
+.gauge-fill.strong { background: var(--up); }
+
+/* ===== SO WHAT ===== */
+.sowhat-card {
+  background: var(--card-bg);
+  border: 1px solid rgba(0,191,165,0.18);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 12px;
+}
+.sowhat-card:first-child {
+  border-left: 4px solid var(--teal);
+  background: rgba(0,191,165,0.04);
+}
+.sowhat-card .sowhat-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 8px;
+}
+.sowhat-card p {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.75;
+}
+
+/* ===== CALENDAR TABLE ===== */
+.calendar-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.calendar-table th {
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--navy);
+  color: #FFFFFF;
+  font-weight: 600;
+  font-size: 13px;
+}
+.calendar-table th:first-child { border-radius: 10px 0 0 0; }
+.calendar-table th:last-child { border-radius: 0 10px 0 0; }
+.calendar-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.calendar-table tr:nth-child(even) td {
+  background: rgba(10,61,51,0.025);
+}
+.calendar-table .stars { color: #F59E0B; }
+
+/* ===== FOOTER ===== */
+.report-footer {
+  text-align: center;
+  padding: 40px 0 32px;
+  border-top: 2px solid var(--navy);
+  margin-top: 48px;
+}
+.report-footer .closing {
+  font-size: 16px;
+  color: var(--text);
+  margin-bottom: 20px;
+  line-height: 1.7;
+}
+.report-footer .disclaimer {
+  font-size: 12px;
+  color: var(--slate);
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+.report-footer .copyright {
+  font-size: 11px;
+  color: var(--slate);
+  opacity: 0.7;
+}
+
+/* ===== DIVIDER ===== */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--slate), transparent);
+  margin: 40px 0;
+  border: none;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 640px) {
+  .cover {
+    padding: 36px 24px 32px;
+    border-radius: 0;
+    margin: 0 -20px 36px;
+  }
+  .cover .cover-headline { font-size: 24px; }
+  .market-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .pulse-card {
+    padding: 10px;
+    overflow: hidden;
+  }
+  .pulse-card .label {
+    font-size: 11px;
+    margin-bottom: 2px;
+  }
+  .pulse-card .value {
+    font-size: 16px;
+  }
+  .pulse-card .change {
+    font-size: 11px;
+  }
+  .pulse-card svg {
+    width: 56px;
+    height: 22px;
+  }
+  .pull-quote {
+    margin-left: -20px;
+    margin-right: -20px;
+    border-radius: 0;
+    padding: 20px;
+  }
+  .section { margin-bottom: 40px; }
+}
+
+</style>
+</head>
+<body>
+<div class="report-embed">
+<div class="report-container">
+    <section class="cover">
+        <div class="cover-date">2026년 9월 22일 화요일</div>
+        <h1 class="cover-headline">AI 낙관론이 유가 자리를 차지했다</h1>
+        <p class="cover-subline">간밤(2026-09-21 현지 마감) 나스닥이 +2.26%로 사상 최고치를 경신했습니다. 메타·인텔이 급등하고 WTI 원유는 -4.28% 빠지며 배럴당 91달러대로 내려앉았습니다. 인플레이션을 자극하던 변수 하나가 빠진 자리에, AI 기대감이 그대로 들어찼습니다.</p>
+        <div class="cover-byline">iM AI Analyst</div>
+    </section>
+
+    <section class="section">
+        <h2 class="section-title">시장 체온</h2>
+        <div class="market-grid">
+                <div class="pulse-card heat-up-3" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><defs><linearGradient id="sph2i31q" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#D32F2F" stop-opacity="0.2"/><stop offset="100%" stop-color="#D32F2F" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 24.0 L 19.0 4.0 L 36.0 11.1 L 53.0 11.4 L 70.0 9.9 L 70.0 26.0 Z" fill="url(#sph2i31q)"/><polyline points="2.0,24.0 19.0,4.0 36.0,11.1 53.0,11.4 70.0,9.9" fill="none" stroke="#D32F2F" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="9.9" r="2" fill="#D32F2F"/></svg></div><div style="flex:1;min-width:0"><div class="label">코스피</div>
+                    <div class="value">7,007.72</div>
+                    <div class="change up">+1.65%</div></div></div>
+                <div class="pulse-card heat-up-2" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><defs><linearGradient id="spy3scr7" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1565C0" stop-opacity="0.2"/><stop offset="100%" stop-color="#1565C0" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 11.2 L 19.0 4.0 L 36.0 23.8 L 53.0 24.0 L 70.0 19.1 L 70.0 26.0 Z" fill="url(#spy3scr7)"/><polyline points="2.0,11.2 19.0,4.0 36.0,23.8 53.0,24.0 70.0,19.1" fill="none" stroke="#1565C0" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="19.1" r="2" fill="#1565C0"/></svg></div><div style="flex:1;min-width:0"><div class="label">코스닥</div>
+                    <div class="value">836.27</div>
+                    <div class="change up">+1.11%</div></div></div>
+                <div class="pulse-card heat-up-2" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><defs><linearGradient id="spgpzmjj" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#D32F2F" stop-opacity="0.2"/><stop offset="100%" stop-color="#D32F2F" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 24.0 L 19.0 11.5 L 36.0 6.1 L 53.0 6.7 L 70.0 4.0 L 70.0 26.0 Z" fill="url(#spgpzmjj)"/><polyline points="2.0,24.0 19.0,11.5 36.0,6.1 53.0,6.7 70.0,4.0" fill="none" stroke="#D32F2F" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="4.0" r="2" fill="#D32F2F"/></svg></div><div style="flex:1;min-width:0"><div class="label">S&amp;P 500</div>
+                    <div class="value">7,764.7</div>
+                    <div class="change up">+1.49%</div></div></div>
+                <div class="pulse-card heat-up-3" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><defs><linearGradient id="spj2jpjr" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#D32F2F" stop-opacity="0.2"/><stop offset="100%" stop-color="#D32F2F" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 24.0 L 19.0 11.1 L 36.0 9.3 L 53.0 8.3 L 70.0 4.0 L 70.0 26.0 Z" fill="url(#spj2jpjr)"/><polyline points="2.0,24.0 19.0,11.1 36.0,9.3 53.0,8.3 70.0,4.0" fill="none" stroke="#D32F2F" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="4.0" r="2" fill="#D32F2F"/></svg></div><div style="flex:1;min-width:0"><div class="label">나스닥</div>
+                    <div class="value">27,122.09</div>
+                    <div class="change up">+2.26%</div></div></div>
+                <div class="pulse-card heat-up-2" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><defs><linearGradient id="sp5gno88" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#D32F2F" stop-opacity="0.2"/><stop offset="100%" stop-color="#D32F2F" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 24.0 L 19.0 9.0 L 36.0 4.0 L 53.0 6.8 L 70.0 7.9 L 70.0 26.0 Z" fill="url(#sp5gno88)"/><polyline points="2.0,24.0 19.0,9.0 36.0,4.0 53.0,6.8 70.0,7.9" fill="none" stroke="#D32F2F" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="7.9" r="2" fill="#D32F2F"/></svg></div><div style="flex:1;min-width:0"><div class="label">다우존스</div>
+                    <div class="value">52,048.83</div>
+                    <div class="change up">+0.71%</div></div></div>
+                <div class="pulse-card heat-up-2" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><defs><linearGradient id="sphgcsgh" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#D32F2F" stop-opacity="0.2"/><stop offset="100%" stop-color="#D32F2F" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 24.0 L 19.0 4.0 L 36.0 7.1 L 53.0 8.8 L 70.0 7.5 L 70.0 26.0 Z" fill="url(#sphgcsgh)"/><polyline points="2.0,24.0 19.0,4.0 36.0,7.1 53.0,8.8 70.0,7.5" fill="none" stroke="#D32F2F" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="7.5" r="2" fill="#D32F2F"/></svg></div><div style="flex:1;min-width:0"><div class="label">닛케이 225</div>
+                    <div class="value">65,018.95</div>
+                    <div class="change up">+1.38%</div></div></div>
+                <div class="pulse-card heat-down-2" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><defs><linearGradient id="spbogytl" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1565C0" stop-opacity="0.2"/><stop offset="100%" stop-color="#1565C0" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 18.7 L 19.0 4.0 L 36.0 19.9 L 53.0 24.0 L 70.0 20.8 L 70.0 26.0 Z" fill="url(#spbogytl)"/><polyline points="2.0,18.7 19.0,4.0 36.0,19.9 53.0,24.0 70.0,20.8" fill="none" stroke="#1565C0" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="20.8" r="2" fill="#1565C0"/></svg></div><div style="flex:1;min-width:0"><div class="label">원/달러</div>
+                    <div class="value">1,375.28</div>
+                    <div class="change down">-0.77%</div></div></div>
+                <div class="pulse-card heat-down-4" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><defs><linearGradient id="sprnoheb" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#D32F2F" stop-opacity="0.2"/><stop offset="100%" stop-color="#D32F2F" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 24.0 L 19.0 18.5 L 36.0 12.5 L 53.0 4.0 L 70.0 8.9 L 70.0 26.0 Z" fill="url(#sprnoheb)"/><polyline points="2.0,24.0 19.0,18.5 36.0,12.5 53.0,4.0 70.0,8.9" fill="none" stroke="#D32F2F" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="8.9" r="2" fill="#D32F2F"/></svg></div><div style="flex:1;min-width:0"><div class="label">WTI 원유</div>
+                    <div class="value">$91.97</div>
+                    <div class="change down">-4.28%</div></div></div>
+                <div class="pulse-card heat-down-4" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><defs><linearGradient id="sp9ty28v" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#D32F2F" stop-opacity="0.2"/><stop offset="100%" stop-color="#D32F2F" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 24.0 L 19.0 18.6 L 36.0 10.9 L 53.0 4.0 L 70.0 9.0 L 70.0 26.0 Z" fill="url(#sp9ty28v)"/><polyline points="2.0,24.0 19.0,18.6 36.0,10.9 53.0,4.0 70.0,9.0" fill="none" stroke="#D32F2F" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="9.0" r="2" fill="#D32F2F"/></svg></div><div style="flex:1;min-width:0"><div class="label">브렌트유</div>
+                    <div class="value">$95.96</div>
+                    <div class="change down">-3.35%</div></div></div>
+                <div class="pulse-card heat-down-2" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><defs><linearGradient id="sph8q3pt" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#D32F2F" stop-opacity="0.2"/><stop offset="100%" stop-color="#D32F2F" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 24.0 L 19.0 15.9 L 36.0 4.0 L 53.0 11.5 L 70.0 10.9 L 70.0 26.0 Z" fill="url(#sph8q3pt)"/><polyline points="2.0,24.0 19.0,15.9 36.0,4.0 53.0,11.5 70.0,10.9" fill="none" stroke="#D32F2F" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="10.9" r="2" fill="#D32F2F"/></svg></div><div style="flex:1;min-width:0"><div class="label">금</div>
+                    <div class="value">$4,381</div>
+                    <div class="change down">-0.99%</div></div></div>
+                <div class="pulse-card heat-down-2" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><defs><linearGradient id="spyvzkac" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#D32F2F" stop-opacity="0.2"/><stop offset="100%" stop-color="#D32F2F" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 24.0 L 19.0 9.3 L 36.0 4.0 L 53.0 8.1 L 70.0 5.6 L 70.0 26.0 Z" fill="url(#spyvzkac)"/><polyline points="2.0,24.0 19.0,9.3 36.0,4.0 53.0,8.1 70.0,5.6" fill="none" stroke="#D32F2F" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="5.6" r="2" fill="#D32F2F"/></svg></div><div style="flex:1;min-width:0"><div class="label">은</div>
+                    <div class="value">$66.53</div>
+                    <div class="change down">-0.92%</div></div></div>
+                <div class="pulse-card heat-up-5" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><defs><linearGradient id="spdwczkb" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1565C0" stop-opacity="0.2"/><stop offset="100%" stop-color="#1565C0" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 4.0 L 19.0 24.0 L 36.0 18.5 L 53.0 18.1 L 70.0 14.8 L 70.0 26.0 Z" fill="url(#spdwczkb)"/><polyline points="2.0,4.0 19.0,24.0 36.0,18.5 53.0,18.1 70.0,14.8" fill="none" stroke="#1565C0" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="14.8" r="2" fill="#1565C0"/></svg></div><div style="flex:1;min-width:0"><div class="label">비트코인</div>
+                    <div class="value">$86,775</div>
+                    <div class="change up">+7.24%</div></div></div>
+                <div class="pulse-card heat-up-5" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><defs><linearGradient id="spa3xorq" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1565C0" stop-opacity="0.2"/><stop offset="100%" stop-color="#1565C0" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 4.0 L 19.0 24.0 L 36.0 18.6 L 53.0 17.9 L 70.0 16.0 L 70.0 26.0 Z" fill="url(#spa3xorq)"/><polyline points="2.0,4.0 19.0,24.0 36.0,18.6 53.0,17.9 70.0,16.0" fill="none" stroke="#1565C0" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="16.0" r="2" fill="#1565C0"/></svg></div><div style="flex:1;min-width:0"><div class="label">이더리움</div>
+                    <div class="value">$2,777</div>
+                    <div class="change up">+5.57%</div></div></div>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2 class="section-title">오늘의 시장 이야기</h2>
+        <div class="narrative">
+                <p>간밤 뉴욕 증시의 주인공은 인공지능(AI) 관련주였습니다. 나스닥이 <strong>+2.26%</strong>를 기록하며 <strong>27,122</strong>로 사상 최고치를 다시 썼습니다. S&P 500도 <strong>+1.49%</strong> 올라 <strong>7,764</strong>에 마감했고, 다우존스는 상대적으로 조용하게 <strong>+0.71%</strong>를 기록했습니다. 세 지수가 함께 오른 날이지만, 격차가 이 이야기의 핵심입니다.</p>
+                <p>표면적 이유는 'AI 낙관론'입니다. 그런데 AI 뉴스는 매일 쏟아집니다. 간밤 시장을 실제로 움직인 숨은 변수는 따로 있었습니다. WTI 원유가 하루 만에 <strong>-4.28%</strong> 빠져 <strong>배럴당 91.97달러</strong>로 내려앉은 것입니다. 지난주 이맘때만 해도 101달러대였던 유가가 단 일주일 사이에 <strong>9달러 이상</strong> 하락했습니다. 유가가 빠지면 인플레이션 기대가 낮아지고, 인플레이션 기대가 낮아지면 연방준비제도(Fed)의 긴축 압력도 그만큼 줄어듭니다. AI 주식이 뛴 배경에는 금리 부담 완화라는 계산이 깔려 있었습니다.</p>
+                <p>미국 10년물 국채 금리는 <strong>4.963%</strong>로 전일 대비 <strong>0.035%p</strong> 하락했습니다. 작은 수치처럼 보이지만 방향이 중요합니다. 5%에 근접하며 시장을 압박하던 장기 금리가 유가 하락 이후 방향을 꺾은 것입니다. 장단기 금리차(10년물-2년물)는 현재 <strong>+0.2%p</strong>로, 역전이 해소되고 정상화 방향으로 진행 중입니다. 채권 시장이 경기 둔화보다 물가 안정 쪽에 더 무게를 두기 시작했다는 신호로 읽힙니다.</p>
+                <div class="pull-quote">
+                    AI 랠리의 진짜 연료는 유가 하락이었습니다. 배럴당 91달러는 인플레이션 압력을 한 단계 낮추고, 금리 피크아웃 기대를 앞당겼습니다.
+                </div>
+                <p>CNBC와 연합뉴스에 따르면 메타와 인텔이 이날 급등을 주도했습니다. 인텔은 최근 사업 구조 재편과 AI 인프라 투자 확대 기대가 반영된 것으로 알려졌습니다. 다우존스의 상승률이 나스닥의 3분의 1에 그친 것은 이번 랠리가 기술·AI 종목에 집중된 섹터 장세임을 보여줍니다. 전통 산업 비중이 높은 다우가 상대적으로 뒤처진 구조입니다.</p>
+                <div class="data-card">
+                    <div class="data-title">간밤(2026-09-21) 미국 증시 마감</div>
+                    <div class="data-row"><span class="data-label">나스닥</span><span class="data-value">27,122 (+2.26%, 사상 최고)</span></div>
+                    <div class="data-row"><span class="data-label">S&amp;P 500</span><span class="data-value">7,764 (+1.49%)</span></div>
+                    <div class="data-row"><span class="data-label">다우존스</span><span class="data-value">52,048 (+0.71%)</span></div>
+                    <div class="data-row"><span class="data-label">미 10년물 국채 금리</span><span class="data-value">4.963% (-0.035%p)</span></div>
+                    <div class="data-row"><span class="data-label">WTI 원유</span><span class="data-value">배럴당 $91.97 (-4.28%)</span></div>
+                </div>
+                <p>유럽 시장도 이 흐름을 선반영하며 올랐습니다. 독일 DAX가 <strong>+1.07%</strong>, 영국 FTSE 100이 <strong>+0.75%</strong>, 유럽 STOXX 600이 <strong>+1.02%</strong>를 기록했습니다. 에너지 비중이 높은 유럽 증시에서 유가 하락은 통상 부정적으로 작용합니다. 그러나 이번에는 달랐습니다. 유가 하락이 인플레이션 둔화 → 유럽중앙은행(ECB) 추가 긴축 부담 완화 → 위험자산 선호라는 연결로 읽혔기 때문입니다.</p>
+                <p>일본 닛케이 225는 <strong>65,018</strong>로 <strong>+1.38%</strong> 상승했습니다. 상해종합지수는 <strong>+0.97%</strong>, 항셍지수는 <strong>+1.18%</strong>를 기록했습니다. 아시아 전반이 뉴욕의 온기를 고르게 나눠 받은 셈입니다. 다만 엔/달러가 <strong>157.28엔</strong>으로 소폭 약세를 유지하며 일본 수출주 호재가 지속되는 상황입니다.</p>
+                <p>원/달러 환율은 현재 <strong>1,375원</strong> 수준으로, 전 거래일 대비 약 <strong>10원 이상</strong> 원화가 강세를 보이고 있습니다. 지난 3개월 전 환율이 <strong>1,539원</strong>에 달했던 점을 감안하면 큰 폭의 원화 회복세입니다. 달러인덱스(DXY)는 <strong>100.42</strong>로 소폭 오름세를 유지하고 있지만, 유가 하락과 미 금리 소폭 하강이 결합해 달러의 추가 강세를 제약하는 구조입니다.</p>
+                <div class="pull-quote">
+                    3개월 전 1,539원이던 원화가 1,375원까지 돌아왔습니다. 환율 변화가 수출 기업 실적 추정치를 조용히 다시 쓰고 있습니다.
+                </div>
+                <p>전 거래일(2026-09-21) 코스피는 <strong>7,007.72</strong>로 <strong>+1.65%</strong> 상승 마감했습니다. 코스닥도 <strong>836.27</strong>로 <strong>+1.11%</strong>를 기록했습니다. 1주일 전(6,627) 대비 코스피가 <strong>380포인트</strong> 가까이 오른 것으로, 단기 급반등 구간에 들어와 있습니다. 오늘 개장을 앞두고 미 나스닥 사상 최고치라는 훈풍이 뒤에서 밀어주는 상황입니다.</p>
+                <div class="data-card">
+                    <div class="data-title">전 거래일(2026-09-21) 한국 증시 마감</div>
+                    <div class="data-row"><span class="data-label">코스피</span><span class="data-value">7,007.72 (+1.65%)</span></div>
+                    <div class="data-row"><span class="data-label">코스닥</span><span class="data-value">836.27 (+1.11%)</span></div>
+                    <div class="data-row"><span class="data-label">원/달러 현재</span><span class="data-value">1,375원 (강세)</span></div>
+                    <div class="data-row"><span class="data-label">국고채 3년</span><span class="data-value">4.056% (+0.021%p)</span></div>
+                    <div class="data-row"><span class="data-label">국고채 10년</span><span class="data-value">4.275% (+0.050%p)</span></div>
+                </div>
+                <p>한국 반도체 업종에는 주목할 구조적 소식이 전해졌습니다. 조선비즈 보도에 따르면 삼성전자와 SK하이닉스가 D램 생산량을 HBM(고대역폭 메모리) 쪽에 집중하는 사이, 중국 업체들이 범용 D램 시장 침투를 가속하고 있다는 분석이 나왔습니다. AI용 HBM 수요 확보에 집중하는 전략이 범용 시장의 빈자리를 만들어내는 부작용입니다. AI 랠리가 한국 반도체 수혜로 곧장 이어지는지 여부를 볼 때, 이 구조를 먼저 확인할 필요가 있습니다.</p>
+                <p>한편 권오현 전 삼성전자 대표가 KAIST(한국과학기술원) 신임 이사장으로 선임됐다고 외신을 통해 전해졌습니다. 직접적인 주가 변수는 아니지만, 한국 반도체·AI 연구 생태계의 인적 네트워크 재편이라는 맥락에서 주목됩니다. 삼성전자 반도체 전성기를 이끈 인물이 국내 최상위 이공계 대학의 이사장직에 오른 것은, AI 인재 양성과 산학 협력 강화라는 중장기 방향을 읽게 합니다.</p>
+                <p>금 가격은 현재 <strong>온스당 4,381달러</strong>로 전일 대비 약 <strong>1%</strong> 하락했습니다. 유가 하락과 함께 안전자산 수요가 동반 약화된 흐름입니다. 반면 비트코인은 <strong>86,775달러</strong>로 하루 사이 <strong>+7.2%</strong>나 급등했습니다. 이더리움도 <strong>+5.57%</strong>를 기록했습니다. 위험자산 선호 심리가 암호화폐 시장으로도 뚜렷하게 번진 모습입니다. VIX(공포지수)는 <strong>14.87</strong>로 전일 대비 소폭 올랐지만 여전히 15 이하로, 시장의 전반적인 안도 심리는 유지 중입니다.</p>
+                <div class="pull-quote">
+                    비트코인 하루 +7.2%, 금 -1%. 안전자산이 빠진 자금이 위험자산으로 이동한 방향은 명확합니다.
+                </div>
+                <p>오늘(9/22) 오전에는 한국은행 금융안정회의가 열립니다. 기준금리를 결정하는 회의가 아니라 금융 시스템 전반의 리스크를 점검하는 자리입니다. 오전 11시에는 '금융안정 상황(2026년 9월)' 보고서가 공개됩니다. 대기업 대출 연체율이 5년 만에 최고 수준에 달했다는 연합뉴스 보도가 나온 시점이어서, 이번 보고서에서 기업 신용 리스크 평가가 어떻게 나올지 주목됩니다.</p>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2 class="section-title">오늘의 관찰 포인트</h2>
+            <div class="watch-card">
+                <div class="watch-badge">오전</div>
+                <div class="watch-title">한국은행 금융안정회의 및 보고서 발표</div>
+                <div class="watch-desc">오늘 오전 한국은행 금융통화위원회가 금융안정회의를 개최하고 오전 11시 '금융안정 상황(2026년 9월)' 보고서를 발표합니다. 기준금리 결정 회의가 아니지만, 7월 대기업 대출 연체율이 5년 만에 최고치를 기록한 상황에서 기업 부문 리스크 평가가 어떻게 담길지 관심입니다. 보고서의 톤이 예상보다 경계적이면 금융주·은행주에 영향을 줄 수 있습니다.</div>
+            </div>
+            <div class="watch-card">
+                <div class="watch-badge">오늘</div>
+                <div class="watch-title">코스피 7,000 안착 여부</div>
+                <div class="watch-desc">전 거래일 코스피가 7,007로 마감하며 7,000선을 회복했습니다. 미 나스닥 사상 최고치라는 훈풍이 오늘 개장 초반 매수세를 자극할 가능성이 있습니다. 다만 1주일 만에 380포인트 급반등한 구간인 만큼, 차익 실현 매물이 7,000선 근방에서 출회될 수 있다는 점도 함께 확인할 변수입니다.</div>
+            </div>
+            <div class="watch-card">
+                <div class="watch-badge">오늘</div>
+                <div class="watch-title">반도체 업종: HBM 집중의 이면 확인</div>
+                <div class="watch-desc">삼성전자와 SK하이닉스가 HBM 생산에 자원을 집중하는 사이 중국 업체들의 범용 D램 시장 잠식이 가속되고 있다는 분석이 나왔습니다. AI 랠리가 한국 반도체 주가에 곧바로 호재로 이어지는지, 아니면 HBM 수혜와 범용 시장 상실이 상쇄되는지를 오늘 외국인 수급 흐름에서 먼저 확인할 필요가 있습니다.</div>
+            </div>
+            <div class="watch-card">
+                <div class="watch-badge">이번 주</div>
+                <div class="watch-title">수요일 한국은행 소비자동향조사</div>
+                <div class="watch-desc">내일(9/23) 오전 한국은행이 2026년 9월 소비자동향조사 결과를 발표합니다. 소비자심리지수(CCSI)와 함께 가계의 금리·물가 기대가 담깁니다. 원/달러 환율이 1,375원 수준으로 안정되고 유가가 하락한 상황에서 소비 심리 회복 여부가 확인됩니다. 내수 관련주 방향성 판단에 참고할 수 있습니다.</div>
+            </div>
+    </section>
+
+    <section class="section">
+        <h2 class="section-title">iM 투자 나침반</h2>
+        
+            <div class="compass-box">
+                <div class="compass-label">자산군별 온도계</div>
+                <div class="compass-title">지금 각 자산의 온도</div>
+                <p><strong>한국 주식:</strong> 코스피 <strong>7,007</strong>로 7,000 회복. 미 나스닥 사상 최고치 호재와 유가 하락이 뒷받침. 단기 급반등 이후 차익 실현 압력 구간.</p>
+                <div class="gauge-bar"><div class="gauge-fill positive" style="width:68%"></div></div>
+                <p><strong>미국 주식:</strong> 나스닥 사상 최고치, AI·기술주 중심 강세. VIX <strong>14.87</strong>로 안도 심리 유지. 전통 산업(다우) 대비 기술주 집중 장세.</p>
+                <div class="gauge-bar"><div class="gauge-fill positive" style="width:68%"></div></div>
+                <p><strong>채권:</strong> 미 10년물 <strong>4.963%</strong>로 소폭 하락. 한국 국고채 10년은 <strong>4.275%</strong>로 소폭 상승. 방향성이 엇갈려 신중 접근이 필요한 구간.</p>
+                <div class="gauge-bar"><div class="gauge-fill neutral" style="width:50%"></div></div>
+                <p><strong>원유:</strong> WTI <strong>91.97달러</strong>로 주간 기준 10달러 가까이 하락. 인플레이션 압력 완화 측면에서 증시에는 호재. 에너지 관련주에는 역풍.</p>
+                <div class="gauge-bar"><div class="gauge-fill cautious" style="width:30%"></div></div>
+                <p><strong>금·귀금속:</strong> 금 <strong>4,381달러</strong>, 은 <strong>66.53달러</strong>로 동반 소폭 하락. 위험자산 선호로 안전자산 수요 약화. 단기 차익 실현 구간.</p>
+                <div class="gauge-bar"><div class="gauge-fill cautious" style="width:30%"></div></div>
+                <p><strong>암호화폐:</strong> 비트코인 <strong>86,775달러</strong>로 하루 <strong>+7.2%</strong> 급등. 이더리움도 <strong>+5.6%</strong>. 위험선호 심리 집약. 변동성은 여전히 높은 자산군.</p>
+                <div class="gauge-bar"><div class="gauge-fill positive" style="width:68%"></div></div>
+            </div>
+            <div class="compass-box">
+                <div class="compass-label">예금·적금 vs 투자</div>
+                <div class="compass-title">4%대 국고채와 예금, 지금 자리는</div>
+                <p>미국 연방기금금리는 현재 <strong>3.63%</strong>이며, 미 소비자물가지수(CPI) 기준 물가는 여전히 높은 수준을 유지 중입니다. 한국 국고채 10년물은 <strong>4.275%</strong>로, 시중 정기예금 금리와 비슷하거나 소폭 높은 수준입니다. 물가 상승 압력이 완전히 꺾이지 않은 상태에서 예금의 실질 수익률(명목금리 - 물가상승률)은 여전히 제한적입니다.</p>
+                <p>다만 유가가 배럴당 <strong>91달러</strong>대로 내려앉으면서 향후 물가 안정 기대가 높아지고 있습니다. 물가가 예상보다 빠르게 안정되면 실질 예금 금리의 매력은 오히려 커질 수 있습니다. 현 시점에서 예금은 변동성 회피 수단으로 여전히 유효하지만, 주식 시장이 7,000선을 회복하고 AI 업종 랠리가 이어지는 환경에서는 투자 자산과의 기회비용 비교가 다시 필요한 시점이기도 합니다.</p>
+                <p>결국 선택의 기준은 투자 기간입니다. 1년 이내 단기 자금이라면 4%대 국고채·예금이 안정적 대안입니다. 3년 이상 중장기 시계를 가진 자금이라면, 나스닥 사상 최고치와 코스피 7,000 회복이라는 환경에서 분할 투자 전략을 재검토할 근거가 생겼습니다.</p>
+            </div>
+            <div class="compass-box">
+                <div class="compass-label">오늘의 업종 온도</div>
+                <div class="compass-title">유가 빠진 날, 업종별 온도가 갈렸다</div>
+                <p><strong>반도체·IT:</strong> AI 낙관론과 나스닥 최고치 수혜. 단 HBM 집중으로 범용 D램 시장 중국에 내주는 구조적 리스크 병존. 외국인 수급이 관건.</p>
+                <div class="gauge-bar"><div class="gauge-fill positive" style="width:68%"></div></div>
+                <p><strong>에너지·정유:</strong> WTI <strong>91달러</strong>로 1주일 새 10달러 하락. 정유사 정제마진과 탐사·개발(E&P) 종목에 직접 역풍. 단기 조정 압력.</p>
+                <div class="gauge-bar"><div class="gauge-fill cautious" style="width:30%"></div></div>
+                <p><strong>금융·은행:</strong> 오늘 한국은행 금융안정보고서 발표. 대기업 연체율 5년 최고 수준이라는 배경에서 보고서 톤에 따라 변동 가능성 있음.</p>
+                <div class="gauge-bar"><div class="gauge-fill neutral" style="width:50%"></div></div>
+                <p><strong>항공·물류:</strong> 유가 하락은 항공·물류 업종 원가 부담 완화 요인. 원/달러 <strong>1,375원</strong>의 원화 강세도 달러 표시 비용 축소에 긍정적.</p>
+                <div class="gauge-bar"><div class="gauge-fill positive" style="width:68%"></div></div>
+                <p><strong>소비재·내수:</strong> 유가 하락 → 에너지 비용 절감 → 소비 여력 소폭 개선 기대. 내일 소비자심리지수(CCSI) 결과가 방향 가늠 기준이 될 것.</p>
+                <div class="gauge-bar"><div class="gauge-fill neutral" style="width:50%"></div></div>
+            </div>
+    </section>
+
+    <section class="section">
+        <h2 class="section-title">그래서, 무엇이 달라지나</h2>
+            <div class="sowhat-card">
+                <div class="sowhat-title">반도체 보유자 — AI 랠리와 HBM 전략의 이면을 함께 보십시오</div>
+                <p>간밤 미국 AI 관련주 급등이 삼성전자·SK하이닉스에 호재로 비칩니다. 그러나 조선비즈 보도에 따르면 두 회사가 HBM 생산에 집중하는 동안 중국 업체들이 범용 D램 시장 점유율을 빠르게 늘리고 있다는 분석이 나왔습니다. 고부가 제품(HBM) 수익 확대와 범용 시장 잠식이라는 두 방향이 동시에 진행 중입니다. AI 랠리를 국내 반도체 주가 상승 논리로 단순 연결하기 전에, 어느 쪽 무게가 더 큰지를 먼저 확인하십시오.</p>
+            </div>
+            <div class="sowhat-card">
+                <div class="sowhat-title">항공·물류 보유자 — 유가 91달러, 비용 구조가 조용히 바뀌고 있습니다</div>
+                <p>WTI 원유가 <strong>배럴당 91.97달러</strong>로 1주일 사이에 약 9달러 하락했습니다. 항공·물류 업종의 가장 큰 비용 항목이 연료비라는 점에서, 이번 유가 하락은 4분기 원가 추정치에 직접 반영될 변수입니다. 여기에 원/달러 <strong>1,375원</strong>으로의 원화 강세가 달러 표시 연료 구매 비용을 추가로 낮추는 효과를 냅니다. 두 변수가 겹치는 구간에서 항공·물류 실적 추정치의 방향성을 다시 검토할 여지가 있습니다.</p>
+            </div>
+            <div class="sowhat-card">
+                <div class="sowhat-title">수출 제조업체 보유자 — 환율 1,375원, 3개월 전과의 차이를 계산하십시오</div>
+                <p>3개월 전 원/달러 환율은 <strong>1,539원</strong>이었습니다. 지금은 <strong>1,375원</strong>입니다. 달러 강세 구간에서 환율 수혜를 누리던 수출 기업들의 실적 추정치가 이 변화를 얼마나 반영하고 있는지가 핵심입니다. 환율 하락(원화 강세)은 달러 표시 수출 매출을 원화로 환산할 때 금액이 줄어드는 효과를 냅니다. 특히 자동차·기계·소재 업종처럼 달러 매출 비중이 높은 기업들의 3분기 실적 가이던스를 점검하십시오.</p>
+            </div>
+            <div class="sowhat-card">
+                <div class="sowhat-title">금융주·은행주 보유자 — 오늘 오전 금융안정보고서를 확인하십시오</div>
+                <p>한국은행이 오늘 오전 11시 '금융안정 상황(2026년 9월)' 보고서를 발표합니다. 연합뉴스 보도에 따르면 7월 대기업 대출 연체율이 <strong>5년 만에 최고</strong> 수준에 달했습니다. 중앙그룹 계열사의 워크아웃·회생절차가 주요 원인으로 꼽혔습니다. 보고서가 기업 신용 리스크를 어느 강도로 표현하느냐에 따라 금융주·은행주 단기 수급에 영향을 줄 수 있습니다. 발표 전 포지션을 점검하십시오.</p>
+            </div>
+            <div class="sowhat-card">
+                <div class="sowhat-title">암호화폐 보유자 — 비트코인 7% 급등, 위험선호의 수혜이자 변동성의 표현</div>
+                <p>비트코인이 하루 만에 <strong>+7.2%</strong> 상승해 <strong>86,775달러</strong>에 거래 중입니다. 이더리움도 <strong>+5.6%</strong>를 기록했습니다. 간밤 AI 주식 급등 및 유가 하락으로 위험자산 선호 심리가 높아진 것이 암호화폐로도 이어진 흐름입니다. 다만 비트코인은 1년 전 <strong>115,306달러</strong> 수준에서 현재 86,775달러로 여전히 낮은 위치입니다. 단기 급등을 추세 전환으로 단정하기보다 위험선호 심리의 후행 지표로 읽는 것이 적절합니다.</p>
+            </div>
+            <div class="sowhat-card">
+                <div class="sowhat-title">내일 소비자심리지수, 내수 관련주의 방향 가늠자</div>
+                <p>내일(9/23) 한국은행이 2026년 9월 소비자동향조사 결과를 발표합니다. 유가 하락과 원화 강세가 가계 구매력에 긍정적 신호를 보내고 있는 상황에서, 소비자심리지수(CCSI)가 어떤 방향으로 나올지가 관건입니다. 지수가 예상보다 높게 나오면 내수 소비재·유통·음식료 업종에 단기 모멘텀이 생길 수 있습니다. 내수 중심 포트폴리오를 운용 중이라면 발표 시점과 수치를 미리 체크해두십시오.</p>
+            </div>
+    </section>
+
+    <section class="section">
+        <h2 class="section-title">이번 주 주요 일정</h2>
+        <table class="calendar-table">
+            <thead><tr><th>날짜</th><th>국가</th><th>이벤트</th><th>중요도</th></tr></thead>
+            <tbody>
+            <tr>
+                <td>9/22</td>
+                <td>한국</td>
+                <td>한국은행 금융안정회의 및 '금융안정 상황(2026년 9월)' 보고서 발표 (11시)</td>
+                <td class="stars">★★★☆☆</td>
+            </tr>
+            <tr>
+                <td>9/23</td>
+                <td>한국</td>
+                <td>한국은행 2026년 9월 소비자동향조사 결과 발표 (소비자심리지수 포함)</td>
+                <td class="stars">★★☆☆☆</td>
+            </tr>
+            <tr>
+                <td>9/29</td>
+                <td>한국</td>
+                <td>한국은행 2026년 9월 기업경기조사(BSI) 및 경제심리지수(ESI) 발표</td>
+                <td class="stars">★★☆☆☆</td>
+            </tr>
+            <tr>
+                <td>9/29</td>
+                <td>한국</td>
+                <td>한국은행 금통위 의사록 공개 (2026년 제17차, 9월 10일 개최)</td>
+                <td class="stars">★★☆☆☆</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <footer class="report-footer">
+        <div class="closing">AI 낙관론이 유가 하락의 빈자리를 채운 하루였습니다. 오늘 오전 11시 한국은행 금융안정보고서가 나오기 전, 표면의 온기 아래 어떤 균열이 점검되고 있는지를 함께 읽어두십시오.</div>
+        <div class="disclaimer">본 리포트는 AI가 자동 생성한 것으로, 투자 권유가 아닙니다. 투자 판단의 책임은 투자자 본인에게 있습니다.</div>
+        <div class="copyright">© iM뱅크 | Powered by iM AI Analyst | 데이터 출처: Yahoo Finance, FRED, ECOS, KRX, Google News</div>
+    </footer>
+</div>
+</div>
+</body>
+</html>
