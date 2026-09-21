@@ -727,9 +727,10 @@ Expected: `OK` (`${{ }}` 표현식이 `run:` 본문에 남아 있지 않으므�
 
 ### Task 4: 배포와 실환경 검증 (수동, 사용자 승인 필요)
 
-- [ ] **Step 1:** 사용자 승인 후 main에 `--no-ff` 머지, 전체 테스트·tsc, push. **그날의 리포트 발송과 3순위 schedule 실행이 끝난 뒤**(평일 10:30 KST 이후 또는 휴장일)에 한다.
+- [ ] **Step 1:** 사용자 승인 후 main에 `--no-ff` 머지, 전체 테스트·tsc, push. **그날의 리포트 발송과 3순위 schedule 실행이 끝난 뒤**에 한다 — 시각 추정이 아니라 `gh run list --workflow=daily-report.yml --event schedule --limit 1`로 그날 schedule 실행이 completed인지 확인한다.
+  **`DELIVERY_TRACKING_SINCE`는 반드시 (push하는 날 + 1일, KST)이어야 한다.** push가 2026-09-21을 넘기면 상수와 `lib/delivery-state.test.ts`의 단언을 함께 고친다. 어긋나면 push 당일 옛 워크플로가 status 없이 보낸 리포트를 같은 날의 다른 실행이 재발송한다(구현 리뷰에서 발견).
 - [ ] **Step 2:** `gh workflow run daily-report.yml --ref main -f dry_run=true` → 두 job success, 로그에 `Resolve delivery: … action=skip — dry_run`, 배포 대기·발송 step `skipped`, 커밋·status 변화 없음.
 - [ ] **Step 3 (첫 거래일 아침, 정시 실행 뒤):** 로그에 `action=send — 발송 기록 없음 — 발송` → `mark: telegram/<kind>=pending` → `Telegram: success — ok:true` → `mark: telegram/<kind>=success`. `gh api repos/yalkongs/dailyreport/commits/<리포트 SHA>/status --jq '.statuses[]|"\(.context)=\(.state)"'`에 `telegram/market=success`, `telegram/etf=success`.
-- [ ] **Step 4 (같은 날, 발송이 끝난 뒤 — 가장 중요한 검증):** `gh workflow run daily-report.yml --ref main` (입력 없음) → 두 job의 로그에 `status=success action=skip — 이미 발송됨`, 발송 step `skipped`. **구독자 채널에 두 번째 메시지가 오지 않았음을 사용자가 확인한다.**
+- [ ] **Step 4 (같은 날, 발송이 끝난 뒤 — 가장 중요한 검증. 반드시 Step 3에서 `telegram/*=success`를 확인한 날에만):** `gh workflow run daily-report.yml --ref main` (입력 없음) → 두 job의 로그에 `status=success action=skip — 이미 발송됨`, 발송 step `skipped`. **구독자 채널에 두 번째 메시지가 오지 않았음을 사용자가 확인한다.**
 - [ ] **Step 5:** `resend_telegram_only=true` dispatch는 검증에 쓰지 않는다. `send` 분기(미발송 복구)는 첫 실제 장애 때 검증된다 — 그때까지 매일 로그의 `Resolve delivery:` 줄로 판정이 맞는지 본다.
 - [ ] **되돌리기:** 머지 커밋을 revert. commit status는 남아도 무해하다(읽는 코드가 사라진다).

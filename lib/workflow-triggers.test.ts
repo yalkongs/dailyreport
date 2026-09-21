@@ -65,6 +65,16 @@ for (const [job, group] of [["market", "daily-report-market"], ["etf", "daily-re
   });
 }
 
+for (const job of ["market", "etf"] as const) {
+  test(`${job}: 발송 직전 재확인은 재발송 경로에서만 하고, 조회 실패는 조용히 넘기지 않는다`, () => {
+    const b = jobBlock(job);
+    assert.match(b, /if \[ "\$IS_RESEND" = "true" \] && \[ "\$FORCE_RESEND" != "true" \]; then/);
+    assert.match(b, /success\|pending\)/);
+    assert.match(b, /::error::발송 상태 재확인 실패/);
+    assert.match(b, /::error::Telegram \$\{STATE\} 이후 상태 기록 실패/);
+  });
+}
+
 test("krx-probe에는 concurrency가 없다", () => {
   assert.doesNotMatch(jobBlock("krx-probe"), /concurrency:/);
 });

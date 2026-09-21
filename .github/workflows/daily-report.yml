@@ -174,7 +174,7 @@ jobs:
               success) echo "✅ Vercel 배포 완료 — 텔레그램 발송 진행"; exit 0 ;;
               failure|error) echo "::error::Vercel 배포 실패(${STATE}) — 텔레그램 발송 중단"; exit 1 ;;
               pending) ;;  # 빌드 중 — 계속 대기
-              *) echo "  ⚠️ status 조회 비정상(statuses:read 권한/네트워크 확인) — 재시도" ;;
+              *) echo "  ⚠️ status 조회 비정상(statuses 권한/네트워크 확인) — 재시도" ;;
             esac
             sleep 10
           done
@@ -193,11 +193,20 @@ jobs:
           IS_RESEND: ${{ steps.delivery.outputs.resend }}
           FORCE_RESEND: ${{ (inputs.resend_telegram_only == true || inputs.resend_telegram_only == 'true') && 'true' || 'false' }}
         run: |
-          # 발송 직전 재확인 — 수동 re-run·겹친 실행 방어. 사람의 명시적 재발송만 우회한다.
-          CURRENT=$(npx tsx scripts/delivery-state.ts status market "$REPORT_SHA" | tail -1)
-          if [ "$FORCE_RESEND" != "true" ] && [ "$CURRENT" != "none" ] && [ "$CURRENT" != "failure" ]; then
-            echo "발송 생략: 현재 status=${CURRENT} (success=이미 발송, pending·error=결과 불명)"
-            exit 0
+          # 발송 직전 재확인 — 수동 re-run·겹친 실행 방어. 이 실행이 방금 생성한 리포트
+          # (IS_RESEND=false)는 아직 발송됐을 수 없으므로 건너뛰고, 사람의 명시적 재발송도 우회한다.
+          if [ "$IS_RESEND" = "true" ] && [ "$FORCE_RESEND" != "true" ]; then
+            CURRENT=$(npx tsx scripts/delivery-state.ts status market "$REPORT_SHA" | tail -1)
+            case "$CURRENT" in
+              none|failure) ;;
+              success|pending)
+                echo "발송 생략: 현재 status=${CURRENT} (success=이미 발송, pending=다른 실행이 발송 중이거나 결과 불명)"
+                exit 0 ;;
+              *)
+                # 조회 실패를 조용히 넘기면 job은 녹색인데 아무것도 안 나간다 — 실패로 알린다.
+                echo "::error::발송 상태 재확인 실패(status=${CURRENT}) — 보내지 않았습니다. status가 없으므로 다음 실행이 복구합니다."
+                exit 1 ;;
+            esac
           fi
           REPORT_URL="https://dailyreport-eta.vercel.app/reports/${REPORT_DATE}"
           # Cache-bust only in resend mode — Telegram caches images by URL,
@@ -233,7 +242,10 @@ jobs:
           STATE=$(printf '%s\n' "$CLASSIFIED" | sed -n 1p)
           DETAIL=$(printf '%s\n' "$CLASSIFIED" | sed -n 2p)
           echo "Telegram: ${STATE} — ${DETAIL}"
-          npx tsx scripts/delivery-state.ts mark market "$REPORT_SHA" "$STATE" "$DETAIL"
+          npx tsx scripts/delivery-state.ts mark market "$REPORT_SHA" "$STATE" "$DETAIL" || {
+            echo "::error::Telegram ${STATE} 이후 상태 기록 실패 — status는 pending으로 남아 자동 재발송되지 않습니다. 수동 재발송 전에 반드시 구독자 채널을 확인하십시오."
+            exit 1
+          }
           if [ "$STATE" != "success" ]; then
             echo "::error::Telegram 발송 ${STATE} — ${DETAIL}"
             exit 1
@@ -359,7 +371,7 @@ jobs:
               success) echo "✅ Vercel 배포 완료 — 텔레그램 발송 진행"; exit 0 ;;
               failure|error) echo "::error::Vercel 배포 실패(${STATE}) — 텔레그램 발송 중단"; exit 1 ;;
               pending) ;;  # 빌드 중 — 계속 대기
-              *) echo "  ⚠️ status 조회 비정상(statuses:read 권한/네트워크 확인) — 재시도" ;;
+              *) echo "  ⚠️ status 조회 비정상(statuses 권한/네트워크 확인) — 재시도" ;;
             esac
             sleep 10
           done
@@ -380,11 +392,20 @@ jobs:
           ANOMALY_COUNT: ${{ steps.delivery.outputs.anomaly_count }}
           ANOMALY_BREAKDOWN: ${{ steps.delivery.outputs.anomaly_breakdown }}
         run: |
-          # 발송 직전 재확인 — 수동 re-run·겹친 실행 방어. 사람의 명시적 재발송만 우회한다.
-          CURRENT=$(npx tsx scripts/delivery-state.ts status etf "$REPORT_SHA" | tail -1)
-          if [ "$FORCE_RESEND" != "true" ] && [ "$CURRENT" != "none" ] && [ "$CURRENT" != "failure" ]; then
-            echo "발송 생략: 현재 status=${CURRENT} (success=이미 발송, pending·error=결과 불명)"
-            exit 0
+          # 발송 직전 재확인 — 수동 re-run·겹친 실행 방어. 이 실행이 방금 생성한 리포트
+          # (IS_RESEND=false)는 아직 발송됐을 수 없으므로 건너뛰고, 사람의 명시적 재발송도 우회한다.
+          if [ "$IS_RESEND" = "true" ] && [ "$FORCE_RESEND" != "true" ]; then
+            CURRENT=$(npx tsx scripts/delivery-state.ts status etf "$REPORT_SHA" | tail -1)
+            case "$CURRENT" in
+              none|failure) ;;
+              success|pending)
+                echo "발송 생략: 현재 status=${CURRENT} (success=이미 발송, pending=다른 실행이 발송 중이거나 결과 불명)"
+                exit 0 ;;
+              *)
+                # 조회 실패를 조용히 넘기면 job은 녹색인데 아무것도 안 나간다 — 실패로 알린다.
+                echo "::error::발송 상태 재확인 실패(status=${CURRENT}) — 보내지 않았습니다. status가 없으므로 다음 실행이 복구합니다."
+                exit 1 ;;
+            esac
           fi
           REPORT_URL="https://dailyreport-eta.vercel.app/etf-reports/${REPORT_DATE}"
 
@@ -429,7 +450,10 @@ jobs:
           STATE=$(printf '%s\n' "$CLASSIFIED" | sed -n 1p)
           DETAIL=$(printf '%s\n' "$CLASSIFIED" | sed -n 2p)
           echo "Telegram: ${STATE} — ${DETAIL}"
-          npx tsx scripts/delivery-state.ts mark etf "$REPORT_SHA" "$STATE" "$DETAIL"
+          npx tsx scripts/delivery-state.ts mark etf "$REPORT_SHA" "$STATE" "$DETAIL" || {
+            echo "::error::Telegram ${STATE} 이후 상태 기록 실패 — status는 pending으로 남아 자동 재발송되지 않습니다. 수동 재발송 전에 반드시 구독자 채널을 확인하십시오."
+            exit 1
+          }
           if [ "$STATE" != "success" ]; then
             echo "::error::Telegram 발송 ${STATE} — ${DETAIL}"
             exit 1
