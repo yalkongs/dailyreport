@@ -88,14 +88,16 @@ KRX OpenAPI는 전일 데이터를 익영업일 08:00경 갱신한다고 알려�
 
 ### 3. 트리거 분리 (워크플로 파일 하나 유지)
 
-- 백업 schedule 둘로: `30 22 * * 0-4`(07:30 KST)=market, 신규 `35 23 * * 0-4`(08:35 KST)=etf.
-  - market: `if: inputs.only != 'etf' && github.event.schedule != '35 23 * * 0-4'`
-  - etf: `if: always() && inputs.only != 'market' && github.event.schedule != '30 22 * * 0-4'`
-  - (Codex가 GitHub 문서로 확인: schedule의 빈 inputs 비교, `always()`+skipped needs 모두 의도대로 동작)
+> 개정(2026-09-21): 처음엔 백업 schedule을 둘로 나누고 `github.event.schedule`로 job을 분기하려 했으나 폐기했다.
+> GitHub schedule의 실제 발화가 09시대로 밀려(9월 15건 전부 09:00 이후) 개장 전 백업으로 쓸 수 없기 때문이다.
+> 백업은 cron-job.org 2차 트리거가 맡고 GitHub schedule은 3순위로 그대로 둔다 —
+> `docs/superpowers/specs/2026-09-21-backup-and-delivery-recovery-design.md` 참조.
+
+- 워크플로의 `on.schedule`과 job `if`는 바꾸지 않는다. `inputs.only`로만 분리한다.
 - ETF 단계에도 `FORCE_REGENERATE` env를 전달한다(현재 market에만 있어 `force_regenerate` 입력이
   ETF에 닿지 않음 — 전환 당일 재생성·검증에 필요).
-- cron-job.org(사용자 작업): 기존 06:40 작업 body → `{"ref":"main","inputs":{"only":"market"}}`,
-  신규 `10 8 * * 1-5`(Asia/Seoul) 작업 body → `{"ref":"main","inputs":{"only":"etf"}}`.
+- cron-job.org(사용자 작업, 4개): 마켓 06:40·07:20 body `{"ref":"main","inputs":{"only":"market"}}`,
+  ETF 08:10(관측으로 확정)·08:35 body `{"ref":"main","inputs":{"only":"etf"}}`. 모두 월~금, Asia/Seoul.
 
 ### 4. 문구
 
@@ -130,9 +132,8 @@ strong tier가 상시 차단된다(현재 strong 19/60). 사실과 어긋나진 
 
 - 개장 후 실행: Yahoo가 장중가를 주고 시세 시각(`regularMarketTime`)을 보존하지 않는다.
   `prev-session` 경로에서도 KRX 필드가 null인 항목은 `??`로 Yahoo 값이 남는다. 보류 과제 M4.
-- 기본(08:10)↔백업(08:35) 간격 25분. 실행 간 `concurrency` 없음. GitHub schedule 지연으로
-  ETF 백업이 09:00 이후 돌 수 있다.
-- 백업은 생성 실패만 복구한다. 배포 대기·Telegram 발송 실패(응답 `ok` 미검사)는 복구하지 못한다.
+- 3순위인 GitHub schedule은 08:00 전이나 09:00 이후에 돌 수 있다(전자는 stale 경로, 후자는 장중가 위험 — M4).
+- 발송 실패 복구와 실행 간 직렬화는 별도 spec(2026-09-21 backup-and-delivery-recovery)에서 다룬다.
 - 두 리포트의 실시간 값(환율·원유·금) 수집 시각이 90분 벌어진다.
 - ETF 도착 시각이 06:50 → 08:20 전후로 바뀐다(구독자 체감).
 - 투자자별 수급은 별도 KRX 경로이고 원천이 매 실행 403이라 사실상 데이터가 없다.

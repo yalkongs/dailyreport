@@ -23,7 +23,7 @@
   Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
   Claude-Session: https://claude.ai/code/session_01FXc7J4MXi9SRfhhjaVfR8s
   ```
-- 백업 schedule cron은 UTC 자정을 넘기지 않는다(넘기면 `0-4` 요일 매핑이 깨진다 — `daily-report.yml:15-16`).
+- `on.schedule`과 job `if`는 바꾸지 않는다(백업은 cron-job.org 2차 트리거 — spec 3절 2026-09-21 개정).
 
 ## File Structure
 
@@ -637,77 +637,37 @@ git add scripts/run-etf.ts lib/etf/etf-evidence-log.ts lib/etf/etf-evidence-log.
 git commit -m "ETF 파이프라인에 리포트 날짜 전달, evidence 로그에 KRX 세션 판정 기록"
 ```
 
-### Task 6: 트리거 분리 + ETF `FORCE_REGENERATE` 연결
+### Task 6: ETF `FORCE_REGENERATE` 연결
+
+> 개정(2026-09-21): 백업 schedule을 둘로 나누고 `github.event.schedule`로 job을 분기하던 원안은 폐기했다
+> (GitHub schedule이 09시대에 발화해 개장 전 백업으로 쓸 수 없음 — spec 3절 개정 참조).
+> `on.schedule`과 job `if`는 바꾸지 않는다. 트리거 분리는 cron-job.org의 `inputs.only`로만 한다.
 
 **Files:**
-- Modify: `.github/workflows/daily-report.yml` (`on.schedule` 10-17, `market.if` 51, `etf.if` 217, ETF "Run ETF pipeline" env 260-264)
-- Test: `lib/workflow-triggers.test.ts` (Task 2에서 만든 파일에 추가)
+- Modify: `.github/workflows/daily-report.yml` (ETF "Run ETF pipeline" step의 `env:`, 파일 상단 주석)
+- Test: `lib/workflow-triggers.test.ts`
 
 - [ ] **Step 1: 실패하는 테스트 추가** — `lib/workflow-triggers.test.ts` 끝에
 
 ```ts
-test("백업 schedule이 둘로 나뉜다 — 07:30 KST=market, 08:35 KST=etf (둘 다 UTC 자정 전)", () => {
-  assert.match(yml, /- cron: '30 22 \* \* 0-4'/);
-  assert.match(yml, /- cron: '35 23 \* \* 0-4'/);
-});
-
-test("market job은 ETF 백업 schedule에서 돌지 않는다", () => {
-  assert.match(
-    jobBlock("market"),
-    /if: \$\{\{ inputs\.only != 'etf' && github\.event\.schedule != '35 23 \* \* 0-4' \}\}/,
-  );
-});
-
-test("etf job은 market 백업 schedule에서 돌지 않고, market이 skip돼도 돈다", () => {
-  assert.match(
-    jobBlock("etf"),
-    /if: \$\{\{ always\(\) && inputs\.only != 'market' && github\.event\.schedule != '30 22 \* \* 0-4' \}\}/,
-  );
-});
-
 test("ETF 파이프라인 step에도 FORCE_REGENERATE가 전달된다", () => {
   assert.match(jobBlock("etf"), /FORCE_REGENERATE: \$\{\{ inputs\.force_regenerate == true && 'true' \|\| 'false' \}\}/);
 });
 
-test("krx-probe는 market 백업 schedule에서만 돈다 (ETF 백업에서 중복 실행 금지)", () => {
-  assert.match(jobBlock("krx-probe"), /if: \$\{\{ github\.event\.schedule == '30 22 \* \* 0-4' \}\}/);
+test("schedule과 job 분기 조건은 그대로다 — 트리거 분리는 inputs.only로만", () => {
+  assert.match(yml, /- cron: '30 22 \* \* 0-4'/);
+  assert.equal((yml.match(/- cron:/g) ?? []).length, 1);
+  assert.match(jobBlock("market"), /if: \$\{\{ inputs\.only != 'etf' \}\}/);
+  assert.match(jobBlock("etf"), /if: \$\{\{ always\(\) && inputs\.only != 'market' \}\}/);
 });
 ```
-
-그리고 Task 2의 첫 테스트에서 `if:` 단언 한 줄을 삭제한다(위 마지막 테스트가 대체):
-`assert.match(job, /if: \$\{\{ github\.event_name == 'schedule' \}\}/);`
 
 - [ ] **Step 2: 실패 확인**
 
 Run: `npx tsx --test lib/workflow-triggers.test.ts`
-Expected: FAIL (5 tests)
+Expected: FAIL (FORCE_REGENERATE 테스트 1건)
 
 - [ ] **Step 3: 워크플로 수정**
-
-`on.schedule` 블록:
-
-```yaml
-  schedule:
-    # 늦은 백업 트리거 (월~금). 정시 트리거는 cron-job.org가 workflow_dispatch로 담당:
-    #   06:40 KST → only=market, 08:10 KST → only=etf
-    # ETF를 08:10으로 옮긴 이유: KRX OpenAPI가 전일 데이터를 익영업일 아침에 게시해
-    # 06:40에는 이틀 전 세션이 잡힌다 (spec 2026-09-20-etf-data-accuracy).
-    # 아래 두 cron은 cron-job.org가 죽은 날에만 의미가 있고, job `if`가
-    # github.event.schedule 문자열로 자기 몫만 실행한다. 문자열을 고치면 job `if`도 같이 고칠 것.
-    # ⚠️ 자정(24:00 UTC) 넘기면 UTC 요일이 하루 밀려 0-4(=KST 월~금) 매핑이
-    #    깨진다. 23:35 UTC는 안전. 이후 수정 시 이 경계를 반드시 지킬 것.
-    - cron: '30 22 * * 0-4'   # 07:30 KST — market 백업
-    - cron: '35 23 * * 0-4'   # 08:35 KST — etf 백업 (08:10 정시 실행의 15분 timeout과 겹치지 않게)
-```
-
-`market` job: `if: ${{ inputs.only != 'etf' }}` →
-`if: ${{ inputs.only != 'etf' && github.event.schedule != '35 23 * * 0-4' }}`
-
-`etf` job: `if: ${{ always() && inputs.only != 'market' }}` →
-`if: ${{ always() && inputs.only != 'market' && github.event.schedule != '30 22 * * 0-4' }}`
-
-`krx-probe` job: `if: ${{ github.event_name == 'schedule' }}` →
-`if: ${{ github.event.schedule == '30 22 * * 0-4' }}`
 
 ETF "Run ETF pipeline" step의 `env:`에 한 줄 추가(`ETF_PUBLIC_BASE_URL` 아래):
 
@@ -716,18 +676,20 @@ ETF "Run ETF pipeline" step의 `env:`에 한 줄 추가(`ETF_PUBLIC_BASE_URL` �
 ```
 
 파일 상단 주석 2행 `# Runs at 06:30 KST on weekdays. Two sequential jobs:` →
-`# Market runs at 06:40 KST, ETF at 08:10 KST on weekdays (cron-job.org dispatch). Two jobs:`
+`# Market runs at 06:40 KST, ETF at 08:10 KST on weekdays (cron-job.org dispatch, inputs.only). Two jobs:`
+
+`on.schedule` 주석에 한 줄 추가: `# 개장 전 백업은 cron-job.org 2차 트리거(07:20 market, 08:35 etf)가 맡는다. 이 schedule은 3순위.`
 
 - [ ] **Step 4: 통과 확인**
 
 Run: `npx tsx --test lib/workflow-triggers.test.ts`
-Expected: PASS (7 tests)
+Expected: PASS
 
 - [ ] **Step 5: 커밋**
 
 ```bash
 git add .github/workflows/daily-report.yml lib/workflow-triggers.test.ts
-git commit -m "ETF 트리거를 08:10으로 분리할 수 있게 schedule·job 분기 추가, ETF 강제 재생성 입력 연결"
+git commit -m "ETF 강제 재생성 입력 연결, 트리거 설명 주석 갱신"
 ```
 
 ### Task 7: 발행 시각 문구
@@ -766,7 +728,7 @@ git commit -m "ETF 발행 시각 문구를 '개장 전'으로 일반화, README 
 - [ ] **Step 1:** 거래일 오후에 사용자 승인 후 `feat/etf-data-accuracy`를 main에 `--no-ff` 머지, 전체 테스트·tsc 확인, push.
 - [ ] **Step 2:** 실데이터 검증 — `gh workflow run daily-report.yml -f only=etf -f dry_run=true -f force_regenerate=true` (발송·커밋 없음). 로그에서 확인:
   `[etf-data] KRX BAS_DD=<직전 거래일> 기대=<직전 거래일> → prev-session`, `[validate] 수집 성공`, market job `skipped`·etf job `success`.
-- [ ] **Step 3:** 사용자가 cron-job.org에서 (a) 기존 06:40 작업 body를 `{"ref":"main","inputs":{"only":"market"}}`로, (b) 신규 작업 `10 8 * * 1-5`(Asia/Seoul), 같은 URL·PAT, body `{"ref":"main","inputs":{"only":"etf"}}`로 설정. **Step 1과 같은 날** 끝낸다.
+- [ ] **Step 3:** 사용자가 cron-job.org에서 4개 작업을 설정(모두 월~금·Asia/Seoul·같은 URL·PAT): 마켓 06:40(기존 수정)·07:20(신규) body `{"ref":"main","inputs":{"only":"market"}}`, ETF 08:10(관측으로 확정)·08:35(신규) body `{"ref":"main","inputs":{"only":"etf"}}`. **Step 1과 같은 날** 끝낸다. `krx-probe` 제거(Step 5)를 먼저 해 2차 dispatch에서 probe가 다시 돌지 않게 한다.
 - [ ] **Step 4:** 다음 3거래일 아침 확인 — 06:40 run은 market만, 08:10 run은 etf만 실행. ETF 로그 `→ prev-session`, 도착 시각, `data/etf-evidence-log.json`의 `krxSession`. `stale`이 반복되면 발송 시각을 늦춘다.
 - [ ] **Step 5:** 관측 job 제거 — `krx-probe` job, `scripts/probe-krx-publish.ts`, `lib/workflow-triggers.test.ts`의 krx-probe 테스트 3개, `probeDeadlinePassed`와 그 테스트를 삭제하고 커밋.
 - [ ] **되돌리기:** cron-job.org 두 작업을 원래대로(06:40 body `{"ref":"main"}`, 08:10 작업 비활성) 돌리고 머지 커밋을 revert.
