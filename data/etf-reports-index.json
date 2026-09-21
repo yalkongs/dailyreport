@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-09-22",
+      "type": "morning",
+      "headline": "SOXX 5% 급등, 반도체가 미 증시를 끌었다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-09-22",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-09-21T21:47:41.563Z"
+    },
+    {
       "date": "2026-09-21",
       "type": "morning",
       "headline": "SOXX 2.7% 상승, 국내 반도체는 엇갈려",
