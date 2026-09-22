@@ -4,7 +4,7 @@ const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] })
 import type { EtfQuote, EtfFlow, InvestorFlow } from './types'
 import { ALL_ETF_UNIVERSE, US_ETF_UNIVERSE } from './universe'
 import { fetchJson } from './fetcher'
-import { resolveKrxSession, expectedKrxBasDd, type KrxSession } from './krx-session'
+import { resolveKrxSession, expectedKrxBasDd, krxRequestOrder, type KrxSession } from './krx-session'
 
 interface KrxEtfDailyTradeRow {
   BAS_DD: string
@@ -48,21 +48,6 @@ function parseKrxNumber(value: string | undefined): number | null {
   return Number.isFinite(n) ? n : null
 }
 
-function formatKrxDate(date: Date): string {
-  return date.toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' }).replace(/-/g, '')
-}
-
-function recentKrxDates(days = 8): string[] {
-  const out: string[] = []
-  const base = new Date()
-  for (let i = 0; i < days; i += 1) {
-    const d = new Date(base)
-    d.setDate(base.getDate() - i)
-    out.push(formatKrxDate(d))
-  }
-  return out
-}
-
 function mapKrxEtfDailyTrade(row: KrxEtfDailyTradeRow): KrxEtfDailyTrade {
   const close = parseKrxNumber(row.TDD_CLSPRC)
   const nav = parseKrxNumber(row.NAV)
@@ -90,7 +75,9 @@ function mapKrxEtfDailyTrade(row: KrxEtfDailyTradeRow): KrxEtfDailyTrade {
   }
 }
 
-export async function collectKrxOpenApiEtfDailyTrades(): Promise<{
+export async function collectKrxOpenApiEtfDailyTrades(
+  reportDate: string = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' }),
+): Promise<{
   map: Map<string, KrxEtfDailyTrade>
   basDd: string | null
 }> {
@@ -102,7 +89,10 @@ export async function collectKrxOpenApiEtfDailyTrades(): Promise<{
   }
 
   const url = 'https://data-dbg.krx.co.kr/svc/apis/etp/etf_bydd_trd'
-  for (const requested of recentKrxDates()) {
+  // 직전 거래일을 먼저 요청한다 — 오늘부터 역행하면 월요일에 KRX가 돌려주는 일요일 날짜의
+  // 빈 행을 먼저 채택해 stale이 된다(krxRequestOrder 주석 참조).
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
+  for (const requested of krxRequestOrder(reportDate, today)) {
     try {
       const data = await fetchJson<{ OutBlock_1?: KrxEtfDailyTradeRow[] }>(url, {
         method: 'POST',
@@ -309,7 +299,7 @@ export async function collectAllEtfData(
 }> {
   const [quotesResult, krxOpenApiResult, investorFlowsResult, flowsResult] = await Promise.allSettled([
     collectYahooQuotes(),
-    collectKrxOpenApiEtfDailyTrades(),
+    collectKrxOpenApiEtfDailyTrades(reportDate),
     collectKrxInvestorFlows(),
     collectUsEtfFlows(),
   ])
