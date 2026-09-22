@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** ETF 리포트가 이틀 전 세션의 국내 ETF 시세를 "전일"로 서술하지 않게 한다 — KRX 데이터가 전일 세션이 아닌 날은 병합하지 않고, ETF 발송을 KRX 게시 이후(08:10 KST)로 옮긴다.
+**Goal:** ETF 리포트가 이틀 전 세션의 국내 ETF 시세를 "전일"로 서술하지 않게 한다 — KRX 데이터가 전일 세션이 아닌 날은 병합하지 않고, ETF 발송을 KRX 게시 이후(08:15 KST)로 옮긴다.
 
 **Architecture:** KRX 응답 행의 `BAS_DD`를 직전 한국 거래일과 비교하는 순수 함수(`lib/etf/krx-session.ts`)를 만들고, 병합을 순수 함수로 분리해 `prev-session`일 때만 KRX 값을 쓴다. stale인 날은 기존 "KRX 수집 실패일" 경로(국내 NAV 전부 null → `krx-nav`)로 들어간다. 게시 시각은 기존 백업 schedule에 편승한 읽기 전용 관측 job으로 먼저 측정한다.
 
@@ -322,11 +322,11 @@ git commit -m "KRX 게시 시각 읽기 전용 관측 job 추가 (백업 schedul
   `gh run list --workflow=daily-report.yml --event schedule --limit 1 --json databaseId -q '.[0].databaseId'` → `gh run view <id> --log | grep krx-probe`
   Expected: `시작 KST …` → `미게시 …` 반복 → `게시 확인 KST HH:MM:SS … BAS_DD=<기대 기준일>`.
   market·etf job의 결과가 평소와 같은지도 함께 확인한다(중복 가드로 skip).
-- [ ] **Step 3:** 3~5거래일의 게시 시각을 표로 정리해 사용자에게 보고하고 발송 시각(기본 08:10)을 확정한다. 게시가 08:10보다 늦으면 발송 시각·백업 cron을 그만큼 늦춘 값으로 Phase 2의 Task 6을 고친다.
+- [ ] **Step 3:** 3~5거래일의 게시 시각을 표로 정리해 사용자에게 보고하고 발송 시각(08:15)을 확정한다 — 확정됨. 게시가 08:05보다 늦으면 발송 시각·백업 cron을 그만큼 늦춘 값으로 Phase 2의 Task 6을 고친다.
 
 ---
 
-# Phase 2 — 기준일 가드 + 08:10 전환 (관측 후, 전환과 같은 날 배포)
+# Phase 2 — 기준일 가드 + 08:15 전환 (관측 후, 전환과 같은 날 배포)
 
 ### Task 4: KRX 수집이 BAS_DD를 돌려주고, 병합을 순수 함수로 분리
 
@@ -599,7 +599,7 @@ Expected: FAIL — `krxBasDd` does not exist in type `EtfEvidenceLogEntry`
 
 ```ts
   failedSources: string[]
-  // 2026-09-20: KRX 응답 기준일과 세션 판정 — 발송 시각(08:10) 적정성 관측용. 옛 엔트리엔 없음.
+  // 2026-09-20: KRX 응답 기준일과 세션 판정 — 발송 시각(08:15) 적정성 관측용. 옛 엔트리엔 없음.
   krxBasDd?: string | null
   krxSession?: 'prev-session' | 'stale' | 'none'
 ```
@@ -676,9 +676,9 @@ ETF "Run ETF pipeline" step의 `env:`에 한 줄 추가(`ETF_PUBLIC_BASE_URL` �
 ```
 
 파일 상단 주석 2행 `# Runs at 06:30 KST on weekdays. Two sequential jobs:` →
-`# Market runs at 06:40 KST, ETF at 08:10 KST on weekdays (cron-job.org dispatch, inputs.only). Two jobs:`
+`# Market runs at 06:40 KST, ETF at 08:15 KST on weekdays (cron-job.org dispatch, inputs.only). Two jobs:`
 
-`on.schedule` 주석에 한 줄 추가: `# 개장 전 백업은 cron-job.org 2차 트리거(07:20 market, 08:35 etf)가 맡는다. 이 schedule은 3순위.`
+`on.schedule` 주석에 한 줄 추가: `# 개장 전 백업은 cron-job.org 2차 트리거(07:20 market, 08:40 etf)가 맡는다. 이 schedule은 3순위.`
 
 - [ ] **Step 4: 통과 확인**
 
@@ -713,7 +713,7 @@ git commit -m "ETF 강제 재생성 입력 연결, 트리거 설명 주석 갱�
 Run: `grep -n "06:30" lib/etf/claude-client.ts`
 Expected: 출력 없음
 
-- [ ] **Step 3: README 갱신** — 발송 시각 설명을 "Market 06:40 KST · ETF 08:10 KST"로, cron-job.org 표에 ETF 작업 행(`10 8 * * 1-5`, body `{"ref":"main","inputs":{"only":"etf"}}`)과 기존 작업 body(`{"ref":"main","inputs":{"only":"market"}}`)를 반영하고, ETF를 08:10으로 옮긴 이유 한 단락(“KRX OpenAPI 전일 데이터 게시 시각”)을 추가한다. 백업 schedule 설명을 두 cron으로 고친다.
+- [ ] **Step 3: README 갱신** — 발송 시각 설명을 "Market 06:40 KST · ETF 08:15 KST"로, cron-job.org 표에 ETF 작업 행(`15 8 * * 1-5`, body `{"ref":"main","inputs":{"only":"etf"}}`)과 기존 작업 body(`{"ref":"main","inputs":{"only":"market"}}`)를 반영하고, ETF를 08:15로 옮긴 이유 한 단락(“KRX OpenAPI 전일 데이터 게시 시각”)을 추가한다. 백업 schedule 설명을 두 cron으로 고친다.
 
 - [ ] **Step 4: 전체 검증 후 커밋**
 
@@ -728,7 +728,7 @@ git commit -m "ETF 발행 시각 문구를 '개장 전'으로 일반화, README 
 - [ ] **Step 1:** 거래일 오후에 사용자 승인 후 `feat/etf-data-accuracy`를 main에 `--no-ff` 머지, 전체 테스트·tsc 확인, push.
 - [ ] **Step 2:** 실데이터 검증 — `gh workflow run daily-report.yml -f only=etf -f dry_run=true -f force_regenerate=true` (발송·커밋 없음). 로그에서 확인:
   `[etf-data] KRX BAS_DD=<직전 거래일> 기대=<직전 거래일> → prev-session`, `[validate] 수집 성공`, market job `skipped`·etf job `success`.
-- [ ] **Step 3:** 사용자가 cron-job.org에서 4개 작업을 설정(모두 월~금·Asia/Seoul·같은 URL·PAT): 마켓 06:40(기존 수정)·07:20(신규) body `{"ref":"main","inputs":{"only":"market"}}`, ETF 08:10(관측으로 확정)·08:35(신규) body `{"ref":"main","inputs":{"only":"etf"}}`. **Step 1과 같은 날** 끝낸다. `krx-probe` 제거(Step 5)를 먼저 해 2차 dispatch에서 probe가 다시 돌지 않게 한다.
-- [ ] **Step 4:** 다음 3거래일 아침 확인 — 06:40 run은 market만, 08:10 run은 etf만 실행. ETF 로그 `→ prev-session`, 도착 시각, `data/etf-evidence-log.json`의 `krxSession`. `stale`이 반복되면 발송 시각을 늦춘다.
+- [ ] **Step 3:** 사용자가 cron-job.org에서 4개 작업을 설정(모두 월~금·Asia/Seoul·같은 URL·PAT): 마켓 06:40(기존 수정)·07:20(신규) body `{"ref":"main","inputs":{"only":"market"}}`, ETF 08:15(관측 확정)·08:40(신규) body `{"ref":"main","inputs":{"only":"etf"}}`. **Step 1과 같은 날** 끝낸다. `krx-probe` 제거(Step 5)를 먼저 해 2차 dispatch에서 probe가 다시 돌지 않게 한다.
+- [ ] **Step 4:** 다음 3거래일 아침 확인 — 06:40 run은 market만, 08:15 run은 etf만 실행. ETF 로그 `→ prev-session`, 도착 시각, `data/etf-evidence-log.json`의 `krxSession`. `stale`이 반복되면 발송 시각을 늦춘다.
 - [ ] **Step 5:** 관측 job 제거 — `krx-probe` job, `scripts/probe-krx-publish.ts`, `lib/workflow-triggers.test.ts`의 krx-probe 테스트 3개, `probeDeadlinePassed`와 그 테스트를 삭제하고 커밋.
-- [ ] **되돌리기:** cron-job.org 두 작업을 원래대로(06:40 body `{"ref":"main"}`, 08:10 작업 비활성) 돌리고 머지 커밋을 revert.
+- [ ] **되돌리기:** cron-job.org 두 작업을 원래대로(06:40 body `{"ref":"main"}`, 08:15·08:40·07:20 작업 비활성) 돌리고 머지 커밋을 revert.
