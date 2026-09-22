@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-09-23",
+      "type": "morning",
+      "headline": "소비심리 3년 만에 최고, 금리 부담 속 반도체가 앞서 달린 밤",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-09-23",
+      "anomalyCount": 10,
+      "anomalyBreakdown": {
+        "premiumDiscount": 10
+      },
+      "createdAt": "2026-09-22T21:48:11.136Z"
+    },
+    {
       "date": "2026-09-22",
       "type": "morning",
       "headline": "SOXX 5% 급등, 반도체가 미 증시를 끌었다",
