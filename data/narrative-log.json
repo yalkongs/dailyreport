@@ -1,6 +1,25 @@
 {
   "entries": [
     {
+      "date": "2026-09-23",
+      "narrativeAngle": "supply_chain",
+      "headline": "원화, 하루 만에 20원 되찾다",
+      "bigStoryTopic": "원/달러 환율이 <strong>1,355.66원</strong>으로 <strong>-1.4",
+      "walletTopics": [
+        "수출 대형주 보유자 — 원화 강세의 실적 환산 효과를 재계산하십시오",
+        "HBM·반도체 소부장 — 중국 AI 수요가 단가 협상력을 바꾸고 있습니다",
+        "석유화학·포장재 업체 — 납사 하락의 수혜, 단 제품가 동반 하락에 주의",
+        "원화 강세·유가 하락 국면, 자산별 현재 위치",
+        "4%대 국고채 환경, 예금의 실질 위치는"
+      ],
+      "metaphors": [
+        "원화 강세",
+        "산업 체인",
+        "체력 회복"
+      ],
+      "lookingAhead": "한국은행 소비자동향조사 발표"
+    },
+    {
       "date": "2026-09-22",
       "narrativeAngle": "hidden_variable",
       "headline": "AI 낙관론이 유가 자리를 차지했다",
@@ -548,25 +567,6 @@
         "교착"
       ],
       "lookingAhead": "7월 고용동향 발표 — 채권·금리의 다음 방향"
-    },
-    {
-      "date": "2026-08-11",
-      "narrativeAngle": "data_anatomy",
-      "headline": "유가 5% 오르고 ITC 압박까지, SK하이닉스 두 개의 숙제",
-      "bigStoryTopic": "WTI가 하루 만에 <strong>5.3%</strong> 뛰며 배럴당 <strong>82",
-      "walletTopics": [
-        "SK하이닉스 보유자: ITC 조사 2차 개시, 실적 호재와 동시에 읽어야",
-        "정유·항공·화학 업종 투자자: WTI 82달러, 원가 셈법 재확인",
-        "코스닥 급등 이후: 단기 속도와 펀더멘털 사이",
-        "유가 급등 이후, 각 자산의 현재 위치",
-        "원/달러 1,417원, 다섯 가지 시선"
-      ],
-      "metaphors": [
-        "ITC 조사",
-        "유가 급등",
-        "특허 압박"
-      ],
-      "lookingAhead": "SK하이닉스 ITC 2차 조사 — 불확실성의 무게"
     }
   ]
 }
