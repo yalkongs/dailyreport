@@ -78,3 +78,14 @@ for (const job of ["market", "etf"] as const) {
 test("krx-probe에는 concurrency가 없다", () => {
   assert.doesNotMatch(jobBlock("krx-probe"), /concurrency:/);
 });
+
+test("ETF 파이프라인 step에도 FORCE_REGENERATE가 전달된다", () => {
+  assert.match(jobBlock("etf"), /FORCE_REGENERATE: \$\{\{ inputs\.force_regenerate == true && 'true' \|\| 'false' \}\}/);
+});
+
+test("schedule과 job 분기 조건은 그대로다 — 트리거 분리는 inputs.only로만", () => {
+  assert.match(yml, /- cron: '30 22 \* \* 0-4'/);
+  assert.equal((yml.match(/- cron:/g) ?? []).length, 1);
+  assert.match(jobBlock("market"), /if: \$\{\{ inputs\.only != 'etf' \}\}/);
+  assert.match(jobBlock("etf"), /if: \$\{\{ always\(\) && inputs\.only != 'market' \}\}/);
+});
