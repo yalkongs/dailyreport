@@ -1,5 +1,5 @@
 name: Generate Daily Market Report
-# Runs at 06:30 KST on weekdays. Two sequential jobs:
+# Market runs at 06:40 KST, ETF at 08:15 KST on weekdays (cron-job.org dispatch, inputs.only). Two jobs:
 #   1. `market` — global market report (existing pipeline)
 #   2. `etf`    — ETF morning report (absorbed from etfreport)
 # The jobs are independent: if `market` fails, `etf` still runs.
@@ -8,10 +8,12 @@ name: Generate Daily Market Report
 
 on:
   schedule:
-    # 늦은 백업 트리거 — KST 07:30 (월~금) = UTC 22:30 (일~목).
-    # 정시 트리거는 cron-job.org(06:40 KST)가 workflow_dispatch로 담당.
-    # cron-job.org가 죽은 날에만 이 백업이 의미 있음. 06:40 발화와 시각이
-    # 분리돼 push 충돌 레이스가 원천 차단됨 (README "아침 트리거" 참조).
+    # 3순위 백업 트리거 — KST 07:30 (월~금) = UTC 22:30 (일~목). 실제 발화는 만성 지연.
+    # 정시 트리거는 cron-job.org가 workflow_dispatch로 담당: 06:40 market(only=market),
+    # 08:15 etf(only=etf — KRX 전일 데이터 게시 ~08:00 이후).
+    # 개장 전 백업은 cron-job.org 2차 트리거(07:20 market, 08:40 etf)가 맡는다. 이 schedule은 3순위.
+    # cron-job.org 자체가 죽은 날에만 의미 있으며 두 job을 모두 돌려 중복 가드에 맡긴다
+    # (README "아침 트리거" 참조).
     # ⚠️ 자정(24:00 UTC) 넘기면 UTC 요일이 하루 밀려 0-4(=KST 월~금) 매핑이
     #    깨진다. 22:30 UTC는 안전. 이후 수정 시 이 경계를 반드시 지킬 것.
     - cron: '30 22 * * 0-4'
@@ -306,6 +308,7 @@ jobs:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           KRX_AUTH_KEY: ${{ secrets.KRX_AUTH_KEY }}
           ETF_PUBLIC_BASE_URL: https://dailyreport-eta.vercel.app
+          FORCE_REGENERATE: ${{ inputs.force_regenerate == true && 'true' || 'false' }}
         run: |
           npx tsx scripts/run-etf.ts
           REPORT_DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
@@ -458,37 +461,3 @@ jobs:
             echo "::error::Telegram 발송 ${STATE} — ${DETAIL}"
             exit 1
           fi
-
-  # KRX OpenAPI 전일 데이터 게시 시각 관측 (읽기 전용, 임시).
-  # 매일 06:40 KST 정시 dispatch(cron-job.org, only=both)에 편승해 09:10 KST까지
-  # 5분 간격으로 조회하고 로그만 남긴다. market·etf job과 무관하며 리포트에 영향이 없다.
-  # 백업 schedule에 편승하지 않는 이유: GitHub schedule 지연으로 2026-08-27 이후 실제
-  # 발화가 09:07~10:20 KST라 관측 구간(~09:10)이 통째로 지나간다.
-  # 수동 dispatch(dry_run·resend·only=market|etf)에서는 돌지 않는다.
-  # 3~5거래일 관측 후 이 job과 scripts/probe-krx-publish.ts를 제거한다.
-  # spec: docs/superpowers/specs/2026-09-20-etf-data-accuracy-design.md
-  krx-probe:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.only == 'both' && inputs.dry_run != true && inputs.dry_run != 'true' && inputs.resend_telegram_only != true && inputs.resend_telegram_only != 'true' }}
-    runs-on: ubuntu-latest
-    # 06:40 시작 → 09:10 마감 + 마지막 5분 대기 = 최대 ~155분.
-    timeout-minutes: 170
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: main
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Probe KRX publish time
-        env:
-          KRX_AUTH_KEY: ${{ secrets.KRX_AUTH_KEY }}
-        run: npx tsx scripts/probe-krx-publish.ts

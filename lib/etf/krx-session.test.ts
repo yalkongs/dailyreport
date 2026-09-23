@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toKrxBasDd, expectedKrxBasDd, resolveKrxSession, probeDeadlinePassed } from "./krx-session";
+import { toKrxBasDd, expectedKrxBasDd, resolveKrxSession, krxRequestOrder } from "./krx-session";
 
 test("toKrxBasDd: ISO 날짜를 KRX basDd로", () => {
   assert.equal(toKrxBasDd("2026-09-17"), "20260917");
@@ -35,9 +35,17 @@ test("resolveKrxSession: 응답이 없으면 none", () => {
   assert.equal(resolveKrxSession("", "2026-09-18"), "none");
 });
 
-test("probeDeadlinePassed: 09:10 이전은 계속, 이후는 중단", () => {
-  assert.equal(probeDeadlinePassed("07:52"), false);
-  assert.equal(probeDeadlinePassed("09:09"), false);
-  assert.equal(probeDeadlinePassed("09:10"), true);
-  assert.equal(probeDeadlinePassed("10:35"), true);
+
+test("krxRequestOrder: 직전 거래일을 먼저 요청하고, 그다음에야 날짜를 역행한다 (월요일 일요일-행 함정 방지)", () => {
+  // 09-22(화) 06:45 실행에서 KRX가 일요일(0920) 기준일로 빈 값 1171행을 돌려준 것이 관측됐다.
+  // 오늘부터 역행하면 월요일엔 일요일 행을 먼저 만나 매주 stale이 된다.
+  // 09-28(월)의 직전 거래일은 추석 연휴(09-24~25)를 건너뛴 09-23(수).
+  const order = krxRequestOrder("2026-09-28", "2026-09-28");
+  assert.equal(order[0], "20260923");
+  assert.ok(!order.slice(1).includes("20260923"));
+  assert.deepEqual(order.slice(1, 4), ["20260928", "20260927", "20260926"]);
+});
+
+test("krxRequestOrder: 백필(과거 reportDate)도 그 날짜의 직전 거래일을 먼저 요청한다", () => {
+  assert.equal(krxRequestOrder("2026-09-16", "2026-09-28")[0], "20260915");
 });

@@ -77,3 +77,18 @@ test('기본 retention 60 — 61건 입력 시 가장 오래된 1건이 잘림',
     fs.rmSync(p, { force: true })
   }
 })
+
+test('KRX 기준일·세션 판정을 엔트리에 기록한다', () => {
+  const p = tmpPath()
+  try {
+    appendEtfEvidenceLog(
+      { ...entry('2026-09-21'), failedSources: ['krx-nav'], krxBasDd: '20260917', krxSession: 'stale' },
+      { path: p },
+    )
+    const stored = JSON.parse(fs.readFileSync(p, 'utf-8')) as EtfEvidenceLogEntry[]
+    assert.equal(stored[0].krxBasDd, '20260917')
+    assert.equal(stored[0].krxSession, 'stale')
+  } finally {
+    fs.rmSync(p, { force: true })
+  }
+})

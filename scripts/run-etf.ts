@@ -106,13 +106,14 @@ async function main() {
   // Step 1: 데이터 수집 (병렬)
   console.log('[1/8] 데이터 수집 중...')
   const [etfData, macro, news] = await Promise.allSettled([
-    collectAllEtfData(),
+    collectAllEtfData(date),
     collectMacroContext(),
     collectNews(),
   ])
 
-  const { quotes, flows, investorFlows } = etfData.status === 'fulfilled'
-    ? etfData.value : { quotes: [], flows: [], investorFlows: [] }
+  const { quotes, flows, investorFlows, krx } = etfData.status === 'fulfilled'
+    ? etfData.value
+    : { quotes: [], flows: [], investorFlows: [], krx: { basDd: null, session: 'none' as const } }
 
   // Layer 0: 수집 실패 소스 기록 (allSettled rejection + KRX nav 전량 null)
   const failedSources: string[] = []
@@ -258,6 +259,8 @@ async function main() {
     anomalyCount: anomalies.length,
     anomalyBreakdown: breakdown,
     failedSources: data.failedSources ?? [],
+    krxBasDd: krx.basDd,
+    krxSession: krx.session,
   })
 
   // Telegram send lives in .github/workflows/daily-report.yml (after

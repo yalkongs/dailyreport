@@ -14,23 +14,7 @@ function jobBlock(name: string): string {
   return next < 0 ? rest : rest.slice(0, next + 1);
 }
 
-test("krx-probe: 06:40 정시 dispatch(only=both)에서만 돌고 다른 job과 의존이 없다", () => {
-  const job = jobBlock("krx-probe");
-  assert.match(
-    job,
-    /if: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.only == 'both' && inputs\.dry_run != true && inputs\.dry_run != 'true' && inputs\.resend_telegram_only != true && inputs\.resend_telegram_only != 'true' \}\}/,
-  );
-  assert.doesNotMatch(job, /needs:/);
-  assert.match(job, /timeout-minutes: 170/);
-  assert.match(job, /KRX_AUTH_KEY: \$\{\{ secrets\.KRX_AUTH_KEY \}\}/);
-  assert.match(job, /npx tsx scripts\/probe-krx-publish\.ts/);
-});
 
-test("krx-probe: 읽기 전용 — commit·push·Telegram step이 없다", () => {
-  const job = jobBlock("krx-probe");
-  assert.doesNotMatch(job, /git (commit|push)/);
-  assert.doesNotMatch(job, /api\.telegram\.org/);
-});
 
 test("권한: commit status를 쓸 수 있다 (발송 상태 기록)", () => {
   assert.match(yml, /\n  statuses: write/);
@@ -75,6 +59,14 @@ for (const job of ["market", "etf"] as const) {
   });
 }
 
-test("krx-probe에는 concurrency가 없다", () => {
-  assert.doesNotMatch(jobBlock("krx-probe"), /concurrency:/);
+
+test("ETF 파이프라인 step에도 FORCE_REGENERATE가 전달된다", () => {
+  assert.match(jobBlock("etf"), /FORCE_REGENERATE: \$\{\{ inputs\.force_regenerate == true && 'true' \|\| 'false' \}\}/);
+});
+
+test("schedule과 job 분기 조건은 그대로다 — 트리거 분리는 inputs.only로만", () => {
+  assert.match(yml, /- cron: '30 22 \* \* 0-4'/);
+  assert.equal((yml.match(/- cron:/g) ?? []).length, 1);
+  assert.match(jobBlock("market"), /if: \$\{\{ inputs\.only != 'etf' \}\}/);
+  assert.match(jobBlock("etf"), /if: \$\{\{ always\(\) && inputs\.only != 'market' \}\}/);
 });

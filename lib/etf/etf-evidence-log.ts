@@ -17,6 +17,9 @@ export interface EtfEvidenceLogEntry {
   anomalyCount: number                                     // 전체(괴리율 포함)
   anomalyBreakdown: Partial<Record<AnomalyType, number>>   // 타입별 분해
   failedSources: string[]
+  // 2026-09-20: KRX 응답 기준일과 세션 판정 — 발송 시각(08:15) 적정성 관측용. 옛 엔트리엔 없음.
+  krxBasDd?: string | null
+  krxSession?: 'prev-session' | 'stale' | 'none'
 }
 
 const DEFAULT_PATH = 'data/etf-evidence-log.json'

@@ -4,6 +4,7 @@ const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] })
 import type { EtfQuote, EtfFlow, InvestorFlow } from './types'
 import { ALL_ETF_UNIVERSE, US_ETF_UNIVERSE } from './universe'
 import { fetchJson } from './fetcher'
+import { resolveKrxSession, expectedKrxBasDd, krxRequestOrder, type KrxSession } from './krx-session'
 
 interface KrxEtfDailyTradeRow {
   BAS_DD: string
@@ -22,7 +23,7 @@ interface KrxEtfDailyTradeRow {
   FLUC_RT_IDX: string
 }
 
-interface KrxEtfDailyTrade {
+export interface KrxEtfDailyTrade {
   date: string
   ticker: string
   name: string
@@ -45,21 +46,6 @@ function parseKrxNumber(value: string | undefined): number | null {
   if (!value || value === '-') return null
   const n = Number(value.replace(/,/g, ''))
   return Number.isFinite(n) ? n : null
-}
-
-function formatKrxDate(date: Date): string {
-  return date.toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' }).replace(/-/g, '')
-}
-
-function recentKrxDates(days = 8): string[] {
-  const out: string[] = []
-  const base = new Date()
-  for (let i = 0; i < days; i += 1) {
-    const d = new Date(base)
-    d.setDate(base.getDate() - i)
-    out.push(formatKrxDate(d))
-  }
-  return out
 }
 
 function mapKrxEtfDailyTrade(row: KrxEtfDailyTradeRow): KrxEtfDailyTrade {
@@ -89,16 +75,24 @@ function mapKrxEtfDailyTrade(row: KrxEtfDailyTradeRow): KrxEtfDailyTrade {
   }
 }
 
-export async function collectKrxOpenApiEtfDailyTrades(): Promise<Map<string, KrxEtfDailyTrade>> {
+export async function collectKrxOpenApiEtfDailyTrades(
+  reportDate: string = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' }),
+): Promise<{
+  map: Map<string, KrxEtfDailyTrade>
+  basDd: string | null
+}> {
   const authKey = process.env.KRX_AUTH_KEY
-  const result = new Map<string, KrxEtfDailyTrade>()
+  const map = new Map<string, KrxEtfDailyTrade>()
   if (!authKey) {
     console.warn('[etf-data] KRX_AUTH_KEY 미설정 — KRX OpenAPI ETF 일별매매정보 건너뜀')
-    return result
+    return { map, basDd: null }
   }
 
   const url = 'https://data-dbg.krx.co.kr/svc/apis/etp/etf_bydd_trd'
-  for (const basDd of recentKrxDates()) {
+  // 직전 거래일을 먼저 요청한다 — 오늘부터 역행하면 월요일에 KRX가 돌려주는 일요일 날짜의
+  // 빈 행을 먼저 채택해 stale이 된다(krxRequestOrder 주석 참조).
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
+  for (const requested of krxRequestOrder(reportDate, today)) {
     try {
       const data = await fetchJson<{ OutBlock_1?: KrxEtfDailyTradeRow[] }>(url, {
         method: 'POST',
@@ -106,23 +100,25 @@ export async function collectKrxOpenApiEtfDailyTrades(): Promise<Map<string, Krx
           'Content-Type': 'application/json',
           AUTH_KEY: authKey,
         },
-        body: JSON.stringify({ basDd }),
+        body: JSON.stringify({ basDd: requested }),
       })
 
       const rows = data?.OutBlock_1 ?? []
       if (rows.length === 0) continue
       for (const row of rows) {
         const mapped = mapKrxEtfDailyTrade(row)
-        result.set(mapped.ticker, mapped)
+        map.set(mapped.ticker, mapped)
       }
-      console.log(`[etf-data] KRX OpenAPI ETF 일별매매정보: ${basDd}, ${rows.length}건`)
-      break
+      // 판정은 요청 날짜가 아니라 응답 행의 기준일로 한다.
+      const basDd = rows[0].BAS_DD || null
+      console.log(`[etf-data] KRX OpenAPI ETF 일별매매정보: 요청=${requested} 응답 BAS_DD=${basDd}, ${rows.length}건`)
+      return { map, basDd }
     } catch (e) {
-      console.error(`[etf-data] KRX OpenAPI ETF 일별매매정보 실패: ${basDd}`, e)
+      console.error(`[etf-data] KRX OpenAPI ETF 일별매매정보 실패: ${requested}`, e)
     }
   }
 
-  return result
+  return { map, basDd: null }
 }
 
 // Yahoo Finance로 ETF 시세 수집 (10개씩 배치)
@@ -172,67 +168,6 @@ export async function collectYahooQuotes(): Promise<EtfQuote[]> {
     }
   }
   return results
-}
-
-// KRX — NAV, 괴리율, 추적오차
-export async function collectKrxNavData(): Promise<
-  Map<string, { nav: number; premiumDiscount: number; trackingError: number }>
-> {
-  const openApiMap = await collectKrxOpenApiEtfDailyTrades()
-  if (openApiMap.size > 0) {
-    return new Map([...openApiMap].map(([ticker, row]) => [ticker, {
-      nav: row.nav ?? 0,
-      premiumDiscount: row.premiumDiscount ?? 0,
-      trackingError: 0,
-    }]))
-  }
-
-  return collectLegacyKrxNavData()
-}
-
-async function collectLegacyKrxNavData(): Promise<
-  Map<string, { nav: number; premiumDiscount: number; trackingError: number }>
-> {
-  const result = new Map<string, { nav: number; premiumDiscount: number; trackingError: number }>()
-  const url = 'https://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd'
-
-  for (const trdDd of recentKrxDates()) {
-    const body = new URLSearchParams({
-      bld: 'dbms/MDC/STAT/standard/MDCSTAT04301',
-      locale: 'ko_KR',
-      trdDd,
-      share: '1',
-      money: '1',
-      csvxls_isNo: 'false',
-    })
-
-    try {
-      const data = await fetchJson<{
-        output: Array<{ ISU_CD: string; NAV: string; DIVRG_RT: string; TRK_ERR: string }>
-      }>(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: body.toString(),
-      })
-
-      if (!data?.output || data.output.length === 0) continue
-
-      for (const row of data.output) {
-        const ticker = `${row.ISU_CD}.KS`
-        result.set(ticker, {
-          nav: parseKrxNumber(row.NAV) ?? 0,
-          premiumDiscount: parseKrxNumber(row.DIVRG_RT) ?? 0,
-          trackingError: parseKrxNumber(row.TRK_ERR) ?? 0,
-        })
-      }
-      console.log(`[etf-data] KRX legacy NAV: ${trdDd}, ${data.output.length}건`)
-      break
-    } catch (e) {
-      console.error(`[etf-data] KRX NAV 수집 실패: ${trdDd}`, e)
-    }
-  }
-
-  return result
 }
 
 // KRX — 투자자별 매매동향
@@ -315,63 +250,74 @@ export async function collectUsEtfFlows(): Promise<EtfFlow[]> {
   return results.filter(r => r.ticker !== '')
 }
 
-// 메인 수집 함수 — Yahoo + KRX 병합
-export async function collectAllEtfData(): Promise<{
+/**
+ * KRX 값을 국내 quote에 병합한다. session 이 'prev-session' 일 때만.
+ * stale·none 에서는 KRX 값을 하나도 섞지 않는다 — D-1 가격과 D-2 NAV를 섞으면
+ * validateData 의 가격/NAV 10% 검증이 리포트를 통째로 중단시키고, 오래된 괴리율이
+ * 이상 탐지·"오늘 N개 관측" 문구로 '오늘'의 사실이 된다.
+ * 국내 NAV가 전부 null이면 run-etf 가 'krx-nav' 실패로 기록한다(기존 경로).
+ */
+export function mergeKrxIntoQuotes(
+  quotes: EtfQuote[],
+  krxMap: Map<string, KrxEtfDailyTrade>,
+  session: KrxSession,
+): EtfQuote[] {
+  if (session !== 'prev-session') return quotes
+  return quotes.map(q => {
+    const krx = krxMap.get(q.ticker)
+    if (!krx) return q
+    return {
+      ...q,
+      name: krx.name || q.name,
+      price: krx.close ?? q.price,
+      change: krx.change ?? q.change,
+      changePercent: krx.changePercent ?? q.changePercent,
+      volume: krx.volume ?? q.volume,
+      aum: krx.netAssetTotal ?? q.aum,
+      nav: krx.nav,
+      premiumDiscount: krx.premiumDiscount,
+      trackingError: q.trackingError,
+      tradingValue: krx.tradingValue,
+      marketCap: krx.marketCap,
+      underlyingIndexName: krx.underlyingIndexName,
+      underlyingIndexClose: krx.underlyingIndexClose,
+      underlyingIndexChangePercent: krx.underlyingIndexChangePercent,
+      dailyIndexGap: krx.dailyIndexGap,
+    }
+  })
+}
+
+// 메인 수집 함수 — Yahoo + KRX 병합. KRX는 응답 기준일이 직전 한국 거래일일 때만 병합한다.
+// (날짜를 알 수 없는 legacy NAV 경로는 2026-09 기준일 가드와 함께 제거 — 날짜 혼합 금지.)
+export async function collectAllEtfData(
+  reportDate: string = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' }),
+): Promise<{
   quotes: EtfQuote[]
   flows: EtfFlow[]
   investorFlows: InvestorFlow[]
+  krx: { basDd: string | null; session: KrxSession }
 }> {
   const [quotesResult, krxOpenApiResult, investorFlowsResult, flowsResult] = await Promise.allSettled([
     collectYahooQuotes(),
-    collectKrxOpenApiEtfDailyTrades(),
+    collectKrxOpenApiEtfDailyTrades(reportDate),
     collectKrxInvestorFlows(),
     collectUsEtfFlows(),
   ])
 
   const quotes = quotesResult.status === 'fulfilled' ? quotesResult.value : []
-  const krxMap = krxOpenApiResult.status === 'fulfilled' ? krxOpenApiResult.value : new Map<string, KrxEtfDailyTrade>()
-  const krxNavFallbackMap = krxMap.size === 0
-    ? await collectLegacyKrxNavData()
-    : new Map<string, { nav: number; premiumDiscount: number; trackingError: number }>()
-
-  // KRX OpenAPI 데이터를 국내 ETF quotes에 병합하고, OpenAPI가 비면 legacy NAV로 보강한다.
-  const mergedQuotes = quotes.map(q => {
-    const krx = krxMap.get(q.ticker)
-    if (krx) {
-      return {
-        ...q,
-        name: krx.name || q.name,
-        price: krx.close ?? q.price,
-        change: krx.change ?? q.change,
-        changePercent: krx.changePercent ?? q.changePercent,
-        volume: krx.volume ?? q.volume,
-        aum: krx.netAssetTotal ?? q.aum,
-        nav: krx.nav,
-        premiumDiscount: krx.premiumDiscount,
-        trackingError: q.trackingError,
-        tradingValue: krx.tradingValue,
-        marketCap: krx.marketCap,
-        underlyingIndexName: krx.underlyingIndexName,
-        underlyingIndexClose: krx.underlyingIndexClose,
-        underlyingIndexChangePercent: krx.underlyingIndexChangePercent,
-        dailyIndexGap: krx.dailyIndexGap,
-      }
-    }
-    const nav = krxNavFallbackMap.get(q.ticker)
-    if (nav) {
-      return {
-        ...q,
-        nav: nav.nav,
-        premiumDiscount: nav.premiumDiscount,
-        trackingError: nav.trackingError,
-      }
-    }
-    return q
-  })
+  const krxResult = krxOpenApiResult.status === 'fulfilled'
+    ? krxOpenApiResult.value
+    : { map: new Map<string, KrxEtfDailyTrade>(), basDd: null }
+  const session = resolveKrxSession(krxResult.basDd, reportDate)
+  console.log(
+    `[etf-data] KRX BAS_DD=${krxResult.basDd ?? '없음'} 기대=${expectedKrxBasDd(reportDate)} → ${session}` +
+    (session === 'prev-session' ? '' : ' — KRX 값을 병합하지 않습니다(국내 NAV·괴리율 없음)'),
+  )
 
   return {
-    quotes: mergedQuotes,
+    quotes: mergeKrxIntoQuotes(quotes, krxResult.map, session),
     flows: flowsResult.status === 'fulfilled' ? flowsResult.value : [],
     investorFlows: investorFlowsResult.status === 'fulfilled' ? investorFlowsResult.value : [],
+    krx: { basDd: krxResult.basDd, session },
   }
 }
