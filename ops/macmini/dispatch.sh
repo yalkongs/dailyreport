@@ -5,8 +5,8 @@
 #   dispatch.sh market|etf          정시/2차 트리거
 #   DRY_RUN=1 dispatch.sh market    dry_run=true로 요청 (발송·커밋 없음, 점검용)
 #
-# 같은 시각 cron-job.org(보험)도 같은 요청을 보낼 수 있다 — job concurrency와
-# 중복 가드·발송 상태(scripts/delivery-state.ts)가 두 번째 요청을 skip시킨다.
+# 요청이 겹쳐도(정시·2차·3순위 schedule·수동) job concurrency와
+# 중복 가드·발송 상태(scripts/delivery-state.ts)가 뒤 요청을 skip시킨다.
 set -u
 
 ONLY="${1:-}"
