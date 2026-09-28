@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-09-29",
+      "type": "morning",
+      "headline": "금 급락·반도체 하락, 방어 우위 국면 진입",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-09-29",
+      "anomalyCount": 11,
+      "anomalyBreakdown": {
+        "premiumDiscount": 11
+      },
+      "createdAt": "2026-09-28T23:18:14.816Z"
+    },
+    {
       "date": "2026-09-28",
       "type": "morning",
       "headline": "반도체 강세·원자재 급락, 섹터가 갈렸다",
