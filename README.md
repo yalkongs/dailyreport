@@ -163,14 +163,15 @@
 8. **GitHub Actions**: 변경 커밋 → push → Vercel 재배포 → Telegram sendPhoto
 
 ### 트리거 옵션
-- **정시 트리거 (1순위): cron-job.org → `workflow_dispatch`.** 월~금 **06:40 KST에
-  `only=market`**, **08:15 KST에 `only=etf`** 로 GitHub dispatch API를 호출 → 워크플로가
-  수 초 내 시작 → Market ~06:55, ETF ~08:30 도착. (아래 "아침 트리거" 참조)
-- **2차 트리거 (2순위): cron-job.org 재호출.** 07:20 `only=market`, 08:40 `only=etf`.
+- **정시 트리거 (1순위): 맥미니 launchd → `workflow_dispatch`.** 월~금 **06:40 KST에
+  `only=market`**, **08:15 KST에 `only=etf`** 로 GitHub dispatch를 요청 → 워크플로가
+  수 초 내 시작 → Market ~06:55, ETF ~08:30 도착. cron-job.org가 같은 요청을 보험으로
+  보낸다(중복 요청은 아래 중복 가드가 skip). (아래 "아침 트리거" 참조)
+- **2차 트리거 (2순위): 같은 경로 재호출.** 07:20 `only=market`, 08:40 `only=etf`.
   정시 실행이 리포트를 남겼으면 중복 가드가 수집 전에 종료하고, 발송만 실패했으면
   commit status를 보고 재발송한다(`scripts/delivery-state.ts`). 간격은 job timeout보다 길다.
 - **3순위 백업: GitHub `schedule` cron.** `30 22 * * 0-4`(07:30 KST 목표, 실제 발화는
-  09시대로 만성 지연). cron-job.org 자체가 죽은 날에만 의미 있는 유일한 독립 경로라
+  09시대로 만성 지연). 맥미니와 cron-job.org가 모두 죽은 날에만 의미 있는 독립 경로라
   그대로 둔다. 두 job을 모두 돌리고 중복 가드에 맡긴다. 08:00 전에 돌면 ETF는 KRX
   stale 경로(국내 NAV 없는 리포트)가 되지만 드문 경로의 저하로 받아들인다.
 - `workflow_dispatch` 수동 옵션:
@@ -179,7 +180,28 @@
   - `only` (market / etf / both)
   - `resend_telegram_only` (생성 스킵, Telegram만 재발송)
 
-### 아침 트리거 (cron-job.org → GitHub workflow_dispatch)
+### 아침 트리거 (맥미니 launchd + cron-job.org → GitHub workflow_dispatch)
+
+**1순위: 맥미니 launchd (2026-09 전환).** 설정이 repo 안(`ops/macmini/`)에 있다.
+
+| 파일 | 역할 |
+|------|------|
+| `ops/macmini/dispatch.sh` | `gh workflow run 260067407 --ref main -f only=<market\|etf>`, 실패 시 30초 간격 3회. `DRY_RUN=1`이면 `dry_run=true` |
+| `ops/macmini/com.yalkongs.dailyreport.market.plist` | 월~금 06:40·07:20 → `dispatch.sh market` |
+| `ops/macmini/com.yalkongs.dailyreport.etf.plist` | 월~금 08:15·08:40 → `dispatch.sh etf` |
+| `ops/macmini/install.sh` | `~/Library/LaunchAgents`에 복사 + `launchctl bootstrap` (`uninstall` 인자로 제거) |
+
+- 인증은 맥미니의 `gh auth`(scope `workflow` 필요). 시각은 시스템 시간대(Asia/Seoul) 기준.
+- 로그: `~/Library/Logs/dailyreport/trigger.log`(dispatch 결과), `market|etf.{out,err}.log`.
+- 상태 확인: `launchctl print gui/$(id -u)/com.yalkongs.dailyreport.etf | grep -E "state|runs|last exit"`.
+- plist 수정 후에는 `ops/macmini/install.sh`를 다시 실행해야 반영된다.
+- **운영 규칙: 평일 06:30~08:50에는 맥미니 재부팅·OS 업데이트 금지.** launchd는 꺼져
+  있던 동안 놓친 실행을 부팅 후 되살리지 않는다(잠자기였다면 깨어날 때 1회 실행).
+  이 경우 cron-job.org 보험이 커버한다.
+
+**보험: cron-job.org.** 아래 설정 그대로 유지. 맥미니와 같은 시각에 요청이 두 번 가도
+job concurrency(`daily-report-market|etf`)로 직렬화되고 두 번째 실행은 중복 가드·발송
+상태(`action=skip — 이미 발송됨`)로 끝난다.
 
 정시 발화는 repo **밖**(외부 cron 계정 + GitHub 토큰)에 산다. 새 기기·6개월 뒤
 복구 시 아래가 유일한 흔적이다. 설계 전문: [`docs/superpowers/specs/2026-06-02-morning-trigger-reliability-design.md`](./docs/superpowers/specs/2026-06-02-morning-trigger-reliability-design.md).
