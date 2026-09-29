@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-09-30",
+      "type": "morning",
+      "headline": "금·반도체 동반 상승, 에너지만 역행",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-09-30",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-09-29T21:47:33.302Z"
+    },
+    {
       "date": "2026-09-29",
       "type": "morning",
       "headline": "금 급락·반도체 하락, 방어 우위 국면 진입",
