@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-10-01",
+      "type": "morning",
+      "headline": "K-원전·가스발전, 대미투자 윤곽…미 증시는 엇갈렸다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-01",
+      "anomalyCount": 5,
+      "anomalyBreakdown": {
+        "premiumDiscount": 5
+      },
+      "createdAt": "2026-09-30T23:17:58.110Z"
+    },
+    {
       "date": "2026-09-30",
       "type": "morning",
       "headline": "금·반도체 동반 상승, 에너지만 역행",
