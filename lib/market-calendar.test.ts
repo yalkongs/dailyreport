@@ -63,3 +63,24 @@ test("describeSessionRecency: 월요일(갭3) → 양쪽 '지난 금요일', '�
   assert.match(us.phrase, /지난 금요일/);
   assert.doesNotMatch(us.phrase, /간밤/);
 });
+
+test("describeSessionRecency.readerPhrase: 갭1 KR '전 거래일', US '간밤', 기존 phrase 불변", () => {
+  const info = getMarketCalendarInfo("2026-06-30");
+  const kr = describeSessionRecency("2026-06-30", info.krPrevTradingDay, "kr");
+  const us = describeSessionRecency("2026-06-30", info.usPrevTradingDay, "us");
+  assert.equal(kr.readerPhrase, "전 거래일");
+  assert.equal(us.readerPhrase, "간밤");
+  assert.equal(kr.phrase, "전 거래일(어제, 2026-06-29)");
+  assert.equal(us.phrase, "간밤(2026-06-29 현지 마감)");
+});
+
+test("describeSessionRecency.readerPhrase: 갭>1은 한국어 요일·일자, ISO 없음", () => {
+  const info = getMarketCalendarInfo("2026-06-29"); // 월, prev 06-26(금)
+  const kr = describeSessionRecency("2026-06-29", info.krPrevTradingDay, "kr");
+  assert.equal(kr.readerPhrase, "지난 금요일(26일)");
+  assert.equal(kr.phrase, "지난 금요일(2026-06-26)");
+  const us = describeSessionRecency("2026-06-29", info.usPrevTradingDay, "us");
+  assert.equal(us.readerPhrase, "지난 금요일(26일)");
+  const k2 = describeSessionRecency("2026-10-06", "2026-10-02", "kr");
+  assert.equal(k2.readerPhrase, "지난 금요일(2일)");
+});

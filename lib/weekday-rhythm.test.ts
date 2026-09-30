@@ -16,3 +16,17 @@ test("월요일 etf 리듬: overnight 설계와 정합 — 현행 유지(주말 
 test("getWeekdayRole: 2026-06-29는 monday_setup", () => {
   assert.equal(getWeekdayRole("2026-06-29"), "monday_setup");
 });
+
+test("etf 월·금 리듬에는 헤드라인 지시가 없다(묶음 3) — 본문 지시는 유지", () => {
+  const mon = describeWeekdayRhythm("monday_setup", "etf");
+  const fri = describeWeekdayRhythm("friday_recap", "etf");
+  assert.doesNotMatch(mon, /헤드라인/);
+  assert.doesNotMatch(fri, /헤드라인/);
+  assert.doesNotMatch(fri, /X요일/);
+  assert.match(mon, /bigPicture/);
+  assert.match(fri, /closingLine/);
+});
+
+test("market 금요일 리듬은 헤드라인 톤 지시를 유지한다", () => {
+  assert.match(describeWeekdayRhythm("friday_recap", "market"), /한 주를 닫는/);
+});
