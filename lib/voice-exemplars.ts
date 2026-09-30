@@ -53,16 +53,57 @@ export const ANTI_PATTERN_EXAMPLES: string[] = [
   "'[전일 사건] 다음 날, [주절]'·'~한 날의 다음'처럼 전일 사건을 '다음 날' 시점 설정으로 앞세우는 틀 — 어색한 번역투 명사화다. 오늘의 핵심 사실을 앞세우고 전일 맥락은 문장 안에서 '전일·간밤 …에 이어'로 처리하라 (예: '코스피 급락 다음 날, 미 증시는 엇갈렸다' → '미 증시 엇갈려…전일 코스피 급락 여진')",
 ];
 
+export type VoiceTarget = "market" | "etf";
+
+// 2026-09-30 묶음 3: ETF 전용 제목 예시 — 실제 발송본에서 사용자가 고른 6개.
+// 마켓은 위 HEADLINE_EXEMPLARS를 그대로 쓴다(마켓 출력 불변).
+export const ETF_HEADLINE_EXEMPLARS: VoiceExemplar[] = [
+  {
+    text: "원화, 하루 만에 20원 되찾다",
+    note: "주어 + 기사체 현재형. 가장 짧은 신문 제목 결.",
+  },
+  {
+    text: "금 급락·반도체 하락, 방어 우위 국면 진입",
+    note: "사실을 나열하고 서술성 명사('진입')로 끝맺음. 티커 없이 한국어 명칭.",
+  },
+  {
+    text: "삼성·SK, 45조 베팅…AI 메모리 전쟁 본격화",
+    note: "사실…의미를 말줄임표로 잇고 '본격화'로 끝맺음.",
+  },
+  {
+    text: "반도체 직격, 방어주가 버텼다",
+    note: "명사구 + 짧은 주술로 대비를 압축.",
+  },
+  {
+    text: "미 국채 5% 벽, 원화가 먼저 무너졌다",
+    note: "분기점 숫자를 은유('벽') 속에 녹임 — strong 근거일 때의 결.",
+  },
+  {
+    text: "무디스 성장률 3.5% 상향, 반도체가 국내 주도",
+    note: "출처 있는 사건을 앞세우고 서술성 명사('주도')로 끝맺음.",
+  },
+];
+
+// ETF 제목 형태(티커 앞세움·2절 틀·'다음 날' 틀)는 ETF 프롬프트의 [cover.headline 작성 규칙]이
+// 직접 다룬다. 여기에는 표현 차원의 반례만 둔다(같은 말을 두 곳에 두지 않는다).
+export const ETF_ANTI_PATTERN_EXAMPLES: string[] = [
+  "'X가 그린 [지도/로드맵/고속도로]' 같은 반복되는 구문 틀",
+  "'분기를 닫다(close a quarter)', '한 주를 닫다', '한 주를 가져갔다', '~을 갈라놓다', 돈이 '꽂히다' 류 억지·번역투 연어 — 한국어 통상 표현으로",
+  "'N포인트를 잃었다/얻었다'는 영어 'lost/gained N points' 직역이다 — 한국어는 'N포인트 하락·상승', 'N포인트 빠졌다'로",
+];
+
 /** 소프트 칼리브레이션 — '진부함이 무엇인지' 가르치는 짧은 예시 (하드 필터 아님) */
 export const TIRED_METAPHOR_HINTS: string[] = [
   "파도", "항해", "롤러코스터", "폭풍", "폭풍전야", "양날의 검",
 ];
 
-/** 양 프롬프트에 주입할 목표 보이스 블록 */
-export function renderVoiceExemplars(): string {
-  const hl = HEADLINE_EXEMPLARS.map((e) => `  · "${e.text}" — ${e.note}`).join("\n");
+/** 양 프롬프트에 주입할 목표 보이스 블록. target 기본값 market — 마켓 출력 불변. */
+export function renderVoiceExemplars(target: VoiceTarget = "market"): string {
+  const headlines = target === "etf" ? ETF_HEADLINE_EXEMPLARS : HEADLINE_EXEMPLARS;
+  const antis = target === "etf" ? ETF_ANTI_PATTERN_EXAMPLES : ANTI_PATTERN_EXAMPLES;
+  const hl = headlines.map((e) => `  · "${e.text}" — ${e.note}`).join("\n");
   const body = BODY_EXEMPLARS.map((e) => `  · "${e.text}" — ${e.note}`).join("\n");
-  const anti = ANTI_PATTERN_EXAMPLES.map((a) => `  · ${a}`).join("\n");
+  const anti = antis.map((a) => `  · ${a}`).join("\n");
   return `## 목표 보이스 — 예시로 익히기 (규칙보다 이 결을 따르라)
 
 데이터에 진실한 구체적 이미지 하나가 제 몫을 하면 환영한다. 매번 어느 날에나

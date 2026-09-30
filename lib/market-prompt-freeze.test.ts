@@ -12,6 +12,7 @@ const frozen: Record<string, string> = JSON.parse(
 
 test("market 목표 보이스 블록은 묶음 3 이전과 바이트 단위로 같다", () => {
   assert.equal(renderVoiceExemplars(), frozen.voice);
+  assert.equal(renderVoiceExemplars("market"), frozen.voice);
 });
 
 for (const d of ["2026-06-30", "2026-06-29", "2026-01-19", "2026-10-06", "2026-09-28"]) {
