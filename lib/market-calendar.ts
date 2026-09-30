@@ -239,16 +239,21 @@ export function describeSessionRecency(
   reportDate: string,
   prevTradingDay: string,
   market: "kr" | "us"
-): { gapDays: number; phrase: string; weekday: string } {
+): { gapDays: number; phrase: string; readerPhrase: string; weekday: string } {
   const gapDays = calendarDaysBetween(prevTradingDay, reportDate);
   const weekday = koreanWeekday(prevTradingDay);
+  // phrase: 모델 참고용(ISO 기준일 포함, market 프롬프트가 사용 — 불변).
+  // readerPhrase: 독자 문장용(묶음 3, 2026-09-30) — ISO 날짜 없이, 갭 날만 한국어 일자.
   let phrase: string;
+  let readerPhrase: string;
   if (gapDays === 1) {
     phrase = market === "kr"
       ? `전 거래일(어제, ${prevTradingDay})`
       : `간밤(${prevTradingDay} 현지 마감)`;
+    readerPhrase = market === "kr" ? "전 거래일" : "간밤";
   } else {
     phrase = `지난 ${weekday}요일(${prevTradingDay})`;
+    readerPhrase = `지난 ${weekday}요일(${Number(prevTradingDay.slice(8, 10))}일)`;
   }
-  return { gapDays, phrase, weekday };
+  return { gapDays, phrase, readerPhrase, weekday };
 }

@@ -61,3 +61,33 @@ test("etf: 24h 상품 실시간 안내 포함", () => {
   const block = buildTemporalFramingBlock(getMarketCalendarInfo("2026-06-30"), "etf");
   assert.match(block, /24시간|실시간 시세/);
 });
+
+const ISO_PAREN = /\(\d{4}-\d{2}-\d{2}/;
+
+test("etf 블록: 독자 표현 + 참고 기준일 분리, 경고·안내 문구에 ISO 괄호 없음(월 06-29)", () => {
+  const block = buildTemporalFramingBlock(getMarketCalendarInfo("2026-06-29"), "etf");
+  assert.match(block, /참고 기준일: 2026-06-26/);
+  assert.match(block, /지난 금요일\(26일\)/);
+  assert.match(block, /YYYY-MM-DD 형식의 숫자 날짜를 쓰지 마십시오/);
+  // 양쪽 갭(월요일)이면 두 경고가 모두 있어야 한다(필터 루프가 삭제된 경고를 놓치지 않게).
+  assert.match(block, /"간밤"이 아니라 "지난 금요일\(26일\)"로/);
+  assert.match(block, /국내 ETF 데이터는 지난 금요일\(26일\) 종가/);
+  const warnLines = block.split("\n").filter((l) => l.includes("⚠️"));
+  assert.ok(warnLines.length >= 3, `경고 줄 ${warnLines.length}`); // 24h 안내 + US 갭 + KR 갭
+  for (const l of warnLines) assert.doesNotMatch(l, ISO_PAREN, l);
+});
+
+test("etf 블록: KR만 갭인 날(2026-10-06)은 KR 경고만, '간밤이 아니라' 지시 없음", () => {
+  const block = buildTemporalFramingBlock(getMarketCalendarInfo("2026-10-06"), "etf");
+  assert.doesNotMatch(block, /"간밤"이 아니라/);
+  assert.match(block, /국내 ETF 데이터는 지난 금요일\(2일\) 종가/);
+  assert.match(block, /간밤 종가/);
+});
+
+test("etf 블록: 미국 단독 휴장(2026-01-19) 안내에 ISO 괄호 없음", () => {
+  const block = buildTemporalFramingBlock(getMarketCalendarInfo("2026-01-19"), "etf");
+  const note = block.split("\n").find((l) => l.includes("미국 세션이 없습니다"))!;
+  assert.ok(note);
+  assert.doesNotMatch(note, ISO_PAREN);
+  assert.match(note, /지난 금요일\(16일\)/);
+});

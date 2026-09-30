@@ -30,11 +30,18 @@ export function buildTemporalFramingBlock(
 
   if (reportType === "etf") {
     // ETF는 시스템 프롬프트가 "발행=개장 전, 전일 국내/간밤 해외"를 이미 명시.
-    // 월요일 등 갭 발생 시 '간밤' 오용만 차단.
-    const gapLine = gapWarn
-      ? `\n- ⚠️ 직전 미국 세션은 ${us.phrase}입니다. "간밤"이 아니라 "${us.phrase}"로 명시하고, 그 사이 뉴스는 "오늘 개장 시 반영될 변수"로 서술하십시오.`
+    // 묶음 3(2026-09-30): 모델 참고용 기준일과 독자용 표현을 분리하고, 갭 경고를 시장별로 나눈다.
+    // (이전에는 KR만 갭인 날에도 미국 문구로 '"간밤"이 아니라 "간밤(…)"로'라는 모순 지시가 나갔다.)
+    const usHolidayNoteEtf = info.isUsClosedOnly
+      ? `\n- ⚠️ 오늘 밤 미국 시장은 ${info.usHolidayName ?? "휴일"}로 휴장입니다 — 오늘 밤 새 미국 세션이 없습니다. 미국 데이터는 ${us.readerPhrase} 종가가 최신입니다.`
       : "";
-    return `\n## ⏰ 시점 기준 (개장 전 브리핑)\n- 미국 데이터: ${us.phrase} 종가. 한국 ETF 데이터: ${kr.phrase} 종가.${usHolidayNote}${twentyFourHourNote}${gapLine}\n`;
+    const usGapLine = us.gapDays > 1
+      ? `\n- ⚠️ 직전 미국 세션은 ${us.readerPhrase}입니다. "간밤"이 아니라 "${us.readerPhrase}"로 명시하고, 그 사이 뉴스는 "오늘 개장 시 반영될 변수"로 서술하십시오.`
+      : "";
+    const krGapLine = kr.gapDays > 1
+      ? `\n- ⚠️ 국내 ETF 데이터는 ${kr.readerPhrase} 종가입니다. "어제"로 쓰지 마십시오.`
+      : "";
+    return `\n## ⏰ 시점 기준 (개장 전 브리핑)\n- 미국 데이터: ${us.readerPhrase} 종가 (참고 기준일: ${info.usPrevTradingDay} 현지 마감). 한국 ETF 데이터: ${kr.readerPhrase} 종가 (참고 기준일: ${info.krPrevTradingDay}).\n- 참고 기준일은 사실 확인용입니다. 제목·서브라인·본문에 YYYY-MM-DD 형식의 숫자 날짜를 쓰지 마십시오. 예외는 하나뿐입니다: 직전 세션이 어제가 아니면(주말·휴일) "지난 금요일(25일)"처럼 한국어 요일·일자를 한 번 쓸 수 있습니다.${usHolidayNoteEtf}${twentyFourHourNote}${usGapLine}${krGapLine}\n`;
   }
 
   // market — 베이스라인 프레이밍이 없으므로 상시 명시 + 단정 금지.
