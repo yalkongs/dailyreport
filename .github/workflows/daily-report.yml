@@ -30,7 +30,7 @@ on:
         type: boolean
         default: false
       only:
-        description: '실행 대상 (market | etf | both)'
+        description: '실행 대상 (market | etf | both) — ETF는 etf에서만 실행, both는 마켓만'
         required: false
         type: choice
         options: [both, market, etf]
