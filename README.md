@@ -176,7 +176,7 @@
 - `workflow_dispatch` 수동 옵션:
   - `dry_run` (Telegram 발송 안 함)
   - `force_regenerate` (오늘자 이미 있어도 재생성)
-  - `only` (market / etf / both)
+  - `only` (market / etf / both) — **ETF는 `only=etf`에서만 돈다.** `both`는 마켓만 실행(외부 호출이 KRX 게시 전 ETF를 먼저 보내는 것 방지, 2026-09-30). ETF 수동 생성·재발송은 `only=etf`로.
   - `resend_telegram_only` (생성 스킵, Telegram만 재발송)
 
 ### 아침 트리거 (맥미니 launchd → GitHub workflow_dispatch)
@@ -222,7 +222,7 @@
 dispatch API를 PAT로 호출했다(설계: [`docs/superpowers/specs/2026-06-02-morning-trigger-reliability-design.md`](./docs/superpowers/specs/2026-06-02-morning-trigger-reliability-design.md)).
 2026-09-28 맥미니 전담으로 전환하며 폐기 — cron-job.org 작업 삭제와 그 작업용
 Fine-grained PAT(Actions write 전용) 폐기가 정리 절차다. 남아 있으면 body 없는
-요청이 `only=both`로 06:40에 ETF까지 돌려 KRX 게시 전 stale 리포트를 먼저 발송한다.
+요청이 `only=both`로 06:40에 ETF까지 돌려 KRX 게시 전 stale 리포트를 먼저 발송했다(2026-09-29·30 실제 발생). 이제 워크플로가 `only=both` dispatch에서 ETF를 돌리지 않으므로 남은 영향은 마켓 중복 호출(중복 가드가 skip)뿐이다.
 
 ---
 
