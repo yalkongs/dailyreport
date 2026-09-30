@@ -233,7 +233,7 @@ function buildEtfGroupStrategies(data: CollectedData, scores: StrategyScore[]): 
     group: '반도체·AI ETF',
     stance: korea >= 2 || pct(quotes.get('SOXX')) !== null && (pct(quotes.get('SOXX')) ?? 0) >= 1 ? '선호' : volatility >= 2 ? '경계' : '관찰',
     tickers: ['SOXX', 'BOTZ', 'ARKK', '091160.KS', '396500.KS'],
-    rationale: '나스닥이 강해도 SOXX가 따라오지 않으면, 국내 반도체 ETF로 불씨가 옮겨가는 힘은 제한적입니다.',
+    rationale: '나스닥이 강해도 SOXX가 따라오지 않으면, 국내 반도체 ETF로 이어지는 힘은 제한적입니다.',
     actionGuide: '개장 후 30분의 거래대금이 함께 늘어나는지 확인한 뒤에 접근하는 게 합리적입니다.',
     confirmSignal: 'SOXX와 QQQ가 모두 강하고, 국내 반도체 ETF 거래대금도 같이 커지는 조합이 가장 깨끗합니다.',
     avoid: '미국 ETF가 올랐다는 이유만으로 국내 ETF를 장 시작 직후 따라잡는 건 위험합니다.',
