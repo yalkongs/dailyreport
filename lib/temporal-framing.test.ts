@@ -91,3 +91,11 @@ test("etf 블록: 미국 단독 휴장(2026-01-19) 안내에 ISO 괄호 없음",
   assert.doesNotMatch(note, ISO_PAREN);
   assert.match(note, /지난 금요일\(16일\)/);
 });
+
+test("etf 블록: 고정 예시 날짜 없음, 일자 괄호는 처음 한 번만 안내", () => {
+  for (const d of ["2026-06-30", "2026-06-29", "2026-10-06"]) {
+    const block = buildTemporalFramingBlock(getMarketCalendarInfo(d), "etf");
+    assert.doesNotMatch(block, /25일/, d);
+    assert.match(block, /처음 한 번만 붙이고/, d);
+  }
+});

@@ -41,7 +41,7 @@ export function buildTemporalFramingBlock(
     const krGapLine = kr.gapDays > 1
       ? `\n- ⚠️ 국내 ETF 데이터는 ${kr.readerPhrase} 종가입니다. "어제"로 쓰지 마십시오.`
       : "";
-    return `\n## ⏰ 시점 기준 (개장 전 브리핑)\n- 미국 데이터: ${us.readerPhrase} 종가 (참고 기준일: ${info.usPrevTradingDay} 현지 마감). 한국 ETF 데이터: ${kr.readerPhrase} 종가 (참고 기준일: ${info.krPrevTradingDay}).\n- 참고 기준일은 사실 확인용입니다. 제목·서브라인·본문에 YYYY-MM-DD 형식의 숫자 날짜를 쓰지 마십시오. 예외는 하나뿐입니다: 직전 세션이 어제가 아니면(주말·휴일) "지난 금요일(25일)"처럼 한국어 요일·일자를 한 번 쓸 수 있습니다.${usHolidayNoteEtf}${twentyFourHourNote}${usGapLine}${krGapLine}\n`;
+    return `\n## ⏰ 시점 기준 (개장 전 브리핑)\n- 미국 데이터: ${us.readerPhrase} 종가 (참고 기준일: ${info.usPrevTradingDay} 현지 마감). 한국 ETF 데이터: ${kr.readerPhrase} 종가 (참고 기준일: ${info.krPrevTradingDay}).\n- 참고 기준일은 사실 확인용입니다. 제목·서브라인·본문에 YYYY-MM-DD 형식의 숫자 날짜를 쓰지 마십시오. 직전 세션이 어제가 아니면(주말·휴일) 아래 경고의 독자용 표현을 쓰되, 일자 괄호("지난 ○요일(N일)")는 처음 한 번만 붙이고 이후에는 "지난 ○요일"로 줄여 씁니다.${usHolidayNoteEtf}${twentyFourHourNote}${usGapLine}${krGapLine}\n`;
   }
 
   // market — 베이스라인 프레이밍이 없으므로 상시 명시 + 단정 금지.
