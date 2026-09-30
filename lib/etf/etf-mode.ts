@@ -123,7 +123,7 @@ export function describeEtfModeForPrompt(mode: EtfMode): string {
 - bigPicture 는 **8~12문장** 으로 깊게 (평소 4~6 보다 길게).
 - storySpine 3막은 각 act 4~6문장 으로 (평소 3~5).
 - characters 카드는 각 4~5문장 으로 강조.
-- 헤드라인은 [제목 작성 규칙]을 따르되, 사건의 무게가 즉시 전달되도록 씁니다 (수치만 나열 지양).
+- 헤드라인은 [cover.headline 작성 규칙]을 따르되, 사건의 무게가 즉시 전달되도록 씁니다 (수치만 나열 지양).
 - closingLine 은 다음 영업일 관전 포인트로 닫음.`;
     case "quiet":
       return `오늘은 **잠잠한 모드** 입니다. 시장 변동이 매우 작고 이상 신호도 드뭅니다.
@@ -131,7 +131,7 @@ export function describeEtfModeForPrompt(mode: EtfMode): string {
 - storySpine 3막은 각 act 2~3문장 으로 축약.
 - characters 는 2~3개만 유지 (warning 카드는 생략 가능).
 - closingLine 에 **"다음 영업일 또는 이번 주 후반에 살펴볼 자리"** 미리보기 포함.
-- 헤드라인은 차분한 톤. 횡보 자체를 명시하는 것도 좋음.`;
+- 헤드라인은 [cover.headline 작성 규칙]을 따르되 차분한 톤으로. 횡보 자체를 명시하는 것도 좋음.`;
     case "normal":
     default:
       return `오늘은 **표준 모드** 입니다. 일상적 ETF 흐름이며 평소 분량 유지.
