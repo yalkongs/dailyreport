@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** ETF 리포트 프롬프트의 제목·문체 지시를 한 정책으로 통합한다. 반복 틀(티커 앞세움·시간명사 종결)과 입력 어휘 에코, ISO 날짜 괄호 누출을 없앤다. 마켓 리포트 출력은 한 글자도 바꾸지 않는다.
+**Goal:** ETF 리포트 프롬프트의 제목·문체 지시를 한 정책으로 통합한다. 반복 틀(티커 앞세움·시간명사 종결)과 입력 어휘 에코, ISO 날짜 괄호 누출을 없앤다. 마켓 프롬프트 조각(목표 보이스·시점 블록·요일 리듬)의 결정적 출력은 한 글자도 바꾸지 않는다(모델 응답의 동일성이 아니라 프롬프트 조립의 불변).
 
 **Architecture:** 공유 모듈(`voice-exemplars`·`weekday-rhythm`·`market-calendar`·`temporal-framing`)은 ETF 분기에만 새 동작을 넣는다. 마켓 경로의 출력은 변경 전 스냅샷 픽스처로 바이트 단위 고정한다. ETF 프롬프트(`lib/etf/claude-client.ts`)는 시스템 프롬프트 예외 표기와 헤드라인 규칙 블록 교체로 정리한다. 테스트를 위해 프롬프트 조립 함수를 export한다.
 
@@ -375,6 +375,8 @@ test("describeSessionRecency.readerPhrase: 갭>1은 한국어 요일·일자, IS
   const kr = describeSessionRecency("2026-06-29", info.krPrevTradingDay, "kr");
   assert.equal(kr.readerPhrase, "지난 금요일(26일)");
   assert.equal(kr.phrase, "지난 금요일(2026-06-26)");
+  const us = describeSessionRecency("2026-06-29", info.usPrevTradingDay, "us");
+  assert.equal(us.readerPhrase, "지난 금요일(26일)");
   const k2 = describeSessionRecency("2026-10-06", "2026-10-02", "kr");
   assert.equal(k2.readerPhrase, "지난 금요일(2일)");
 });
@@ -390,7 +392,11 @@ test("etf 블록: 독자 표현 + 참고 기준일 분리, 경고·안내 문구
   assert.match(block, /참고 기준일: 2026-06-26/);
   assert.match(block, /지난 금요일\(26일\)/);
   assert.match(block, /YYYY-MM-DD 형식의 숫자 날짜를 쓰지 마십시오/);
+  // 양쪽 갭(월요일)이면 두 경고가 모두 있어야 한다(필터 루프가 삭제된 경고를 놓치지 않게).
+  assert.match(block, /"간밤"이 아니라 "지난 금요일\(26일\)"로/);
+  assert.match(block, /국내 ETF 데이터는 지난 금요일\(26일\) 종가/);
   const warnLines = block.split("\n").filter((l) => l.includes("⚠️"));
+  assert.ok(warnLines.length >= 3, `경고 줄 ${warnLines.length}`); // 24h 안내 + US 갭 + KR 갭
   for (const l of warnLines) assert.doesNotMatch(l, ISO_PAREN, l);
 });
 
@@ -529,6 +535,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `lib/etf/claude-client.ts` (23-50 시스템 프롬프트, 174 `buildMorningPrompt`, 322-366 헤드라인 관련, 402)
+- Modify: `lib/etf/etf-mode.ts:126,133` (모드별 헤드라인 줄을 통합 블록 참조로)
 - Create: `lib/etf/claude-client.prompt.test.ts`
 
 **Interfaces:**
@@ -547,7 +554,8 @@ import { SYSTEM_PROMPT, buildMorningPrompt } from './claude-client'
 import { getMarketCalendarInfo } from '../market-calendar'
 import type { CollectedData, MacroContext } from './types'
 
-function makeData(date: string, recentHeadlines: string[]): CollectedData {
+interface Opts { angle?: string; mode?: 'event' | 'quiet' | 'normal'; tier?: 'strong' | 'thin' | 'hollow' }
+function makeData(date: string, recentHeadlines: string[], o: Opts = {}): CollectedData {
   return {
     reportType: 'morning',
     date,
@@ -558,9 +566,11 @@ function makeData(date: string, recentHeadlines: string[]): CollectedData {
     news: [],
     analysisLens: '변동성국면',
     recentHeadlines,
-    narrativeAngle: '글로벌→국내_전이',
+    narrativeAngle: o.angle ?? '글로벌→국내_전이',
     calendarInfo: getMarketCalendarInfo(date),
     failedSources: [],
+    ...(o.mode ? { etfMode: { mode: o.mode, reason: '테스트', metrics: { soxxChange: null, spyChange: null, kospiProxy: null, vix: null, anomalyCount: 0 } } as any } : {}),
+    ...(o.tier ? { etfEvidence: { tier: o.tier, newsCount: 0, freshCount: 0, topCatalystScore: 0, topCatalyst: null, anomalyCount: 0, failedSources: [], reason: '테스트' } } : {}),
   }
 }
 
@@ -608,7 +618,25 @@ test('ETF 시스템 프롬프트: ETF 예시 세트 + 본문 규칙의 제목 �
 
 test('국내 ETF 6자리 코드 규칙에 제목 예외 표기', () => {
   const p = buildMorningPrompt(makeData('2026-09-30', []))
-  assert.match(p, /"종목명 \(6자리 코드\)"로 표기하십시오\. \(cover\.headline 제외/)
+  assert.match(p, /"종목명 \(6자리 코드\)"로 표기하십시오\. \(cover\.headline 제외 — \[cover\.headline 작성 규칙\] 참조\)/)
+})
+
+test('환율 앵글: "두 얼굴" 대신 "상반된 효과"', () => {
+  const p = buildMorningPrompt(makeData('2026-09-30', [], { angle: '환율_양면성' }))
+  assert.match(p, /오늘의 서사 앵글: 환율_양면성/)
+  assert.match(p, /상반된 효과/)
+  assert.ok(!p.includes('두 얼굴'))
+})
+
+test('이벤트·잠잠 모드와 명시 tier에서도 옛 지시·깨진 참조가 없다', () => {
+  for (const mode of ['event', 'quiet', 'normal'] as const) {
+    for (const tier of ['strong', 'thin', 'hollow'] as const) {
+      const p = buildMorningPrompt(makeData('2026-09-30', ['원자재 강세 속 금융주 선방'], { mode, tier }))
+      assert.match(p, new RegExp(`근거 상태 — tier: ${tier}`))
+      assert.ok(!p.includes('[제목 작성 규칙]'), `${mode}/${tier} 깨진 참조`)
+      for (const s of REMOVED) assert.ok(!p.includes(s), `${mode}/${tier}: ${s}`)
+    }
+  }
 })
 ```
 
@@ -631,7 +659,7 @@ Expected: FAIL (`SYSTEM_PROMPT`/`buildMorningPrompt` export 없음)
 - `${renderVoiceExemplars()}` → `${renderVoiceExemplars('etf')}`
 
 402행:
-- `- 국내 ETF는 반드시 "종목명 (6자리 코드)"로 표기하십시오.` → `- 국내 ETF는 반드시 "종목명 (6자리 코드)"로 표기하십시오. (cover.headline 제외 — 제목에는 한국어 명칭만)`
+- `- 국내 ETF는 반드시 "종목명 (6자리 코드)"로 표기하십시오.` → `- 국내 ETF는 반드시 "종목명 (6자리 코드)"로 표기하십시오. (cover.headline 제외 — [cover.headline 작성 규칙] 참조)`
   (같은 줄의 뒷부분 `"122630.KS KODEX 레버리지"나 … 금지입니다.`는 그대로 둔다.)
 
 - [ ] **Step 5: 최근 헤드라인 블록 교체 (322-329행 부근)**
@@ -677,20 +705,30 @@ Expected: FAIL (`SYSTEM_PROMPT`/`buildMorningPrompt` export 없음)
 - 본문 payoff: narrativeNotes.bigPicture 첫 부분이 헤드라인의 이미지를 받아 전개하되, 헤드라인 문장을 그대로 되풀이하지 않습니다.
 ```
 
+- [ ] **Step 6b: 모드별 헤드라인 줄을 통합 블록 참조로**
+
+`lib/etf/etf-mode.ts`의 `describeEtfModeForPrompt`에서:
+- event(126행): `- 헤드라인은 [제목 작성 규칙]을 따르되, 사건의 무게가 즉시 전달되도록 씁니다 (수치만 나열 지양).`
+  → `- 헤드라인은 [cover.headline 작성 규칙]을 따르되, 사건의 무게가 즉시 전달되도록 씁니다 (수치만 나열 지양).`
+- quiet(133행): `- 헤드라인은 차분한 톤. 횡보 자체를 명시하는 것도 좋음.`
+  → `- 헤드라인은 [cover.headline 작성 규칙]을 따르되 차분한 톤으로. 횡보 자체를 명시하는 것도 좋음.`
+
+(`[제목 작성 규칙]`은 ETF 프롬프트에 없는 이름이다 — 마켓 프롬프트의 블록 이름이 섞여 들어온 깨진 참조.)
+
 - [ ] **Step 7: 잔존 옛 지시 grep**
 
-Run: `grep -n "앵커(수치·티커)\|반드시 명사구\|홀로 하락\|반도체 6% 붕괴\|tier 종속" lib/etf/claude-client.ts`
+Run: `grep -n "앵커(수치·티커)\|반드시 명사구\|홀로 하락\|반도체 6% 붕괴\|tier 종속" lib/etf/claude-client.ts; grep -n "\[제목 작성 규칙\]" lib/etf/*.ts`
 Expected: 출력 없음. 다른 곳(`catalyst` 블록 끝 `헤드라인 반영 여부·방식은 아래 [cover.headline 작성 규칙]을 따르십시오`)의 참조 이름이 새 블록 제목과 일치하는지 확인한다(`grep -n "cover.headline 작성 규칙" lib/etf/claude-client.ts`).
 
 - [ ] **Step 8: 통과 확인**
 
-Run: `npx tsx --test lib/etf/claude-client.prompt.test.ts lib/etf/claude-client.macro.test.ts lib/market-prompt-freeze.test.ts`
+Run: `npx tsx --test lib/etf/claude-client.prompt.test.ts lib/etf/claude-client.macro.test.ts lib/etf/etf-mode.test.ts lib/market-prompt-freeze.test.ts`
 Expected: 모두 pass
 
 - [ ] **Step 9: Commit**
 
 ```bash
-git add lib/etf/claude-client.ts lib/etf/claude-client.prompt.test.ts
+git add lib/etf/claude-client.ts lib/etf/etf-mode.ts lib/etf/claude-client.prompt.test.ts
 git commit -m "ETF 제목 정책을 한 블록으로 통합 — thin 앵커 앞세움·명사구 계약·대안 단어 나열 제거, 본문 규칙에 제목 예외 표기
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -707,31 +745,55 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 Run: `npx tsx --test $(git ls-files '*.test.ts') && npx tsc --noEmit`
 Expected: 전부 pass, tsc 출력 없음. 기준선(main): 154+ pass.
 
-- [ ] **Step 2: 일회용 worktree 생성**
+- [ ] **Step 2: 일회용 worktree 생성 (새 경로·커밋 고정·실패 시 중단)**
 
 ```bash
-WT=/private/tmp/claude-501/-Users-yalkongs-Project-dailyreport/2d0159af-6c5a-4c01-b37d-ab59ce222806/scratchpad/etf-eval
-git worktree add --detach "$WT" feat/etf-headline-consolidation
+set -euo pipefail
+cd /Users/yalkongs/Project/dailyreport
+test -z "$(git status --porcelain --untracked-files=no)"          # 커밋 안 된 변경이 있으면 중단
+REV=$(git rev-parse feat/etf-headline-consolidation)
+WT=$(mktemp -d /private/tmp/claude-501/-Users-yalkongs-Project-dailyreport/2d0159af-6c5a-4c01-b37d-ab59ce222806/scratchpad/etf-eval.XXXX)
+rmdir "$WT"
+git worktree add --detach "$WT" "$REV"
 ln -s /Users/yalkongs/Project/dailyreport/node_modules "$WT/node_modules"
+echo "WT=$WT REV=$REV"
 ```
 
-- [ ] **Step 3: 격리 생성 1~2회**
+격리는 파일 출력에 대한 것이다. worktree 추가·삭제는 저장소 관리 정보를 건드리고, `node_modules`는 본 작업 트리를 공유한다(읽기 전용으로 쓰인다).
+
+- [ ] **Step 3: 격리 생성 1회 (종료 코드 확인)**
 
 ```bash
-cd "$WT" && set -a && source /Users/yalkongs/Project/dailyreport/.env.local && set +a && \
-  FORCE_REGENERATE=true npx tsx scripts/run-etf.ts 2>&1 | tee "$WT/../etf-eval-1.log" | grep -E "근거 tier|회 실패|fallback|soft-warn|헤드라인|headline"
+set -uo pipefail
+cd "$WT"
+set -a; source /Users/yalkongs/Project/dailyreport/.env.local; set +a
+test -n "${ANTHROPIC_API_KEY:-}" || { echo "ANTHROPIC_API_KEY 없음 — 중단"; exit 1; }
+[ -n "${KRX_AUTH_KEY:-}" ] || echo "주의: KRX_AUTH_KEY 없음 — 국내 NAV·괴리율 없이 생성됨(운영과 다름)"
+FORCE_REGENERATE=true npx tsx scripts/run-etf.ts > "$WT.log" 2>&1; echo "exit=$?"
+grep -E "근거 tier|ETF 모드|회 실패|fallback|soft-warn|KRX BAS_DD" "$WT.log"
 ```
 
-run-etf에는 git·Telegram 호출이 없다(발송은 워크플로 step 몫). 기록은 worktree 파일에만 남는다. 생성된 오늘 자 `public/etf/…` HTML과 `data/etf-reports-index.json`의 새 항목에서 제목·서브라인·bigPicture를 읽는다.
+Expected: `exit=0`. 0이 아니면 로그 끝 40줄을 보고 판독을 멈춘다. run-etf에는 git·Telegram·배포 호출이 없다(발송은 워크플로 step 몫, `scripts/run-etf.ts:222-268`). 출력은 `process.cwd()` 기준이라 worktree에만 남는다. 한국 휴장일에는 `FORCE_REGENERATE`로도 생성하지 않는다(`:93-103`). 휴장일이면 다음 거래일에 실행한다.
+
+2회 실행은 하지 않는다. 첫 실행이 렌즈·앵글 기록을 갱신하고 선택이 무작위라 두 번째 실행은 같은 조건의 반복이 아니다. 제목 변동성은 2주 관찰로 본다.
 
 - [ ] **Step 4: 결과 판독 기록**
 
-다음을 표로 기록한다(보고용, 파일 커밋 없음): 제목·서브라인, ① 형태 위반(티커/등락률 앞세움) 여부, ② 시간명사 종결 여부, 본문·서브라인 ISO 날짜(`\d{4}-\d{2}-\d{2}`) 개수, 에코 문구(옮겨붙·두 얼굴·거꾸로·홀로·뒷걸음) 개수, 품질 검증 1회차 통과 여부.
+```bash
+cd "$WT"
+DATE=$(TZ=Asia/Seoul date +%F)
+HTML=$(ls -t public/etf-reports/*${DATE}*.html | head -1); ls -l "$HTML"      # 방금 생성됐는지 시각 확인
+node -e 'const i=require("./data/etf-reports-index.json");const r=(i.reports||i).find(x=>x.date===process.argv[1]);console.log(r&&r.headline)' "$DATE"
+grep -oE "[0-9]{4}-[0-9]{2}-[0-9]{2}" "$HTML" | sort | uniq -c              # ISO 날짜(메타·URL 포함 — 본문 여부는 문맥 확인)
+grep -cE "옮겨붙|두 얼굴|거꾸로|홀로|뒷걸음" "$HTML" || true
+```
+
+HTML에서 서브라인과 bigPicture를 읽는다(인덱스에는 헤드라인만 있다). 다음을 표로 기록한다(보고용, 파일 커밋 없음): 제목, 서브라인, ① 티커/등락률 앞세움 여부, ② 시간명사 종결 여부, 본문·서브라인의 ISO 날짜, 에코 문구, 1회차 품질 검증 통과 여부, tier·모드.
 
 - [ ] **Step 5: worktree 삭제**
 
 ```bash
-cd /Users/yalkongs/Project/dailyreport && git worktree remove --force "$WT" && git worktree prune && git status --short
+cd /Users/yalkongs/Project/dailyreport && git worktree remove --force "$WT" && git worktree prune && rm -f "$WT.log" && git status --short
 ```
 Expected: 작업 트리 변경 없음.
 
