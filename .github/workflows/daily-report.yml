@@ -255,7 +255,10 @@ jobs:
 
   etf:
     needs: market
-    if: ${{ always() && inputs.only != 'market' }}
+    # ETF는 schedule(3순위 백업) 또는 only=etf dispatch에서만 돈다(2026-09-30).
+    # only=both dispatch는 마켓만 — 06:40 외부 호출(폐기된 cron-job.org)이 KRX 게시(~08:00) 전에
+    # NAV 없는 ETF를 먼저 발송해 08:15 정상 실행을 중복 가드로 막은 사고 방지. 수동 ETF는 only=etf로.
+    if: ${{ always() && (github.event_name == 'schedule' || inputs.only == 'etf') }}
     runs-on: ubuntu-latest
     # 10→15 (2026-08-18): 글꼴 설치 상한 5분 + ETF 파이프라인 ~3분에 여유를 둔다.
     timeout-minutes: 15

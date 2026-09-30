@@ -68,5 +68,17 @@ test("schedule과 job 분기 조건은 그대로다 — 트리거 분리는 inpu
   assert.match(yml, /- cron: '30 22 \* \* 0-4'/);
   assert.equal((yml.match(/- cron:/g) ?? []).length, 1);
   assert.match(jobBlock("market"), /if: \$\{\{ inputs\.only != 'etf' \}\}/);
-  assert.match(jobBlock("etf"), /if: \$\{\{ always\(\) && inputs\.only != 'market' \}\}/);
+  assert.match(jobBlock("etf"), /if: \$\{\{ always\(\) && \(github\.event_name == 'schedule' \|\| inputs\.only == 'etf'\) \}\}/);
+});
+
+// 2026-09-30: 외부 호출(예: 폐기된 cron-job.org의 only=both)이 KRX 게시(~08:00) 전에 ETF를
+// 먼저 발송해 08:15 정상 실행을 중복 가드로 막은 사고 방지. ETF는 schedule 또는 only=etf에서만.
+test("ETF job은 dispatch only=both·only=market에서 돌지 않는다", () => {
+  const cond = jobBlock("etf").match(/if: \$\{\{ (.*) \}\}/)![1];
+  const evalCond = (event: string, only: string) =>
+    new Function("github", "inputs", `return ${cond.replace(/always\(\)/g, "true")}`)({ event_name: event }, { only });
+  assert.equal(evalCond("workflow_dispatch", "both"), false);
+  assert.equal(evalCond("workflow_dispatch", "market"), false);
+  assert.equal(evalCond("workflow_dispatch", "etf"), true);
+  assert.equal(evalCond("schedule", ""), true);
 });
