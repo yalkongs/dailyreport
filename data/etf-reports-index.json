@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-10-02",
+      "type": "morning",
+      "headline": "9월 물가 2%대 복귀, 반도체가 미 증시 앞서 달렸다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-02",
+      "anomalyCount": 9,
+      "anomalyBreakdown": {
+        "premiumDiscount": 9
+      },
+      "createdAt": "2026-10-01T23:18:22.202Z"
+    },
+    {
       "date": "2026-10-01",
       "type": "morning",
       "headline": "K-원전·가스발전, 대미투자 윤곽…미 증시는 엇갈렸다",
