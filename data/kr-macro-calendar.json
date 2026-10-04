@@ -1,46 +1,54 @@
 {
-  "generatedAt": "2026-09-27T18:09:24.770Z",
-  "weekRangeStart": "2026-09-28",
-  "weekRangeEnd": "2026-10-12",
+  "generatedAt": "2026-10-04T18:02:54.513Z",
+  "weekRangeStart": "2026-10-05",
+  "weekRangeEnd": "2026-10-19",
   "events": [
     {
-      "date": "2026-09-30",
-      "category": "industrial",
-      "name": "2026년 8월 산업활동동향 발표",
-      "importance": 3,
-      "description": "국가데이터처(구 통계청)가 8월 산업활동동향(생산·소비·투자 지표 포함)을 발표. 반도체 생산 흐름이 전체 지표를 좌우할 가능성 높음.",
-      "source": "mods.go.kr"
-    },
-    {
-      "date": "2026-10-01",
-      "category": "trade",
-      "name": "2026년 9월 수출입 동향 발표 (잠정치)",
-      "importance": 3,
-      "description": "산업통상자원부가 매월 1일 전월 수출입 동향 잠정치를 발표. 9월 수출입 실적 및 무역수지 공개.",
-      "source": "motie.go.kr"
-    },
-    {
-      "date": "2026-10-02",
-      "category": "cpi",
-      "name": "2026년 9월 소비자물가동향 발표",
-      "importance": 5,
-      "description": "국가데이터처(구 통계청)가 9월 소비자물가동향 발표. 8월에는 SK텔레콤 요금 감면 기저효과로 CPI 3.1% 상승 기록. 9월 수치는 해당 기저효과 영향 지속 여부 주목.",
-      "source": "mods.go.kr"
+      "date": "2026-10-08",
+      "category": "other",
+      "name": "2026년 8월 국제수지(잠정) 발표",
+      "importance": 2,
+      "description": "한국은행 공식 월간통계 공표일정 기준. 경상수지·자본수지 포함 국제수지 잠정치 공표.",
+      "source": "bok.or.kr"
     },
     {
       "date": "2026-10-08",
       "category": "futures_expiry",
-      "name": "코스피200 옵션 월간 만기일",
+      "name": "KOSPI200 주가지수 선물·옵션 월간 만기일",
       "importance": 2,
-      "description": "KRX 코스피200 옵션 10월물 만기일(매월 둘째 목요일). 2026년 10월의 둘째 목요일은 10월 8일. 만기 당일 프로그램 매매 변동성 확대 가능.",
+      "description": "KRX 규정상 주가지수 선물·옵션 월간 만기는 매월 둘째 목요일. 2026년 10월 둘째 목요일은 10월 8일. 위클리옵션 포함 파생상품 만기 집중일.",
       "source": "krx.co.kr"
+    },
+    {
+      "date": "2026-10-15",
+      "category": "other",
+      "name": "2026년 8월 통화 및 유동성 발표",
+      "importance": 2,
+      "description": "한국은행 공식 월간통계 공표일정 기준. M1·M2 등 통화량 지표 공표.",
+      "source": "bok.or.kr"
+    },
+    {
+      "date": "2026-10-16",
+      "category": "trade",
+      "name": "2026년 9월 수출입물가지수 및 무역지수(잠정) 발표",
+      "importance": 3,
+      "description": "한국은행 공식 월간통계 공표일정 기준. 수출입물가 및 교역조건 잠정치 공표.",
+      "source": "bok.or.kr"
+    },
+    {
+      "date": "2026-10-16",
+      "category": "employment",
+      "name": "2026년 9월 고용동향 발표",
+      "importance": 4,
+      "description": "국가데이터처(구 통계청) 공식 공표일정 확인. 취업자수·실업률 등 발표. 금번부터 15~34세 청년 고용지표 추가 공표 예정.",
+      "source": "mods.go.kr"
     },
     {
       "date": "2026-10-22",
       "category": "bok_mpb",
-      "name": "한국은행 금융통화위원회 통화정책방향 결정회의",
+      "name": "한국은행 금융통화위원회 통화정책방향 결정회의 (기준금리 결정)",
       "importance": 5,
-      "description": "2026년 8회 중 7번째 통화정책방향 결정회의. 기준금리 결정 발표. 검색 기간(~10/12) 이후이나 시장이 사전에 포지션 조정을 시작하는 핵심 일정으로 참고 포함.",
+      "description": "2026년 제7차 통화정책방향 결정회의. 기준금리 결정 및 총재 기자간담회. 한국은행이 2025년 10월 공식 발표한 연간 일정에 따름. 현 기준금리 연 2.50%.",
       "source": "bok.or.kr"
     }
   ]
