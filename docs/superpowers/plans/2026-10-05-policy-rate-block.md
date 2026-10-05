@@ -42,7 +42,7 @@
 1. **FRED 결측값 `"."`**: 휴일 등에 `value: "."`가 섞여도 요약이 깨지지 않아야 한다. Task 2에서 `"."` 포함 응답 테스트로 고정한다.
 2. **ECOS 오류 응답**: `{"RESULT":{"CODE":"INFO-200",...}}`(데이터 없음)이 와도 throw하지 않고, `null`과 `errors` 기록으로 끝나야 한다. Task 2에서 고정한다.
 3. **한쪽 소스만 성공**: 블록에 성공한 쪽 줄과 "오늘 확인 불가" 줄이 함께 나와야 한다. Task 3에서 고정한다.
-4. **soft-warn 입력이 JSON 문자열**: `\"`와 `\n`이 섞인 `JSON.stringify(content)`에서도 문장 분리와 탐지가 동작해야 한다. Task 5에서 고정한다.
+4. **soft-warn 입력이 중첩 리포트 객체**: 객체 경계에서 서로 다른 문장이 합쳐지면 안 된다. `extractReportText`로 문자열 값만 모아 검사한다. Task 5에서 고정한다.
 5. **부동소수 비교**: `4.00`과 `4` 같은 표현 차이나 `0.1+0.2` 류 오차가 가짜 변경으로 잡히면 안 된다. Task 1에서 오차 1e-9 이하 무시 테스트로 고정한다.
 
 ---
@@ -418,6 +418,55 @@ test("collectPolicyRates: FRED 결측 '.' 섞여도 요약", async () => {
   assert.equal(rates.fed!.stance, "인상(인하→인상 전환)");
 });
 
+test("collectPolicyRates: 하단 관측일이 상단과 다르면 fed null + errors", async () => {
+  const { fetcher } = makeFetcher({ DFEDTARL: fredObs(WINDOW, "2025-12-11", 3.75, [["2025-12-11", 3.5]]) });
+  const { rates, errors } = await collectPolicyRates({ today: TODAY, fetcher, fredKey: "k", ecosKey: "k" });
+  assert.equal(rates.fed, null);
+  assert.equal(errors[0].source, "policy-rate-fed");
+  assert.match(errors[0].message, /관측일 불일치/);
+});
+
+test("collectPolicyRates: 빈 정상 응답 → 요약 불가 errors", async () => {
+  const { fetcher } = makeFetcher({
+    DFEDTARU: { observations: [] },
+    "722Y001": { StatisticSearch: { list_total_count: 0, row: [] } },
+  });
+  const { rates, errors } = await collectPolicyRates({ today: TODAY, fetcher, fredKey: "k", ecosKey: "k" });
+  assert.deepEqual(rates, { fed: null, bok: null });
+  assert.deepEqual(errors.map((e) => e.source).sort(), ["policy-rate-bok", "policy-rate-fed"]);
+  assert.ok(errors.every((e) => /요약 불가/.test(e.message)));
+});
+
+test("collectPolicyRates: 실제 응답 형식(추가 필드 포함) 파싱", async () => {
+  // FRED observations 실제 형식(realtime_* 필드 포함), ECOS 2026-10-05 sample 키 실제 응답 행 형식
+  const fredReal = (obs: { observations: { date: string; value: string }[] }) => ({
+    realtime_start: TODAY, realtime_end: TODAY, units: "lin", count: obs.observations.length,
+    observations: obs.observations.map((o) => ({ realtime_start: TODAY, realtime_end: TODAY, ...o })),
+  });
+  const bok = ecosRows(WINDOW, "2026-10-04", 2.5, BOK_CHANGES).map((r) => ({
+    STAT_CODE: "722Y001", STAT_NAME: "1.3.1. 한국은행 기준금리 및 여수신금리",
+    ITEM_CODE1: "0101000", ITEM_NAME1: "한국은행 기준금리", ITEM_CODE2: null, ITEM_NAME2: null,
+    UNIT_NAME: "연%", WGT: null, ...r,
+  }));
+  const fetcher = async (url: string) => {
+    if (url.includes("DFEDTARU")) return fredReal(fredObs(WINDOW, "2026-10-04", 4.0, FED_CHANGES));
+    if (url.includes("DFEDTARL")) return fredReal(fredObs(WINDOW, "2026-10-04", 3.75, FED_LOWER));
+    const m = url.match(/\/json\/kr\/(\d+)\/(\d+)\//)!;
+    return { StatisticSearch: { list_total_count: bok.length, row: bok.slice(Number(m[1]) - 1, Number(m[2])) } };
+  };
+  const { rates, errors } = await collectPolicyRates({ today: TODAY, fetcher, fredKey: "k", ecosKey: "k" });
+  assert.deepEqual(errors, []);
+  assert.equal(rates.fed!.currentText, "3.75~4.00%");
+  assert.equal(rates.bok!.lastChange!.date, "2026-08-27");
+});
+
+test("collectPolicyRates: 윤일 today도 존재하는 조회 시작일로", async () => {
+  const { fetcher, calls } = makeFetcher();
+  await collectPolicyRates({ today: "2028-02-29", fetcher, fredKey: "k", ecosKey: "k" });
+  assert.ok(calls.some((u) => u.includes("observation_start=2025-03-01")));
+  assert.ok(calls.some((u) => u.includes("/20250301/20280229/")));
+});
+
 test("collectPolicyRates: ECOS 데이터 없음 응답 → bok null + errors", async () => {
   const { fetcher } = makeFetcher({ "722Y001": { RESULT: { CODE: "INFO-200", MESSAGE: "해당하는 데이터가 없습니다." } } });
   const { rates, errors } = await collectPolicyRates({ today: TODAY, fetcher, fredKey: "k", ecosKey: "k" });
@@ -455,8 +504,9 @@ function kstToday(): string {
 }
 
 function minusYears(date: string, years: number): string {
-  const [y, m, d] = date.split("-");
-  return `${Number(y) - years}-${m}-${d}`;
+  const t = new Date(date + "T00:00:00Z");
+  t.setUTCFullYear(t.getUTCFullYear() - years); // 2028-02-29 → 2025-03-01 (존재하는 날짜로 보정)
+  return t.toISOString().slice(0, 10);
 }
 
 interface FredResp {
@@ -518,6 +568,9 @@ export async function collectPolicyRates(
     const lowerLatest = [...lower].reverse().find((p) => Number.isFinite(p.value));
     const upperLatest = [...upper].reverse().find((p) => Number.isFinite(p.value));
     if (!lowerLatest || !upperLatest) throw new Error("요약 불가: FRED 목표범위 관측 없음");
+    if (lowerLatest.date !== upperLatest.date) {
+      throw new Error(`요약 불가: 목표범위 상·하단 관측일 불일치(${lowerLatest.date} vs ${upperLatest.date})`);
+    }
     const s = summarizePolicyRate(upper, {
       label: "미 연준 목표범위",
       today,
@@ -552,7 +605,7 @@ export async function collectPolicyRates(
 - [ ] **Step 4: 통과 확인**
 
 Run: `npx tsx --test lib/policy-rate.test.ts`
-Expected: 모든 테스트 PASS(18건)
+Expected: 모든 테스트 PASS(22건)
 
 - [ ] **Step 5: 커밋**
 
@@ -639,6 +692,7 @@ test("POLICY_RATE_RULE: 국면은 블록만, 전망은 출처 인용", () => {
   assert.ok(POLICY_RATE_RULE.startsWith("- ❌ **중앙은행 금리 국면 추정 금지**"));
   assert.ok(POLICY_RATE_RULE.includes("[정책금리] 블록에 적힌 대로만"));
   assert.ok(POLICY_RATE_RULE.includes("FRED 연방기금금리 월평균"));
+  assert.ok(POLICY_RATE_RULE.includes("블록에 없는 중앙은행(ECB·일본은행 등)"));
   assert.ok(POLICY_RATE_RULE.includes("출처가 있을 때만"));
 });
 ```
@@ -680,7 +734,8 @@ export function formatPolicyRateLog(rates: PolicyRates): string {
 
 export const POLICY_RATE_RULE =
   "- ❌ **중앙은행 금리 국면 추정 금지**: 연준·한은의 **현재 국면과 지난 결정**(인상·인하·동결, 언제 얼마나)은 [정책금리] 블록에 적힌 대로만 쓸 것. " +
-  "블록에서 '오늘 확인 불가'인 중앙은행은 국면·지난 결정을 언급하지 말 것(FRED 연방기금금리 월평균 값으로 대신 추정하지 말 것). " +
+  "블록에서 '오늘 확인 불가'인 연준·한은은 국면·지난 결정을 언급하지 말 것(FRED 연방기금금리 월평균 값으로 대신 추정하지 말 것). " +
+  "블록에 없는 중앙은행(ECB·일본은행 등)의 국면·결정은 추정하지 말고, 뉴스에 출처가 있을 때만 출처를 밝혀 인용할 것. " +
   "**앞으로의 방향**(추가 인상·인하 전망)은 뉴스에 출처가 있을 때만 출처를 밝혀 인용할 것 — 현재 국면과 반대되는 전망이면 " +
   "\"인상 국면 속에서도 ○○는 인하 가능성을 제기했다\"처럼 국면을 함께 밝힐 것.";
 ```
@@ -688,7 +743,7 @@ export const POLICY_RATE_RULE =
 - [ ] **Step 4: 통과 확인**
 
 Run: `npx tsx --test lib/policy-rate.test.ts`
-Expected: 모든 테스트 PASS(24건)
+Expected: 모든 테스트 PASS(28건)
 
 - [ ] **Step 5: 커밋**
 
@@ -788,7 +843,7 @@ test("context-data: 정책금리 수집·errors 병합·로그 연결", () => {
 - [ ] **Step 6: 확인**
 
 Run: `npx tsc --noEmit -p . && npx tsx --test lib/*.test.ts lib/etf/*.test.ts`
-Expected: tsc clean, 205/205 PASS(기준선 180 + 이번 브랜치 25)
+Expected: tsc clean, 209/209 PASS(기준선 180 + 이번 브랜치 29)
 
 - [ ] **Step 7: 커밋**
 
@@ -817,7 +872,7 @@ Claude-Session: https://claude.ai/code/session_01EWRiFtTs8hWaAkoKrxbP3s"
 - [ ] **Step 1: 실패하는 테스트 추가** — `lib/policy-rate.test.ts`
 
 ```ts
-import { findPolicyDirectionMismatches } from "./policy-rate";
+import { findPolicyDirectionMismatches, extractReportText } from "./policy-rate";
 
 const CUT_BOK: PolicyRateSummary = { ...BOK, stance: "인하", stanceDirection: "cut" };
 const HOLD_BOK: PolicyRateSummary = { ...BOK, stance: "동결 지속(최근 3년 변경 없음)", stanceDirection: "hold" };
@@ -835,9 +890,16 @@ test("soft-warn: <strong> 낀 표현과 '금리를 내렸다'도 탐지", () => 
   assert.equal(findPolicyDirectionMismatches(text, { fed: FED, bok: BOK }).length, 2);
 });
 
-test("soft-warn: JSON 문자열 입력에서도 동작", () => {
-  const json = JSON.stringify({ a: "첫 문장입니다.\n한은의 추가 인하 속도가 관건입니다.", b: "\"따옴표\" 문장." });
-  assert.equal(findPolicyDirectionMismatches(json, { fed: FED, bok: BOK }).length, 1);
+test("extractReportText: 중첩 객체의 문자열 값만 줄 단위로 모은다", () => {
+  const content = { bigStory: { content: [
+    { type: "paragraph", text: "연준이 동결했습니다." },
+    { text: "한은의 추가 인상 기대가 커졌습니다.", type: "paragraph" },
+  ] }, n: 3 };
+  const text = extractReportText(content);
+  assert.ok(text.includes("연준이 동결했습니다.\n"));
+  assert.ok(!text.includes("{"));
+  // 객체 경계가 문장을 합치지 않는다: 연준 hike·한은 cut 에서 두 번째 문장만 탐지
+  assert.equal(findPolicyDirectionMismatches(text, { fed: FED, bok: CUT_BOK }).length, 1);
 });
 
 test("soft-warn: 은행이 엇갈리면 문장 단서로 구분", () => {
@@ -846,6 +908,11 @@ test("soft-warn: 은행이 엇갈리면 문장 단서로 구분", () => {
   assert.equal(findPolicyDirectionMismatches("연준의 추가 인하 기대가 커졌습니다.", rates).length, 1);
   assert.equal(findPolicyDirectionMismatches("한은의 추가 인상 기대가 커졌습니다.", rates).length, 1);
   assert.equal(findPolicyDirectionMismatches("추가 인하 기대가 커졌습니다.", rates).length, 0);
+});
+
+test("soft-warn: 단서 없는 문장은 두 은행이 모두 있고 같은 방향일 때만", () => {
+  assert.equal(findPolicyDirectionMismatches("추가 인하 기대가 커졌습니다.", { fed: FED, bok: null }).length, 0);
+  assert.equal(findPolicyDirectionMismatches("추가 인하 기대가 커졌습니다.", { fed: FED, bok: BOK }).length, 1);
 });
 
 test("soft-warn: hold·없음은 검사하지 않음", () => {
@@ -857,7 +924,7 @@ test("프롬프트 소스: 규칙 삽입·과거 수치 출처 통합·인하 �
   const cc = fs.readFileSync("lib/claude-client.ts", "utf8");
   assert.ok(cc.includes("${POLICY_RATE_RULE}"));
   assert.ok(cc.includes("renderPolicyRateBlock(context.policyRates)"));
-  assert.ok(cc.includes("findPolicyDirectionMismatches(jsonStr, context.policyRates)"));
+  assert.ok(cc.includes("findPolicyDirectionMismatches(extractReportText(content), context.policyRates)"));
   assert.ok(!cc.includes("금리 인하를 준비하던"));
   assert.ok(cc.includes("historicalComparison 필드 또는 [정책금리] 블록의 수치만"));
   assert.ok(cc.includes("historicalComparison·[정책금리] 블록에 포함되지 않은 과거 수치는 절대 사용 금지"));
@@ -881,18 +948,30 @@ const BOK_CUE = /한국은행|한은|금통위|국내 기준금리/;
 const EASE_RE = /금리 인하 기대|인하 기대|추가 (금리 )?인하|금리 인하 (시점|속도|여력|여지|국면)|인하 방향|인하 사이클|금리를 (내렸|내린|인하했)|인하를 준비/;
 const TIGHT_RE = /금리 인상 기대|인상 기대|추가 (금리 )?인상|금리 인상 (시점|속도|여력|여지|국면)|인상 방향|인상 사이클|금리를 (올렸|올린|인상했)|인상을 준비/;
 
+/** 리포트 콘텐츠 객체의 모든 문자열 값을 줄 단위로 모은다(JSON 구조 기호가 문장을 합치지 않게). */
+export function extractReportText(value: unknown): string {
+  const out: string[] = [];
+  const walk = (v: unknown) => {
+    if (typeof v === "string") out.push(v);
+    else if (Array.isArray(v)) v.forEach(walk);
+    else if (v && typeof v === "object") Object.values(v).forEach(walk);
+  };
+  walk(value);
+  return out.join("\n") + "\n";
+}
+
 /** 국면 라벨과 반대 방향 전제 문장 발췌(기록 전용). hold·null 은 검사하지 않는다. */
 export function findPolicyDirectionMismatches(text: string, rates: PolicyRates): string[] {
-  const plain = text.replace(/<[^>]+>/g, "").replace(/\\n/g, "\n").replace(/\\"/g, "\"");
-  const sentences = plain.split(/(?<=[.!?])\s+|\n|","/).map((s) => s.trim()).filter(Boolean);
+  const plain = text.replace(/<[^>]+>/g, "");
+  const sentences = plain.split(/(?<=[.!?])\s+|\n/).map((s) => s.trim()).filter(Boolean);
   const hits: string[] = [];
   for (const sent of sentences) {
     const fedCue = FED_CUE.test(sent);
     const bokCue = BOK_CUE.test(sent);
     const targets = fedCue || bokCue
-      ? [fedCue ? rates.fed : null, bokCue ? rates.bok : null]
-      : [rates.fed, rates.bok];
-    const dirs = new Set(targets.filter((s): s is PolicyRateSummary => !!s).map((s) => s.stanceDirection));
+      ? [fedCue ? rates.fed : null, bokCue ? rates.bok : null].filter((s): s is PolicyRateSummary => !!s)
+      : rates.fed && rates.bok ? [rates.fed, rates.bok] : [];
+    const dirs = new Set(targets.map((s) => s.stanceDirection));
     if (dirs.size !== 1) continue;
     const dir = [...dirs][0];
     const re = dir === "hike" ? EASE_RE : dir === "cut" ? TIGHT_RE : null;
@@ -902,14 +981,14 @@ export function findPolicyDirectionMismatches(text: string, rates: PolicyRates):
 }
 ```
 
-`dirs`는 단서가 가리킨 은행 중 데이터가 있는 쪽만 모은다. 단서가 없으면 두 은행을 다 본다. 방향이 하나로 모이지 않으면(엇갈림 또는 데이터 없음) 건너뛴다. 예를 들어 "추가 인하 기대"(단서 없음)는 연준 hike·한은 cut이면 `dirs`가 2개라 건너뛴다. 데이터가 하나도 없으면 0개라 역시 건너뛴다.
+`targets`는 단서가 가리킨 은행 중 데이터가 있는 쪽이다. 단서가 없으면 두 은행이 모두 있을 때만 둘 다 본다(스펙: "두 은행이 같은 방향일 때만"). 방향이 하나로 모이지 않으면(엇갈림 또는 대상 없음) 건너뛴다. 예를 들어 "추가 인하 기대"(단서 없음)는 연준 hike·한은 cut이면 `dirs`가 2개라 건너뛰고, 한은 데이터가 없으면 대상이 0개라 건너뛴다.
 
 - [ ] **Step 4: `lib/claude-client.ts` 수정**
 
 (a) import — `import { softFixUnquotableSources, ... } from "./quotable-sources";` 다음 줄에 추가한다.
 
 ```ts
-import { renderPolicyRateBlock, POLICY_RATE_RULE, findPolicyDirectionMismatches } from "./policy-rate";
+import { renderPolicyRateBlock, POLICY_RATE_RULE, findPolicyDirectionMismatches, extractReportText } from "./policy-rate";
 ```
 
 (b) "⛔ 허위 정보 생성 금지" 블록: 첫 숫자 규칙 문구를 바꾸고, `가상 통계/설문 결과 금지` 줄 다음에 규칙을 넣는다.
@@ -944,7 +1023,7 @@ ${POLICY_RATE_RULE}
 
 ```ts
   if (context?.policyRates) {
-    const mismatches = findPolicyDirectionMismatches(jsonStr, context.policyRates);
+    const mismatches = findPolicyDirectionMismatches(extractReportText(content), context.policyRates);
     if (mismatches.length > 0) {
       console.log(`[soft-warn] 정책 방향 불일치 ${mismatches.length}건 (기록 전용)`);
       for (const m of mismatches) console.log(`  - ${m}`);
@@ -964,7 +1043,7 @@ Expected: `lib/catalyst-extractor.ts:36`(키워드 목록 — 방향 전제가 �
 - [ ] **Step 7: 전체 확인**
 
 Run: `npx tsc --noEmit -p . && npx tsx --test lib/*.test.ts lib/etf/*.test.ts`
-Expected: tsc clean, 211/211 PASS. `market-prompt-freeze.test.ts`는 변경 없이 통과해야 한다(보이스·시점·요일 블록 불변).
+Expected: tsc clean, 216/216 PASS. `market-prompt-freeze.test.ts`는 변경 없이 통과해야 한다(보이스·시점·요일 블록 불변).
 
 - [ ] **Step 8: 커밋**
 
