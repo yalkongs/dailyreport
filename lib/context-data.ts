@@ -119,7 +119,7 @@ export async function collectContextData(): Promise<ContextData> {
   console.log(`  🎭 Fear & Greed: ${fearGreed ? fearGreed.value : "없음"}`);
   console.log(`  📈 과거 비교: ${historical.length}건`);
   if (errors.length > 0) {
-    console.log(`  ⚠️ 수집 에러: ${errors.map((e) => e.source).join(", ")}`);
+    console.log(`  ⚠️ 수집 에러: ${errors.map((e) => `${e.source}(${e.message})`).join(", ")}`);
   }
   console.log(`✅ 컨텍스트 데이터 수집 완료`);
 

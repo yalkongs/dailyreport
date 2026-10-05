@@ -191,7 +191,7 @@ export async function collectPolicyRates(
   const [fed, bok] = await Promise.allSettled([fedTask(), bokTask()]);
   const pick = (r: PromiseSettledResult<PolicyRateSummary | null>, source: string) => {
     if (r.status === "fulfilled") return r.value;
-    errors.push({ source, status: "error", message: (r.reason as Error).message });
+    errors.push({ source, status: "error", message: r.reason instanceof Error ? r.reason.message : String(r.reason) });
     return null;
   };
   return {

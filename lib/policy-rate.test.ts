@@ -361,3 +361,27 @@ test("프롬프트 소스: 규칙 삽입·과거 수치 출처 통합·인하 �
   assert.ok(!sd.includes("미국 금리 인하가 진짜 시작되면"));
   assert.ok(sd.includes("미국 금리 경로가 바뀌면 무슨 일이 벌어지나 — 시나리오 분석"));
 });
+
+test("collectPolicyRates: 비 Error 거부(undefined)도 fed만 null, bok 유지", async () => {
+  const { fetcher: base } = makeFetcher();
+  const fetcher = async (url: string) => {
+    if (url.includes("DFEDTARU")) throw undefined;
+    return base(url);
+  };
+  const { rates, errors } = await collectPolicyRates({ today: TODAY, fetcher, fredKey: "k", ecosKey: "k" });
+  assert.equal(rates.fed, null);
+  assert.ok(rates.bok);
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0].source, "policy-rate-fed");
+  assert.equal(typeof errors[0].message, "string");
+});
+
+test("context-data.ts: 수집 에러 로그에 사유(message) 포함", () => {
+  const src = fs.readFileSync(new URL("./context-data.ts", import.meta.url), "utf8");
+  assert.ok(src.includes("${e.source}(${e.message})"));
+});
+
+test("claude-client.ts: 컨텍스트 비활성 시에도 정책금리 블록 유지", () => {
+  const src = fs.readFileSync(new URL("./claude-client.ts", import.meta.url), "utf8");
+  assert.ok(src.includes("if (!context) return renderPolicyRateBlock({ fed: null, bok: null });"));
+});

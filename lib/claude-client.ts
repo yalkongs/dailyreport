@@ -167,7 +167,7 @@ function buildEvidenceBlock(ctx: AntiRepetitionContext): string {
 }
 
 function buildContextBlock(context: ContextData | null, ctx?: AntiRepetitionContext): string {
-  if (!context) return "";
+  if (!context) return renderPolicyRateBlock({ fed: null, bok: null });
 
   let block = `\n## 컨텍스트 데이터 (맥락 제공용)\n`;
   block += `아래 데이터는 시장 분석의 맥락을 제공합니다. 리포트 본문에 자연스럽게 녹여 활용하십시오.\n`;
