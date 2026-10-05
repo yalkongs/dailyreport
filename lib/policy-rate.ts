@@ -199,3 +199,37 @@ export async function collectPolicyRates(
     errors,
   };
 }
+
+const BLOCK_HEAD = "### 정책금리 (확정 사실 — 중앙은행의 현재 국면·지난 결정 서술의 유일한 근거)";
+
+function fmtDelta(delta: number): string {
+  return `${delta > 0 ? "+" : "−"}${Math.abs(delta).toFixed(2)}%p`;
+}
+
+function renderLine(label: string, s: PolicyRateSummary | null): string {
+  if (!s) return `- ${label}: 오늘 확인 불가 — 국면·지난 결정 언급 금지\n`;
+  let facts: string;
+  if (!s.lastChange) {
+    facts = "최근 3년 변경 없음";
+  } else {
+    facts = `최근 변경 ${s.lastChange.date}(효력일) ${fmtDelta(s.lastChange.delta)}`;
+    if (s.prevChange) facts += `, 직전 변경 ${s.prevChange.date} ${fmtDelta(s.prevChange.delta)}`;
+  }
+  return `- ${s.label}: ${s.currentText} — ${facts}\n  → 현재 국면: ${s.stance}\n`;
+}
+
+export function renderPolicyRateBlock(rates: PolicyRates): string {
+  return `\n${BLOCK_HEAD}\n` + renderLine("미 연준 목표범위", rates.fed) + renderLine("한국은행 기준금리", rates.bok);
+}
+
+export function formatPolicyRateLog(rates: PolicyRates): string {
+  const one = (s: PolicyRateSummary | null) => (s ? `${s.currentText}(${s.stance})` : "없음");
+  return `🏛️ 정책금리: 연준 ${one(rates.fed)} / 한은 ${one(rates.bok)}`;
+}
+
+export const POLICY_RATE_RULE =
+  "- ❌ **중앙은행 금리 국면 추정 금지**: 연준·한은의 **현재 국면과 지난 결정**(인상·인하·동결, 언제 얼마나)은 [정책금리] 블록에 적힌 대로만 쓸 것. " +
+  "블록에서 '오늘 확인 불가'인 연준·한은은 국면·지난 결정을 언급하지 말 것(FRED 연방기금금리 월평균 값으로 대신 추정하지 말 것). " +
+  "블록에 없는 중앙은행(ECB·일본은행 등)의 국면·결정은 추정하지 말고, 뉴스에 출처가 있을 때만 출처를 밝혀 인용할 것. " +
+  "**앞으로의 방향**(추가 인상·인하 전망)은 뉴스에 출처가 있을 때만 출처를 밝혀 인용할 것 — 현재 국면과 반대되는 전망이면 " +
+  "\"인상 국면 속에서도 ○○는 인하 가능성을 제기했다\"처럼 국면을 함께 밝힐 것.";

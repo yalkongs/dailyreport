@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { summarizePolicyRate, daysBetween, type RatePoint, collectPolicyRates } from "./policy-rate";
+import { summarizePolicyRate, daysBetween, type RatePoint, collectPolicyRates, renderPolicyRateBlock, formatPolicyRateLog, POLICY_RATE_RULE } from "./policy-rate";
+import type { PolicyRateSummary } from "./types";
 
 const TODAY = "2026-10-05";
 const WINDOW = "2023-10-05";
@@ -232,4 +233,62 @@ test("collectPolicyRates: ECOS 데이터 없음 응답 → bok null + errors", a
   assert.ok(rates.fed);
   assert.equal(errors[0].source, "policy-rate-bok");
   assert.match(errors[0].message, /INFO-200|요약 불가/);
+});
+
+const FED: PolicyRateSummary = {
+  label: "미 연준 목표범위", currentText: "3.75~4.00%", current: 4,
+  lastChange: { date: "2026-09-17", delta: 0.25 }, prevChange: { date: "2025-12-11", delta: -0.25 },
+  stance: "인상(인하→인상 전환)", stanceDirection: "hike", asOf: "2026-10-04",
+};
+const BOK: PolicyRateSummary = {
+  label: "한국은행 기준금리", currentText: "3.00%", current: 3,
+  lastChange: { date: "2026-08-27", delta: 0.25 }, prevChange: { date: "2026-07-16", delta: 0.25 },
+  stance: "인상(2회 연속)", stanceDirection: "hike", asOf: "2026-10-04",
+};
+const HEAD = "### 정책금리 (확정 사실 — 중앙은행의 현재 국면·지난 결정 서술의 유일한 근거)";
+
+test("renderPolicyRateBlock: 두 소스", () => {
+  assert.equal(
+    renderPolicyRateBlock({ fed: FED, bok: BOK }),
+    `\n${HEAD}\n` +
+      "- 미 연준 목표범위: 3.75~4.00% — 최근 변경 2026-09-17(효력일) +0.25%p, 직전 변경 2025-12-11 −0.25%p\n" +
+      "  → 현재 국면: 인상(인하→인상 전환)\n" +
+      "- 한국은행 기준금리: 3.00% — 최근 변경 2026-08-27(효력일) +0.25%p, 직전 변경 2026-07-16 +0.25%p\n" +
+      "  → 현재 국면: 인상(2회 연속)\n",
+  );
+});
+
+test("renderPolicyRateBlock: 한쪽 없음 → 확인 불가 줄", () => {
+  const out = renderPolicyRateBlock({ fed: FED, bok: null });
+  assert.ok(out.includes("- 미 연준 목표범위: 3.75~4.00%"));
+  assert.ok(out.endsWith("- 한국은행 기준금리: 오늘 확인 불가 — 국면·지난 결정 언급 금지\n"));
+});
+
+test("renderPolicyRateBlock: 둘 다 없음 → 제목 + 확인 불가 두 줄", () => {
+  assert.equal(
+    renderPolicyRateBlock({ fed: null, bok: null }),
+    `\n${HEAD}\n` +
+      "- 미 연준 목표범위: 오늘 확인 불가 — 국면·지난 결정 언급 금지\n" +
+      "- 한국은행 기준금리: 오늘 확인 불가 — 국면·지난 결정 언급 금지\n",
+  );
+});
+
+test("renderPolicyRateBlock: 변경 없음·직전 없음", () => {
+  const hold: PolicyRateSummary = { ...BOK, lastChange: null, prevChange: null, stance: "동결 지속(최근 3년 변경 없음)", stanceDirection: "hold" };
+  const single: PolicyRateSummary = { ...BOK, prevChange: null, stance: "인상" };
+  assert.ok(renderPolicyRateBlock({ fed: null, bok: hold }).includes("- 한국은행 기준금리: 3.00% — 최근 3년 변경 없음\n  → 현재 국면: 동결 지속(최근 3년 변경 없음)\n"));
+  assert.ok(renderPolicyRateBlock({ fed: null, bok: single }).includes("최근 변경 2026-08-27(효력일) +0.25%p\n  → 현재 국면: 인상\n"));
+});
+
+test("formatPolicyRateLog", () => {
+  assert.equal(formatPolicyRateLog({ fed: FED, bok: BOK }), "🏛️ 정책금리: 연준 3.75~4.00%(인상(인하→인상 전환)) / 한은 3.00%(인상(2회 연속))");
+  assert.equal(formatPolicyRateLog({ fed: null, bok: null }), "🏛️ 정책금리: 연준 없음 / 한은 없음");
+});
+
+test("POLICY_RATE_RULE: 국면은 블록만, 전망은 출처 인용", () => {
+  assert.ok(POLICY_RATE_RULE.startsWith("- ❌ **중앙은행 금리 국면 추정 금지**"));
+  assert.ok(POLICY_RATE_RULE.includes("[정책금리] 블록에 적힌 대로만"));
+  assert.ok(POLICY_RATE_RULE.includes("FRED 연방기금금리 월평균"));
+  assert.ok(POLICY_RATE_RULE.includes("블록에 없는 중앙은행(ECB·일본은행 등)"));
+  assert.ok(POLICY_RATE_RULE.includes("출처가 있을 때만"));
 });
