@@ -14,6 +14,7 @@ import { buildTemporalFramingBlock } from "./temporal-framing";
 // R2·R3 (2026-07-22): 시점·출처 정합 검사(파싱 직후 문자열 레벨 soft fix).
 import { checkAndFixTemporal } from "./temporal-consistency";
 import { softFixUnquotableSources, countCitationPhrases, QUOTABLE_SOURCES } from "./quotable-sources";
+import { renderPolicyRateBlock, POLICY_RATE_RULE, findPolicyDirectionMismatches, extractReportText } from "./policy-rate";
 
 const client = new Anthropic();
 
@@ -70,8 +71,9 @@ ${renderVoiceExemplars()}
 
 ### ⛔ 허위 정보 생성 금지 — 이 규칙은 다른 모든 지시보다 우선합니다
 - ❌ **가상 인물/인터뷰 생성 절대 금지**: "경기도 일산의 한 택배 기사" 등 실존하지 않는 인물의 발언이나 사례를 만들어내지 말 것.
-- ❌ **제공되지 않은 숫자 날조 금지**: 과거 비교가 필요하면 반드시 historicalComparison 필드의 수치만 사용할 것. 해당 데이터가 없으면 과거 비교를 생략할 것.
+- ❌ **제공되지 않은 숫자 날조 금지**: 과거 비교가 필요하면 반드시 historicalComparison 필드 또는 [정책금리] 블록의 수치만 사용할 것. 해당 데이터가 없으면 과거 비교를 생략할 것.
 - ❌ **가상 통계/설문 결과 금지**: "최근 설문에 따르면" 등 출처 없는 통계를 만들어내지 말 것.
+${POLICY_RATE_RULE}
 
 ### 좋은 글 vs 나쁜 글 예시
 
@@ -79,14 +81,14 @@ ${renderVoiceExemplars()}
 "WTI 원유가 7.7% 상승했습니다. 이는 에너지 시장의 불확실성을 반영하며, 글로벌 경제에 상당한 파장을 미칠 것으로 예상됩니다."
 
 **✅ 좋은 글:**
-"WTI 원유가 하루 만에 7.7% 상승했습니다. 배럴당 104달러. 작년 이맘때 70달러대였던 것을 감안하면, 반년 사이 50% 가까이 오른 셈입니다. 문제는 시점입니다. 각국 중앙은행이 금리 인하를 준비하던 바로 그 순간, 원유가 인플레이션의 변수를 다시 꺼내든 것입니다."
+"WTI 원유가 하루 만에 7.7% 상승했습니다. 배럴당 104달러. 작년 이맘때 70달러대였던 것을 감안하면, 반년 사이 50% 가까이 오른 셈입니다. 문제는 시점입니다. 각국 중앙은행이 물가가 잡혔는지 확인하려던 바로 그 순간, 원유가 인플레이션의 변수를 다시 꺼내든 것입니다."
 
 ## 구조적 원칙
 
 1. **하나의 큰 줄거리**: 오늘 시장 전체를 관통하는 핵심 스토리를 먼저 잡을 것.
 2. **시장별 칸막이 금지**: 하나의 이야기 흐름 안에서 각 시장을 자연스럽게 엮을 것.
 3. **인과관계 체인**: 사건 → 원인 → 파급 → 한국 영향 순서로 서술할 것.
-4. **맥락 제공**: historicalComparison 데이터로 현재 수치의 위치를 보여줄 것. 포함되지 않은 과거 수치는 절대 사용 금지.
+4. **맥락 제공**: historicalComparison 데이터로 현재 수치의 위치를 보여줄 것. historicalComparison·[정책금리] 블록에 포함되지 않은 과거 수치는 절대 사용 금지.
 5. **방향성 제시, 추천 금지**: 특정 종목 매수·매도 추천은 절대 금지.
 
 ## ⛔ 트리비얼 연결 금지 목록
@@ -211,6 +213,8 @@ function buildContextBlock(context: ContextData | null, ctx?: AntiRepetitionCont
     }
   }
 
+  block += renderPolicyRateBlock(context.policyRates);
+
   if (context.fredIndicators.length > 0) {
     block += `\n### 미국 경제지표 (FRED)\n`;
     for (const f of context.fredIndicators) {
@@ -245,7 +249,7 @@ function buildContextBlock(context: ContextData | null, ctx?: AntiRepetitionCont
 
   if (context.historicalComparison.length > 0) {
     block += `\n### 과거 비교 데이터 (historicalComparison)\n`;
-    block += `⚠️ 과거 수치를 인용할 때는 반드시 이 데이터만 사용하십시오.\n`;
+    block += `⚠️ 과거 수치를 인용할 때는 반드시 이 데이터 또는 [정책금리] 블록만 사용하십시오.\n`;
     for (const h of context.historicalComparison) {
       const parts = [`현재: ${h.current}`];
       if (h.oneWeekAgo != null) parts.push(`1주전: ${h.oneWeekAgo}`);
@@ -583,6 +587,13 @@ export async function generateReport(
   // JSON 콘텐츠 후처리: 금지 표현 검사
   const jsonStr = JSON.stringify(content);
   sanitizeBannedExpressions(jsonStr);
+  if (context?.policyRates) {
+    const mismatches = findPolicyDirectionMismatches(extractReportText(content), context.policyRates);
+    if (mismatches.length > 0) {
+      console.log(`[soft-warn] 정책 방향 불일치 ${mismatches.length}건 (기록 전용)`);
+      for (const m of mismatches) console.log(`  - ${m}`);
+    }
+  }
 
   console.log(`📄 JSON 파싱 성공 — bigStory: ${content.bigStory.content.length}블록, watchPoints: ${content.watchPoints.length}, compass: ${content.compass.length}, soWhat: ${content.soWhat.length}`);
 

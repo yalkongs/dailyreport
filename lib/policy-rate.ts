@@ -233,3 +233,40 @@ export const POLICY_RATE_RULE =
   "블록에 없는 중앙은행(ECB·일본은행 등)의 국면·결정은 추정하지 말고, 뉴스에 출처가 있을 때만 출처를 밝혀 인용할 것. " +
   "**앞으로의 방향**(추가 인상·인하 전망)은 뉴스에 출처가 있을 때만 출처를 밝혀 인용할 것 — 현재 국면과 반대되는 전망이면 " +
   "\"인상 국면 속에서도 ○○는 인하 가능성을 제기했다\"처럼 국면을 함께 밝힐 것.";
+
+const FED_CUE = /연준|Fed|FOMC|워시|미국 (기준)?금리/;
+const BOK_CUE = /한국은행|한은|금통위|국내 기준금리/;
+const EASE_RE = /금리 인하 기대|인하 기대|추가 (금리 )?인하|금리 인하 (시점|속도|여력|여지|국면)|인하 방향|인하 사이클|금리를 (내렸|내린|인하했)|인하를 준비/;
+const TIGHT_RE = /금리 인상 기대|인상 기대|추가 (금리 )?인상|금리 인상 (시점|속도|여력|여지|국면)|인상 방향|인상 사이클|금리를 (올렸|올린|인상했)|인상을 준비/;
+
+/** 리포트 콘텐츠 객체의 모든 문자열 값을 줄 단위로 모은다(JSON 구조 기호가 문장을 합치지 않게). */
+export function extractReportText(value: unknown): string {
+  const out: string[] = [];
+  const walk = (v: unknown) => {
+    if (typeof v === "string") out.push(v);
+    else if (Array.isArray(v)) v.forEach(walk);
+    else if (v && typeof v === "object") Object.values(v).forEach(walk);
+  };
+  walk(value);
+  return out.join("\n") + "\n";
+}
+
+/** 국면 라벨과 반대 방향 전제 문장 발췌(기록 전용). hold·null 은 검사하지 않는다. */
+export function findPolicyDirectionMismatches(text: string, rates: PolicyRates): string[] {
+  const plain = text.replace(/<[^>]+>/g, "");
+  const sentences = plain.split(/(?<=[.!?])\s+|\n/).map((s) => s.trim()).filter(Boolean);
+  const hits: string[] = [];
+  for (const sent of sentences) {
+    const fedCue = FED_CUE.test(sent);
+    const bokCue = BOK_CUE.test(sent);
+    const targets = fedCue || bokCue
+      ? [fedCue ? rates.fed : null, bokCue ? rates.bok : null].filter((s): s is PolicyRateSummary => !!s)
+      : rates.fed && rates.bok ? [rates.fed, rates.bok] : [];
+    const dirs = new Set(targets.map((s) => s.stanceDirection));
+    if (dirs.size !== 1) continue;
+    const dir = [...dirs][0];
+    const re = dir === "hike" ? EASE_RE : dir === "cut" ? TIGHT_RE : null;
+    if (re && re.test(sent)) hits.push(sent.slice(0, 80));
+  }
+  return hits;
+}

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { summarizePolicyRate, daysBetween, type RatePoint, collectPolicyRates, renderPolicyRateBlock, formatPolicyRateLog, POLICY_RATE_RULE } from "./policy-rate";
+import { summarizePolicyRate, daysBetween, type RatePoint, collectPolicyRates, renderPolicyRateBlock, formatPolicyRateLog, POLICY_RATE_RULE, findPolicyDirectionMismatches, extractReportText } from "./policy-rate";
 import type { PolicyRateSummary } from "./types";
 
 const TODAY = "2026-10-05";
@@ -300,4 +300,64 @@ test("context-data: 정책금리 수집·errors 병합·로그 연결", () => {
   assert.ok(src.includes("errors.push(...policyRateResult.errors)"));
   assert.ok(src.includes("policyRates: policyRateResult.rates"));
   assert.ok(src.includes("formatPolicyRateLog(policyRateResult.rates)"));
+});
+
+const CUT_BOK: PolicyRateSummary = { ...BOK, stance: "인하", stanceDirection: "cut" };
+const HOLD_BOK: PolicyRateSummary = { ...BOK, stance: "동결 지속(최근 3년 변경 없음)", stanceDirection: "hold" };
+
+test("soft-warn: 인상 국면에서 인하 전제 표현 탐지(10-02 실문장)", () => {
+  const text = "수치가 예상보다 높게 나오면 한국은행 금리 인하 기대가 후퇴하며 채권·주식 모두 단기 부담을 받을 수 있습니다. 반도체는 강했습니다.";
+  const hits = findPolicyDirectionMismatches(text, { fed: FED, bok: BOK });
+  assert.equal(hits.length, 1);
+  assert.ok(hits[0].includes("금리 인하 기대"));
+  assert.ok(hits[0].length <= 80);
+});
+
+test("soft-warn: <strong> 낀 표현과 '금리를 내렸다'도 탐지", () => {
+  const text = "연준의 금리 <strong>인하</strong> 기대가 커졌습니다. 한은이 금리를 내렸습니다.";
+  assert.equal(findPolicyDirectionMismatches(text, { fed: FED, bok: BOK }).length, 2);
+});
+
+test("extractReportText: 중첩 객체의 문자열 값만 줄 단위로 모은다", () => {
+  const content = { bigStory: { content: [
+    { type: "paragraph", text: "연준이 동결했습니다." },
+    { text: "한은의 추가 인상 기대가 커졌습니다.", type: "paragraph" },
+  ] }, n: 3 };
+  const text = extractReportText(content);
+  assert.ok(text.includes("연준이 동결했습니다.\n"));
+  assert.ok(!text.includes("{"));
+  // 객체 경계가 문장을 합치지 않는다: 연준 hike·한은 cut 에서 두 번째 문장만 탐지
+  assert.equal(findPolicyDirectionMismatches(text, { fed: FED, bok: CUT_BOK }).length, 1);
+});
+
+test("soft-warn: 은행이 엇갈리면 문장 단서로 구분", () => {
+  const rates = { fed: FED, bok: CUT_BOK };
+  assert.equal(findPolicyDirectionMismatches("한은의 추가 인하 기대가 커졌습니다.", rates).length, 0);
+  assert.equal(findPolicyDirectionMismatches("연준의 추가 인하 기대가 커졌습니다.", rates).length, 1);
+  assert.equal(findPolicyDirectionMismatches("한은의 추가 인상 기대가 커졌습니다.", rates).length, 1);
+  assert.equal(findPolicyDirectionMismatches("추가 인하 기대가 커졌습니다.", rates).length, 0);
+});
+
+test("soft-warn: 단서 없는 문장은 두 은행이 모두 있고 같은 방향일 때만", () => {
+  assert.equal(findPolicyDirectionMismatches("추가 인하 기대가 커졌습니다.", { fed: FED, bok: null }).length, 0);
+  assert.equal(findPolicyDirectionMismatches("추가 인하 기대가 커졌습니다.", { fed: FED, bok: BOK }).length, 1);
+});
+
+test("soft-warn: hold·없음은 검사하지 않음", () => {
+  assert.equal(findPolicyDirectionMismatches("한은의 추가 인하 기대.", { fed: null, bok: HOLD_BOK }).length, 0);
+  assert.equal(findPolicyDirectionMismatches("추가 인하 기대.", { fed: null, bok: null }).length, 0);
+});
+
+test("프롬프트 소스: 규칙 삽입·과거 수치 출처 통합·인하 프레임 제거", () => {
+  const cc = fs.readFileSync("lib/claude-client.ts", "utf8");
+  assert.ok(cc.includes("${POLICY_RATE_RULE}"));
+  assert.ok(cc.includes("renderPolicyRateBlock(context.policyRates)"));
+  assert.ok(cc.includes("findPolicyDirectionMismatches(extractReportText(content), context.policyRates)"));
+  assert.ok(!cc.includes("금리 인하를 준비하던"));
+  assert.ok(cc.includes("historicalComparison 필드 또는 [정책금리] 블록의 수치만"));
+  assert.ok(cc.includes("historicalComparison·[정책금리] 블록에 포함되지 않은 과거 수치는 절대 사용 금지"));
+  assert.ok(cc.includes("반드시 이 데이터 또는 [정책금리] 블록만 사용하십시오"));
+  const sd = fs.readFileSync("lib/sideways-detector.ts", "utf8");
+  assert.ok(!sd.includes("미국 금리 인하가 진짜 시작되면"));
+  assert.ok(sd.includes("미국 금리 경로가 바뀌면 무슨 일이 벌어지나 — 시나리오 분석"));
 });
