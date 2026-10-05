@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { summarizePolicyRate, daysBetween, type RatePoint } from "./policy-rate";
+import { summarizePolicyRate, daysBetween, type RatePoint, collectPolicyRates } from "./policy-rate";
 
 const TODAY = "2026-10-05";
 const WINDOW = "2023-10-05";
@@ -102,4 +102,134 @@ test("7일 초과 공백 직후 값이 바뀌면 → null", () => {
   const pts = daily(WINDOW, "2026-10-04", 3.75, [["2026-09-17", 4.0]])
     .filter((p) => p.date < "2026-09-08" || p.date > "2026-09-17");
   assert.equal(summarizePolicyRate(pts, opts()), null);
+});
+
+function fredObs(start: string, end: string, initial: number, changes: [string, number][] = []) {
+  return { observations: daily(start, end, initial, changes).map((p) => ({ date: p.date, value: String(p.value) })) };
+}
+function ecosRows(start: string, end: string, initial: number, changes: [string, number][] = []) {
+  return daily(start, end, initial, changes).map((p) => ({ TIME: p.date.replaceAll("-", ""), DATA_VALUE: String(p.value) }));
+}
+const FED_CHANGES: [string, number][] = [["2025-12-11", 3.75], ["2026-09-17", 4.0]];
+const FED_LOWER: [string, number][] = [["2025-12-11", 3.5], ["2026-09-17", 3.75]];
+const BOK_CHANGES: [string, number][] = [["2026-07-16", 2.75], ["2026-08-27", 3.0]];
+
+function makeFetcher(overrides: Record<string, unknown | Error> = {}) {
+  const calls: string[] = [];
+  const bokAll = ecosRows(WINDOW, "2026-10-04", 2.5, BOK_CHANGES);
+  const fetcher = async (url: string) => {
+    calls.push(url);
+    for (const [k, v] of Object.entries(overrides)) {
+      if (url.includes(k)) {
+        if (v instanceof Error) throw v;
+        return v;
+      }
+    }
+    if (url.includes("DFEDTARU")) return fredObs(WINDOW, "2026-10-04", 4.0, FED_CHANGES);
+    if (url.includes("DFEDTARL")) return fredObs(WINDOW, "2026-10-04", 3.75, FED_LOWER);
+    const m = url.match(/\/json\/kr\/(\d+)\/(\d+)\//);
+    if (m) {
+      const [s, e] = [Number(m[1]), Number(m[2])];
+      return { StatisticSearch: { list_total_count: bokAll.length, row: bokAll.slice(s - 1, e) } };
+    }
+    throw new Error("unexpected url " + url);
+  };
+  return { fetcher, calls };
+}
+
+test("collectPolicyRates: 두 소스 정상 + ECOS 페이지 이어받기", async () => {
+  const { fetcher, calls } = makeFetcher();
+  const { rates, errors } = await collectPolicyRates({ today: TODAY, fetcher, fredKey: "k", ecosKey: "k" });
+  assert.deepEqual(errors, []);
+  assert.equal(rates.fed!.currentText, "3.75~4.00%");
+  assert.equal(rates.fed!.stance, "인상(인하→인상 전환)");
+  assert.equal(rates.bok!.currentText, "3.00%");
+  assert.equal(rates.bok!.stance, "인상(2회 연속)");
+  assert.ok(calls.some((u) => u.includes("/1/1000/722Y001/D/")));
+  assert.ok(calls.some((u) => u.includes("/1001/2000/722Y001/D/")));
+  assert.ok(calls.every((u) => !u.includes("/722Y001/M/")));
+});
+
+test("collectPolicyRates: 키 없으면 조용히 null", async () => {
+  const { fetcher, calls } = makeFetcher();
+  const { rates, errors } = await collectPolicyRates({ today: TODAY, fetcher, fredKey: "", ecosKey: "" });
+  assert.deepEqual(rates, { fed: null, bok: null });
+  assert.deepEqual(errors, []);
+  assert.equal(calls.length, 0);
+});
+
+test("collectPolicyRates: FRED 실패는 fed만 null + errors 기록", async () => {
+  const { fetcher } = makeFetcher({ DFEDTARU: new Error("HTTP 500") });
+  const { rates, errors } = await collectPolicyRates({ today: TODAY, fetcher, fredKey: "k", ecosKey: "k" });
+  assert.equal(rates.fed, null);
+  assert.ok(rates.bok);
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0].source, "policy-rate-fed");
+  assert.match(errors[0].message, /HTTP 500/);
+});
+
+test("collectPolicyRates: FRED 결측 '.' 섞여도 요약", async () => {
+  const obs = fredObs(WINDOW, "2026-10-04", 4.0, FED_CHANGES);
+  obs.observations[200].value = ".";
+  const { fetcher } = makeFetcher({ DFEDTARU: obs });
+  const { rates } = await collectPolicyRates({ today: TODAY, fetcher, fredKey: "k", ecosKey: "k" });
+  assert.equal(rates.fed!.stance, "인상(인하→인상 전환)");
+});
+
+test("collectPolicyRates: 하단 관측일이 상단과 다르면 fed null + errors", async () => {
+  const { fetcher } = makeFetcher({ DFEDTARL: fredObs(WINDOW, "2025-12-11", 3.75, [["2025-12-11", 3.5]]) });
+  const { rates, errors } = await collectPolicyRates({ today: TODAY, fetcher, fredKey: "k", ecosKey: "k" });
+  assert.equal(rates.fed, null);
+  assert.equal(errors[0].source, "policy-rate-fed");
+  assert.match(errors[0].message, /관측일 불일치/);
+});
+
+test("collectPolicyRates: 빈 정상 응답 → 요약 불가 errors", async () => {
+  const { fetcher } = makeFetcher({
+    DFEDTARU: { observations: [] },
+    "722Y001": { StatisticSearch: { list_total_count: 0, row: [] } },
+  });
+  const { rates, errors } = await collectPolicyRates({ today: TODAY, fetcher, fredKey: "k", ecosKey: "k" });
+  assert.deepEqual(rates, { fed: null, bok: null });
+  assert.deepEqual(errors.map((e) => e.source).sort(), ["policy-rate-bok", "policy-rate-fed"]);
+  assert.ok(errors.every((e) => /요약 불가/.test(e.message)));
+});
+
+test("collectPolicyRates: 실제 응답 형식(추가 필드 포함) 파싱", async () => {
+  // FRED observations 실제 형식(realtime_* 필드 포함), ECOS 2026-10-05 sample 키 실제 응답 행 형식
+  const fredReal = (obs: { observations: { date: string; value: string }[] }) => ({
+    realtime_start: TODAY, realtime_end: TODAY, units: "lin", count: obs.observations.length,
+    observations: obs.observations.map((o) => ({ realtime_start: TODAY, realtime_end: TODAY, ...o })),
+  });
+  const bok = ecosRows(WINDOW, "2026-10-04", 2.5, BOK_CHANGES).map((r) => ({
+    STAT_CODE: "722Y001", STAT_NAME: "1.3.1. 한국은행 기준금리 및 여수신금리",
+    ITEM_CODE1: "0101000", ITEM_NAME1: "한국은행 기준금리", ITEM_CODE2: null, ITEM_NAME2: null,
+    UNIT_NAME: "연%", WGT: null, ...r,
+  }));
+  const fetcher = async (url: string) => {
+    if (url.includes("DFEDTARU")) return fredReal(fredObs(WINDOW, "2026-10-04", 4.0, FED_CHANGES));
+    if (url.includes("DFEDTARL")) return fredReal(fredObs(WINDOW, "2026-10-04", 3.75, FED_LOWER));
+    const m = url.match(/\/json\/kr\/(\d+)\/(\d+)\//)!;
+    return { StatisticSearch: { list_total_count: bok.length, row: bok.slice(Number(m[1]) - 1, Number(m[2])) } };
+  };
+  const { rates, errors } = await collectPolicyRates({ today: TODAY, fetcher, fredKey: "k", ecosKey: "k" });
+  assert.deepEqual(errors, []);
+  assert.equal(rates.fed!.currentText, "3.75~4.00%");
+  assert.equal(rates.bok!.lastChange!.date, "2026-08-27");
+});
+
+test("collectPolicyRates: 윤일 today도 존재하는 조회 시작일로", async () => {
+  const { fetcher, calls } = makeFetcher();
+  await collectPolicyRates({ today: "2028-02-29", fetcher, fredKey: "k", ecosKey: "k" });
+  assert.ok(calls.some((u) => u.includes("observation_start=2025-03-01")));
+  assert.ok(calls.some((u) => u.includes("/20250301/20280229/")));
+});
+
+test("collectPolicyRates: ECOS 데이터 없음 응답 → bok null + errors", async () => {
+  const { fetcher } = makeFetcher({ "722Y001": { RESULT: { CODE: "INFO-200", MESSAGE: "해당하는 데이터가 없습니다." } } });
+  const { rates, errors } = await collectPolicyRates({ today: TODAY, fetcher, fredKey: "k", ecosKey: "k" });
+  assert.equal(rates.bok, null);
+  assert.ok(rates.fed);
+  assert.equal(errors[0].source, "policy-rate-bok");
+  assert.match(errors[0].message, /INFO-200|요약 불가/);
 });
