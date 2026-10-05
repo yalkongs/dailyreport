@@ -33,7 +33,7 @@ test("market US단독휴장(MLK 월 2026-01-19): KR 개장 전 가드 + US 휴�
   assert.equal(info.isUsClosedOnly, true);
   const block = buildTemporalFramingBlock(info, "market");
   assert.match(block, /오늘 밤 새 미국 세션이 없습니다/);  // US 휴일 맥락 흡수
-  assert.match(block, /지난 금요일\(2026-01-16\)/);        // KR 데이터 갭 인지(월요일)
+  assert.match(block, /지난 금요일\(16일\)/);              // KR 데이터 갭 인지(월요일) — 독자용 표현
   assert.match(block, /오늘 코스피/);                       // KR 개장 전 단정 금지 (잔여 핵심)
 });
 
@@ -98,4 +98,47 @@ test("etf 블록: 고정 예시 날짜 없음, 일자 괄호는 처음 한 번�
     assert.doesNotMatch(block, /25일/, d);
     assert.match(block, /처음 한 번만 붙이고/, d);
   }
+});
+
+// 결정 8 마켓 확장 (2026-10-06): market 블록도 독자용 표현과 참고 기준일을 분리한다.
+// 이전에는 "정확한 표현: \"간밤(2026-10-05 현지 마감) 마감 기준\""이 본문 ISO 괄호를 심었다.
+test("market 블록: ISO 괄호 없음 + 참고 기준일 분리 + 숫자 날짜 금지 안내", () => {
+  // 정상일·KR만 갭·양쪽 갭(월)·US 단독 휴장(갭)·추석 뒤·US만 갭(01-20)·US 단독 휴장(갭 없음, 11-26)
+  for (const d of ["2026-10-02", "2026-10-06", "2026-06-29", "2026-01-19", "2026-09-28", "2026-01-20", "2026-11-26"]) {
+    const block = buildTemporalFramingBlock(getMarketCalendarInfo(d), "market");
+    assert.doesNotMatch(block, ISO_PAREN, d);
+    // 독자용 표현 줄에는 어떤 형태로도 ISO 날짜가 없어야 한다("전 거래일(어제, YYYY-MM-DD)" 포함).
+    const readerLine = block.split("\n").find((l) => l.startsWith("3. 독자용 표현"))!;
+    assert.ok(readerLine, d);
+    assert.doesNotMatch(readerLine.split("참고 기준일은")[0], /\d{4}-\d{2}-\d{2}/, d);
+    assert.match(block, /YYYY-MM-DD 형식의 숫자 날짜를 쓰지 마십시오/, d);
+    assert.match(block, /처음 한 번만 붙이고/, d);
+  }
+});
+
+test("market 정상일(금 10-02): 독자용 '전 거래일'·'간밤' + 참고 기준일", () => {
+  const block = buildTemporalFramingBlock(getMarketCalendarInfo("2026-10-02"), "market");
+  assert.match(block, /한국 주식 지수 데이터는 전 거래일 종가\*\*입니다\(참고 기준일: 2026-10-01\)/);
+  assert.match(block, /미국 지수 데이터는 간밤 종가\*\*입니다\(참고 기준일: 2026-10-01 현지 마감\)/);
+  assert.match(block, /독자용 표현: "전 거래일 종가 기준", "간밤 마감 기준"/);
+  assert.doesNotMatch(block, /어제, 2026/);
+});
+
+test("market KR 갭일(화 10-06): '지난 금요일(2일)' + 미국은 간밤", () => {
+  const block = buildTemporalFramingBlock(getMarketCalendarInfo("2026-10-06"), "market");
+  assert.match(block, /한국 주식 지수 데이터는 지난 금요일\(2일\) 종가\*\*입니다\(참고 기준일: 2026-10-02\)/);
+  assert.match(block, /독자용 표현: "지난 금요일\(2일\) 종가 기준", "간밤 마감 기준"/);
+  assert.match(block, /비거래일/);
+});
+
+test("market 미국 단독 휴장(2026-01-19) 안내도 독자용 표현", () => {
+  const block = buildTemporalFramingBlock(getMarketCalendarInfo("2026-01-19"), "market");
+  const note = block.split("\n").find((l) => l.includes("오늘 밤 새 미국 세션이 없습니다"))!;
+  assert.ok(note);
+  assert.doesNotMatch(note, /\d{4}-\d{2}-\d{2}/);
+});
+
+test("market US만 갭(화 2026-01-20): 한국은 전 거래일, 미국은 지난 금요일(16일)", () => {
+  const block = buildTemporalFramingBlock(getMarketCalendarInfo("2026-01-20"), "market");
+  assert.match(block, /독자용 표현: "전 거래일 종가 기준", "지난 금요일\(16일\) 마감 기준"/);
 });

@@ -242,7 +242,7 @@ export function describeSessionRecency(
 ): { gapDays: number; phrase: string; readerPhrase: string; weekday: string } {
   const gapDays = calendarDaysBetween(prevTradingDay, reportDate);
   const weekday = koreanWeekday(prevTradingDay);
-  // phrase: 모델 참고용(ISO 기준일 포함, market 프롬프트가 사용 — 불변).
+  // phrase: ISO 기준일 포함 표현(2026-10-06부터 프롬프트 미사용 — 두 리포트 모두 readerPhrase + 참고 기준일).
   // readerPhrase: 독자 문장용(묶음 3, 2026-09-30) — ISO 날짜 없이, 갭 날만 한국어 일자.
   let phrase: string;
   let readerPhrase: string;

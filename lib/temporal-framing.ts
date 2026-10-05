@@ -21,8 +21,11 @@ export function buildTemporalFramingBlock(
   // 캘린더 B (2026-06-30): 미국 단독 휴장(KR 개장)일 때도 이 블록이 단일 시점 소스.
   // run.ts는 KR 휴장이면 생성 전 skip하므로, 생성되는 비정상 상태는 isUsClosedOnly 하나뿐.
   const usHolidayNote = info.isUsClosedOnly
-    ? `\n- ⚠️ 오늘 밤 미국 시장은 ${info.usHolidayName ?? "휴일"}로 휴장입니다 — 오늘 밤 새 미국 세션이 없습니다. 미국 데이터는 ${us.phrase} 종가가 최신입니다.`
+    ? `\n- ⚠️ 오늘 밤 미국 시장은 ${info.usHolidayName ?? "휴일"}로 휴장입니다 — 오늘 밤 새 미국 세션이 없습니다. 미국 데이터는 ${us.readerPhrase} 종가가 최신입니다.`
     : "";
+  // 결정 8 (묶음 3 ETF → 2026-10-06 market 확장): 독자 문장에 ISO 날짜 괄호를 심지 않는다.
+  const noIsoNote =
+    `참고 기준일은 사실 확인용입니다. 제목·서브라인·본문에 YYYY-MM-DD 형식의 숫자 날짜를 쓰지 마십시오. 직전 세션이 어제가 아니면(주말·휴일) 일자 괄호("지난 ○요일(N일)")는 처음 한 번만 붙이고 이후에는 "지난 ○요일"로 줄여 씁니다.`;
 
   // 캘린더 C (2026-06-30): 환율·원자재·암호화폐는 24h 거래라 종가/간밤마감이 아니라 실시간 틱.
   const twentyFourHourNote =
@@ -32,16 +35,13 @@ export function buildTemporalFramingBlock(
     // ETF는 시스템 프롬프트가 "발행=개장 전, 전일 국내/간밤 해외"를 이미 명시.
     // 묶음 3(2026-09-30): 모델 참고용 기준일과 독자용 표현을 분리하고, 갭 경고를 시장별로 나눈다.
     // (이전에는 KR만 갭인 날에도 미국 문구로 '"간밤"이 아니라 "간밤(…)"로'라는 모순 지시가 나갔다.)
-    const usHolidayNoteEtf = info.isUsClosedOnly
-      ? `\n- ⚠️ 오늘 밤 미국 시장은 ${info.usHolidayName ?? "휴일"}로 휴장입니다 — 오늘 밤 새 미국 세션이 없습니다. 미국 데이터는 ${us.readerPhrase} 종가가 최신입니다.`
-      : "";
     const usGapLine = us.gapDays > 1
       ? `\n- ⚠️ 직전 미국 세션은 ${us.readerPhrase}입니다. "간밤"이 아니라 "${us.readerPhrase}"로 명시하고, 그 사이 뉴스는 "오늘 개장 시 반영될 변수"로 서술하십시오.`
       : "";
     const krGapLine = kr.gapDays > 1
       ? `\n- ⚠️ 국내 ETF 데이터는 ${kr.readerPhrase} 종가입니다. "어제"로 쓰지 마십시오.`
       : "";
-    return `\n## ⏰ 시점 기준 (개장 전 브리핑)\n- 미국 데이터: ${us.readerPhrase} 종가 (참고 기준일: ${info.usPrevTradingDay} 현지 마감). 한국 ETF 데이터: ${kr.readerPhrase} 종가 (참고 기준일: ${info.krPrevTradingDay}).\n- 참고 기준일은 사실 확인용입니다. 제목·서브라인·본문에 YYYY-MM-DD 형식의 숫자 날짜를 쓰지 마십시오. 직전 세션이 어제가 아니면(주말·휴일) 아래 경고의 독자용 표현을 쓰되, 일자 괄호("지난 ○요일(N일)")는 처음 한 번만 붙이고 이후에는 "지난 ○요일"로 줄여 씁니다.${usHolidayNoteEtf}${twentyFourHourNote}${usGapLine}${krGapLine}\n`;
+    return `\n## ⏰ 시점 기준 (개장 전 브리핑)\n- 미국 데이터: ${us.readerPhrase} 종가 (참고 기준일: ${info.usPrevTradingDay} 현지 마감). 한국 ETF 데이터: ${kr.readerPhrase} 종가 (참고 기준일: ${info.krPrevTradingDay}).\n- 참고 기준일은 사실 확인용입니다. 제목·서브라인·본문에 YYYY-MM-DD 형식의 숫자 날짜를 쓰지 마십시오. 직전 세션이 어제가 아니면(주말·휴일) 아래 경고의 독자용 표현을 쓰되, 일자 괄호("지난 ○요일(N일)")는 처음 한 번만 붙이고 이후에는 "지난 ○요일"로 줄여 씁니다.${usHolidayNote}${twentyFourHourNote}${usGapLine}${krGapLine}\n`;
   }
 
   // market — 베이스라인 프레이밍이 없으므로 상시 명시 + 단정 금지.
@@ -50,8 +50,8 @@ export function buildTemporalFramingBlock(
     : "";
   return `\n## ⏰ 시점 기준 — 개장 전 브리핑 (반드시 반영)
 - 이 리포트는 ${info.date}(${koreanWeekday(info.date)}) **한국 장 개장(09:00) 전**에 작성된 **개장 전 브리핑**입니다.${usHolidayNote}
-1. 코스피·코스닥 등 **한국 주식 지수 데이터는 ${kr.phrase} 종가**입니다. "오늘 코스피가 X로 마감했다", "서울 장이 열리자마자" 같은 **오늘 세션 단정 금지** — 오늘 한국 장은 아직 시작도 안 했습니다.
-2. S&P500·나스닥·다우·VIX·미 10Y 등 **미국 지수 데이터는 ${us.phrase} 종가**입니다.
-3. 정확한 표현: "${kr.phrase} 종가 기준", "${us.phrase} 마감 기준".${twentyFourHourNote}${gapBlock}
+1. 코스피·코스닥 등 **한국 주식 지수 데이터는 ${kr.readerPhrase} 종가**입니다(참고 기준일: ${info.krPrevTradingDay}). "오늘 코스피가 X로 마감했다", "서울 장이 열리자마자" 같은 **오늘 세션 단정 금지** — 오늘 한국 장은 아직 시작도 안 했습니다.
+2. S&P500·나스닥·다우·VIX·미 10Y 등 **미국 지수 데이터는 ${us.readerPhrase} 종가**입니다(참고 기준일: ${info.usPrevTradingDay} 현지 마감).
+3. 독자용 표현: "${kr.readerPhrase} 종가 기준", "${us.readerPhrase} 마감 기준". ${noIsoNote}${twentyFourHourNote}${gapBlock}
 `;
 }
