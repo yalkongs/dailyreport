@@ -179,6 +179,27 @@ export interface ContextError {
   message: string;
 }
 
+export interface PolicyRateChange {
+  date: string; // 효력일 YYYY-MM-DD
+  delta: number; // %p, 양수=인상
+}
+
+export interface PolicyRateSummary {
+  label: string; // "미 연준 목표범위" | "한국은행 기준금리"
+  currentText: string; // "3.75~4.00%" | "3.00%"
+  current: number; // 판정용(연준은 상단)
+  lastChange: PolicyRateChange | null;
+  prevChange: PolicyRateChange | null;
+  stance: string;
+  stanceDirection: "hike" | "cut" | "hold";
+  asOf: string;
+}
+
+export interface PolicyRates {
+  fed: PolicyRateSummary | null;
+  bok: PolicyRateSummary | null;
+}
+
 export interface ContextData {
   news: NewsHeadline[];
   economicCalendar: EconomicEvent[];
@@ -186,6 +207,7 @@ export interface ContextData {
   sentiment: MarketSentiment;
   investorFlow: InvestorFlow | null;
   koreanBonds: KoreanBondYield[];
+  policyRates: PolicyRates;
   historicalComparison: HistoricalComparison[];
   contextErrors: ContextError[];
 }
