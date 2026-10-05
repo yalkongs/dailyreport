@@ -96,7 +96,7 @@ export interface PolicyRates { fed: PolicyRateSummary | null; bok: PolicyRateSum
 
 **정책금리 블록**: `buildContextBlock`의 FRED 블록 바로 앞에 넣는다. 렌더 함수 `renderPolicyRateBlock(rates)`는 별도 export해서 테스트한다.
 ```
-### 정책금리 (확정 사실 — 중앙은행 금리 방향 서술의 유일한 근거)
+### 정책금리 (확정 사실 — 중앙은행의 현재 국면·지난 결정 서술의 유일한 근거)
 - 미 연준 목표범위: 3.75~4.00% — 최근 변경 2026-09-17(효력일) +0.25%p, 직전 변경 2025-12-11 −0.25%p
   → 현재 국면: 인상(인하→인상 전환)
 - 한국은행 기준금리: 3.00% — 최근 변경 2026-08-27(효력일) +0.25%p, 직전 변경 2026-07-16 +0.25%p
