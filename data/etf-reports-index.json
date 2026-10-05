@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-10-06",
+      "type": "morning",
+      "headline": "SPY·QQQ 동반 상승, 코스피 7100선 재도전 앞에 서다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-06",
+      "anomalyCount": 4,
+      "anomalyBreakdown": {
+        "premiumDiscount": 4
+      },
+      "createdAt": "2026-10-05T23:20:28.391Z"
+    },
+    {
       "date": "2026-10-02",
       "type": "morning",
       "headline": "9월 물가 2%대 복귀, 반도체가 미 증시 앞서 달렸다",
