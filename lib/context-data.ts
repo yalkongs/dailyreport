@@ -10,6 +10,7 @@ import { collectFredData } from "./fred-data";
 import { collectEcosData } from "./ecos-data";
 import { collectInvestorFlow } from "./krx-investor-flow";
 import { collectHistoricalData, collectVix } from "./market-data";
+import { collectPolicyRates, formatPolicyRateLog } from "./policy-rate";
 import { fetchWithTimeout } from "./fetch-utils";
 import type { ContextData, ContextError, MarketSentiment } from "./types";
 
@@ -49,7 +50,7 @@ export async function collectContextData(): Promise<ContextData> {
   const errors: ContextError[] = [];
 
   // 모든 소스 병렬 수집 — 개별 실패는 전체를 중단하지 않음
-  const [news, calendar, fred, ecos, investorFlow, vix, fearGreed, historical] =
+  const [news, calendar, fred, ecos, investorFlow, vix, fearGreed, historical, policyRateResult] =
     await Promise.all([
       collectNews().catch((err) => {
         errors.push({ source: "news", status: "error", message: (err as Error).message });
@@ -83,11 +84,17 @@ export async function collectContextData(): Promise<ContextData> {
         errors.push({ source: "historical", status: "error", message: (err as Error).message });
         return [] as Awaited<ReturnType<typeof collectHistoricalData>>;
       }),
+      collectPolicyRates().catch((err) => ({
+        rates: { fed: null, bok: null },
+        errors: [{ source: "policy-rate", status: "error", message: (err as Error).message }],
+      })),
     ]);
 
   const sentiment: MarketSentiment = {};
   if (vix) sentiment.vix = vix;
   if (fearGreed) sentiment.fearGreed = fearGreed;
+
+  errors.push(...policyRateResult.errors);
 
   const contextData: ContextData = {
     news,
@@ -96,6 +103,7 @@ export async function collectContextData(): Promise<ContextData> {
     sentiment,
     investorFlow,
     koreanBonds: ecos,
+    policyRates: policyRateResult.rates,
     historicalComparison: historical,
     contextErrors: errors,
   };
@@ -105,6 +113,7 @@ export async function collectContextData(): Promise<ContextData> {
   console.log(`  📅 캘린더: ${calendar.length}건`);
   console.log(`  📊 FRED: ${fred.length}건`);
   console.log(`  🏦 ECOS: ${ecos.length}건`);
+  console.log(`  ${formatPolicyRateLog(policyRateResult.rates)}`);
   console.log(`  💰 투자자 수급: ${investorFlow ? "OK" : "없음"}`);
   console.log(`  😨 VIX: ${vix ? vix.value.toFixed(2) : "없음"}`);
   console.log(`  🎭 Fear & Greed: ${fearGreed ? fearGreed.value : "없음"}`);

@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { summarizePolicyRate, daysBetween, type RatePoint, collectPolicyRates, renderPolicyRateBlock, formatPolicyRateLog, POLICY_RATE_RULE } from "./policy-rate";
@@ -291,4 +292,12 @@ test("POLICY_RATE_RULE: 국면은 블록만, 전망은 출처 인용", () => {
   assert.ok(POLICY_RATE_RULE.includes("FRED 연방기금금리 월평균"));
   assert.ok(POLICY_RATE_RULE.includes("블록에 없는 중앙은행(ECB·일본은행 등)"));
   assert.ok(POLICY_RATE_RULE.includes("출처가 있을 때만"));
+});
+
+test("context-data: 정책금리 수집·errors 병합·로그 연결", () => {
+  const src = fs.readFileSync("lib/context-data.ts", "utf8");
+  assert.ok(src.includes("collectPolicyRates()"));
+  assert.ok(src.includes("errors.push(...policyRateResult.errors)"));
+  assert.ok(src.includes("policyRates: policyRateResult.rates"));
+  assert.ok(src.includes("formatPolicyRateLog(policyRateResult.rates)"));
 });

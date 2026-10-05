@@ -207,6 +207,7 @@ export interface ContextData {
   sentiment: MarketSentiment;
   investorFlow: InvestorFlow | null;
   koreanBonds: KoreanBondYield[];
+  policyRates: PolicyRates;
   historicalComparison: HistoricalComparison[];
   contextErrors: ContextError[];
 }
