@@ -246,16 +246,16 @@ const BOK: PolicyRateSummary = {
   lastChange: { date: "2026-08-27", delta: 0.25 }, prevChange: { date: "2026-07-16", delta: 0.25 },
   stance: "인상(2회 연속)", stanceDirection: "hike", asOf: "2026-10-04",
 };
-const HEAD = "### 정책금리 (확정 사실 — 중앙은행의 현재 국면·지난 결정 서술의 유일한 근거)";
+const HEAD = "### 정책금리 (확정 사실 — 데이터 기준일까지 중앙은행의 국면·지난 결정 서술의 유일한 근거)";
 
 test("renderPolicyRateBlock: 두 소스", () => {
   assert.equal(
     renderPolicyRateBlock({ fed: FED, bok: BOK }),
     `\n${HEAD}\n` +
       "- 미 연준 목표범위: 3.75~4.00% — 최근 변경 2026-09-17(효력일) +0.25%p, 직전 변경 2025-12-11 −0.25%p\n" +
-      "  → 현재 국면: 인상(인하→인상 전환)\n" +
+      "  → 현재 국면: 인상(인하→인상 전환) (데이터 기준일 2026-10-04)\n" +
       "- 한국은행 기준금리: 3.00% — 최근 변경 2026-08-27(효력일) +0.25%p, 직전 변경 2026-07-16 +0.25%p\n" +
-      "  → 현재 국면: 인상(2회 연속)\n",
+      "  → 현재 국면: 인상(2회 연속) (데이터 기준일 2026-10-04)\n",
   );
 });
 
@@ -277,12 +277,13 @@ test("renderPolicyRateBlock: 둘 다 없음 → 제목 + 확인 불가 두 줄",
 test("renderPolicyRateBlock: 변경 없음·직전 없음", () => {
   const hold: PolicyRateSummary = { ...BOK, lastChange: null, prevChange: null, stance: "동결 지속(최근 3년 변경 없음)", stanceDirection: "hold" };
   const single: PolicyRateSummary = { ...BOK, prevChange: null, stance: "인상" };
-  assert.ok(renderPolicyRateBlock({ fed: null, bok: hold }).includes("- 한국은행 기준금리: 3.00% — 최근 3년 변경 없음\n  → 현재 국면: 동결 지속(최근 3년 변경 없음)\n"));
-  assert.ok(renderPolicyRateBlock({ fed: null, bok: single }).includes("최근 변경 2026-08-27(효력일) +0.25%p\n  → 현재 국면: 인상\n"));
+  assert.ok(renderPolicyRateBlock({ fed: null, bok: hold }).includes("- 한국은행 기준금리: 3.00% — 최근 3년 변경 없음\n  → 현재 국면: 동결 지속(최근 3년 변경 없음) (데이터 기준일 2026-10-04)\n"));
+  assert.ok(renderPolicyRateBlock({ fed: null, bok: single }).includes("최근 변경 2026-08-27(효력일) +0.25%p\n  → 현재 국면: 인상 (데이터 기준일 2026-10-04)\n"));
 });
 
 test("formatPolicyRateLog", () => {
-  assert.equal(formatPolicyRateLog({ fed: FED, bok: BOK }), "🏛️ 정책금리: 연준 3.75~4.00%(인상(인하→인상 전환)) / 한은 3.00%(인상(2회 연속))");
+  assert.equal(formatPolicyRateLog({ fed: FED, bok: BOK }), "🏛️ 정책금리: 연준 3.75~4.00%(인상(인하→인상 전환), 최근 변경 2026-09-17, 기준일 2026-10-04) / 한은 3.00%(인상(2회 연속), 최근 변경 2026-08-27, 기준일 2026-10-04)");
+  assert.ok(formatPolicyRateLog({ fed: null, bok: { ...BOK, lastChange: null, prevChange: null } }).includes("최근 변경 없음, 기준일 2026-10-04"));
   assert.equal(formatPolicyRateLog({ fed: null, bok: null }), "🏛️ 정책금리: 연준 없음 / 한은 없음");
 });
 
@@ -292,6 +293,8 @@ test("POLICY_RATE_RULE: 국면은 블록만, 전망은 출처 인용", () => {
   assert.ok(POLICY_RATE_RULE.includes("FRED 연방기금금리 월평균"));
   assert.ok(POLICY_RATE_RULE.includes("블록에 없는 중앙은행(ECB·일본은행 등)"));
   assert.ok(POLICY_RATE_RULE.includes("출처가 있을 때만"));
+  assert.ok(POLICY_RATE_RULE.includes("데이터 기준일 **이후에 발표된**"));
+  assert.ok(POLICY_RATE_RULE.includes("그 결정이 블록보다 우선한다"));
 });
 
 test("context-data: 정책금리 수집·errors 병합·로그 연결", () => {

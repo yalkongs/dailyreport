@@ -200,7 +200,7 @@ export async function collectPolicyRates(
   };
 }
 
-const BLOCK_HEAD = "### 정책금리 (확정 사실 — 중앙은행의 현재 국면·지난 결정 서술의 유일한 근거)";
+const BLOCK_HEAD = "### 정책금리 (확정 사실 — 데이터 기준일까지 중앙은행의 국면·지난 결정 서술의 유일한 근거)";
 
 function fmtDelta(delta: number): string {
   return `${delta > 0 ? "+" : "−"}${Math.abs(delta).toFixed(2)}%p`;
@@ -215,7 +215,7 @@ function renderLine(label: string, s: PolicyRateSummary | null): string {
     facts = `최근 변경 ${s.lastChange.date}(효력일) ${fmtDelta(s.lastChange.delta)}`;
     if (s.prevChange) facts += `, 직전 변경 ${s.prevChange.date} ${fmtDelta(s.prevChange.delta)}`;
   }
-  return `- ${s.label}: ${s.currentText} — ${facts}\n  → 현재 국면: ${s.stance}\n`;
+  return `- ${s.label}: ${s.currentText} — ${facts}\n  → 현재 국면: ${s.stance} (데이터 기준일 ${s.asOf})\n`;
 }
 
 export function renderPolicyRateBlock(rates: PolicyRates): string {
@@ -223,12 +223,16 @@ export function renderPolicyRateBlock(rates: PolicyRates): string {
 }
 
 export function formatPolicyRateLog(rates: PolicyRates): string {
-  const one = (s: PolicyRateSummary | null) => (s ? `${s.currentText}(${s.stance})` : "없음");
+  const one = (s: PolicyRateSummary | null) =>
+    s
+      ? `${s.currentText}(${s.stance}, ${s.lastChange ? `최근 변경 ${s.lastChange.date}` : "최근 변경 없음"}, 기준일 ${s.asOf})`
+      : "없음";
   return `🏛️ 정책금리: 연준 ${one(rates.fed)} / 한은 ${one(rates.bok)}`;
 }
 
 export const POLICY_RATE_RULE =
   "- ❌ **중앙은행 금리 국면 추정 금지**: 연준·한은의 **현재 국면과 지난 결정**(인상·인하·동결, 언제 얼마나)은 [정책금리] 블록에 적힌 대로만 쓸 것. " +
+  "단, 블록의 데이터 기준일 **이후에 발표된** 연준·한은 결정이 오늘 뉴스에 출처와 함께 있으면 그 결정이 블록보다 우선한다 — \"○○에 따르면 연준이 기준금리를 0.25%p 인상했다\"처럼 출처를 밝혀 쓰고, 블록의 국면 라벨은 그 결정을 반영해 읽을 것. " +
   "블록에서 '오늘 확인 불가'인 연준·한은은 국면·지난 결정을 언급하지 말 것(FRED 연방기금금리 월평균 값으로 대신 추정하지 말 것). " +
   "블록에 없는 중앙은행(ECB·일본은행 등)의 국면·결정은 추정하지 말고, 뉴스에 출처가 있을 때만 출처를 밝혀 인용할 것. " +
   "**앞으로의 방향**(추가 인상·인하 전망)은 뉴스에 출처가 있을 때만 출처를 밝혀 인용할 것 — 현재 국면과 반대되는 전망이면 " +
