@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-10-07",
+      "type": "morning",
+      "headline": "S&P500·나스닥 최고치, 국내는 2차전지가 치고 나갔다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-07",
+      "anomalyCount": 6,
+      "anomalyBreakdown": {
+        "premiumDiscount": 6
+      },
+      "createdAt": "2026-10-06T23:20:31.868Z"
+    },
+    {
       "date": "2026-10-06",
       "type": "morning",
       "headline": "SPY·QQQ 동반 상승, 코스피 7100선 재도전 앞에 서다",
