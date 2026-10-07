@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-10-08",
+      "type": "morning",
+      "headline": "삼성전자 매출 195조, 반도체 ETF는 역행했다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-08",
+      "anomalyCount": 10,
+      "anomalyBreakdown": {
+        "premiumDiscount": 10
+      },
+      "createdAt": "2026-10-07T23:18:16.276Z"
+    },
+    {
       "date": "2026-10-07",
       "type": "morning",
       "headline": "S&P500·나스닥 최고치, 국내는 2차전지가 치고 나갔다",
