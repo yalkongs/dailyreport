@@ -38,4 +38,5 @@ test("market 월요일 리듬은 직전 세션 요일을 단정하지 않는다(
   assert.doesNotMatch(block, /금요일/);
   assert.match(block, /\[시점 기준\] 블록의 직전 거래일 종가/);
   assert.match(block, /주말·휴일 사이/);
+  assert.match(block, /각 시장의 직전 종가 이후/); // 뉴스 반영 판단은 시장별 종가 기준
 });
