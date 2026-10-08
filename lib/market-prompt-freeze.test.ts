@@ -22,7 +22,7 @@ for (const d of ["2026-06-30", "2026-06-29", "2026-01-19", "2026-10-06", "2026-0
 }
 
 for (const role of ["monday_setup", "friday_recap", "midweek"] as const) {
-  test(`market 요일 리듬(${role})은 묶음 3 이전과 같다`, () => {
+  test(`market 요일 리듬(${role})은 고정 스냅샷과 같다(monday_setup은 2026-10-08 직전 거래일 위임으로 의도적 갱신)`, () => {
     assert.equal(describeWeekdayRhythm(role, "market"), frozen[`weekday_${role}`]);
   });
 }
