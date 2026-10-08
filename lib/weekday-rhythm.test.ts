@@ -30,3 +30,13 @@ test("etf 월·금 리듬에는 헤드라인 지시가 없다(묶음 3) — 본�
 test("market 금요일 리듬은 헤드라인 톤 지시를 유지한다", () => {
   assert.match(describeWeekdayRhythm("friday_recap", "market"), /한 주를 닫는/);
 });
+
+// 2026-10-08: 금요일 휴장 뒤 월요일(예: 10-12, KR 직전 거래일=10-08 목)에 "지난 금요일 종가" 고정 문구가
+// 시점 블록("지난 목요일(8일)")과 충돌했다. 날짜 단정은 시점 블록 단일 소스로 넘긴다.
+test("market 월요일 리듬은 직전 세션 요일을 단정하지 않는다(시점 블록에 위임)", () => {
+  const block = describeWeekdayRhythm("monday_setup", "market");
+  assert.doesNotMatch(block, /금요일/);
+  assert.match(block, /\[시점 기준\] 블록의 직전 거래일 종가/);
+  assert.match(block, /주말·휴일 사이/);
+  assert.match(block, /각 시장의 직전 종가 이후/); // 뉴스 반영 판단은 시장별 종가 기준
+});
