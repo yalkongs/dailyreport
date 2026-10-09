@@ -18,7 +18,7 @@
 
 - 배당 테마는 **삭제**(사용자 결정 A, 10-09). 유니버스 추가는 수집·프롬프트 입력까지 바뀌어 범위 밖.
 - 렌더러의 모든 고정 티커는 유니버스 구성원이어야 한다. 테스트로 고정한다.
-- 지수대비 무효화는 **데이터 병합 단계**에서 한다. 렌더러 표시처 3곳(`:415` 카드, `:1257` 전술 보드, `:1288` 액션 보드)이 한 번에 따라온다. `metricItemsHtml`·`renderMetricBar`는 이미 null을 생략한다.
+- 지수대비 무효화는 **데이터 병합 단계**에서 한다. 렌더러 사용처(`:415` 카드 막대, `:1257` 전술 보드 메트릭, `:1288~1289` 액션 보드 필터·정렬 → `:1321` 출력)가 한 번에 따라온다. `metricItemsHtml`·`renderMetricBar`는 이미 null을 생략한다.
 
 ## 변경
 
@@ -41,6 +41,8 @@
 
 ### 3. 태그 판정 (`lib/etf/renderer.ts` `inferEtfTag`, export해서 테스트)
 
+호출부 2곳: 일반 카드 `:419`, 액션 보드 행 `:1337`. 둘 다 같은 함수를 쓰므로 함수만 바꾼다.
+
 순서:
 1. `isTacticalEtf(q)` → `'전술'`
 2. `getEtfByTicker(q.ticker)`가 있으면 category 기준: `'채권'`→`'채권'`, `'테마'`→`'테마'`, `'섹터'`→`'섹터'`, `'해외지수'`→`'해외지수'`, `'팩터'`→`'팩터'`, `'지수'`→`'지수'`, `'대안'`→ 이름이 `/골드|gold|silver|원유|oil|wti|commodity|원자재/i`면 `'원자재'`, 아니면 `'대안'`(VNQ·BITO).
@@ -59,7 +61,7 @@
 - `renderGlobalKoreaBridge`: `364970.KS` → `365040.KS`(TIGER AI코리아그로스액티브, 대체 문구 '국내 성장 테마 ETF' 유지)
 - `renderMarketHeatmap`
   - 반도체·AI: meta `SOXX·국내 반도체`, tickers `SOXX` `091160.KS` `396500.KS`
-  - 한국 ETF: meta `수집 KR 50 평균` → `수집 국내 ETF 평균`(실제 51종; 개수는 sampleText가 이미 표시)
+  - 한국 ETF: meta `수집 KR 50 평균` → `수집 국내 ETF 평균`(실제 50종이지만 고정 숫자를 두지 않는다; 개수는 sampleText가 이미 표시)
   - 환노출 해외: tickers `360750.KS` `133690.KS`
   - 레버리지/인버스: tickers `122630.KS` `252670.KS`
 - `renderIssueEtfs`
@@ -80,16 +82,22 @@
 ## 테스트
 
 - `lib/etf/universe.test.ts`: `foreignUnderlying === true`인 티커 집합이 위 13종과 정확히 같다.
-- `lib/etf/etf-data.merge.test.ts`: prev-session 병합 시
-  - 국내 1배(`069500.KS`)는 `dailyIndexGap` 유지
-  - `foreignUnderlying`(`390390.KS`)은 `null`, `underlyingIndexChangePercent`는 유지
-  - 레버리지(`122630.KS`, KRX 이름 'KODEX 레버리지')는 `null`
+- `lib/etf/etf-data.merge.test.ts`: prev-session 병합 시 (기존 fixture는 gap이 항상 0이므로 **0이 아닌 gap**으로 새 fixture를 만든다)
+  - 국내 1배(`069500.KS`, gap 0이 아닌 값)는 `dailyIndexGap` 유지
+  - `foreignUnderlying`(`390390.KS`)은 `null`, `underlyingIndexName`·`underlyingIndexClose`·`underlyingIndexChangePercent`는 유지
+  - 레버리지(`122630.KS`, KRX 이름 'KODEX 레버리지')·인버스(`252670.KS`, 'KODEX 200선물인버스2X')는 `null`
+  - KRX 이름이 빈 문자열이면 `q.name`으로 판정(Yahoo 이름 'KODEX 레버리지' → `null`)
 - 신규 `lib/etf/renderer-hardcode.test.ts`
-  - `inferEtfTag`: TIGER 200 금융→`'섹터'`, TIGER 미국달러SOFR금리액티브(합성)→`'채권'`, KODEX 골드선물(H)→`'원자재'`, KODEX WTI원유선물(H)→`'원자재'`, KODEX 레버리지→`'전술'`, KODEX 미국반도체→`'테마'`, VNQ→`'대안'`, 유니버스 밖 이름 '○○ 금융'→원자재 아님
-  - 소스 스캔: `renderer.ts`의 티커 리터럴(`'NNNNNN.KS'` 및 따옴표 안 2~5자 대문자 중 유니버스 US 티커 형식) 전부가 유니버스 구성원. 비티커 대문자 상수(NAV·VIX·WTI 등)는 스캔 대상에서 제외하는 허용 목록을 둔다.
-  - 소스 스캔: `renderer.ts`에 `/자금이\s*(몰|쏠|이동)/`, `/자금\s*유[입출]/`, `/순유[입출]/` 없음; `ETF_LABEL_OVERRIDES`·`'배당'` 테마 문자열 없음
+  - `inferEtfTag`: TIGER 200 금융→`'섹터'`, TIGER 미국달러SOFR금리액티브(합성)→`'채권'`, KODEX 골드선물(H)→`'원자재'`, KODEX WTI원유선물(H)→`'원자재'`, KODEX 레버리지→`'전술'`, KODEX 미국반도체→`'테마'`, TIGER 글로벌리튬&2차전지SOLACTIVE(합성)→`'테마'`, TIGER 미국S&P500→`'해외지수'`, MTUM→`'팩터'`, VNQ→`'대안'`, 유니버스 밖 이름 '○○ 금융'→원자재 아님
+  - 소스 스캔: `renderer.ts`의 티커 리터럴(따옴표 안 `[0-9][0-9A-Z]{5}\.KS` — `0098F0.KS` 같은 영숫자 코드 포함 — 및 2~5자 대문자) 전부가 유니버스 구성원. 비티커 대문자 상수(NAV·VIX·WTI 등)는 스캔 대상에서 제외하는 허용 목록을 둔다.
+  - 소스 스캔: `renderer.ts`에 `/자금이[^.'`]{0,10}(몰|쏠|이동)/`("자금이 어디로 쏠리는지" 포함), `/자금\s*유[입출]/`, `/순유[입출]/` 없음; `ETF_LABEL_OVERRIDES` 없음; `/배당/` 부분 일치 없음(배당성장·배당·인컴 모두)
+- 렌더 회귀(신규, 같은 파일): 최소 `CollectedData`·`MorningReport` fixture로 `renderMorningHtml` 실행
+  - 병합 결과를 그대로 넣었을 때 해외지수·전술 ETF 행에 '지수대비'가 없고, 국내 1배 ETF는 gap이 `0`이어도 생략되지 않고 `0.00%p`로 표시된다(null만 생략, 0은 유효값)
+  - TIGER 200 금융 카드 태그가 '원자재'가 아니다
+  - 그룹 시세가 전부 없을 때(quotes에 해당 티커 없음) 이슈 카드·매칭표 폴백이 원코드(`.KS`)를 노출하지 않는다
+  - HTML에 '배당'·'자금이 몰리는'이 없다
 - 기존 전체: `npx tsx --test lib/*.test.ts lib/etf/*.test.ts` 통과, `npx tsc --noEmit -p .` 통과
-- 수동: 10-08 저장 데이터가 없으므로, 로컬 렌더 스모크(가짜 quotes로 `renderMorningHtml`)에서 배당 카드·원코드가 사라졌는지 확인
+- 수동: 머지 전 렌더 회귀 테스트가 만든 HTML을 열어 배치가 깨지지 않았는지 눈으로 확인
 
 ## 위험
 
