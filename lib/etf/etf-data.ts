@@ -2,7 +2,8 @@
 import YahooFinance from 'yahoo-finance2'
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] })
 import type { EtfQuote, EtfFlow, InvestorFlow } from './types'
-import { ALL_ETF_UNIVERSE, US_ETF_UNIVERSE } from './universe'
+import { ALL_ETF_UNIVERSE, US_ETF_UNIVERSE, getEtfByTicker } from './universe'
+import { isTacticalEtf } from './story-characters'
 import { fetchJson } from './fetcher'
 import { resolveKrxSession, expectedKrxBasDd, krxRequestOrder, type KrxSession } from './krx-session'
 
@@ -266,9 +267,13 @@ export function mergeKrxIntoQuotes(
   return quotes.map(q => {
     const krx = krxMap.get(q.ticker)
     if (!krx) return q
+    const name = krx.name || q.name
+    // 지수대비가 의미 없는 경우 비운다(렌더러는 null을 생략):
+    // 해외 기초지수는 한국 장과 지수 날짜가 어긋나고, 레버리지·인버스는 배수를 무시한 1배 차이라서.
+    const gapMeaningless = getEtfByTicker(q.ticker)?.foreignUnderlying === true || isTacticalEtf({ ...q, name })
     return {
       ...q,
-      name: krx.name || q.name,
+      name,
       price: krx.close ?? q.price,
       change: krx.change ?? q.change,
       changePercent: krx.changePercent ?? q.changePercent,
@@ -282,7 +287,7 @@ export function mergeKrxIntoQuotes(
       underlyingIndexName: krx.underlyingIndexName,
       underlyingIndexClose: krx.underlyingIndexClose,
       underlyingIndexChangePercent: krx.underlyingIndexChangePercent,
-      dailyIndexGap: krx.dailyIndexGap,
+      dailyIndexGap: gapMeaningless ? null : krx.dailyIndexGap,
     }
   })
 }
