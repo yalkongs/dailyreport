@@ -469,12 +469,24 @@ function renderMetricBar(label: string, value: number | null | undefined, maxAbs
   </div>`
 }
 
-function inferEtfTag(q: EtfQuote): string {
+const COMMODITY_NAME = /골드|gold|silver|원유|oil|wti|commodity|원자재/i
+const TAG_BY_CATEGORY: Record<string, string> = {
+  '채권': '채권', '테마': '테마', '섹터': '섹터', '해외지수': '해외지수', '팩터': '팩터', '지수': '지수',
+}
+
+// 유니버스 category가 1순위. 이름 정규식은 유니버스 밖 종목에만 쓴다
+// (단독 '금'은 '금융'·'금리'에 걸려서 제외).
+export function inferEtfTag(q: EtfQuote): string {
+  if (isTacticalEtf(q)) return '전술'
+  const def = getEtfByTicker(q.ticker)
+  if (def) {
+    if (def.category === '대안') return COMMODITY_NAME.test(q.name) || COMMODITY_NAME.test(def.name) ? '원자재' : '대안'
+    return TAG_BY_CATEGORY[def.category] ?? '지수'
+  }
   const name = q.name.toLowerCase()
-  if (/레버리지|2x|인버스|inverse/.test(name)) return '전술'
   if (/반도체|semiconductor|ai|바이오|bio/.test(name)) return '테마'
   if (/채권|bond|국채|tlt|ief|shy/.test(name)) return '채권'
-  if (/금|gold|원유|oil|commodity|원자재/.test(name)) return '원자재'
+  if (COMMODITY_NAME.test(name)) return '원자재'
   return '지수'
 }
 
