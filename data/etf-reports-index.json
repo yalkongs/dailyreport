@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-10-12",
+      "type": "morning",
+      "headline": "사이버·바이오가 달리는 사이, 반도체는 뒤처졌다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-12",
+      "anomalyCount": 13,
+      "anomalyBreakdown": {
+        "premiumDiscount": 13
+      },
+      "createdAt": "2026-10-11T23:18:13.271Z"
+    },
+    {
       "date": "2026-10-08",
       "type": "morning",
       "headline": "삼성전자 매출 195조, 반도체 ETF는 역행했다",
