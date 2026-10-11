@@ -3,6 +3,7 @@ import type { EtfDefinition } from './types'
 
 // 국내 코드는 실제 상장 목록과 대조해 확정한 값이다(universe.test.ts의 VERIFIED_KR 참조).
 // 코드를 추가·변경할 때는 상장 목록으로 상품명을 확인하고 테스트의 표도 함께 갱신할 것.
+// foreignUnderlying: 기초지수가 해외 세션인 국내 상장 ETF — KRX 병합에서 지수대비를 비운다(etf-data.ts).
 export const KR_ETF_UNIVERSE: EtfDefinition[] = [
   // 국내 주식 지수 (10)
   { ticker: '069500.KS', name: 'KODEX 200', market: 'KR', category: '지수' },
@@ -42,7 +43,6 @@ export const KR_ETF_UNIVERSE: EtfDefinition[] = [
   { ticker: '0098F0.KS', name: 'KODEX 원자력SMR', market: 'KR', category: '테마', theme: '원자력' },
   { ticker: '471760.KS', name: 'TIGER AI반도체핵심공정', market: 'KR', category: '테마', theme: 'AI' },
   { ticker: '463250.KS', name: 'TIGER K방산&우주', market: 'KR', category: '테마', theme: '방산' },
-  // foreignUnderlying: 기초지수가 해외 세션인 국내 상장 ETF — KRX 병합에서 지수대비를 비운다(etf-data.ts).
   // 국내 채권·대안 (10)
   { ticker: '114260.KS', name: 'KODEX 국고채3년', market: 'KR', category: '채권' },
   { ticker: '148070.KS', name: 'KIWOOM 국고채10년', market: 'KR', category: '채권' },

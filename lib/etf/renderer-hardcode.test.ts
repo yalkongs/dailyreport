@@ -36,8 +36,8 @@ test("inferEtfTag: 유니버스 category 우선 — '금융'·'금리'는 원자
 });
 
 test("inferEtfTag: 유니버스 밖 이름의 '금융'·'금리'는 원자재가 아니다", () => {
-  assert.notEqual(inferEtfTag(quote("999990.KS", "ACME 은행금융")), "원자재");
-  assert.notEqual(inferEtfTag(quote("999991.KS", "ACME 금리플러스")), "원자재");
+  assert.equal(inferEtfTag(quote("999990.KS", "ACME 은행금융")), "지수");
+  assert.equal(inferEtfTag(quote("999991.KS", "ACME 금리플러스")), "지수");
   assert.equal(inferEtfTag(quote("999992.KS", "ACME 골드")), "원자재");
 });
 
@@ -123,7 +123,8 @@ test("렌더 회귀: 액션 보드 지수대비 패널은 국내 1배만, gap 0�
   const board = section(renderMorningHtml(REPORT, data(mergedQuotes())), "Domestic ETF Action Board");
   const gapPanel = board.slice(board.indexOf("기초지수 대비"));
   assert.match(gapPanel, /KODEX 200/);
-  assert.match(gapPanel, /0\.00%p/);
+  const kodex200 = chunkWith(gapPanel, '<div class="compact-etf-row">', "(069500)");
+  assert.match(kodex200, /0\.00%p/);
   assert.match(gapPanel, /TIGER 200 금융/);
   assert.doesNotMatch(gapPanel, /KODEX 미국반도체/);
 });
@@ -132,6 +133,10 @@ test("렌더 회귀: 일반 카드 — 해외 기초지수는 지수대비 없�
   const scanner = section(renderMorningHtml(REPORT, data(mergedQuotes())), "KR ETF Market Scanner");
   const foreign = chunkWith(scanner, '<div class="etf-card">', "KODEX 미국반도체");
   assert.doesNotMatch(foreign, /지수대비/);
+  const kodex200 = chunkWith(scanner, '<div class="etf-card">', "KODEX 200");
+  assert.match(kodex200, /\(069500\)/);
+  assert.match(kodex200, /지수대비/);
+  assert.match(kodex200, /0\.00%p/);
   const finance = chunkWith(scanner, '<div class="etf-card">', "TIGER 200 금융");
   assert.match(finance, /<span class="etf-tag">섹터<\/span>/);
   assert.doesNotMatch(finance, /원자재/);
