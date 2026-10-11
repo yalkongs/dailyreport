@@ -47,18 +47,6 @@ interface HtmlMetadata {
   previewTitle: string
 }
 
-const ETF_LABEL_OVERRIDES: Record<string, string> = {
-  '379800.KS': 'KODEX 미국S&P500 (379800)',
-  '379810.KS': 'KODEX 미국나스닥100 (379810)',
-  '396500.KS': 'TIGER 반도체TOP10 (396500)',
-  '453850.KS': 'ACE 미국30년국채액티브(H) (453850)',
-  '476550.KS': 'TIGER 미국30년국채커버드콜액티브(H) (476550)',
-  '429000.KS': 'TIGER 미국S&P500배당귀족 (429000)',
-  '458730.KS': 'TIGER 미국배당다우존스 (458730)',
-  '233740.KS': 'KODEX 코스닥150레버리지 (233740)',
-  '251340.KS': 'KODEX 코스닥150선물인버스 (251340)',
-}
-
 function imBankLogoSrc(): string {
   const src = tryLoadBrandLogoDataUri()
   if (!src) {
@@ -657,8 +645,6 @@ function renderStrategyTicker(ticker: string, quotes: EtfQuote[]): string {
 }
 
 function formatKnownTicker(ticker: string): string {
-  const override = ETF_LABEL_OVERRIDES[ticker]
-  if (override) return override
   const def = getEtfByTicker(ticker)
   if (def?.market === 'KR') return `${def.name} (${ticker.replace(/\.(KS|KQ)$/i, '')})`
   if (def) return `${def.ticker} ${def.name}`
@@ -1044,17 +1030,16 @@ function quoteLabel(q: EtfQuote | undefined, fallback: string): string {
 
 function renderGlobalKrMatching(data: CollectedData): string {
   const pairs = [
-    { theme: '미국 S&P 500', global: ['SPY', 'VOO', 'IVV'], kr: ['360750.KS', '379800.KS'], check: '환율 방향과 S&P 500 선물이 같은 편을 들어주는지가 오늘의 관전 포인트입니다.' },
-    { theme: '미국 나스닥 100', global: ['QQQ'], kr: ['133690.KS', '379810.KS'], check: '성장주 강세가 원화 약세의 부담을 이겨낼 만큼인지 가늠해 봅니다.' },
-    { theme: '반도체', global: ['SOXX', 'SMH'], kr: ['091160.KS', '396500.KS', '381180.KS'], check: '미국 반도체 흐름이 국내 거래대금 증가로 실제 이어지는지가 열쇠입니다.' },
-    { theme: '장기 미국채', global: ['TLT', 'IEF'], kr: ['453850.KS', '476550.KS'], check: '미국 10년 금리와 TLT가 같은 방향을 가리키는지 봐야 판단이 깔끔합니다.' },
-    { theme: '배당성장', global: ['SCHD', 'VIG'], kr: ['458730.KS', '429000.KS'], check: '방어 수요가 먼저인지, 환율이 먼저인지 — 두 요인을 따로 떼어서 봅니다.' },
+    { theme: '미국 S&P 500', global: ['SPY', 'VOO'], kr: ['360750.KS'], check: '환율 방향과 S&P 500 선물이 같은 편을 들어주는지가 오늘의 관전 포인트입니다.' },
+    { theme: '미국 나스닥 100', global: ['QQQ'], kr: ['133690.KS'], check: '성장주 강세가 원화 약세의 부담을 이겨낼 만큼인지 가늠해 봅니다.' },
+    { theme: '반도체', global: ['SOXX'], kr: ['091160.KS', '396500.KS', '471760.KS'], check: '미국 반도체 흐름이 국내 거래대금 증가로 실제 이어지는지가 열쇠입니다.' },
+    { theme: '장기 미국채', global: ['TLT', 'IEF'], kr: ['458250.KS', '305080.KS'], check: '미국 10년 금리와 TLT가 같은 방향을 가리키는지 봐야 판단이 깔끔합니다.' },
   ]
 
   const rows = pairs.map(pair => {
     const globalQuotes = pair.global.map(ticker => findQuote(data.quotes, ticker)).filter(Boolean) as EtfQuote[]
     const krQuotes = pair.kr.map(ticker => findQuote(data.quotes, ticker)).filter(Boolean) as EtfQuote[]
-    const globalText = globalQuotes.length ? globalQuotes.map(formatMatchQuote).join(' · ') : pair.global.map(ticker => renderPlainTickerLink(ticker, ticker)).join(' · ')
+    const globalText = globalQuotes.length ? globalQuotes.map(formatMatchQuote).join(' · ') : pair.global.map(ticker => renderPlainTickerLink(ticker, formatKnownTicker(ticker))).join(' · ')
     const krText = krQuotes.length ? krQuotes.map(formatMatchQuote).join(' · ') : pair.kr.map(ticker => renderPlainTickerLink(ticker, formatKnownTicker(ticker))).join(' · ')
     return `<div class="match-row">
       <div><div class="match-head">테마</div><div class="match-body">${e(pair.theme)}</div></div>
@@ -1084,7 +1069,7 @@ function renderGlobalKoreaBridge(data: CollectedData): string {
   const qqq = findQuote(data.quotes, 'QQQ')
   const tlt = findQuote(data.quotes, 'TLT')
   const semiconductor = findQuote(data.quotes, '091160.KS')
-  const bio = findQuote(data.quotes, '364970.KS')
+  const growth = findQuote(data.quotes, '365040.KS')
   const sp500Kr = findQuote(data.quotes, '360750.KS')
   const leverage = findQuote(data.quotes, '122630.KS')
   const inverse = findQuote(data.quotes, '252670.KS')
@@ -1093,7 +1078,7 @@ function renderGlobalKoreaBridge(data: CollectedData): string {
     {
       step: '미국 기술주 신호',
       signal: `SOXX ${fmtQuoteMove(soxx)} · QQQ ${fmtQuoteMove(qqq)}`,
-      target: `${quoteLabel(semiconductor, '국내 반도체 ETF')}와 ${quoteLabel(bio, '국내 성장 테마 ETF')}의 장 초반 거래대금이 늘어나야 이 신호에 무게가 실립니다.`,
+      target: `${quoteLabel(semiconductor, '국내 반도체 ETF')}와 ${quoteLabel(growth, '국내 성장 테마 ETF')}의 장 초반 거래대금이 늘어나야 이 신호에 무게가 실립니다.`,
     },
     {
       step: '환율 영향',
@@ -1123,13 +1108,13 @@ function renderGlobalKoreaBridge(data: CollectedData): string {
 function renderMarketHeatmap(data: CollectedData): string {
   const groups = [
     { name: '미국 대표지수', meta: 'SPY·QQQ·IWM', tickers: ['SPY', 'QQQ', 'IWM'] },
-    { name: '반도체·AI', meta: 'SOXX·SMH·국내 반도체', tickers: ['SOXX', 'SMH', '091160.KS', '396500.KS'] },
-    { name: '한국 ETF', meta: '수집 KR 50 평균', tickers: data.quotes.filter(q => q.market === 'KR').map(q => q.ticker).slice(0, 80) },
-    { name: '환노출 해외', meta: '국내 상장 미국 ETF', tickers: ['360750.KS', '133690.KS', '379800.KS', '379810.KS'] },
+    { name: '반도체·AI', meta: 'SOXX·국내 반도체', tickers: ['SOXX', '091160.KS', '396500.KS'] },
+    { name: '한국 ETF', meta: '수집 국내 ETF 평균', tickers: data.quotes.filter(q => q.market === 'KR').map(q => q.ticker).slice(0, 80) },
+    { name: '환노출 해외', meta: '국내 상장 미국 ETF', tickers: ['360750.KS', '133690.KS'] },
     { name: '채권', meta: 'TLT·IEF·BND', tickers: ['TLT', 'IEF', 'BND'] },
     { name: '금·원자재', meta: 'GLD·USO·DBC', tickers: ['GLD', 'USO', 'DBC'] },
     { name: '에너지', meta: 'XLE·원유', tickers: ['XLE', '261220.KS'] },
-    { name: '레버리지/인버스', meta: '국내 전술형', tickers: ['122630.KS', '252670.KS', '233740.KS', '251340.KS'] },
+    { name: '레버리지/인버스', meta: '국내 전술형', tickers: ['122630.KS', '252670.KS'] },
   ]
 
   const cells = groups
@@ -1171,11 +1156,10 @@ function heatClass(value: number): string {
 
 function renderIssueEtfs(data: CollectedData): string {
   const issues = [
-    { title: '반도체·AI', reason: '미국 반도체의 열기가 국내 IT ETF 거래대금까지 옮겨 붙는지가 오늘의 관전 포인트입니다.', tickers: ['SOXX', 'SMH', '091160.KS', '396500.KS'] },
-    { title: '배당·인컴', reason: '변동성이 커지는 국면에서 방어 자산으로 자금이 이동하는 흐름이 보이는지 눈여겨봅니다.', tickers: ['SCHD', 'VIG', '458730.KS'] },
-    { title: '장기채·금리', reason: '미국 10년 금리의 움직임이 장기채 ETF 가격에 어떻게 새겨지는지 읽어냅니다.', tickers: ['TLT', 'IEF', '453850.KS'] },
-    { title: '환노출 미국주식', reason: 'S&P500·나스닥이 오른 폭과 원/달러 환율이 깎아낸 폭을 따로 떼어 계산해 봅니다.', tickers: ['360750.KS', '133690.KS', '379810.KS'] },
-    { title: '레버리지·인버스', reason: 'NAV와 괴리 상태를 먼저 확인한 뒤에야 장 초반 진입을 고민할 수 있는 상품군입니다.', tickers: ['122630.KS', '252670.KS', '233740.KS'] },
+    { title: '반도체·AI', reason: '미국 반도체 흐름이 국내 반도체 ETF 거래대금으로 이어지는지가 오늘의 관전 포인트입니다.', tickers: ['SOXX', '091160.KS', '396500.KS'] },
+    { title: '장기채·금리', reason: '미국 10년 금리의 움직임이 장기채 ETF 가격에 어떻게 새겨지는지 읽어냅니다.', tickers: ['TLT', 'IEF', '458250.KS'] },
+    { title: '환노출 미국주식', reason: 'S&P500·나스닥이 오른 폭과 원/달러 환율이 깎아낸 폭을 따로 떼어 계산해 봅니다.', tickers: ['360750.KS', '133690.KS'] },
+    { title: '레버리지·인버스', reason: 'NAV와 괴리 상태를 먼저 확인한 뒤에야 장 초반 진입을 고민할 수 있는 상품군입니다.', tickers: ['122630.KS', '252670.KS'] },
     { title: '금·원자재', reason: '지정학 변수와 달러 방향이 원자재 ETF에 같은 신호를 보내는지 맞춰 봅니다.', tickers: ['GLD', 'SLV', 'USO', '132030.KS'] },
   ]
 
@@ -1185,7 +1169,7 @@ function renderIssueEtfs(data: CollectedData): string {
       .filter(Boolean) as EtfQuote[]
     const fallbackLinks = issue.tickers
       .slice(0, 3)
-      .map(ticker => renderPlainTickerLink(ticker, ticker, 'etf-tag etf-link'))
+      .map(ticker => renderPlainTickerLink(ticker, formatKnownTicker(ticker), 'etf-tag etf-link'))
       .join('')
     const links = linked.length
       ? linked.slice(0, 4).map(q => renderEtfLink(q.ticker, `${e(formatEtfIdentity(q).plain)} ${e(fmtQuoteMove(q))}`, 'etf-tag etf-link')).join('')
@@ -1307,9 +1291,9 @@ function renderDomesticActionBoard(quotes: EtfQuote[]): string {
   // 인덱스에 따라 2~3가지 변주를 돌려가며 사용합니다.
   const liquidityNotes = [
     '거래가 활발해 체결은 수월하지만, 장 초반 급등락은 따로 챙겨봅니다.',
-    '자금이 몰리는 자리입니다. 방향보다 변동폭의 크기를 먼저 가늠합니다.',
-    '수급이 두텁습니다. 지표나 거시 변화에 평소보다 민감하게 반응할 수 있습니다.',
-    '유동성은 풍부합니다. 이 자금이 어디로 쏠리는지 함께 살필 타이밍입니다.',
+    '거래대금이 두꺼운 축입니다. 방향보다 변동폭의 크기를 먼저 가늠합니다.',
+    '거래가 두텁습니다. 지표나 거시 변화에 평소보다 민감하게 반응할 수 있습니다.',
+    '유동성은 풍부합니다. 장 초반 거래대금이 어느 쪽으로 늘어나는지 함께 살핍니다.',
   ]
   const premiumNotes = [
     '체결가와 NAV가 벌어져 있어, 오늘은 지정가 주문이 시장가보다 안전합니다.',
