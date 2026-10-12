@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-10-13",
+      "type": "morning",
+      "headline": "코스피 3.81% 급락, 반도체가 낙폭 이끌었다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-13",
+      "anomalyCount": 3,
+      "anomalyBreakdown": {
+        "premiumDiscount": 3
+      },
+      "createdAt": "2026-10-12T23:18:34.520Z"
+    },
+    {
       "date": "2026-10-12",
       "type": "morning",
       "headline": "사이버·바이오가 달리는 사이, 반도체는 뒤처졌다",
