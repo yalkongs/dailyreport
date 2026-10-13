@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-10-14",
+      "type": "morning",
+      "headline": "코스피 6% 급락, CPI 앞에 선 미 증시는 제자리",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-14",
+      "anomalyCount": 6,
+      "anomalyBreakdown": {
+        "premiumDiscount": 6
+      },
+      "createdAt": "2026-10-13T23:18:23.215Z"
+    },
+    {
       "date": "2026-10-13",
       "type": "morning",
       "headline": "코스피 3.81% 급락, 반도체가 낙폭 이끌었다",
