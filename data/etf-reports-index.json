@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-10-15",
+      "type": "morning",
+      "headline": "미 반도체 4.5% 급락, 방어주가 홀로 버텼다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-15",
+      "anomalyCount": 4,
+      "anomalyBreakdown": {
+        "premiumDiscount": 4
+      },
+      "createdAt": "2026-10-14T23:18:16.191Z"
+    },
+    {
       "date": "2026-10-14",
       "type": "morning",
       "headline": "코스피 6% 급락, CPI 앞에 선 미 증시는 제자리",
