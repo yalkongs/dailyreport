@@ -65,6 +65,18 @@ test("법적 고지: 마켓 리포트의 옛 한 줄 고지는 남지 않는다"
   assert.doesNotMatch(market, /투자 권유가 아닙니다\. 투자 판단의 책임은/);
 });
 
+test("법적 고지: 리포트의 맨 마지막 내용이다(고지 목록 뒤에 보이는 텍스트 없음)", () => {
+  for (const [label, html] of RENDERED) {
+    const listEnd = html.indexOf("</ul>", html.lastIndexOf('class="legal-list"'));
+    assert.ok(listEnd >= 0, `${label}: 고지 목록`);
+    const visibleAfter = html.slice(listEnd)
+      .replace(/<(style|script)[\s\S]*?<\/\1>/gi, "")
+      .replace(/<[^>]+>/g, "")
+      .trim();
+    assert.equal(visibleAfter, "", `${label}: 고지 뒤 텍스트`);
+  }
+});
+
 test("법적 고지: 조문 번호를 인용하지 않는다(개정 시 틀린 인용 방지)", () => {
   for (const item of LEGAL_DISCLAIMER_ITEMS) assert.doesNotMatch(item, /제\s*\d+\s*조/);
 });
