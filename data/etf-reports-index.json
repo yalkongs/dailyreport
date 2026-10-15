@@ -1,6 +1,17 @@
 {
   "reports": [
     {
+      "date": "2026-10-16",
+      "type": "morning",
+      "headline": "코스피 8% 급락, 금·원유는 올랐다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-16",
+      "anomalyCount": 13,
+      "anomalyBreakdown": {
+        "premiumDiscount": 13
+      },
+      "createdAt": "2026-10-15T23:18:31.813Z"
+    },
+    {
       "date": "2026-10-15",
       "type": "morning",
       "headline": "미 반도체 4.5% 급락, 방어주가 홀로 버텼다",
