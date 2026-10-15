@@ -12,6 +12,7 @@ export interface EtfDefinition {
   market: Market
   category: string      // "섹터", "지수", "테마", "채권", "팩터"
   theme?: string        // "AI", "반도체" 등 (선택)
+  foreignUnderlying?: boolean  // 국내 상장이지만 기초지수가 해외 세션 — 한국 장 등락률과 지수 등락률의 날짜가 어긋나 지수대비 비교 불가
 }
 
 // 수집된 ETF 시세

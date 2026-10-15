@@ -3,6 +3,7 @@ import type { EtfDefinition } from './types'
 
 // 국내 코드는 실제 상장 목록과 대조해 확정한 값이다(universe.test.ts의 VERIFIED_KR 참조).
 // 코드를 추가·변경할 때는 상장 목록으로 상품명을 확인하고 테스트의 표도 함께 갱신할 것.
+// foreignUnderlying: 기초지수가 해외 세션인 국내 상장 ETF — KRX 병합에서 지수대비를 비운다(etf-data.ts).
 export const KR_ETF_UNIVERSE: EtfDefinition[] = [
   // 국내 주식 지수 (10)
   { ticker: '069500.KS', name: 'KODEX 200', market: 'KR', category: '지수' },
@@ -35,9 +36,9 @@ export const KR_ETF_UNIVERSE: EtfDefinition[] = [
   { ticker: '365040.KS', name: 'TIGER AI코리아그로스액티브', market: 'KR', category: '테마', theme: 'AI' },
   { ticker: '445290.KS', name: 'KODEX 로봇액티브', market: 'KR', category: '테마', theme: '로봇' },
   { ticker: '329200.KS', name: 'TIGER 리츠부동산인프라', market: 'KR', category: '테마', theme: '리츠' },
-  { ticker: '394670.KS', name: 'TIGER 글로벌리튬&2차전지SOLACTIVE(합성)', market: 'KR', category: '테마', theme: '2차전지' },
+  { ticker: '394670.KS', name: 'TIGER 글로벌리튬&2차전지SOLACTIVE(합성)', market: 'KR', category: '테마', theme: '2차전지', foreignUnderlying: true },
   { ticker: '494670.KS', name: 'TIGER 조선TOP10', market: 'KR', category: '테마', theme: '조선' },
-  { ticker: '390390.KS', name: 'KODEX 미국반도체', market: 'KR', category: '테마', theme: '반도체' },
+  { ticker: '390390.KS', name: 'KODEX 미국반도체', market: 'KR', category: '테마', theme: '반도체', foreignUnderlying: true },
   { ticker: '300610.KS', name: 'TIGER K게임', market: 'KR', category: '테마' },
   { ticker: '0098F0.KS', name: 'KODEX 원자력SMR', market: 'KR', category: '테마', theme: '원자력' },
   { ticker: '471760.KS', name: 'TIGER AI반도체핵심공정', market: 'KR', category: '테마', theme: 'AI' },
@@ -46,19 +47,19 @@ export const KR_ETF_UNIVERSE: EtfDefinition[] = [
   { ticker: '114260.KS', name: 'KODEX 국고채3년', market: 'KR', category: '채권' },
   { ticker: '148070.KS', name: 'KIWOOM 국고채10년', market: 'KR', category: '채권' },
   { ticker: '157450.KS', name: 'TIGER 단기통안채', market: 'KR', category: '채권' },
-  { ticker: '305080.KS', name: 'TIGER 미국채10년선물', market: 'KR', category: '채권' },
+  { ticker: '305080.KS', name: 'TIGER 미국채10년선물', market: 'KR', category: '채권', foreignUnderlying: true },
   { ticker: '114820.KS', name: 'TIGER 국채3년', market: 'KR', category: '채권' },
-  { ticker: '132030.KS', name: 'KODEX 골드선물(H)', market: 'KR', category: '대안', theme: '금' },
-  { ticker: '261220.KS', name: 'KODEX WTI원유선물(H)', market: 'KR', category: '대안' },
-  { ticker: '329750.KS', name: 'TIGER 미국달러단기채권액티브', market: 'KR', category: '채권' },
-  { ticker: '456610.KS', name: 'TIGER 미국달러SOFR금리액티브(합성)', market: 'KR', category: '채권' },
-  { ticker: '458250.KS', name: 'TIGER 미국30년국채스트립액티브(합성 H)', market: 'KR', category: '채권' },
+  { ticker: '132030.KS', name: 'KODEX 골드선물(H)', market: 'KR', category: '대안', theme: '금', foreignUnderlying: true },
+  { ticker: '261220.KS', name: 'KODEX WTI원유선물(H)', market: 'KR', category: '대안', foreignUnderlying: true },
+  { ticker: '329750.KS', name: 'TIGER 미국달러단기채권액티브', market: 'KR', category: '채권', foreignUnderlying: true },
+  { ticker: '456610.KS', name: 'TIGER 미국달러SOFR금리액티브(합성)', market: 'KR', category: '채권', foreignUnderlying: true },
+  { ticker: '458250.KS', name: 'TIGER 미국30년국채스트립액티브(합성 H)', market: 'KR', category: '채권', foreignUnderlying: true },
   // 해외 지수 국내 상장 (5)
-  { ticker: '360750.KS', name: 'TIGER 미국S&P500', market: 'KR', category: '해외지수' },
-  { ticker: '133690.KS', name: 'TIGER 미국나스닥100', market: 'KR', category: '해외지수' },
-  { ticker: '195930.KS', name: 'TIGER 유로스탁스50(합성 H)', market: 'KR', category: '해외지수' },
-  { ticker: '099140.KS', name: 'KODEX 차이나H', market: 'KR', category: '해외지수' },
-  { ticker: '241180.KS', name: 'TIGER 일본니케이225', market: 'KR', category: '해외지수' },
+  { ticker: '360750.KS', name: 'TIGER 미국S&P500', market: 'KR', category: '해외지수', foreignUnderlying: true },
+  { ticker: '133690.KS', name: 'TIGER 미국나스닥100', market: 'KR', category: '해외지수', foreignUnderlying: true },
+  { ticker: '195930.KS', name: 'TIGER 유로스탁스50(합성 H)', market: 'KR', category: '해외지수', foreignUnderlying: true },
+  { ticker: '099140.KS', name: 'KODEX 차이나H', market: 'KR', category: '해외지수', foreignUnderlying: true },
+  { ticker: '241180.KS', name: 'TIGER 일본니케이225', market: 'KR', category: '해외지수', foreignUnderlying: true },
 ]
 
 export const US_ETF_UNIVERSE: EtfDefinition[] = [

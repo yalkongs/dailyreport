@@ -96,3 +96,12 @@ test("영문이 섞인 신형 코드도 Google Finance 링크가 만들어진다
   assert.equal(googleFinanceQuoteUrl("0098F0.KS")?.includes("/0098F0:KRX"), true);
   assert.equal(googleFinanceQuoteUrl("069500.KS")?.includes("/069500:KRX"), true);
 });
+
+test("foreignUnderlying: 해외 기초지수 국내 상장 13종과 정확히 일치", () => {
+  const expected = [
+    "360750.KS", "133690.KS", "195930.KS", "099140.KS", "241180.KS", "390390.KS", "394670.KS",
+    "458250.KS", "305080.KS", "132030.KS", "261220.KS", "329750.KS", "456610.KS",
+  ].sort();
+  const actual = ALL_ETF_UNIVERSE.filter(e => e.foreignUnderlying === true).map(e => e.ticker).sort();
+  assert.deepEqual(actual, expected);
+});
