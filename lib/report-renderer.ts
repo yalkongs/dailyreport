@@ -16,6 +16,7 @@ import type {
 } from "./types";
 import { buildSparklineMap } from "./chart-generator";
 import { stripEmphasisTags } from "./html-entities";
+import { LEGAL_DISCLAIMER_ITEMS, LEGAL_DISCLAIMER_TITLE } from "./legal-disclaimer";
 
 // --- 유틸리티 ---
 
@@ -345,10 +346,19 @@ function renderCalendar(content: ReportContent): string {
 }
 
 function renderFooter(content: ReportContent): string {
+  const legalItems = LEGAL_DISCLAIMER_ITEMS
+    .map((item) => `<li>${escapeHtml(item)}</li>`)
+    .join("\n            ");
+
   return `
     <footer class="report-footer">
         <div class="closing">${escapeHtml(content.closingMessage)}</div>
-        <div class="disclaimer">본 리포트는 AI가 자동 생성한 것으로, 투자 권유가 아닙니다. 투자 판단의 책임은 투자자 본인에게 있습니다.</div>
+        <div class="legal-notice">
+            <div class="legal-title">${escapeHtml(LEGAL_DISCLAIMER_TITLE)}</div>
+            <ul class="legal-list">
+            ${legalItems}
+            </ul>
+        </div>
         <div class="copyright">© iM뱅크 | Powered by iM AI Analyst | 데이터 출처: Yahoo Finance, FRED, ECOS, KRX, Google News</div>
     </footer>
 </div>

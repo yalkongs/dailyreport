@@ -19,6 +19,7 @@ import {
 } from './report-preview'
 // R1 (2026-07-22): 선택 로직은 story-characters.ts로 이동(렌더러·프롬프트·검증 공유).
 import { isTacticalEtf, selectStoryCharacters } from './story-characters'
+import { LEGAL_DISCLAIMER_ITEMS, LEGAL_DISCLAIMER_TITLE } from '../legal-disclaimer'
 
 export function escapeHtml(s: string): string {
   return s
@@ -132,6 +133,11 @@ function baseHtml(title: string, date: string, type: string, body: string, metad
                      border-radius: 8px; padding: 18px; margin-bottom: 28px; }
     .notice-title { font-size: 18px; font-weight: 900; color: var(--ink); margin-bottom: 8px; }
     .notice-text { font-size: 13px; color: var(--muted); line-height: 1.65; }
+    .legal-title { font-size: 13px; font-weight: 900; color: var(--ink); margin-top: 16px; padding-top: 14px;
+                   border-top: 1px solid var(--line); }
+    .legal-list { margin: 8px 0 0; padding-left: 18px; list-style: disc; }
+    .legal-list li { font-size: 12px; color: var(--muted); line-height: 1.65; margin-bottom: 5px; word-break: keep-all; }
+    .legal-list li:last-child { margin-bottom: 0; }
     .pill-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
     .pill { border: 1px solid var(--line); border-radius: 6px; background: var(--soft-teal); color: var(--im-teal-deep);
             font-size: 11px; font-weight: 900; padding: 5px 8px; }
@@ -746,13 +752,21 @@ function publicText(text: string): string {
 }
 
 function renderClientNotice(data: CollectedData, strategy: MorningStrategyInput): string {
+  // ETF 고유 확인사항(총보수·환헤지·괴리율 등)은 여기에, 법률 근거 고지는
+  // 마켓 리포트와 공유하는 lib/legal-disclaimer.ts 문구를 그대로 붙인다.
+  const legalItems = LEGAL_DISCLAIMER_ITEMS.map(item => `<li>${e(item)}</li>`).join('\n    ')
+
   return `<div class="client-notice">
   <div class="notice-title">투자자 보호 기준</div>
-  <div class="notice-text">이 자료는 iM뱅크 고객의 ETF 시장 이해를 돕는 시장정보입니다. 고객별 투자성향, 투자목적, 보유상품, 손실감내 수준을 반영한 투자권유가 아니며 주문 전 상품설명서, 총보수, 세금, 환헤지 여부, NAV/iNAV, 괴리율을 별도로 확인해야 합니다.</div>
+  <div class="notice-text">이 자료는 iM뱅크 고객의 ETF 시장 이해를 돕는 시장정보입니다. ETF는 상품마다 기초지수, 총보수, 세금, 환헤지 여부, NAV/iNAV 대비 괴리율, 유동성이 다르므로 주문 전 개별 상품의 (간이)투자설명서와 거래 조건을 반드시 확인해야 합니다.</div>
   <div class="pill-row">
     <span class="pill">기준일 ${e(data.date)}</span>
     <span class="pill">생성 ${e(formatKstDateTime(strategy.generatedAt))}</span>
   </div>
+  <div class="legal-title">${e(LEGAL_DISCLAIMER_TITLE)}</div>
+  <ul class="legal-list">
+    ${legalItems}
+  </ul>
 </div>`
 }
 
