@@ -353,13 +353,13 @@ function renderFooter(content: ReportContent): string {
   return `
     <footer class="report-footer">
         <div class="closing">${escapeHtml(content.closingMessage)}</div>
+        <div class="copyright">© iM뱅크 | Powered by iM AI Analyst | 데이터 출처: Yahoo Finance, FRED, ECOS, KRX, Google News</div>
         <div class="legal-notice">
             <div class="legal-title">${escapeHtml(LEGAL_DISCLAIMER_TITLE)}</div>
             <ul class="legal-list">
             ${legalItems}
             </ul>
         </div>
-        <div class="copyright">© iM뱅크 | Powered by iM AI Analyst | 데이터 출처: Yahoo Finance, FRED, ECOS, KRX, Google News</div>
     </footer>
 </div>
 </div>

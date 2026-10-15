@@ -359,7 +359,7 @@
   border: 1px solid var(--slate);
   border-radius: 6px;
   padding: 16px 18px;
-  margin: 0 0 12px;
+  margin: 0;
 }
 .report-footer .legal-title {
   font-size: 12px;
@@ -385,6 +385,7 @@
   font-size: 11px;
   color: var(--slate);
   opacity: 0.7;
+  margin-bottom: 12px;
 }
 
 /* ===== DIVIDER ===== */
