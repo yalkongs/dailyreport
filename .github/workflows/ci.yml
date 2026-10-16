@@ -1,0 +1,54 @@
+name: CI
+# 변경을 막는 자동 검증(감사 F11) — 모든 브랜치 push와 PR에서 테스트·타입 검사를 돈다.
+# 생성·발송 workflow(daily-report.yml)와 분리: 비밀·네트워크·외부 발송 없이 돈다
+# (워크플로 셸 테스트는 가짜 gh·curl·임시 git 저장소를, CLI 테스트는 127.0.0.1 가짜 API를 쓴다).
+# 매일 봇이 main에 커밋하는 리포트(public/)·데이터(data/)와 문서(docs/)만 바뀐 push는 건너뛴다.
+# lint는 현재 실패하므로 정리한 뒤 추가한다.
+
+on:
+  push:
+    branches: ['**']
+    paths-ignore:
+      - 'public/**'
+      - 'data/**'
+      - 'docs/**'
+  pull_request:
+    paths-ignore:
+      - 'public/**'
+      - 'data/**'
+      - 'docs/**'
+
+# 운영 workflow와 같은 시간대 — 날짜 계산 테스트가 운영과 같은 환경에서 돈다.
+env:
+  TZ: Asia/Seoul
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # daily-report.yml과 같은 버전 — 운영에서 도는 Node로 검증한다.
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Typecheck
+        run: npm run typecheck

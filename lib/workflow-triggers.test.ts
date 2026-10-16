@@ -199,3 +199,38 @@ test("delivery-monitor: 읽기 전용 최소 권한, check-delivery를 env로 �
   assert.doesNotMatch(monitorYml, /TELEGRAM|ANTHROPIC/);
   assert.match(monitorYml, /node-version: '20'/);
 });
+
+// ── ci.yml: 변경을 막는 자동 검증(감사 F11) ────────────────────────────────────────────
+const ciPath = path.join(__dirname, "..", ".github", "workflows", "ci.yml");
+const ciYml = fs.existsSync(ciPath) ? fs.readFileSync(ciPath, "utf8") : "";
+const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8")) as { scripts: Record<string, string> };
+
+test("package.json: npm test·typecheck가 한 명령으로 전체 테스트·타입 검사를 돈다", () => {
+  assert.equal(pkg.scripts.test, "tsx --test lib/*.test.ts lib/etf/*.test.ts");
+  assert.equal(pkg.scripts.typecheck, "tsc --noEmit -p .");
+});
+
+test("ci.yml: 모든 브랜치 push·PR에서 npm ci → test → typecheck, 봇 리포트 커밋 경로는 제외", () => {
+  assert.ok(ciYml, "ci.yml 없음");
+  assert.match(ciYml, /\n  push:\n    branches: \['\*\*'\]\n    paths-ignore:\n/);
+  assert.match(ciYml, /\n  pull_request:\n    paths-ignore:\n/);
+  // 매일 봇이 main에 커밋하는 리포트·데이터와 문서는 코드 검증이 필요 없다.
+  const ignores = [...ciYml.matchAll(/paths-ignore:\n((?:\s+- .+\n)+)/g)].map((m) =>
+    m[1].split("\n").map((l) => l.trim().replace(/^- /, "").replace(/'/g, "")).filter(Boolean),
+  );
+  assert.equal(ignores.length, 2);
+  for (const list of ignores) assert.deepEqual(list, ["public/**", "data/**", "docs/**"]);
+  const steps = ["run: npm ci", "run: npm test", "run: npm run typecheck"].map((s) => ciYml.indexOf(s));
+  assert.ok(steps.every((i) => i >= 0), "npm ci/test/typecheck step 누락");
+  assert.deepEqual([...steps].sort((a, b) => a - b), steps, "step 순서");
+  assert.doesNotMatch(ciYml, /npm run lint/); // lint는 현재 실패 — 정리 후 추가
+});
+
+test("ci.yml: 운영 workflow와 같은 Node 버전, 읽기 권한만, 비밀 없음", () => {
+  const prodNode = [...yml.matchAll(/node-version: '(\d+)'/g)].map((m) => m[1]);
+  assert.ok(prodNode.length > 0);
+  assert.equal(new Set(prodNode).size, 1);
+  assert.match(ciYml, new RegExp(`node-version: '${prodNode[0]}'`));
+  assert.match(ciYml, /\npermissions:\n  contents: read\n/);
+  assert.doesNotMatch(ciYml, /secrets\./);
+});
