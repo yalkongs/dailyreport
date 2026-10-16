@@ -8,6 +8,7 @@ import type {
   HistoricalComparison,
   ReportContent,
 } from "./types";
+import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS, MARKET_GENERATION_BUDGET_MS, makeDeadline } from "./claude-budget";
 import { formatEconomicEventLine } from "./economic-calendar";
 import { renderReport } from "./report-renderer";
 import { BANNED_METAPHORS } from "./banned-metaphors";
@@ -18,7 +19,8 @@ import { checkAndFixTemporal } from "./temporal-consistency";
 import { softFixUnquotableSources, countCitationPhrases, QUOTABLE_SOURCES } from "./quotable-sources";
 import { renderPolicyRateBlock, POLICY_RATE_RULE, findPolicyDirectionMismatches, extractReportText } from "./policy-rate";
 
-const client = new Anthropic();
+// F07: 요청 상한·SDK 재시도를 명시(기본 10분·2회는 job 상한 20분과 맞지 않았다).
+const client = new Anthropic({ timeout: CLAUDE_REQUEST_TIMEOUT_MS, maxRetries: CLAUDE_MAX_RETRIES });
 
 // --- 반복 방지 컨텍스트 ---
 export interface AntiRepetitionContext {
@@ -501,7 +503,13 @@ export async function generateReport(
   let content: ReportContent | null = null;
   let lastParseErr: unknown = null;
 
+  const deadline = makeDeadline(MARKET_GENERATION_BUDGET_MS);
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    // F07: 생성 예산을 넘기면 새 호출을 시작하지 않는다(다음 트리거가 새 runner에서 재시도).
+    if (attempt > 1 && !deadline.canStartCall()) {
+      console.log(`⏱️ 생성 예산 초과(${Math.round(deadline.elapsedMs() / 1000)}초 경과) — 추가 재생성 중단`);
+      break;
+    }
     let rawJson = "";
     try {
       const stream = await client.messages.stream({

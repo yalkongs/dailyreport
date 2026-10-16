@@ -7,6 +7,7 @@ import { selectStoryCharacters } from './story-characters'
 import { QUOTABLE_SOURCES } from '../quotable-sources'
 import { buildMorningStrategyInput } from './morning-strategy'
 import { validateMorningReportQuality } from './report-quality'
+import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS } from '../claude-budget'
 import { normalizeMorningReportLanguage } from './report-language'
 import { buildMorningNarrativePlan } from './morning-report-plan'
 import { describeAngle, ETF_NARRATIVE_ANGLES, type EtfNarrativeAngle } from './narrative-angle'
@@ -16,7 +17,8 @@ import { buildTemporalFramingBlock } from '../temporal-framing'
 // Lazy initialization: env vars may not be loaded at module parse time
 let _client: Anthropic | null = null
 function getClient(): Anthropic {
-  if (!_client) _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  // F07: 요청 상한·SDK 재시도를 명시(기본 10분·2회는 job 상한 15분과 맞지 않았다).
+  if (!_client) _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, timeout: CLAUDE_REQUEST_TIMEOUT_MS, maxRetries: CLAUDE_MAX_RETRIES })
   return _client
 }
 

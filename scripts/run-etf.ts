@@ -9,6 +9,7 @@ import * as path from 'path'
 import { collectAllEtfData } from '../lib/etf/etf-data'
 import { collectIndexQuotes, collectMacroContext, isMacroEmpty } from '../lib/etf/market-context'
 import { collectEconomicCalendar } from '../lib/economic-calendar'
+import { ETF_GENERATION_BUDGET_MS, makeDeadline } from '../lib/claude-budget'
 import { collectNews } from '../lib/etf/news'
 import { detectAnomalies } from '../lib/etf/analyzer'
 import {
@@ -199,7 +200,13 @@ async function main() {
   const MAX_CLAUDE_ATTEMPTS = 2
   let report: Awaited<ReturnType<typeof generateMorningReport>> | undefined
   let lastError: unknown
+  // F07: 생성 단계 예산 — 넘기면 새 호출을 시작하지 않는다(다음 트리거가 새 runner에서 재시도).
+  const deadline = makeDeadline(ETF_GENERATION_BUDGET_MS)
   for (let attempt = 1; attempt <= MAX_CLAUDE_ATTEMPTS; attempt++) {
+    if (attempt > 1 && !deadline.canStartCall()) {
+      console.warn(`[warn] 생성 예산 초과(${Math.round(deadline.elapsedMs() / 1000)}초) — ${attempt}회차 생략, Tier 1 fallback으로`)
+      break
+    }
     try {
       report = await generateMorningReport(data)
       if (attempt > 1) {
@@ -218,6 +225,11 @@ async function main() {
 
   // P0 fallback: narrativeNotes 만 drop해서 Tier 1 하드코딩 본문으로 렌더링
   if (!report) {
+    if (!deadline.canStartCall()) {
+      console.error(`[error] 생성 예산 초과(${Math.round(deadline.elapsedMs() / 1000)}초) — fallback 호출 생략. 다음 트리거가 재시도합니다.`)
+      console.error('[error] 원인:', lastError)
+      process.exit(1)
+    }
     try {
       console.log('[5b/8] Tier 1 fallback — narrativeNotes drop 후 재검증')
       const raw = await generateMorningReportRaw(data)
