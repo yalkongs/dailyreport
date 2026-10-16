@@ -17,7 +17,8 @@ import {
 } from "../lib/narrative-memory";
 import { saveMarketPreviewImage } from "../lib/market/preview";
 import { decodeHtmlEntities } from "../lib/html-entities";
-import type { ReportsIndex, ReportMeta, MarketSnapshot, MarketSnapshotItem, MarketDataCollection } from "../lib/types";
+import { decidePriceHashGuard, readLastDataHash, saveMarketReportBundle } from "../lib/market-run-guards";
+import type { ReportsIndex, MarketSnapshot, MarketSnapshotItem, MarketDataCollection } from "../lib/types";
 
 const REPORTS_DIR = path.join(process.cwd(), "public", "reports");
 const INDEX_PATH = path.join(process.cwd(), "data", "reports-index.json");
@@ -34,10 +35,6 @@ function loadIndex(): ReportsIndex {
     return JSON.parse(fs.readFileSync(INDEX_PATH, "utf-8"));
   }
   return { reports: [], lastUpdated: toKSTString(new Date()) };
-}
-
-function saveIndex(index: ReportsIndex) {
-  fs.writeFileSync(INDEX_PATH, JSON.stringify(index, null, 2), "utf-8");
 }
 
 function extractHeadlineFromHtml(html: string): { headline: string; subline: string } {
@@ -133,6 +130,9 @@ async function main() {
 
   ensureDirectories();
 
+  // FORCE_REGENERATE=true는 중복 실행 가드(Step 1a)와 가격 해시 가드(Step 2) 둘 다 우회한다.
+  const forceRegenerate = process.env.FORCE_REGENERATE === "true";
+
   // Step 1: 데이터 수집
   console.log("━━━ Step 1: 시장 데이터 수집 ━━━");
   const marketData = await collectAllMarketData();
@@ -162,7 +162,7 @@ async function main() {
     const todayEntry = existingIndex.reports.find((r) => r.date === todayDate);
 
     if (fs.existsSync(todayHtmlPath) && todayEntry) {
-      if (process.env.FORCE_REGENERATE === "true") {
+      if (forceRegenerate) {
         console.log(`⚠️ 오늘(${todayDate}) 리포트가 이미 존재하지만 FORCE_REGENERATE=true로 재생성합니다.`);
       } else {
         console.log(`✋ 오늘(${todayDate}) 리포트가 이미 존재합니다. 파이프라인을 종료합니다.`);
@@ -231,14 +231,17 @@ async function main() {
     ...marketData.forex.map(f => `${f.symbol}:${f.rate}`),
   ].join("|");
 
-  if (fs.existsSync(LAST_DATA_HASH_PATH)) {
-    const lastHash = fs.readFileSync(LAST_DATA_HASH_PATH, "utf-8").trim();
-    if (priceHash === lastHash) {
-      console.log("⚠️ 시장 데이터가 이전과 동일합니다 (주말/휴일 가능성). 리포트 생성을 건너뜁니다.");
-      process.exit(0);
-    }
+  // 해시는 여기서 기록하지 않는다 — 리포트 HTML·인덱스 저장이 끝난 뒤(Step 5~6)에만
+  // 기록해야 생성 실패 후 재시도가 "동일 데이터"로 오판되지 않는다.
+  const lastHash = readLastDataHash(LAST_DATA_HASH_PATH);
+  if (decidePriceHashGuard({ priceHash, lastHash, force: forceRegenerate }) === "skip") {
+    console.log("⚠️ 시장 데이터가 이전과 동일합니다 (주말/휴일 가능성). 리포트 생성을 건너뜁니다.");
+    console.log("   강제 생성이 필요하면 FORCE_REGENERATE=true 환경변수로 실행하세요.");
+    process.exit(0);
   }
-  fs.writeFileSync(LAST_DATA_HASH_PATH, priceHash, "utf-8");
+  if (forceRegenerate && lastHash === priceHash) {
+    console.log("⚠️ 시장 데이터가 이전과 동일하지만 FORCE_REGENERATE=true로 생성을 계속합니다.");
+  }
   console.log();
 
   // Step 3: 반복 방지 컨텍스트 구성
@@ -284,43 +287,16 @@ async function main() {
   const { html, content: reportContent } = await generateReport(marketData, ctx, contextData);
   console.log();
 
-  // Step 5: 파일 저장
-  console.log("━━━ Step 5: 파일 저장 ━━━");
+  // Step 5~6: 파일 저장 + 인덱스 업데이트 + 가격 해시 기록(마지막)
+  console.log("━━━ Step 5~6: 파일 저장 · 인덱스 업데이트 ━━━");
   const reportDate = marketData.date;
-  const fileName = `${reportDate}.html`;
-  const filePath = path.join(REPORTS_DIR, fileName);
-
-  fs.writeFileSync(filePath, html, "utf-8");
-  console.log(`💾 리포트 저장: ${filePath}`);
-
-  // Step 6: 인덱스 업데이트
-  console.log("━━━ Step 6: 인덱스 업데이트 ━━━");
-  const index = loadIndex();
-
   const { headline, subline } = extractHeadlineFromHtml(html);
   console.log(`📰 헤드라인: "${headline}"`);
 
-  const existingIdx = index.reports.findIndex((r) => r.date === reportDate);
-  const meta: ReportMeta = {
-    date: reportDate,
-    title: `iM AI Market Report - ${reportDate}`,
-    headline,
-    subline,
-    generatedAt: toKSTString(new Date()),
-    filePath: `/reports/${fileName}`,
-  };
-
-  if (existingIdx >= 0) {
-    index.reports[existingIdx] = meta;
-    console.log(`🔄 기존 리포트 업데이트: ${reportDate}`);
-  } else {
-    index.reports.unshift(meta);
-    console.log(`➕ 새 리포트 추가: ${reportDate}`);
-  }
-
-  index.lastUpdated = toKSTString(new Date());
-  saveIndex(index);
-  console.log(`📁 인덱스 업데이트 완료 (총 ${index.reports.length}건)`);
+  const { filePath } = await saveMarketReportBundle(
+    { date: reportDate, html, headline, subline, priceHash, generatedAt: toKSTString(new Date()) },
+    { reportsDir: REPORTS_DIR, indexPath: INDEX_PATH, hashPath: LAST_DATA_HASH_PATH },
+  );
   console.log();
 
   // Step 6b: 링크 프리뷰 이미지 생성 (Telegram sendPhoto + OG card용)
