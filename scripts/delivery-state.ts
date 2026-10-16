@@ -39,7 +39,7 @@ async function gh<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await res.json()) as T;
 }
 
-function kstToday(): string {
+export function kstToday(): string {
   return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
 }
 
@@ -54,9 +54,18 @@ function setOutput(values: Record<string, string>): void {
   for (const l of lines) console.log(`  output ${l}`);
 }
 
-async function readTelegramStatus(k: ReportKind, sha: string): Promise<TelegramStatus> {
+// 아래 두 조회는 scripts/check-delivery.ts(독립 도착 감시)도 그대로 쓴다 — 같은 커밋·같은 context.
+export async function readTelegramStatus(k: ReportKind, sha: string): Promise<TelegramStatus> {
   const combined = await gh<{ statuses: { context: string; state: string }[] }>(`/commits/${sha}/status`);
   return pickTelegramStatus(combined.statuses ?? [], k);
+}
+
+/** main에서 그 날짜(KST)의 리포트 커밋을 찾는다. 없으면 null, 조회 실패는 throw. */
+export async function findReportSha(k: ReportKind, date: string): Promise<string | null> {
+  const commits = await gh<{ sha: string; commit: { message: string } }[]>(
+    `/commits?sha=main&since=${encodeURIComponent(kstDayStartIso(date))}&per_page=100`,
+  );
+  return findReportCommit(commits.map((c) => ({ sha: c.sha, message: c.commit.message })), k, date);
 }
 
 function readIndexEntry(k: ReportKind, date: string): { headline: string; anomalyCount: number; breakdown: string } {
@@ -91,10 +100,7 @@ async function resolve(k: ReportKind): Promise<void> {
       // 이 실행이 방금 push한 리포트 커밋. rebase 뒤의 최종 SHA.
       reportSha = execSync("git rev-parse HEAD").toString().trim();
     } else if (!dryRun) {
-      const commits = await gh<{ sha: string; commit: { message: string } }[]>(
-        `/commits?sha=main&since=${encodeURIComponent(kstDayStartIso(date))}&per_page=100`,
-      );
-      reportSha = findReportCommit(commits.map((c) => ({ sha: c.sha, message: c.commit.message })), k, date);
+      reportSha = await findReportSha(k, date);
     }
     if (reportSha) telegramStatus = await readTelegramStatus(k, reportSha);
   } catch (e) {
@@ -187,7 +193,10 @@ async function main(): Promise<void> {
   throw new Error("usage: delivery-state.ts resolve|status|mark|classify …");
 }
 
-main().catch((e) => {
-  console.error(`[delivery-state] ${(e as Error).message}`);
-  process.exit(1);
-});
+// 직접 실행할 때만 CLI로 동작한다 — check-delivery.ts·테스트가 import해도 main()이 돌지 않게.
+if (require.main === module) {
+  main().catch((e) => {
+    console.error(`[delivery-state] ${(e as Error).message}`);
+    process.exit(1);
+  });
+}

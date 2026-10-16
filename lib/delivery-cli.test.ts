@@ -8,6 +8,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
 import type { AddressInfo } from "node:net";
+import { calendarFor } from "../scripts/check-delivery";
 
 const ROOT = path.join(__dirname, "..");
 const TSX_CLI = path.join(ROOT, "node_modules", "tsx", "dist", "cli.mjs");
@@ -17,12 +18,15 @@ function kstToday(): string {
   return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
 }
 
-/** 오늘 자 market·etf 리포트 커밋 하나와 그 커밋의 statuses를 돌려주는 가짜 GitHub API. */
+/**
+ * 그 날짜(기본 오늘 KST) market·etf 리포트 커밋과 그 커밋의 statuses를 돌려주는 가짜 GitHub API.
+ * date: null이면 리포트 커밋이 없는 main을 흉내 낸다.
+ */
 async function fakeGitHub(
   statuses: { context: string; state: string }[] | "http-500",
   fn: (apiUrl: string) => Promise<void>,
+  date: string | null = kstToday(),
 ): Promise<void> {
-  const today = kstToday();
   const server = http.createServer((req, res) => {
     const url = new URL(req.url ?? "/", "http://x");
     const send = (code: number, body: unknown) => {
@@ -31,9 +35,10 @@ async function fakeGitHub(
     };
     if (statuses === "http-500") return send(500, { message: "boom" });
     if (url.pathname === "/repos/o/r/commits") {
+      if (date === null) return send(200, [{ sha: "c0de", commit: { message: "Merge branch 'x'" } }]);
       return send(200, [
-        { sha: SHA, commit: { message: `Daily Market Report - ${today} (KST)` } },
-        { sha: SHA, commit: { message: `ETF Daily Report - ${today} (KST)` } },
+        { sha: SHA, commit: { message: `Daily Market Report - ${date} (KST)` } },
+        { sha: SHA, commit: { message: `ETF Daily Report - ${date} (KST)` } },
       ]);
     }
     if (url.pathname === `/repos/o/r/commits/${SHA}/status`) return send(200, { statuses });
@@ -131,4 +136,70 @@ test("resolve: dry_run은 조회 없이 skip, exit 0", async () => {
   const r = await runCli("delivery-state.ts", ["resolve", "market"], { ...resolveEnv("http://127.0.0.1:1"), DRY_RUN: "true" });
   assert.equal(r.code, 0, r.stdout + r.stderr);
   assert.match(r.output, /^action=skip$/m);
+});
+
+// ── check-delivery: 독립 도착 감시(감사 F06b). 날짜를 인자로 고정해 오늘 요일·휴일과 무관하게 검증 ──
+
+const BUSINESS_DAY = "2026-10-14"; // 수요일, 한국 영업일
+const UNREACHABLE = "http://127.0.0.1:1"; // 조회하면 바로 실패 — 휴장일엔 조회 자체를 안 해야 한다
+
+test("check-delivery: 영업일 + telegram status success → exit 0", async () => {
+  await fakeGitHub([{ context: "telegram/market", state: "success" }], async (api) => {
+    const r = await runCli("check-delivery.ts", ["market", BUSINESS_DAY], { GITHUB_API_URL: api });
+    assert.equal(r.code, 0, r.stdout + r.stderr);
+    assert.match(r.summary, /발송 완료/);
+  }, BUSINESS_DAY);
+});
+
+test("check-delivery: 휴장일(한글날·주말)은 조회 없이 exit 0", async () => {
+  for (const date of ["2026-10-09", "2026-10-17"]) {
+    const r = await runCli("check-delivery.ts", ["etf", date], { GITHUB_API_URL: UNREACHABLE });
+    assert.equal(r.code, 0, r.stdout + r.stderr);
+    assert.match(r.stdout, /휴장/);
+  }
+});
+
+test("check-delivery: 리포트 커밋은 있는데 status가 없으면 미발송 → exit 1 + 요약", async () => {
+  await fakeGitHub([{ context: "Vercel", state: "success" }], async (api) => {
+    const r = await runCli("check-delivery.ts", ["etf", BUSINESS_DAY], { GITHUB_API_URL: api });
+    assert.equal(r.code, 1, r.stdout + r.stderr);
+    assert.match(r.stdout, /::error title=리포트 도착 감시 \(etf\)::.*미발송/);
+    assert.match(r.summary, /미발송/);
+  }, BUSINESS_DAY);
+});
+
+test("check-delivery: pending(결과 불명) → exit 1", async () => {
+  await fakeGitHub([{ context: "telegram/market", state: "pending" }], async (api) => {
+    const r = await runCli("check-delivery.ts", ["market", BUSINESS_DAY], { GITHUB_API_URL: api });
+    assert.equal(r.code, 1, r.stdout + r.stderr);
+    assert.match(r.summary, /status=pending/);
+  }, BUSINESS_DAY);
+});
+
+test("check-delivery: 오늘 리포트 커밋이 없으면 리포트 없음 → exit 1", async () => {
+  await fakeGitHub([], async (api) => {
+    const r = await runCli("check-delivery.ts", ["market", BUSINESS_DAY], { GITHUB_API_URL: api });
+    assert.equal(r.code, 1, r.stdout + r.stderr);
+    assert.match(r.summary, /리포트 없음/);
+  }, null);
+});
+
+test("check-delivery: GitHub 조회 실패 → exit 1 (조회 실패)", async () => {
+  const r = await runCli("check-delivery.ts", ["market", BUSINESS_DAY], { GITHUB_API_URL: UNREACHABLE });
+  assert.equal(r.code, 1, r.stdout + r.stderr);
+  assert.match(r.summary, /조회 실패/);
+});
+
+test("check-delivery: 날짜 인자가 없으면 오늘(KST)을 본다", async () => {
+  await fakeGitHub([{ context: "telegram/etf", state: "success" }], async (api) => {
+    const r = await runCli("check-delivery.ts", ["etf"], { GITHUB_API_URL: api });
+    // 영업일이면 success로, 휴장이면 휴장으로 통과. 휴장 캘린더가 없는 해(연초 미갱신)만 실패가 맞다.
+    assert.equal(r.code, calendarFor(kstToday()).calendarCovered ? 0 : 1, r.stdout + r.stderr);
+    assert.match(r.stdout, new RegExp(`date=${kstToday()}`));
+  });
+});
+
+test("check-delivery: kind·날짜 인자 오류는 exit 1", async () => {
+  assert.equal((await runCli("check-delivery.ts", ["bond"], { GITHUB_API_URL: UNREACHABLE })).code, 1);
+  assert.equal((await runCli("check-delivery.ts", ["market", "2026/10/14"], { GITHUB_API_URL: UNREACHABLE })).code, 1);
 });
