@@ -197,11 +197,16 @@ function renderMarketPulse(
     }
   }
 
+  // C08 (2026-10-16): 추세선은 다섯 시점을 같은 간격으로 그린다 — 실제 시간 간격이 아니라는 점과
+  // 색 기준(1년 전 대비)을 밝혀 일간 등락 색과 혼동하지 않게 한다.
+  const sparkNote = sparkMap.size > 0
+    ? `\n        <p class="pulse-note">추세선: 1년 전·3개월 전·1개월 전·1주 전·현재 5개 시점 비교(시간 간격 비례 아님). 추세선 색은 1년 전 대비, 숫자는 전일 대비입니다.</p>`
+    : "";
   return `
     <section class="section">
         <h2 class="section-title">시장 체온</h2>
         <div class="market-grid">
-${cardsHtml}        </div>
+${cardsHtml}        </div>${sparkNote}
     </section>`;
 }
 

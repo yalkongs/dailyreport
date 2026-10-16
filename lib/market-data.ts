@@ -1,5 +1,6 @@
 import YahooFinance from "yahoo-finance2";
 import { koreanWeekday } from "./market-calendar";
+import { pickCloseOnOrBefore, weekStartKst } from "./historical-baseline";
 import type {
   MarketIndex,
   ForexData,
@@ -252,33 +253,31 @@ export async function collectHistoricalData(): Promise<HistoricalComparison[]> {
         current: currentQuote.price,
       };
 
-      // 1주, 1개월, 3개월, 1년 전 데이터
-      const periods: { key: keyof HistoricalComparison; daysAgo: number }[] = [
+      // 1주, 1개월, 3개월, 1년 전 데이터 — C05: 목표 시각 '이전' 마지막 종가와 그 날짜.
+      // (이전 구현은 목표일 이후 첫 값이라 휴일이 끼면 이번 주 월요일 종가가 '1주 전'이 됐다.)
+      const periods: { key: "oneWeekAgo" | "oneMonthAgo" | "threeMonthsAgo" | "oneYearAgo"; daysAgo: number }[] = [
         { key: "oneWeekAgo", daysAgo: 7 },
         { key: "oneMonthAgo", daysAgo: 30 },
         { key: "threeMonthsAgo", daysAgo: 90 },
         { key: "oneYearAgo", daysAgo: 365 },
       ];
+      const targets: { key: "oneWeekAgo" | "oneMonthAgo" | "threeMonthsAgo" | "oneYearAgo" | "weekToDateBase"; target: Date }[] = [
+        ...periods.map((p) => ({ key: p.key, target: new Date(now.getTime() - p.daysAgo * 86400000) })),
+        // 주간 누적 기준: 이번 주 월요일 00:00 KST 직전 마지막 종가(직전 주 마지막 거래일)
+        { key: "weekToDateBase", target: new Date(weekStartKst(now).getTime() - 1) },
+      ];
 
-      for (const period of periods) {
+      for (const t of targets) {
         try {
-          const pastDate = new Date(now);
-          pastDate.setDate(pastDate.getDate() - period.daysAgo);
-          const futureDate = new Date(pastDate);
-          futureDate.setDate(futureDate.getDate() + 5); // 주말/휴일 대비
-
           const history = await yahooFinance.chart(item.symbol, {
-            period1: pastDate,
-            period2: futureDate,
+            period1: new Date(t.target.getTime() - 10 * 86400000), // 연휴 대비 10일 창
+            period2: new Date(t.target.getTime() + 86400000),
             interval: "1d",
           });
-
-          const quotes = history.quotes;
-          if (quotes && quotes.length > 0) {
-            const close = quotes[0].close;
-            if (close != null) {
-              (comparison as unknown as Record<string, unknown>)[period.key] = +close.toFixed(2);
-            }
+          const picked = pickCloseOnOrBefore(history.quotes ?? [], t.target);
+          if (picked) {
+            comparison[t.key] = picked.close;
+            comparison[`${t.key}Date`] = picked.date;
           }
         } catch {
           // 개별 기간 실패는 무시

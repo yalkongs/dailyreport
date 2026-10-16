@@ -47,7 +47,7 @@ function generateSparkline(points: ChartPoint[], isUp: boolean): string {
   const color = isUp ? "#D32F2F" : "#1565C0";
   const uid = `sp${Math.random().toString(36).slice(2, 8)}`;
 
-  return `<svg width="72" height="28" viewBox="0 0 ${W} ${H}" style="display:block"><defs><linearGradient id="${uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.2"/><stop offset="100%" stop-color="${color}" stop-opacity="0.02"/></linearGradient></defs><path d="${areaPath}" fill="url(#${uid})"/><polyline points="${polyPoints}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${coords[coords.length - 1].x.toFixed(1)}" cy="${coords[coords.length - 1].y.toFixed(1)}" r="2" fill="${color}"/></svg>`;
+  return `<svg width="72" height="28" viewBox="0 0 ${W} ${H}" style="display:block"><title>1년 전·3개월 전·1개월 전·1주 전·현재 5개 시점(시간 간격 비례 아님)</title><defs><linearGradient id="${uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.2"/><stop offset="100%" stop-color="${color}" stop-opacity="0.02"/></linearGradient></defs><path d="${areaPath}" fill="url(#${uid})"/><polyline points="${polyPoints}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${coords[coords.length - 1].x.toFixed(1)}" cy="${coords[coords.length - 1].y.toFixed(1)}" r="2" fill="${color}"/></svg>`;
 }
 
 /**

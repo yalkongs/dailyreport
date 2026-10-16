@@ -235,6 +235,16 @@ export function findFxDirectionErrors(text: string): string[] {
   return errors
 }
 
+// C05 (2026-10-16 감사): ETF 입력의 등락률은 모두 1일 기준이다. "이번 주 KODEX 반도체 -11.94%"처럼
+// 하루 수익률을 주간 수익률로 쓰는 문장을 잡는다(부호 있는 %나 방향어가 붙은 %만 — 예상치 등은 제외).
+const WEEK_WORDS = /이번\s*주|금주|한\s*주\s*(?:간|동안)?|주간/
+const DIRECTIONAL_PERCENT = /[+\-−]\s?\d+(?:\.\d+)?%|\d+(?:\.\d+)?%\s*(?:대\s*)?(?:하락|상승|급락|급등|내려|올라|밀려|빠져|반등)/
+export function findWeeklyReturnClaims(text: string): string[] {
+  return splitSentences(text)
+    .filter(s => WEEK_WORDS.test(s) && DIRECTIONAL_PERCENT.test(s))
+    .map(s => (s.length > 80 ? `${s.slice(0, 80)}…` : s))
+}
+
 function duplicateSentences(text: string): string[] {
   // P1+보강 [M2] (2026-04-24): 중복 검출 하한 18자 → 14자.
   // Story Spine 1막과 간밤 시장 요약이 동일 문장을 반복 출력하는 사례 대응.
@@ -378,6 +388,12 @@ export function validateMorningReportQuality(
 
   // R1: Characters 카드-산문 정합 (data.quotes 로 배정 재계산).
   violations.push(...checkCharacterProseConsistency(report, data.quotes))
+
+  // C05: 하루 등락률을 주간 수익률로 쓴 문장.
+  const weekly = findWeeklyReturnClaims(text)
+  if (weekly.length > 0) {
+    violations.push(`주간 수익률 서술(입력은 1일 등락률뿐): ${weekly.slice(0, 2).join(' / ')}`)
+  }
 
   // C02: 환노출 환율 효과 방향 오류.
   const fxErrors = findFxDirectionErrors(text)

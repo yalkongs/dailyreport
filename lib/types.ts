@@ -171,6 +171,13 @@ export interface HistoricalComparison {
   oneMonthAgo?: number;
   threeMonthsAgo?: number;
   oneYearAgo?: number;
+  // C05 (2026-10-16): 각 기준값의 실제 종가 날짜(YYYY-MM-DD)와 주간 누적 기준(이번 주 월요일 이전 마지막 종가).
+  oneWeekAgoDate?: string;
+  oneMonthAgoDate?: string;
+  threeMonthsAgoDate?: string;
+  oneYearAgoDate?: string;
+  weekToDateBase?: number;
+  weekToDateBaseDate?: string;
 }
 
 export interface ContextError {

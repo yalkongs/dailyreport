@@ -342,6 +342,12 @@
 .calendar-table .stars { color: #F59E0B; }
 
 /* ===== FOOTER ===== */
+.pulse-note {
+  font-size: 11px;
+  color: var(--slate);
+  margin: 10px 0 0;
+  line-height: 1.5;
+}
 .report-footer {
   text-align: center;
   padding: 40px 0 32px;

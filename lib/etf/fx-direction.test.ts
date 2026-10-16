@@ -47,3 +47,14 @@ test('검증: 방향이 맞는 서술과 진입 수준 위험 서술은 통과�
   assert.deepEqual(findFxDirectionErrors('환율이 높은 지금 새로 담으면 이후 원화 강세 때 환산 손실을 볼 수 있습니다.'), [])
   assert.deepEqual(findFxDirectionErrors('원화 약세 구간에서 담은 몫은 원화가 강세로 돌아서면 환손실이 납니다.'), [])
 })
+
+// C05: 하루 등락률의 주간 수익률 둔갑
+import { findWeeklyReturnClaims } from './report-quality'
+test('검증: 하루 등락률을 이번 주 수익률로 쓰면 잡는다', () => {
+  assert.ok(findWeeklyReturnClaims('이번 주 국내 ETF 시장은 KODEX 반도체 (091160) -11.94%가 낙폭을 이끌었습니다.').length > 0)
+  assert.ok(findWeeklyReturnClaims('한 주간 TIGER 반도체TOP10은 8%대 하락했습니다.').length > 0)
+})
+test('검증: 주간 단어가 있어도 수익률 주장이 아니면 통과', () => {
+  assert.deepEqual(findWeeklyReturnClaims('이번 주 금요일 발표될 CPI 예상치는 3.1%입니다.'), [])
+  assert.deepEqual(findWeeklyReturnClaims('KODEX 반도체 (091160)는 전 거래일 -11.94% 하락했습니다.'), [])
+})

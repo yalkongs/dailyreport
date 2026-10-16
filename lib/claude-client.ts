@@ -5,6 +5,7 @@ import type {
   NarrativeLogEntry,
   SidewaysAnalysis,
   ContextData,
+  HistoricalComparison,
   ReportContent,
 } from "./types";
 import { renderReport } from "./report-renderer";
@@ -247,19 +248,30 @@ function buildContextBlock(context: ContextData | null, ctx?: AntiRepetitionCont
     }
   }
 
-  if (context.historicalComparison.length > 0) {
-    block += `\n### 과거 비교 데이터 (historicalComparison)\n`;
-    block += `⚠️ 과거 수치를 인용할 때는 반드시 이 데이터 또는 [정책금리] 블록만 사용하십시오.\n`;
-    for (const h of context.historicalComparison) {
-      const parts = [`현재: ${h.current}`];
-      if (h.oneWeekAgo != null) parts.push(`1주전: ${h.oneWeekAgo}`);
-      if (h.oneMonthAgo != null) parts.push(`1개월전: ${h.oneMonthAgo}`);
-      if (h.threeMonthsAgo != null) parts.push(`3개월전: ${h.threeMonthsAgo}`);
-      if (h.oneYearAgo != null) parts.push(`1년전: ${h.oneYearAgo}`);
-      block += `- ${h.nameKo}: ${parts.join(" / ")}\n`;
-    }
-  }
+  block += buildHistoricalBlock(context.historicalComparison);
 
+  return block;
+}
+
+// C05: 과거 비교 블록 — 기준값별 실제 종가 날짜와 주간 누적 기준을 함께 준다.
+export function buildHistoricalBlock(historical: HistoricalComparison[]): string {
+  if (historical.length === 0) return "";
+  let block = "";
+  block += `\n### 과거 비교 데이터 (historicalComparison)\n`;
+  block += `⚠️ 과거 수치를 인용할 때는 반드시 이 데이터 또는 [정책금리] 블록만 사용하십시오.\n`;
+  // C05: 기준값마다 실제 종가 날짜를 붙인다. '이번 주'(주간 누적)는 [주간 기준] 대비로만 쓰고,
+  // '1주전'(같은 요일 기준)과 섞지 않는다. 하루 등락을 주간 수익률로 부르지 않는다.
+  block += `⚠️ 괄호 안 날짜는 그 기준값의 실제 종가 날짜입니다. '이번 주·한 주간' 누적 등락은 [주간 기준] 대비로만 계산하고, '1주전'과 섞지 마십시오. 하루 등락률을 주간 수익률로 쓰지 마십시오.\n`;
+  const md = (d?: string) => (d ? `(${d.slice(5).replace("-", "/")} 종가)` : "");
+  for (const h of historical) {
+    const parts = [`현재: ${h.current}`];
+    if (h.weekToDateBase != null) parts.push(`주간 기준${md(h.weekToDateBaseDate)}: ${h.weekToDateBase}`);
+    if (h.oneWeekAgo != null) parts.push(`1주전${md(h.oneWeekAgoDate)}: ${h.oneWeekAgo}`);
+    if (h.oneMonthAgo != null) parts.push(`1개월전${md(h.oneMonthAgoDate)}: ${h.oneMonthAgo}`);
+    if (h.threeMonthsAgo != null) parts.push(`3개월전${md(h.threeMonthsAgoDate)}: ${h.threeMonthsAgo}`);
+    if (h.oneYearAgo != null) parts.push(`1년전${md(h.oneYearAgoDate)}: ${h.oneYearAgo}`);
+    block += `- ${h.nameKo}: ${parts.join(" / ")}\n`;
+  }
   return block;
 }
 
