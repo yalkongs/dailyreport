@@ -60,6 +60,44 @@ for (const job of ["market", "etf"] as const) {
 }
 
 
+// 감사 F05: market·etf·주간 매크로 갱신은 concurrency 그룹이 달라 같은 main에 동시에 push한다.
+// rebase 실패를 `|| true`로 삼키고 push를 한 번만 하던 구조를 제한 재시도로 바꿨다.
+const macroYml = fs.readFileSync(path.join(__dirname, "..", ".github", "workflows", "refresh-kr-macro.yml"), "utf8");
+
+/** 블록에서 `- name: <prefix>…` step 텍스트(다음 step 직전까지). */
+function stepBlock(block: string, namePrefix: string): string {
+  const start = block.indexOf(`- name: ${namePrefix}`);
+  assert.ok(start >= 0, `step '${namePrefix}' 없음`);
+  const next = block.indexOf("\n      - name: ", start + 1);
+  return next < 0 ? block.slice(start) : block.slice(start, next);
+}
+
+const pushSteps: [string, string][] = [
+  ["market", stepBlock(jobBlock("market"), "Commit and push report")],
+  ["etf", stepBlock(jobBlock("etf"), "Commit and push ETF report")],
+  ["refresh-kr-macro", stepBlock(macroYml, "Commit and push")],
+];
+for (const [label, step] of pushSteps) {
+  test(`${label}: main push는 rebase 실패를 삼키지 않고 제한 재시도한다`, () => {
+    assert.doesNotMatch(step, /git pull --rebase[^\n]*\|\| true/);
+    assert.match(step, /for attempt in 1 2 3 4 5; do/);
+    assert.match(step, /if git pull --rebase origin \S+ && git push; then/);
+    assert.match(step, /git rebase --abort 2>\/dev\/null \|\| true/);
+    assert.match(step, /sleep \$\(\(attempt \* 5\)\)/);
+    assert.match(step, /::error::main 반영 5회 실패/);
+    assert.match(step, /\n\s+exit 1\n/);
+    // rebase는 commit 뒤 — 앞에 오면 더러운 트리로 매번 거부된다(기존 인시던트 주석).
+    assert.ok(step.indexOf("git commit") < step.indexOf("git pull --rebase"), "rebase가 commit보다 앞에 있음");
+  });
+}
+
+test("market·etf push는 main으로 rebase한다 (checkout ref: main과 일치)", () => {
+  assert.match(pushSteps[0][1], /git pull --rebase origin main && git push/);
+  assert.match(pushSteps[1][1], /git pull --rebase origin main && git push/);
+  assert.match(pushSteps[0][1], /rebase는 반드시 commit \*\*뒤\*\*에 온다/);
+  assert.match(pushSteps[1][1], /commit \*\*뒤\*\*에 와야 한다/);
+});
+
 test("ETF 파이프라인 step에도 FORCE_REGENERATE가 전달된다", () => {
   assert.match(jobBlock("etf"), /FORCE_REGENERATE: \$\{\{ inputs\.force_regenerate == true && 'true' \|\| 'false' \}\}/);
 });

@@ -149,3 +149,143 @@ for (const job of ["market", "etf"] as const) {
     });
   }
 }
+
+// ── F05: main push 경합은 제한 재시도로 흡수하고, 진짜 충돌은 실패로 드러낸다 ─────────────
+
+const macroYml = fs.readFileSync(path.join(WF_DIR, "refresh-kr-macro.yml"), "utf8");
+const REAL_GIT = spawnSync("sh", ["-c", "command -v git"], { encoding: "utf8" }).stdout.trim();
+const GIT_ENV = {
+  GIT_CONFIG_NOSYSTEM: "1",
+  GIT_AUTHOR_NAME: "test",
+  GIT_AUTHOR_EMAIL: "test@example.com",
+  GIT_COMMITTER_NAME: "test",
+  GIT_COMMITTER_EMAIL: "test@example.com",
+};
+
+function gitEnv(home: string): NodeJS.ProcessEnv {
+  return { ...GIT_ENV, HOME: home, PATH: process.env.PATH ?? "", NODE_ENV: "test" };
+}
+
+function git(cwd: string, ...args: string[]): string {
+  const r = spawnSync(REAL_GIT, args, { cwd, encoding: "utf8", env: gitEnv(cwd) });
+  assert.equal(r.status, 0, `git ${args.join(" ")}: ${r.stderr}`);
+  return r.stdout;
+}
+
+function write(file: string, content: string): void {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, content);
+}
+
+/**
+ * 원격(bare)·이 job의 checkout(work)·다른 job의 clone(other)을 만든다.
+ * other에서 `otherFile`을 고쳐 커밋해 두고, race.sh가 실행되면 그 커밋을 먼저 push한다.
+ */
+function pushFixture(work: string, mine: Record<string, string>, otherFile: string): void {
+  const root = path.dirname(work);
+  const remote = path.join(root, "remote.git");
+  const seed = path.join(root, "seed");
+  const other = path.join(root, "other");
+  git(root, "init", "-q", "--bare", "-b", "main", remote);
+  git(root, "init", "-q", "-b", "main", seed);
+  for (const f of ["public/reports/.keep", "public/etf-reports/.keep"]) write(path.join(seed, f), "");
+  for (const f of ["data/reports-index.json", "data/etf-reports-index.json", "data/kr-macro-calendar.json"]) {
+    write(path.join(seed, f), "base\n");
+  }
+  git(seed, "add", ".");
+  git(seed, "commit", "-q", "-m", "seed");
+  git(seed, "remote", "add", "origin", remote);
+  git(seed, "push", "-q", "origin", "main");
+  git(root, "clone", "-q", remote, work);
+  git(root, "clone", "-q", remote, other);
+  for (const [f, c] of Object.entries(mine)) write(path.join(work, f), c);
+  write(path.join(other, otherFile), "other job\n");
+  git(other, "commit", "-q", "-am", "other job commit");
+  write(path.join(root, "race.sh"), `cd "${other}" && "${REAL_GIT}" push -q origin main\n`);
+}
+
+// 첫 push 직전에 다른 job이 먼저 push한다(race.sh) → 실제 git push는 non-fast-forward로 거부된다.
+const GIT_RACE_STUB = `if [ "$1" = "push" ] && [ "$(grep -c '^push' "$STUB_DIR/git.calls")" = 1 ]; then
+  bash "$STUB_DIR/race.sh"
+fi
+exec "${REAL_GIT}" "$@"`;
+
+function remoteLog(dir: string): string[] {
+  return git(dir, "--git-dir", path.join(dir, "remote.git"), "log", "--format=%s", "main").split("\n").filter(Boolean);
+}
+
+interface PushCase {
+  label: string;
+  script: string;
+  mine: Record<string, string>;
+  subject: string;
+  otherFile: string;
+  conflictFile: string;
+}
+
+const pushCases: PushCase[] = [
+  {
+    label: "market",
+    script: stepRun(jobBlock(dailyYml, "market"), "Commit and push report"),
+    mine: { "public/reports/2026-10-16.html": "<html>m</html>\n", "data/reports-index.json": "market\n" },
+    subject: "Daily Market Report - 2026-10-16 (KST)",
+    otherFile: "data/etf-reports-index.json",
+    conflictFile: "data/reports-index.json",
+  },
+  {
+    label: "etf",
+    script: stepRun(jobBlock(dailyYml, "etf"), "Commit and push ETF report"),
+    mine: { "public/etf-reports/2026-10-16.html": "<html>e</html>\n", "data/etf-reports-index.json": "etf\n" },
+    subject: "ETF Daily Report - 2026-10-16 (KST)",
+    otherFile: "data/reports-index.json",
+    conflictFile: "data/etf-reports-index.json",
+  },
+  {
+    label: "refresh-kr-macro",
+    script: stepRun(macroYml.slice(macroYml.indexOf("\n  refresh:\n")), "Commit and push"),
+    mine: { "data/kr-macro-calendar.json": "macro\n" },
+    subject: "Refresh KR macro calendar — ",
+    otherFile: "data/reports-index.json",
+    conflictFile: "data/kr-macro-calendar.json",
+  },
+];
+
+for (const c of pushCases) {
+  // 워크플로 표현식은 Actions가 실행 전에 치환한다 — 테스트에서도 같은 값으로 바꿔 넣는다.
+  const script = c.script.replace(/\$\{\{ steps\.[a-z]+\.outputs\.date \}\}/g, "2026-10-16");
+  const env = { ...GIT_ENV, GITHUB_REF_NAME: "main" };
+
+  test(`${c.label} push: 워크플로 표현식이 모두 치환됐다`, () => {
+    assert.doesNotMatch(script, /\$\{\{/);
+  });
+
+  for (const flags of SHELL_MODES) {
+    const mode = flags.join(" ");
+
+    test(`${c.label} push [bash ${mode}]: 다른 job이 먼저 push해 거부돼도 rebase 후 재시도로 반영된다`, () => {
+      const r = runStep(script, { git: GIT_RACE_STUB, sleep: "exit 0" }, env, flags, (w) => pushFixture(w, c.mine, c.otherFile));
+      assert.equal(r.status, 0, r.out);
+      assert.equal(r.calls("git").filter((l) => l.startsWith("push")).length, 2, r.out);
+      const log = remoteLog(r.dir);
+      assert.equal(log.length, 3, log.join(" | "));
+      assert.ok(log[0].startsWith(c.subject), `맨 위가 이 job 커밋이 아님: ${log.join(" | ")}`);
+      assert.equal(log[1], "other job commit");
+    });
+
+    test(`${c.label} push [bash ${mode}]: 같은 파일 충돌은 rebase를 abort하며 5회 시도 후 exit 1`, () => {
+      const r = runStep(script, { git: GIT_RACE_STUB, sleep: "exit 0" }, env, flags, (w) => {
+        pushFixture(w, c.mine, c.conflictFile);
+        // 이 job이 rebase하기 전에 다른 job이 같은 파일을 이미 push — 매 시도 rebase 충돌.
+        const race = path.join(path.dirname(w), "race.sh");
+        const pre = spawnSync("sh", [race], { encoding: "utf8", env: gitEnv(w) });
+        assert.equal(pre.status, 0, pre.stderr);
+        fs.writeFileSync(race, "true\n");
+      });
+      assert.equal(r.status, 1, r.out);
+      assert.match(r.out, /::error::main 반영 5회 실패/);
+      assert.equal(r.calls("git").filter((l) => l.startsWith("pull --rebase")).length, 5, r.out);
+      assert.equal(r.calls("git").filter((l) => l === "rebase --abort").length, 5, r.out);
+      assert.deepEqual(remoteLog(r.dir), ["other job commit", "seed"]);
+    });
+  }
+}
