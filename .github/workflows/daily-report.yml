@@ -142,8 +142,27 @@ jobs:
           # 더러워 매번 "cannot pull with rebase: You have unstaged changes"(exit 128)로
           # 거부되고 `|| true`가 이를 삼킨다 — 이 스텝의 발동 조건(changed=='true')이
           # 더러운 트리를 보장하므로 구조적으로 실행 불가능해진다.
-          git pull --rebase origin main || true
-          git push
+          # 공유 main push 경합 재시도(감사 F05): market·etf·주간 매크로 갱신은 concurrency 그룹이
+          # 달라 같은 main에 동시에 push할 수 있다(needs는 별도 dispatch 사이를 막지 못한다).
+          # rebase 실패를 `|| true`로 삼키지 않는다 — 진행 중 rebase를 abort하고 짧게 쉰 뒤
+          # pull --rebase·push를 최대 5회 다시 시도하고, 끝내 실패하면 job을 실패시킨다.
+          # (같은 파일을 서로 고친 진짜 충돌이면 5회 모두 실패해 ::error::로 드러난다.)
+          PUSHED=""
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push; then
+              PUSHED=1
+              break
+            fi
+            git rebase --abort 2>/dev/null || true
+            if [ "$attempt" -lt 5 ]; then
+              echo "::warning::pull --rebase/push 실패 — 재시도 ${attempt}/5"
+              sleep $((attempt * 5))
+            fi
+          done
+          if [ -z "$PUSHED" ]; then
+            echo "::error::main 반영 5회 실패(rebase 충돌 또는 push 거부) — 리포트 커밋이 push되지 않았습니다"
+            exit 1
+          fi
 
       - name: Resolve delivery (보낼지 판정 — 발송 상태는 리포트 커밋의 commit status)
         id: delivery
@@ -169,8 +188,11 @@ jobs:
           for i in $(seq 1 60); do
             # 2>&1: API 실패를 STATE로 받아 로그에 노출(과거엔 pending으로 삼켜 403을
             # 느린 빌드로 오인했음). success/failure/error/pending 외 값은 비정상 응답.
+            # `|| true`: Actions 셸은 `bash -e`라 gh가 실패(503 등)하면 대입문에서 step이 즉시
+            # 끝나 아래 재시도가 한 번도 돌지 않았다(감사 F04). 오류 출력은 STATE에 그대로 남아
+            # `*)` 분기에서 로그에 찍히고 재시도한다.
             STATE=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/status" \
-              --jq '[.statuses[] | select(.context == "Vercel")] | (first.state // "pending")' 2>&1)
+              --jq '[.statuses[] | select(.context == "Vercel")] | (first.state // "pending")' 2>&1) || true
             echo "  [${i}/60] Vercel: ${STATE}"
             case "${STATE}" in
               success) echo "✅ Vercel 배포 완료 — 텔레그램 발송 진행"; exit 0 ;;
@@ -227,6 +249,28 @@ jobs:
           # (헤드라인 데이터는 정규화된 평문 "S&P" 이므로 caption용으로 HTML escape 필요).
           HEADLINE_HTML=$(printf '%s' "$HEADLINE" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
           MESSAGE=$(printf '<b>iM AI Market Report</b>\n\n<b>%s</b>\n\n%s\n\n<a href="%s">리포트 보기</a>' "$HEADLINE_HTML" "$FORMATTED_DATE" "$REPORT_URL")
+
+          # 발송 전 공개 자산 확인(감사 F03) — Vercel success는 배포가 끝났다는 뜻일 뿐, 이 날짜의
+          # 프리뷰 PNG가 실제로 올라갔다는 보장이 아니다(PNG 생성이 실패한 채 커밋돼도 배포는 success).
+          # 텔레그램이 가져갈 바로 그 URL(위 OG_IMAGE_URL·REPORT_URL — 재발송이면 ?v= 포함)을 GET한다.
+          # 프리뷰는 200 + image/png 여야 한다: 없는 PNG는 /reports/[date] 동적 라우트가 200 text/html로
+          # 받으므로 content-type 검사가 핵심이다. 본문은 200만 본다(마켓은 없는 날짜도 200 — 감사 F13 —
+          # 이라 보조 검사). CDN 전파를 고려해 10초 간격 6회. 실패하면 pending 기록도 발송도 하지 않고
+          # 중단한다 — status가 비어 있으므로 자산을 복구한 뒤 다음 실행이 발송한다.
+          ASSETS_OK=""
+          for i in 1 2 3 4 5 6; do
+            PNG_CHECK=$(curl -sS -o /dev/null --max-time 10 -w '%{http_code} %{content_type}' "$OG_IMAGE_URL") || true
+            PAGE_CHECK=$(curl -sS -o /dev/null --max-time 10 -w '%{http_code} %{content_type}' "$REPORT_URL") || true
+            echo "  [${i}/6] 프리뷰 PNG: ${PNG_CHECK} · 본문: ${PAGE_CHECK}"
+            case "$PNG_CHECK" in
+              "200 image/png"*) case "$PAGE_CHECK" in "200 "*) ASSETS_OK=1; break ;; esac ;;
+            esac
+            if [ "$i" -lt 6 ]; then sleep 10; fi
+          done
+          if [ -z "$ASSETS_OK" ]; then
+            echo "::error::공개 자산 확인 실패 — 프리뷰 ${OG_IMAGE_URL} → '${PNG_CHECK}'(200 image/png 필요), 본문 ${REPORT_URL} → '${PAGE_CHECK}'(200 필요). 깨진 카드 방지 위해 발송하지 않았습니다(status 미기록 — 자산 복구 후 다음 실행이 발송)."
+            exit 1
+          fi
 
           # --form-string: value는 리터럴로 처리 (caption이 '<'로 시작하면
           # -F는 "파일에서 읽기"로 오해해 exit 26 낸다. 이모지 제거로 노출됨)
@@ -343,8 +387,23 @@ jobs:
           # ⚠️ commit **뒤**에 와야 한다. git add 앞에 있던 2026-04-18~2026-08-09
           # 배치에서는 더러운 트리 때문에 매번 exit 128로 거부되고 `|| true`가
           # 삼켜, 16주간 한 번도 실행되지 않았다.
-          git pull --rebase origin main || true
-          git push
+          # 공유 main push 경합 재시도(감사 F05) — market job의 같은 step 주석 참조.
+          PUSHED=""
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push; then
+              PUSHED=1
+              break
+            fi
+            git rebase --abort 2>/dev/null || true
+            if [ "$attempt" -lt 5 ]; then
+              echo "::warning::pull --rebase/push 실패 — 재시도 ${attempt}/5"
+              sleep $((attempt * 5))
+            fi
+          done
+          if [ -z "$PUSHED" ]; then
+            echo "::error::main 반영 5회 실패(rebase 충돌 또는 push 거부) — ETF 리포트 커밋이 push되지 않았습니다"
+            exit 1
+          fi
 
       - name: Resolve delivery (보낼지 판정 — 발송 상태는 리포트 커밋의 commit status)
         id: delivery
@@ -370,8 +429,11 @@ jobs:
           for i in $(seq 1 60); do
             # 2>&1: API 실패를 STATE로 받아 로그에 노출(과거엔 pending으로 삼켜 403을
             # 느린 빌드로 오인했음). success/failure/error/pending 외 값은 비정상 응답.
+            # `|| true`: Actions 셸은 `bash -e`라 gh가 실패(503 등)하면 대입문에서 step이 즉시
+            # 끝나 아래 재시도가 한 번도 돌지 않았다(감사 F04). 오류 출력은 STATE에 그대로 남아
+            # `*)` 분기에서 로그에 찍히고 재시도한다.
             STATE=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/status" \
-              --jq '[.statuses[] | select(.context == "Vercel")] | (first.state // "pending")' 2>&1)
+              --jq '[.statuses[] | select(.context == "Vercel")] | (first.state // "pending")' 2>&1) || true
             echo "  [${i}/60] Vercel: ${STATE}"
             case "${STATE}" in
               success) echo "✅ Vercel 배포 완료 — 텔레그램 발송 진행"; exit 0 ;;
@@ -440,6 +502,24 @@ jobs:
             OG_IMAGE_URL="https://dailyreport-eta.vercel.app/etf-reports/${REPORT_DATE}-preview.png?v=${GITHUB_RUN_ID}"
           else
             OG_IMAGE_URL="https://dailyreport-eta.vercel.app/etf-reports/${REPORT_DATE}-preview.png"
+          fi
+
+          # 발송 전 공개 자산 확인(감사 F03) — market job의 같은 블록 주석 참조. 텔레그램이 가져갈
+          # 바로 그 URL(위 OG_IMAGE_URL·REPORT_URL)을 GET해 프리뷰 200 + image/png, 본문 200을
+          # 확인한다. 실패하면 pending 기록도 발송도 하지 않고 중단한다(다음 실행이 복구 후 발송).
+          ASSETS_OK=""
+          for i in 1 2 3 4 5 6; do
+            PNG_CHECK=$(curl -sS -o /dev/null --max-time 10 -w '%{http_code} %{content_type}' "$OG_IMAGE_URL") || true
+            PAGE_CHECK=$(curl -sS -o /dev/null --max-time 10 -w '%{http_code} %{content_type}' "$REPORT_URL") || true
+            echo "  [${i}/6] 프리뷰 PNG: ${PNG_CHECK} · 본문: ${PAGE_CHECK}"
+            case "$PNG_CHECK" in
+              "200 image/png"*) case "$PAGE_CHECK" in "200 "*) ASSETS_OK=1; break ;; esac ;;
+            esac
+            if [ "$i" -lt 6 ]; then sleep 10; fi
+          done
+          if [ -z "$ASSETS_OK" ]; then
+            echo "::error::공개 자산 확인 실패 — 프리뷰 ${OG_IMAGE_URL} → '${PNG_CHECK}'(200 image/png 필요), 본문 ${REPORT_URL} → '${PAGE_CHECK}'(200 필요). 깨진 카드 방지 위해 발송하지 않았습니다(status 미기록 — 자산 복구 후 다음 실행이 발송)."
+            exit 1
           fi
 
           # 발송 직전에 pending을 먼저 기록한다 — 발송 뒤 결과 기록에 실패해도 다음 실행이

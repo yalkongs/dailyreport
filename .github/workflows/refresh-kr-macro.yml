@@ -66,4 +66,23 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/kr-macro-calendar.json
           git commit -m "Refresh KR macro calendar — $(date -u +%Y-%m-%d) (weekly auto)"
-          git push
+          # 공유 main push 경합 재시도(감사 F05): 일일 market·etf job도 같은 저장소에 push한다.
+          # rebase는 commit 뒤에 온다(앞에 두면 더러운 트리로 매번 거부 — daily-report.yml 주석 참조).
+          # checkout이 ref를 고정하지 않으므로 실행 브랜치(schedule은 main)로 rebase·push한다.
+          # rebase 실패를 삼키지 않고 abort 후 최대 5회 재시도, 끝내 실패하면 job을 실패시킨다.
+          PUSHED=""
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin "${GITHUB_REF_NAME}" && git push; then
+              PUSHED=1
+              break
+            fi
+            git rebase --abort 2>/dev/null || true
+            if [ "$attempt" -lt 5 ]; then
+              echo "::warning::pull --rebase/push 실패 — 재시도 ${attempt}/5"
+              sleep $((attempt * 5))
+            fi
+          done
+          if [ -z "$PUSHED" ]; then
+            echo "::error::main 반영 5회 실패(rebase 충돌 또는 push 거부) — 매크로 캘린더 커밋이 push되지 않았습니다"
+            exit 1
+          fi

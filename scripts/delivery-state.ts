@@ -39,7 +39,7 @@ async function gh<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await res.json()) as T;
 }
 
-function kstToday(): string {
+export function kstToday(): string {
   return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
 }
 
@@ -54,9 +54,18 @@ function setOutput(values: Record<string, string>): void {
   for (const l of lines) console.log(`  output ${l}`);
 }
 
-async function readTelegramStatus(k: ReportKind, sha: string): Promise<TelegramStatus> {
+// 아래 두 조회는 scripts/check-delivery.ts(독립 도착 감시)도 그대로 쓴다 — 같은 커밋·같은 context.
+export async function readTelegramStatus(k: ReportKind, sha: string): Promise<TelegramStatus> {
   const combined = await gh<{ statuses: { context: string; state: string }[] }>(`/commits/${sha}/status`);
   return pickTelegramStatus(combined.statuses ?? [], k);
+}
+
+/** main에서 그 날짜(KST)의 리포트 커밋을 찾는다. 없으면 null, 조회 실패는 throw. */
+export async function findReportSha(k: ReportKind, date: string): Promise<string | null> {
+  const commits = await gh<{ sha: string; commit: { message: string } }[]>(
+    `/commits?sha=main&since=${encodeURIComponent(kstDayStartIso(date))}&per_page=100`,
+  );
+  return findReportCommit(commits.map((c) => ({ sha: c.sha, message: c.commit.message })), k, date);
 }
 
 function readIndexEntry(k: ReportKind, date: string): { headline: string; anomalyCount: number; breakdown: string } {
@@ -91,10 +100,7 @@ async function resolve(k: ReportKind): Promise<void> {
       // 이 실행이 방금 push한 리포트 커밋. rebase 뒤의 최종 SHA.
       reportSha = execSync("git rev-parse HEAD").toString().trim();
     } else if (!dryRun) {
-      const commits = await gh<{ sha: string; commit: { message: string } }[]>(
-        `/commits?sha=main&since=${encodeURIComponent(kstDayStartIso(date))}&per_page=100`,
-      );
-      reportSha = findReportCommit(commits.map((c) => ({ sha: c.sha, message: c.commit.message })), k, date);
+      reportSha = await findReportSha(k, date);
     }
     if (reportSha) telegramStatus = await readTelegramStatus(k, reportSha);
   } catch (e) {
@@ -111,7 +117,7 @@ async function resolve(k: ReportKind): Promise<void> {
   console.log(`Resolve delivery: kind=${k} date=${date} sha=${reportSha ?? "-"} status=${telegramStatus ?? "none"} action=${decision.action} — ${decision.reason}`);
   if (decision.action === "unknown") {
     const msg = `${k} 리포트(${date}) 발송 결과 불명 — 자동 재발송하지 않았습니다. ${decision.reason}. 구독자 채널을 확인한 뒤 필요하면 workflow_dispatch(resend_telegram_only=true, only=${k})로 수동 재발송하십시오.`;
-    console.log(`::warning title=Telegram 발송 결과 불명::${msg}`);
+    console.log(`::error title=Telegram 발송 결과 불명::${msg}`);
     if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### ⚠️ ${msg}\n`);
   }
 
@@ -126,6 +132,11 @@ async function resolve(k: ReportKind): Promise<void> {
     resend: changed ? "false" : "true",
     ...(k === "etf" ? { anomaly_count: String(entry.anomalyCount), anomaly_breakdown: entry.breakdown } : {}),
   });
+
+  // 결과 불명은 자동 재발송하지 않지만(중복 방지), 녹색으로 끝나면 아무도 모른다(감사 F06).
+  // 출력·요약을 다 쓴 뒤 비정상 종료해 job을 실패시킨다 — GitHub가 소유자에게 실패 메일을 보낸다.
+  // 이후 배포 대기·발송 step은 실패로 건너뛰고, action=='send' 조건도 그대로 이중 방어한다.
+  if (decision.action === "unknown") process.exitCode = 1;
 }
 
 async function status(k: ReportKind, sha: string): Promise<void> {
@@ -182,7 +193,10 @@ async function main(): Promise<void> {
   throw new Error("usage: delivery-state.ts resolve|status|mark|classify …");
 }
 
-main().catch((e) => {
-  console.error(`[delivery-state] ${(e as Error).message}`);
-  process.exit(1);
-});
+// 직접 실행할 때만 CLI로 동작한다 — check-delivery.ts·테스트가 import해도 main()이 돌지 않게.
+if (require.main === module) {
+  main().catch((e) => {
+    console.error(`[delivery-state] ${(e as Error).message}`);
+    process.exit(1);
+  });
+}
