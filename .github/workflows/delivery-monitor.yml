@@ -1,0 +1,57 @@
+name: Delivery Monitor
+# 독립 도착 감시(감사 F06) — 영업일 아침 리포트가 구독자에게 실제로 발송(telegram/<kind>=success)됐는지
+# 확인한다. 생성 workflow(daily-report.yml)가 아예 돌지 않은 날(트리거 누락 — job 실패 메일조차 없음)과
+# 돌았지만 미발송으로 끝난 날을 모두 잡는다. 이 job이 실패하면 GitHub가 저장소 소유자에게 메일을 보낸다.
+# 한국 휴장일은 통과(파이프라인 silent skip과 같은 기준). 판정은 scripts/check-delivery.ts.
+# 읽기 전용 — 발송·재발송·status 기록을 하지 않는다(중복 발송 방지 정책은 daily-report.yml 쪽 그대로).
+#
+# 트리거:
+#   - 정시 감시: 맥미니 launchd(ops/macmini/monitor.sh)가 07:45(market)·09:00(etf) KST에 dispatch.
+#   - schedule: 늦은 백업. GitHub schedule은 만성 지연(관측상 수 시간)이라 정시 보장이 아니다 —
+#     맥미니가 죽은 날에도 그날 안에는 경보가 나게 하는 용도.
+
+on:
+  schedule:
+    # KST 07:45 월~금 = UTC 22:45 일~목 → market
+    # KST 09:00 월~금 = UTC 00:00 월~금 → etf
+    # ⚠️ 아래 KIND 식이 cron 문자열로 종류를 고른다 — 바꾸면 두 곳을 함께 바꿀 것.
+    - cron: '45 22 * * 0-4'
+    - cron: '0 0 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: '감시 대상 (market | etf)'
+        required: true
+        type: choice
+        options: [market, etf]
+        default: market
+
+env:
+  TZ: Asia/Seoul
+
+permissions:
+  contents: read   # main 커밋 목록 조회(오늘 리포트 커밋 찾기)
+  statuses: read   # telegram/<kind> commit status 조회
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check delivery (영업일인데 발송 success가 아니면 실패)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KIND: ${{ github.event_name == 'schedule' && (github.event.schedule == '45 22 * * 0-4' && 'market' || 'etf') || inputs.kind }}
+        run: npx tsx scripts/check-delivery.ts "$KIND"

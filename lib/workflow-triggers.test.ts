@@ -150,3 +150,52 @@ test("ETF job은 dispatch only=both·only=market에서 돌지 않는다", () => 
   assert.equal(evalCond("workflow_dispatch", "etf"), true);
   assert.equal(evalCond("schedule", ""), true);
 });
+
+// ── delivery-monitor.yml: 독립 도착 감시(감사 F06c) ─────────────────────────────────────
+const monitorPath = path.join(__dirname, "..", ".github", "workflows", "delivery-monitor.yml");
+const monitorYml = fs.existsSync(monitorPath) ? fs.readFileSync(monitorPath, "utf8") : "";
+
+/** UTC cron 'M H * * a-b'를 KST 시각·요일(0=일)로 바꾼다. */
+function cronToKst(cron: string): { hhmm: string; weekdays: number[] } {
+  const m = cron.match(/^(\d+) (\d+) \* \* (\d)-(\d)$/);
+  assert.ok(m, `지원하지 않는 cron: ${cron}`);
+  const [min, hour, from, to] = m.slice(1).map(Number);
+  const kstHour = hour + 9;
+  const shift = kstHour >= 24 ? 1 : 0;
+  const days: number[] = [];
+  for (let d = from; d <= to; d++) days.push((d + shift) % 7);
+  return { hhmm: `${String(kstHour % 24).padStart(2, "0")}:${String(min).padStart(2, "0")}`, weekdays: days };
+}
+
+function monitorKind(event: string, schedule: string, kind: string): string {
+  const expr = monitorYml.match(/KIND: \$\{\{ (.*) \}\}/)![1];
+  return new Function("github", "inputs", `return ${expr}`)({ event_name: event, event: { schedule } }, { kind });
+}
+
+test("delivery-monitor: 수동 실행(kind)과 schedule 백업(KST 07:45 market·09:00 etf, 월~금)", () => {
+  assert.ok(monitorYml, "delivery-monitor.yml 없음");
+  assert.match(monitorYml, /workflow_dispatch:\n    inputs:\n      kind:/);
+  assert.match(monitorYml, /options: \[market, etf\]/);
+  const crons = [...monitorYml.matchAll(/- cron: '([^']+)'/g)].map((x) => x[1]);
+  assert.equal(crons.length, 2);
+  const byKind = Object.fromEntries(crons.map((c) => [monitorKind("schedule", c, ""), cronToKst(c)]));
+  // 어느 cron이 발화했는지로 종류를 고른다 — cron 문자열 오타면 엉뚱한 종류를 감시한다.
+  assert.deepEqual(byKind, {
+    market: { hhmm: "07:45", weekdays: [1, 2, 3, 4, 5] },
+    etf: { hhmm: "09:00", weekdays: [1, 2, 3, 4, 5] },
+  });
+});
+
+test("delivery-monitor: dispatch는 입력 kind를 그대로 쓴다", () => {
+  assert.equal(monitorKind("workflow_dispatch", "", "market"), "market");
+  assert.equal(monitorKind("workflow_dispatch", "", "etf"), "etf");
+});
+
+test("delivery-monitor: 읽기 전용 최소 권한, check-delivery를 env로 받은 KIND로 실행", () => {
+  assert.match(monitorYml, /\npermissions:\n  contents: read[^\n]*\n  statuses: read[^\n]*\n/);
+  assert.doesNotMatch(monitorYml, /: write/);
+  assert.match(monitorYml, /GH_TOKEN: \$\{\{ secrets\.GITHUB_TOKEN \}\}/);
+  assert.match(monitorYml, /run: npx tsx scripts\/check-delivery\.ts "\$KIND"/);
+  assert.doesNotMatch(monitorYml, /TELEGRAM|ANTHROPIC/);
+  assert.match(monitorYml, /node-version: '20'/);
+});
