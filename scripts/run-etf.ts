@@ -133,6 +133,7 @@ async function main() {
   if (news.status === 'rejected') failedSources.push('news')
   // C01: 지수 실측이 없으면 프롬프트가 지수 등락 수치를 쓰지 못하게 한다.
   if (indices.status === 'rejected' || indices.value.length === 0) failedSources.push('indices')
+  console.log(`  지수 실측 ${indices.status === 'fulfilled' ? indices.value.length : 0}건 · 미국 지표 일정 ${usEvents.status === 'fulfilled' ? usEvents.value.length : 0}건`)
   const krQuotes = quotes.filter(q => q.market === 'KR')
   if (krQuotes.length > 0 && krQuotes.every(q => q.nav === null)) failedSources.push('krx-nav')
 
