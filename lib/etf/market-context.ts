@@ -102,12 +102,44 @@ export function sessionDate(epochLike: unknown, timeZone: string): string | null
   return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d)
 }
 
+// 오늘(KST) 이전 마지막 두 종가로 직전 거래일 등락을 만든다. ETF 리포트의 '전 거래일'은 KRX 전일 데이터다.
+export function previousSessionFromCloses(
+  quotes: ReadonlyArray<{ date: Date; close: number | null | undefined }>,
+  todayKst: string,
+): { price: number; changePercent: number; asOf: string } | null {
+  const past = quotes
+    .filter(q => q.close != null && Number.isFinite(q.close) && (sessionDate(q.date, 'Asia/Seoul') ?? '') < todayKst)
+    .sort((a, b) => a.date.getTime() - b.date.getTime())
+  if (past.length < 2) return null
+  const [prev, last] = past.slice(-2)
+  return {
+    price: last.close as number,
+    changePercent: ((last.close as number) / (prev.close as number) - 1) * 100,
+    asOf: sessionDate(last.date, 'Asia/Seoul') as string,
+  }
+}
+
+// 국내 지수가 오늘 세션 값이면(장중·장 마감 뒤 수동 재실행) 직전 거래일 값으로 바꾼다 — 아침 정시 실행은
+// 개장 전이라 원래 직전 거래일 값이다.
+async function alignKrIndexToPreviousSession(q: IndexQuote): Promise<IndexQuote> {
+  const todayKst = sessionDate(new Date(), 'Asia/Seoul') as string
+  if (!/^\^K[SQ]/.test(q.symbol) || q.asOf !== todayKst) return q
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const history: any = await yahooFinance.chart(q.symbol, { period1: new Date(Date.now() - 12 * 86400000), interval: '1d' })
+    const prev = previousSessionFromCloses(history?.quotes ?? [], todayKst)
+    return prev ? { ...q, ...prev } : { ...q, price: null, changePercent: null }
+  } catch {
+    return { ...q, price: null, changePercent: null }
+  }
+}
+
 export async function collectIndexQuotes(): Promise<IndexQuote[]> {
   const results = await Promise.allSettled(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     INDEX_SYMBOLS.map(i => yahooFinance.quote(i.symbol, {}, { validateResult: false }) as Promise<any>),
   )
-  return INDEX_SYMBOLS.map((i, idx) => {
+  const raw: IndexQuote[] = INDEX_SYMBOLS.map((i, idx) => {
     const r = results[idx]
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const q: any = r.status === 'fulfilled' ? r.value : null
@@ -115,7 +147,9 @@ export async function collectIndexQuotes(): Promise<IndexQuote[]> {
     const changePercent = typeof q?.regularMarketChangePercent === 'number' && Number.isFinite(q.regularMarketChangePercent)
       ? q.regularMarketChangePercent : null
     return { symbol: i.symbol, nameKo: i.nameKo, price, changePercent, asOf: sessionDate(q?.regularMarketTime, /^\^K[SQ]/.test(i.symbol) ? 'Asia/Seoul' : 'America/New_York') }
-  }).filter(q => q.price !== null && q.changePercent !== null)
+  })
+  const aligned = await Promise.all(raw.map(alignKrIndexToPreviousSession))
+  return aligned.filter(q => q.price !== null && q.changePercent !== null)
 }
 
 // F09 (2026-10-16 감사): 거시 수집기는 개별 오류를 null로 바꿔 fulfilled를 반환하므로, 바깥의
