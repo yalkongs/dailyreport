@@ -250,6 +250,28 @@ jobs:
           HEADLINE_HTML=$(printf '%s' "$HEADLINE" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
           MESSAGE=$(printf '<b>iM AI Market Report</b>\n\n<b>%s</b>\n\n%s\n\n<a href="%s">리포트 보기</a>' "$HEADLINE_HTML" "$FORMATTED_DATE" "$REPORT_URL")
 
+          # 발송 전 공개 자산 확인(감사 F03) — Vercel success는 배포가 끝났다는 뜻일 뿐, 이 날짜의
+          # 프리뷰 PNG가 실제로 올라갔다는 보장이 아니다(PNG 생성이 실패한 채 커밋돼도 배포는 success).
+          # 텔레그램이 가져갈 바로 그 URL(위 OG_IMAGE_URL·REPORT_URL — 재발송이면 ?v= 포함)을 GET한다.
+          # 프리뷰는 200 + image/png 여야 한다: 없는 PNG는 /reports/[date] 동적 라우트가 200 text/html로
+          # 받으므로 content-type 검사가 핵심이다. 본문은 200만 본다(마켓은 없는 날짜도 200 — 감사 F13 —
+          # 이라 보조 검사). CDN 전파를 고려해 10초 간격 6회. 실패하면 pending 기록도 발송도 하지 않고
+          # 중단한다 — status가 비어 있으므로 자산을 복구한 뒤 다음 실행이 발송한다.
+          ASSETS_OK=""
+          for i in 1 2 3 4 5 6; do
+            PNG_CHECK=$(curl -sS -o /dev/null --max-time 10 -w '%{http_code} %{content_type}' "$OG_IMAGE_URL") || true
+            PAGE_CHECK=$(curl -sS -o /dev/null --max-time 10 -w '%{http_code} %{content_type}' "$REPORT_URL") || true
+            echo "  [${i}/6] 프리뷰 PNG: ${PNG_CHECK} · 본문: ${PAGE_CHECK}"
+            case "$PNG_CHECK" in
+              "200 image/png"*) case "$PAGE_CHECK" in "200 "*) ASSETS_OK=1; break ;; esac ;;
+            esac
+            if [ "$i" -lt 6 ]; then sleep 10; fi
+          done
+          if [ -z "$ASSETS_OK" ]; then
+            echo "::error::공개 자산 확인 실패 — 프리뷰 ${OG_IMAGE_URL} → '${PNG_CHECK}'(200 image/png 필요), 본문 ${REPORT_URL} → '${PAGE_CHECK}'(200 필요). 깨진 카드 방지 위해 발송하지 않았습니다(status 미기록 — 자산 복구 후 다음 실행이 발송)."
+            exit 1
+          fi
+
           # --form-string: value는 리터럴로 처리 (caption이 '<'로 시작하면
           # -F는 "파일에서 읽기"로 오해해 exit 26 낸다. 이모지 제거로 노출됨)
           # 발송 직전에 pending을 먼저 기록한다 — 발송 뒤 결과 기록에 실패해도 다음 실행이
@@ -480,6 +502,24 @@ jobs:
             OG_IMAGE_URL="https://dailyreport-eta.vercel.app/etf-reports/${REPORT_DATE}-preview.png?v=${GITHUB_RUN_ID}"
           else
             OG_IMAGE_URL="https://dailyreport-eta.vercel.app/etf-reports/${REPORT_DATE}-preview.png"
+          fi
+
+          # 발송 전 공개 자산 확인(감사 F03) — market job의 같은 블록 주석 참조. 텔레그램이 가져갈
+          # 바로 그 URL(위 OG_IMAGE_URL·REPORT_URL)을 GET해 프리뷰 200 + image/png, 본문 200을
+          # 확인한다. 실패하면 pending 기록도 발송도 하지 않고 중단한다(다음 실행이 복구 후 발송).
+          ASSETS_OK=""
+          for i in 1 2 3 4 5 6; do
+            PNG_CHECK=$(curl -sS -o /dev/null --max-time 10 -w '%{http_code} %{content_type}' "$OG_IMAGE_URL") || true
+            PAGE_CHECK=$(curl -sS -o /dev/null --max-time 10 -w '%{http_code} %{content_type}' "$REPORT_URL") || true
+            echo "  [${i}/6] 프리뷰 PNG: ${PNG_CHECK} · 본문: ${PAGE_CHECK}"
+            case "$PNG_CHECK" in
+              "200 image/png"*) case "$PAGE_CHECK" in "200 "*) ASSETS_OK=1; break ;; esac ;;
+            esac
+            if [ "$i" -lt 6 ]; then sleep 10; fi
+          done
+          if [ -z "$ASSETS_OK" ]; then
+            echo "::error::공개 자산 확인 실패 — 프리뷰 ${OG_IMAGE_URL} → '${PNG_CHECK}'(200 image/png 필요), 본문 ${REPORT_URL} → '${PAGE_CHECK}'(200 필요). 깨진 카드 방지 위해 발송하지 않았습니다(status 미기록 — 자산 복구 후 다음 실행이 발송)."
+            exit 1
           fi
 
           # 발송 직전에 pending을 먼저 기록한다 — 발송 뒤 결과 기록에 실패해도 다음 실행이

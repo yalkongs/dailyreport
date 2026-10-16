@@ -289,3 +289,98 @@ for (const c of pushCases) {
     });
   }
 }
+
+// ── F03: 발송 전 공개 자산(프리뷰 PNG·본문) 확인 — 실패하면 pending 기록도 발송도 하지 않는다 ──────
+
+// 가짜 curl: 텔레그램 호출은 ok:true, 자산 조회는 `-w '%{http_code} %{content_type}'` 형식으로 응답.
+// IMG_RESP/PAGE_RESP로 응답을 바꾸고, IMG_RESP_FIRST는 첫 프리뷰 조회에만 적용(CDN 전파 지연).
+const CURL_STUB = `url=""
+for a in "$@"; do case "$a" in http*) url="$a" ;; esac; done
+case "$url" in
+  *api.telegram.org*) echo '{"ok":true,"result":{"message_id":1}}'; exit 0 ;;
+  *-preview.png*)
+    resp="\${IMG_RESP:-200 image/png}"
+    if [ -n "\${IMG_RESP_FIRST:-}" ] && [ "$(grep -c 'preview.png' "$STUB_DIR/curl.calls")" = 1 ]; then resp="$IMG_RESP_FIRST"; fi ;;
+  *) resp="\${PAGE_RESP:-200 text/html; charset=utf-8}" ;;
+esac
+printf '%s' "$resp"`;
+// 가짜 npx(delivery-state CLI): classify는 success, status는 none, mark는 기록만.
+const NPX_STUB = `case "$*" in
+  *" classify"*) cat > /dev/null; echo success; echo ok:true ;;
+  *" status "*) echo none ;;
+esac`;
+
+const sendCases = [
+  { job: "market", step: "Send Telegram notification", path: "reports" },
+  { job: "etf", step: "Send ETF Telegram notification", path: "etf-reports" },
+] as const;
+
+for (const c of sendCases) {
+  const script = stepRun(jobBlock(dailyYml, c.job), c.step);
+  const base = `https://dailyreport-eta.vercel.app/${c.path}/2026-10-16`;
+  const env = {
+    GH_TOKEN: "x",
+    TELEGRAM_BOT_TOKEN: "tok",
+    TELEGRAM_CHAT_ID: "chat",
+    REPORT_DATE: "2026-10-16",
+    REPORT_SHA: FAKE_SHA,
+    HEADLINE: "S&P 500 <상승>",
+    IS_RESEND: "false",
+    FORCE_RESEND: "false",
+    ANOMALY_COUNT: "0",
+    ANOMALY_BREAKDOWN: "",
+  };
+  const stubs = { curl: CURL_STUB, npx: NPX_STUB, sleep: "exit 0" };
+  const telegramCalls = (r: ShellResult) => r.calls("curl").filter((l) => l.includes("api.telegram.org"));
+  const markCalls = (r: ShellResult) => r.calls("npx").filter((l) => l.includes(" mark "));
+  const pngChecks = (r: ShellResult) =>
+    r.calls("curl").filter((l) => l.includes("-preview.png") && !l.includes("api.telegram.org"));
+
+  for (const flags of SHELL_MODES) {
+    const mode = flags.join(" ");
+
+    test(`${c.job} 발송 [bash ${mode}]: 자산이 정상이면 확인 → pending → 발송 → success 기록`, () => {
+      const r = runStep(script, stubs, env, flags);
+      assert.equal(r.status, 0, r.out);
+      const curls = r.calls("curl");
+      assert.ok(curls.some((l) => l.endsWith(` ${base}-preview.png`)), curls.join("\n"));
+      assert.ok(curls.some((l) => l.endsWith(` ${base}`)), curls.join("\n"));
+      assert.equal(telegramCalls(r).length, 1);
+      assert.ok(curls.findIndex((l) => l.includes("api.telegram.org")) > curls.findIndex((l) => l.includes("-preview.png")));
+      assert.equal(markCalls(r).length, 2, r.calls("npx").join("\n"));
+      assert.match(markCalls(r)[0], new RegExp(`mark ${c.job} ${FAKE_SHA} pending`));
+      assert.match(markCalls(r)[1], new RegExp(`mark ${c.job} ${FAKE_SHA} success`));
+    });
+
+    test(`${c.job} 발송 [bash ${mode}]: 첫 PNG 조회가 404여도 재확인해 통과하면 발송 (CDN 전파)`, () => {
+      const r = runStep(script, stubs, { ...env, IMG_RESP_FIRST: "404 text/plain" }, flags);
+      assert.equal(r.status, 0, r.out);
+      assert.equal(pngChecks(r).length, 2);
+      assert.equal(telegramCalls(r).length, 1);
+    });
+
+    for (const [why, extra] of [
+      ["PNG 404", { IMG_RESP: "404 text/plain" }],
+      ["PNG 자리에 HTML(동적 라우트 fallback)", { IMG_RESP: "200 text/html; charset=utf-8" }],
+      ["curl 연결 실패", { IMG_RESP: "000 " }],
+      ["본문 404", { PAGE_RESP: "404 text/html" }],
+    ] as const) {
+      test(`${c.job} 발송 [bash ${mode}]: ${why}면 pending 기록·발송 없이 exit 1`, () => {
+        const r = runStep(script, stubs, { ...env, ...extra }, flags);
+        assert.equal(r.status, 1, r.out);
+        assert.match(r.out, /::error::공개 자산 확인 실패/);
+        assert.equal(pngChecks(r).length, 6, r.out);
+        assert.equal(telegramCalls(r).length, 0);
+        assert.equal(markCalls(r).length, 0);
+      });
+    }
+
+    test(`${c.job} 발송 [bash ${mode}]: 재발송은 cache-bust URL(?v=run id)을 확인하고 같은 URL로 보낸다`, () => {
+      const r = runStep(script, stubs, { ...env, IS_RESEND: "true", FORCE_RESEND: "true" }, flags);
+      assert.equal(r.status, 0, r.out);
+      const png = `${base}-preview.png?v=123`;
+      assert.ok(r.calls("curl").some((l) => l.endsWith(` ${png}`)), r.calls("curl").join("\n"));
+      assert.ok(telegramCalls(r)[0].includes(`photo=${png}`), telegramCalls(r)[0]);
+    });
+  }
+}

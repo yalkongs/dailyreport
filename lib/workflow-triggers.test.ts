@@ -91,6 +91,27 @@ for (const [label, step] of pushSteps) {
   });
 }
 
+// 감사 F03: Vercel success만으로는 이 날짜의 PNG가 실제로 올라갔는지 모른다. 발송 step이
+// 텔레그램에 넘길 바로 그 URL을 발송(pending 기록) 전에 확인한다.
+for (const [job, sendStep] of [["market", "Send Telegram notification"], ["etf", "Send ETF Telegram notification"]] as const) {
+  test(`${job}: 발송 전에 텔레그램이 가져갈 프리뷰 PNG·본문 URL을 실제로 확인한다`, () => {
+    const s = stepBlock(jobBlock(job), sendStep);
+    const ogDef = s.lastIndexOf('OG_IMAGE_URL="https://dailyreport-eta.vercel.app/');
+    const check = s.indexOf(`-w '%{http_code} %{content_type}' "$OG_IMAGE_URL"`);
+    const pageCheck = s.indexOf(`-w '%{http_code} %{content_type}' "$REPORT_URL"`);
+    const pending = s.indexOf(`delivery-state.ts mark ${job} "$REPORT_SHA" pending`);
+    const telegram = s.indexOf("api.telegram.org");
+    assert.ok(ogDef >= 0 && check >= 0 && pageCheck >= 0 && pending >= 0 && telegram >= 0);
+    assert.ok(ogDef < check, "자산 확인이 OG_IMAGE_URL 정의보다 앞");
+    assert.ok(check < pending && pageCheck < pending, "자산 확인이 pending 기록보다 뒤");
+    assert.ok(pending < telegram);
+    assert.match(s, /"200 image\/png"\*\)/);
+    assert.match(s, /::error::공개 자산 확인 실패/);
+    // 텔레그램에 넘기는 사진 URL도 같은 변수 — 확인한 URL과 보내는 URL이 갈라지지 않게.
+    assert.match(s, /--form-string "photo=\$\{OG_IMAGE_URL\}"/);
+  });
+}
+
 test("market·etf push는 main으로 rebase한다 (checkout ref: main과 일치)", () => {
   assert.match(pushSteps[0][1], /git pull --rebase origin main && git push/);
   assert.match(pushSteps[1][1], /git pull --rebase origin main && git push/);
