@@ -128,8 +128,12 @@ export function buildMacroBlock(macro: import('./types').MacroContext, failedSou
   const warn = failedSources?.includes('macro')
     ? '⚠️ 거시 데이터 수집 실패 — 아래 수치는 신뢰할 수 없습니다(직전 영업일 기준으로도 보지 마십시오).\n'
     : ''
+  // C02: 환율은 수준과 변화 방향을 함께 준다(방향 없이 수준만 주면 '원화 약세=손실' 오서술이 났다).
+  const fxChange = typeof macro.usdKrwChangePercent === 'number' && macro.usdKrw !== null
+    ? ` (전일 대비 ${macro.usdKrwChangePercent >= 0 ? '+' : ''}${macro.usdKrwChangePercent.toFixed(2)}% · ${macro.usdKrwChangePercent >= 0 ? '원화 약세' : '원화 강세'})`
+    : ''
   return `[거시 지표]
-${warn}USD/KRW: ${formatPromptNumber(macro.usdKrw, 0)}
+${warn}USD/KRW: ${formatPromptNumber(macro.usdKrw, 0)}${fxChange}
 VIX: ${formatPromptNumber(macro.vix, 2)}
 MOVE: ${formatPromptNumber(macro.moveIndex, 2)}
 공포탐욕: ${formatPromptNumber(macro.fearGreed, 0)}
@@ -346,6 +350,7 @@ ${data.recentHeadlines.map(h => `- ${h}`).join('\n')}
 - overnightBrief.narrative는 간밤 해외시장 사실과 거시지표만 씁니다.
 - overnightBrief.krImpact는 해외 ETF·환율·KRX 국내 ETF가 국내 개장에 미치는 연결만 씁니다.
 - usEtfHighlights.sectorNarrative는 섹터 흐름만 씁니다. 환율·괴리율·자금흐름 설명을 반복하지 마십시오.
+- **환율 효과 방향**: 원/달러가 오르면(원화 약세) 환노출 해외 ETF의 원화 환산 성과에 플러스, 내리면(원화 강세) 마이너스입니다. "원화 약세가 수익을 깎는다·상쇄한다"는 틀린 서술입니다. 오늘의 환산 효과는 [거시 지표]의 USD/KRW 전일 대비 방향으로 쓰고, 높은 환율에서 새로 담을 때의 반전 위험은 별도 문장으로 씁니다. 이름에 (H)가 붙은 환헤지 상품은 환율 영향이 작습니다.
 
 [cover.headline 작성 규칙]
 

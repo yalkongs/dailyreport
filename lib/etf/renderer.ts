@@ -841,7 +841,7 @@ function renderStoryOpening(report: MorningReport, data: CollectedData): string 
   // Tier 2: Claude storySpine 우선, 없으면 Tier 1 하드코딩 fallback
   const spine = report.narrativeNotes?.storySpine
   const act1Note = spine?.act1?.trim() || `${primaryName}의 거래대금이 함께 따라와야 이 신호가 실제로 움직이는 흐름이 됩니다.`
-  const act2Note = spine?.act2?.trim() || `${gateName}는 기초지수가 오른 폭과 환율이 깎아내는 폭을 나눠 보는 게 중요합니다.`
+  const act2Note = spine?.act2?.trim() || `${gateName}는 기초지수 등락과 원/달러 환율 변화를 나눠 봐야 원화 기준 성과가 보입니다.`
   const act3Note = spine?.act3?.trim() || '당장의 가격 움직임보다 거래대금과 NAV 괴리가 말해주는 이야기를 먼저 읽어봅니다.'
 
   return `<div class="story-card">
@@ -1025,7 +1025,7 @@ function checklistActionText(index: number): string {
 
 function checklistAvoidText(index: number): string {
   if (index === 0) return '미국 ETF가 강하다고 국내 ETF를 장 시작 직후 따라잡는 건 위험합니다.'
-  if (index === 1) return '환율 부담이 큰 구간에서는, 환노출 해외 ETF를 단번에 늘리지 않는 게 좋습니다.'
+  if (index === 1) return '환율이 높은 구간에서 환노출 해외 ETF를 단번에 늘리면, 이후 원화 강세 때 환산 손실을 크게 입을 수 있습니다.'
   return '레버리지·인버스는 장기 보유 후보가 아닙니다. 오늘 하루 안에 끝낼 전술형으로만 다룹니다.'
 }
 
@@ -1045,7 +1045,7 @@ function quoteLabel(q: EtfQuote | undefined, fallback: string): string {
 function renderGlobalKrMatching(data: CollectedData): string {
   const pairs = [
     { theme: '미국 S&P 500', global: ['SPY', 'VOO'], kr: ['360750.KS'], check: '환율 방향과 S&P 500 선물이 같은 편을 들어주는지가 오늘의 관전 포인트입니다.' },
-    { theme: '미국 나스닥 100', global: ['QQQ'], kr: ['133690.KS'], check: '성장주 강세가 원화 약세의 부담을 이겨낼 만큼인지 가늠해 봅니다.' },
+    { theme: '미국 나스닥 100', global: ['QQQ'], kr: ['133690.KS'], check: '나스닥 등락과 원/달러 환율 변화가 원화 기준 성과에 각각 얼마나 기여했는지 나눠 봅니다.' },
     { theme: '반도체', global: ['SOXX'], kr: ['091160.KS', '396500.KS', '471760.KS'], check: '미국 반도체 흐름이 국내 거래대금 증가로 실제 이어지는지가 열쇠입니다.' },
     { theme: '장기 미국채', global: ['TLT', 'IEF'], kr: ['458250.KS', '305080.KS'], check: '미국 10년 금리와 TLT가 같은 방향을 가리키는지 봐야 판단이 깔끔합니다.' },
   ]
@@ -1172,7 +1172,7 @@ function renderIssueEtfs(data: CollectedData): string {
   const issues = [
     { title: '반도체·AI', reason: '미국 반도체 흐름이 국내 반도체 ETF 거래대금으로 이어지는지가 오늘의 관전 포인트입니다.', tickers: ['SOXX', '091160.KS', '396500.KS'] },
     { title: '장기채·금리', reason: '미국 10년 금리의 움직임이 장기채 ETF 가격에 어떻게 새겨지는지 읽어냅니다.', tickers: ['TLT', 'IEF', '458250.KS'] },
-    { title: '환노출 미국주식', reason: 'S&P500·나스닥이 오른 폭과 원/달러 환율이 깎아낸 폭을 따로 떼어 계산해 봅니다.', tickers: ['360750.KS', '133690.KS'] },
+    { title: '환노출 미국주식', reason: 'S&P500·나스닥 등락과 원/달러 환율 변화를 따로 떼어, 원화 기준 성과가 어디서 왔는지 계산해 봅니다.', tickers: ['360750.KS', '133690.KS'] },
     { title: '레버리지·인버스', reason: 'NAV와 괴리 상태를 먼저 확인한 뒤에야 장 초반 진입을 고민할 수 있는 상품군입니다.', tickers: ['122630.KS', '252670.KS'] },
     { title: '금·원자재', reason: '지정학 변수와 달러 방향이 원자재 ETF에 같은 신호를 보내는지 맞춰 봅니다.', tickers: ['GLD', 'SLV', 'USO', '132030.KS'] },
   ]

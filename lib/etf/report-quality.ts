@@ -220,6 +220,21 @@ function splitSentences(text: string): string[] {
     .filter(Boolean)
 }
 
+// C02 (2026-10-16 감사): 원/달러 상승(원화 약세)은 환노출 해외 ETF의 원화 환산 성과에 플러스다.
+// "원화 약세 → 환율 손실이 수익을 상쇄" 같은 반대 방향 서술을 잡는다. 같은 문장에 원화 강세·반전이
+// 함께 나오면(높은 환율에서 진입한 뒤 원화가 강해질 위험) 정상 서술이므로 통과시킨다.
+const FX_LOSS_WORDS = /환율\s*손실|환손실|환차손|환산\s*손실|깎|상쇄/
+const FX_REVERSAL_WORDS = /원화\s*강세|강세로|반전|되돌|돌아서/
+export function findFxDirectionErrors(text: string): string[] {
+  const errors: string[] = []
+  for (const sentence of splitSentences(text)) {
+    const wrong = /환율이?\s*깎/.test(sentence) ||
+      (/원화\s*약세/.test(sentence) && FX_LOSS_WORDS.test(sentence) && !FX_REVERSAL_WORDS.test(sentence))
+    if (wrong) errors.push(sentence.length > 80 ? `${sentence.slice(0, 80)}…` : sentence)
+  }
+  return errors
+}
+
 function duplicateSentences(text: string): string[] {
   // P1+보강 [M2] (2026-04-24): 중복 검출 하한 18자 → 14자.
   // Story Spine 1막과 간밤 시장 요약이 동일 문장을 반복 출력하는 사례 대응.
@@ -363,6 +378,12 @@ export function validateMorningReportQuality(
 
   // R1: Characters 카드-산문 정합 (data.quotes 로 배정 재계산).
   violations.push(...checkCharacterProseConsistency(report, data.quotes))
+
+  // C02: 환노출 환율 효과 방향 오류.
+  const fxErrors = findFxDirectionErrors(text)
+  if (fxErrors.length > 0) {
+    violations.push(`환율 방향 오류(원화 약세는 환노출 원화 환산에 플러스): ${fxErrors.slice(0, 2).join(' / ')}`)
+  }
 
   const adviceMatches = findMatches(text, INVESTMENT_ADVICE_PATTERNS)
   if (adviceMatches.length > 0) {

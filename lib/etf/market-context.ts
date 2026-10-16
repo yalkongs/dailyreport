@@ -4,7 +4,7 @@ const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] })
 import type { MacroContext } from './types'
 import { fetchJson } from './fetcher'
 
-const MACRO_TICKERS: Record<keyof Omit<MacroContext, 'fearGreed' | 'moveIndex'>, string> = {
+const MACRO_TICKERS: Record<keyof Omit<MacroContext, 'fearGreed' | 'moveIndex' | 'usdKrwChangePercent'>, string> = {
   usdKrw: 'KRW=X',
   dxy: 'DX-Y.NYB',
   vix: '^VIX',
@@ -14,7 +14,7 @@ const MACRO_TICKERS: Record<keyof Omit<MacroContext, 'fearGreed' | 'moveIndex'>,
 }
 
 export async function collectMacroContext(): Promise<MacroContext> {
-  const tickerEntries = Object.entries(MACRO_TICKERS) as [keyof Omit<MacroContext, 'fearGreed' | 'moveIndex'>, string][]
+  const tickerEntries = Object.entries(MACRO_TICKERS) as [keyof Omit<MacroContext, 'fearGreed' | 'moveIndex' | 'usdKrwChangePercent'>, string][]
   const tickers = tickerEntries.map(([, t]) => t)
 
   const [quoteResults, fearGreedResult, moveResult] = await Promise.allSettled([
@@ -32,12 +32,20 @@ export async function collectMacroContext(): Promise<MacroContext> {
     return r?.status === 'fulfilled' ? ((r.value as any)?.regularMarketPrice ?? null) : null
   }
 
+  const getChangePercent = (index: number): number | null => {
+    const r = quoteValues[index]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const v = r?.status === 'fulfilled' ? (r.value as any)?.regularMarketChangePercent : null
+    return typeof v === 'number' && Number.isFinite(v) ? v : null
+  }
+
   // GC=F (Gold Futures) is quoted in USD/troy oz — no unit conversion needed
   // GC=F continuous contract may show spot price; verify against GLD NAV if discrepancy persists
   const gold = getValue(5)
 
   return {
     usdKrw: getValue(0),
+    usdKrwChangePercent: getChangePercent(0),
     dxy: getValue(1),
     vix: getValue(2),
     us10y: getValue(3),

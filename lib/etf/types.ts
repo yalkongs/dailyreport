@@ -57,6 +57,8 @@ export interface InvestorFlow {
 // 거시 컨텍스트
 export interface MacroContext {
   usdKrw: number | null
+  // C02 (2026-10-16): 원/달러 전일 대비 변화율. +는 원화 약세(환노출 해외 ETF 원화 환산에 플러스).
+  usdKrwChangePercent?: number | null
   dxy: number | null
   vix: number | null
   moveIndex: number | null
