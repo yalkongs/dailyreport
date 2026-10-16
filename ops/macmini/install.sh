@@ -1,12 +1,14 @@
 #!/bin/bash
-# 맥미니 아침 트리거(launchd) 설치/제거.
+# 맥미니 아침 트리거·도착 감시(launchd) 설치/제거.
 #   ops/macmini/install.sh            설치(재설치 포함)
 #   ops/macmini/install.sh uninstall  제거
+# market·etf = 리포트 생성 dispatch(dispatch.sh), monitor.* = 도착 감시 dispatch(monitor.sh, 07:45·09:00).
 set -eu
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 AGENTS="$HOME/Library/LaunchAgents"
-LABELS=(com.yalkongs.dailyreport.market com.yalkongs.dailyreport.etf)
+LABELS=(com.yalkongs.dailyreport.market com.yalkongs.dailyreport.etf
+        com.yalkongs.dailyreport.monitor.market com.yalkongs.dailyreport.monitor.etf)
 DOMAIN="gui/$(id -u)"
 
 for label in "${LABELS[@]}"; do
