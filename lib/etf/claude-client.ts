@@ -136,7 +136,7 @@ export function buildMacroBlock(macro: import('./types').MacroContext, failedSou
 ${warn}USD/KRW: ${formatPromptNumber(macro.usdKrw, 0)}${fxChange}
 VIX: ${formatPromptNumber(macro.vix, 2)}
 MOVE: ${formatPromptNumber(macro.moveIndex, 2)}
-공포탐욕: ${formatPromptNumber(macro.fearGreed, 0)}
+코인 공포탐욕: ${formatPromptNumber(macro.fearGreed, 0)} (alternative.me 암호화폐 심리 지표 — 주식 심리 지표 아님)
 US 10Y: ${formatPromptNumber(macro.us10y, 2)}%
 WTI: ${formatPromptNumber(macro.wti, 1)}
 Gold: ${formatPromptNumber(macro.gold, 0)}`

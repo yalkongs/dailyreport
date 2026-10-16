@@ -568,7 +568,7 @@ function formatMacro(macro: MacroContext): string {
   ${renderMacroItem('US 10Y', macro.us10y ? `${macro.us10y.toFixed(2)}%` : '-')}
   ${renderMacroItem('WTI', formatNumber(macro.wti, 1))}
   ${renderMacroItem('Gold', formatNumber(macro.gold, 0))}
-  ${renderMacroItem('Fear&Greed', formatNumber(macro.fearGreed, 0))}
+  ${renderMacroItem('코인 공포탐욕', formatNumber(macro.fearGreed, 0))}
 </div>`
 }
 
@@ -1120,15 +1120,18 @@ function renderGlobalKoreaBridge(data: CollectedData): string {
 }
 
 function renderMarketHeatmap(data: CollectedData): string {
+  // C08 (2026-10-16 감사): 평균이 의미를 지우지 않게 묶는다. 미국·국내는 거래 세션이 달라 한 타일에서
+  // 평균내지 않고, 레버리지·인버스는 반대 노출이 상쇄되므로 평균 타일을 두지 않는다(전술 경고 보드에
+  // 각각 표시). 국내 평균은 전술형을 뺀 1배 ETF만.
   const groups = [
     { name: '미국 대표지수', meta: 'SPY·QQQ·IWM', tickers: ['SPY', 'QQQ', 'IWM'] },
-    { name: '반도체·AI', meta: 'SOXX·국내 반도체', tickers: ['SOXX', '091160.KS', '396500.KS'] },
-    { name: '한국 ETF', meta: '수집 국내 ETF 평균', tickers: data.quotes.filter(q => q.market === 'KR').map(q => q.ticker).slice(0, 80) },
+    { name: '미국 반도체', meta: 'SOXX', tickers: ['SOXX'] },
+    { name: '국내 반도체', meta: 'KODEX 반도체·TIGER 반도체TOP10·TIGER AI반도체핵심공정', tickers: ['091160.KS', '396500.KS', '471760.KS'] },
+    { name: '국내 1배 ETF', meta: '수집 국내 ETF 평균(레버리지·인버스 제외)', tickers: data.quotes.filter(q => q.market === 'KR' && !isTacticalEtf(q)).map(q => q.ticker).slice(0, 80) },
     { name: '환노출 해외', meta: '국내 상장 미국 ETF', tickers: ['360750.KS', '133690.KS'] },
     { name: '채권', meta: 'TLT·IEF·BND', tickers: ['TLT', 'IEF', 'BND'] },
     { name: '금·원자재', meta: 'GLD·USO·DBC', tickers: ['GLD', 'USO', 'DBC'] },
-    { name: '에너지', meta: 'XLE·원유', tickers: ['XLE', '261220.KS'] },
-    { name: '레버리지/인버스', meta: '국내 전술형', tickers: ['122630.KS', '252670.KS'] },
+    { name: '미국 에너지', meta: 'XLE', tickers: ['XLE'] },
   ]
 
   const cells = groups
@@ -1154,7 +1157,7 @@ function renderMarketHeatmap(data: CollectedData): string {
   <div class="section-title">ETF Market Heatmap</div>
   <div class="heatmap-grid">${cells}</div>
   <div class="legend"><span>1D 기준</span><span>-3% 이하</span><span>-1~-3%</span><span>-1~+1%</span><span>+1~+3%</span><span>+3% 이상</span></div>
-  <p class="heat-sub">모든 수치는 1D 기준입니다. 표본 수 2개 이하는 시장 대표값이 아니라 참고값입니다. 5D 흐름은 12개월 시계열 수집 후 표시합니다.</p>
+  <p class="heat-sub">모든 수치는 1D 기준입니다. 미국 타일은 간밤 미국 장, 국내 타일은 직전 한국 장 기준이며 서로 섞어 평균내지 않습니다. 표본 수 2개 이하는 시장 대표값이 아니라 참고값입니다. 5D 흐름은 12개월 시계열 수집 후 표시합니다.</p>
 </div>`
 }
 
