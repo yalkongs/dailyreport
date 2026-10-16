@@ -115,6 +115,7 @@ export interface SidewaysAnalysis {
 export interface NewsHeadline {
   title: string;
   source: string;
+  url?: string; // C09 (2026-10-16): 기사 원문 링크(http/https만)
   category: "global" | "korea" | "economy" | "semiconductor";
   pubDate?: string;
   // Phase 1.5 (2026-05-21): 발행 경과 시간(시간 단위). 신선도 정렬·표시용.

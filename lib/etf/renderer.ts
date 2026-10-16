@@ -820,10 +820,10 @@ function renderTodayChecklist(report: MorningReport, quotes: EtfQuote[]): string
 function renderBigPicture(report: MorningReport, data: CollectedData): string {
   const text = report.narrativeNotes?.bigPicture?.trim()
   if (!text) return ''
-  const angleLabel = data.narrativeAngle ? `서사 앵글: ${data.narrativeAngle.replace(/_/g, ' ')}` : '오늘의 큰 그림'
+  // C09: '서사 앵글·분석 렌즈'는 생성 내부 용어라 독자에게 노출하지 않는다.
   return `<div class="section big-picture">
   <div class="section-title">Big Picture</div>
-  <div class="big-picture-meta">${e(angleLabel)} · 분석 렌즈: ${e(data.analysisLens)}</div>
+  <div class="big-picture-meta">오늘의 큰 그림</div>
   <div class="big-picture-body">${renderReportText(text, data.quotes)}</div>
 </div>`
 }
@@ -1401,13 +1401,14 @@ function formatKstDateTime(value: string): string {
 function renderNewsSources(data: CollectedData): string {
   const usedNews = selectRelevantNews(data)
   if (usedNews.length === 0) return ''
+  // C09: 입력으로 받은 뉴스 중 키워드로 고른 일부다 — '전략에 사용한' 인용 목록처럼 부르지 않고 원문 링크를 단다.
   return `<div class="section">
-  <div class="section-title">전략에 사용한 뉴스 출처</div>
-  <p class="narrative" style="margin-bottom:12px">뉴스는 가격과 거시지표를 보완하는 참고 자료로만 사용합니다. 기사 본문을 확인하지 않은 단정 표현은 전략 근거로 쓰지 않습니다.</p>
+  <div class="section-title">참고한 뉴스</div>
+  <p class="narrative" style="margin-bottom:12px">리포트 작성 때 입력으로 제공된 뉴스 중 일부입니다. 본문 각 문장과 1:1로 연결된 인용 목록은 아니며, 기사 본문을 확인하지 않은 단정 표현은 근거로 쓰지 않습니다.</p>
   <div class="source-list">
     ${usedNews.map(item => `
     <div class="source-item">
-      <strong>${e(item.title)}</strong><br>
+      ${/^https?:\/\//i.test(item.url) ? `<a class="source-link" href="${e(item.url)}" target="_blank" rel="noopener noreferrer">${e(item.title)}</a>` : `<strong>${e(item.title)}</strong>`}<br>
       ${e(item.source)} · ${e(formatKstDateTime(item.publishedAt))} · ${e(sourceDomain(item.url))}
     </div>`).join('')}
   </div>

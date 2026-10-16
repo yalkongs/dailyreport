@@ -350,6 +350,33 @@ function renderCalendar(content: ReportContent): string {
     </section>`;
 }
 
+export interface ReportSourceLink {
+  title: string;
+  source: string;
+  url?: string;
+}
+
+// C09 (2026-10-16): 리포트 작성 때 입력으로 준 뉴스 일부와 원문 링크. 본문 주장과 1:1 인용 목록이 아님을 밝힌다.
+function renderSources(sources: ReportSourceLink[] | undefined): string {
+  const items = (sources ?? []).slice(0, 6);
+  if (items.length === 0) return "";
+  const li = items.map((s) => {
+    const title = escapeHtml(s.title);
+    const titleHtml = s.url && /^https?:\/\//i.test(s.url)
+      ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${title}</a>`
+      : title;
+    return `<li>${titleHtml} <span class="source-meta">· ${escapeHtml(s.source)}</span></li>`;
+  }).join("\n            ");
+  return `
+    <section class="section">
+        <h2 class="section-title">참고한 뉴스</h2>
+        <p class="source-note">리포트 작성 때 입력으로 제공된 뉴스 중 일부입니다. 본문 각 문장과 1:1로 연결된 인용 목록은 아닙니다.</p>
+        <ul class="source-list">
+            ${li}
+        </ul>
+    </section>`;
+}
+
 function renderFooter(content: ReportContent): string {
   const legalItems = LEGAL_DISCLAIMER_ITEMS
     .map((item) => `<li>${escapeHtml(item)}</li>`)
@@ -378,7 +405,8 @@ export function renderReport(
   content: ReportContent,
   data: MarketDataCollection,
   historicalData: HistoricalComparison[],
-  mode?: "event" | "normal" | "quiet"
+  mode?: "event" | "normal" | "quiet",
+  sources?: ReportSourceLink[]
 ): string {
   const css = loadCSS();
 
@@ -398,6 +426,7 @@ export function renderReport(
     (isEvent || isQuiet) ? "" : renderCompass(content),  // event/quiet: 생략
     isQuiet ? "" : renderSoWhat(content),  // quiet: 생략
     renderCalendar(content),
+    renderSources(sources),
     renderFooter(content),
   ];
 

@@ -653,7 +653,9 @@ export async function generateReport(
   // 코드 템플릿으로 HTML 렌더링 (Phase 1: 모드 전달)
   const historicalData = context?.historicalComparison ?? [];
   const mode = (ctx ?? defaultCtx).marketMode?.mode;
-  const html = renderReport(content, data, historicalData, mode);
+  // C09: 입력으로 준 뉴스 일부를 원문 링크와 함께 리포트에 남긴다.
+  const sources = (context?.news ?? []).map((n) => ({ title: n.title, source: n.source, url: n.url }));
+  const html = renderReport(content, data, historicalData, mode, sources);
 
   console.log(`✅ 리포트 렌더링 완료 (${html.length} bytes, 모드: ${mode ?? "n/a"})`);
   return { html, content };
