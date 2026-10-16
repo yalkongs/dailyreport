@@ -15,9 +15,15 @@ import {
   getRecentEntries,
   saveNarrativeEntry,
 } from "../lib/narrative-memory";
-import { saveMarketPreviewImage } from "../lib/market/preview";
+import { saveMarketPreviewImage, marketPreviewFilename } from "../lib/market/preview";
 import { decodeHtmlEntities } from "../lib/html-entities";
-import { decidePriceHashGuard, readLastDataHash, saveMarketReportBundle } from "../lib/market-run-guards";
+import {
+  decideDuplicateGuard,
+  decidePriceHashGuard,
+  readLastDataHash,
+  retryOnce,
+  saveMarketReportBundle,
+} from "../lib/market-run-guards";
 import type { ReportsIndex, MarketSnapshot, MarketSnapshotItem, MarketDataCollection } from "../lib/types";
 
 const REPORTS_DIR = path.join(process.cwd(), "public", "reports");
@@ -154,24 +160,43 @@ async function main() {
 
   // Step 1a: 중복 실행 방지 가드 — 오늘 자 리포트가 이미 있으면 종료
   // (GitHub Actions 크론 지연·수동 실행 충돌로 인한 중복 생성/텔레그램 재발송 방지)
+  // HTML·인덱스는 있는데 프리뷰 PNG만 없으면 PNG만 복구한다(AI 재호출 없음, F03).
   console.log("━━━ Step 1a: 중복 실행 방지 체크 ━━━");
   {
     const todayDate = marketData.date;
     const todayHtmlPath = path.join(REPORTS_DIR, `${todayDate}.html`);
+    const todayPreviewPath = path.join(REPORTS_DIR, marketPreviewFilename(todayDate));
     const existingIndex = loadIndex();
     const todayEntry = existingIndex.reports.find((r) => r.date === todayDate);
+    const htmlExists = fs.existsSync(todayHtmlPath);
 
-    if (fs.existsSync(todayHtmlPath) && todayEntry) {
-      if (forceRegenerate) {
-        console.log(`⚠️ 오늘(${todayDate}) 리포트가 이미 존재하지만 FORCE_REGENERATE=true로 재생성합니다.`);
-      } else {
-        console.log(`✋ 오늘(${todayDate}) 리포트가 이미 존재합니다. 파이프라인을 종료합니다.`);
-        console.log(`   기존 파일: ${todayHtmlPath}`);
-        console.log(`   기존 헤드라인: "${todayEntry.headline}"`);
-        console.log(`   기존 생성 시각: ${todayEntry.generatedAt}`);
-        console.log(`   강제 재생성이 필요하면 FORCE_REGENERATE=true 환경변수로 실행하세요.`);
-        process.exit(0);
-      }
+    const action = decideDuplicateGuard({
+      htmlExists,
+      indexEntryExists: !!todayEntry,
+      previewExists: fs.existsSync(todayPreviewPath),
+      force: forceRegenerate,
+    });
+
+    if (action === "skip") {
+      console.log(`✋ 오늘(${todayDate}) 리포트가 이미 존재합니다. 파이프라인을 종료합니다.`);
+      console.log(`   기존 파일: ${todayHtmlPath}`);
+      console.log(`   기존 헤드라인: "${todayEntry!.headline}"`);
+      console.log(`   기존 생성 시각: ${todayEntry!.generatedAt}`);
+      console.log(`   강제 재생성이 필요하면 FORCE_REGENERATE=true 환경변수로 실행하세요.`);
+      process.exit(0);
+    } else if (action === "repair-png") {
+      // repair-png는 HTML·인덱스 항목이 모두 있을 때만 나온다
+      const entry = todayEntry!;
+      console.log(`🩹 오늘(${todayDate}) HTML·인덱스는 있으나 프리뷰 PNG가 없습니다 — 인덱스 헤드라인으로 PNG만 복구합니다 (AI 호출 없음).`);
+      const previewPath = await retryOnce(
+        () => saveMarketPreviewImage(todayDate, entry.headline, entry.subline),
+        (err) => console.warn(`⚠️  프리뷰 PNG 복구 실패 — 1회 재시도합니다:`, err),
+      );
+      console.log(`🖼️  프리뷰 이미지 복구 완료: ${previewPath}`);
+      console.log(`   리포트 본문·인덱스는 그대로 둡니다. 커밋 단계가 복구된 PNG를 반영합니다.`);
+      process.exit(0);
+    } else if (htmlExists && todayEntry) {
+      console.log(`⚠️ 오늘(${todayDate}) 리포트가 이미 존재하지만 FORCE_REGENERATE=true로 재생성합니다.`);
     } else {
       console.log(`✓ 오늘(${todayDate}) 신규 리포트 생성 진행`);
     }
@@ -287,8 +312,10 @@ async function main() {
   const { html, content: reportContent } = await generateReport(marketData, ctx, contextData);
   console.log();
 
-  // Step 5~6: 파일 저장 + 인덱스 업데이트 + 가격 해시 기록(마지막)
-  console.log("━━━ Step 5~6: 파일 저장 · 인덱스 업데이트 ━━━");
+  // Step 5~6: 파일 저장 → 링크 프리뷰 PNG(Telegram sendPhoto + OG card용) → 인덱스 → 가격 해시
+  // PNG는 1회 재시도 후에도 실패하면 throw → exit 1 (ETF 파이프라인과 같은 정책).
+  // 인덱스·해시를 쓰기 전에 실패하므로 미완성 결과가 "생성 완료"로 고착되지 않는다.
+  console.log("━━━ Step 5~6: 파일 저장 · 프리뷰 PNG · 인덱스 업데이트 ━━━");
   const reportDate = marketData.date;
   const { headline, subline } = extractHeadlineFromHtml(html);
   console.log(`📰 헤드라인: "${headline}"`);
@@ -296,19 +323,8 @@ async function main() {
   const { filePath } = await saveMarketReportBundle(
     { date: reportDate, html, headline, subline, priceHash, generatedAt: toKSTString(new Date()) },
     { reportsDir: REPORTS_DIR, indexPath: INDEX_PATH, hashPath: LAST_DATA_HASH_PATH },
+    { renderPreview: saveMarketPreviewImage },
   );
-  console.log();
-
-  // Step 6b: 링크 프리뷰 이미지 생성 (Telegram sendPhoto + OG card용)
-  console.log("━━━ Step 6b: 링크 프리뷰 PNG 생성 ━━━");
-  try {
-    const previewPath = await saveMarketPreviewImage(reportDate, headline, subline);
-    console.log(`🖼️  프리뷰 이미지: ${previewPath}`);
-  } catch (err) {
-    // 프리뷰 실패는 치명적 아님 — 단 og:image가 이 정적 PNG를 직접 가리키므로
-    // 실패 시 링크 프리뷰가 빈다(워크플로 배포검증이 발송 전 자산 존재를 보장).
-    console.warn(`⚠️  프리뷰 이미지 생성 실패 (계속 진행):`, err);
-  }
   console.log();
 
   // Step 7: 내러티브 로그 저장 (JSON에서 직접 추출 — 2차 API 호출 불필요)

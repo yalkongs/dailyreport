@@ -6,6 +6,39 @@ import * as fs from "fs";
 import * as path from "path";
 import type { ReportMeta, ReportsIndex } from "./types";
 
+// --- 중복 실행 가드 ---
+// 오늘 자 HTML·인덱스 항목이 있으면 종료(크론 지연·수동 실행 겹침 방지).
+// 단 프리뷰 PNG만 빠진 경우는 "완료"가 아니다 — Telegram sendPhoto와 og:image가
+// 그 PNG를 직접 가리키므로, AI 재호출 없이 인덱스 헤드라인으로 PNG만 복구한다(F03).
+
+export type DuplicateGuardAction = "proceed" | "skip" | "repair-png";
+
+export function decideDuplicateGuard(input: {
+  htmlExists: boolean;
+  indexEntryExists: boolean;
+  previewExists: boolean;
+  force: boolean;
+}): DuplicateGuardAction {
+  if (!input.htmlExists || !input.indexEntryExists) return "proceed";
+  // 강제 재생성은 전체를 다시 만들므로 PNG도 함께 재생성된다
+  if (input.force) return "proceed";
+  if (!input.previewExists) return "repair-png";
+  return "skip";
+}
+
+// 1회 재시도 — 두 번째 실패는 그대로 throw (호출측이 비정상 종료로 처리)
+export async function retryOnce<T>(
+  task: () => Promise<T>,
+  onRetry?: (err: unknown) => void,
+): Promise<T> {
+  try {
+    return await task();
+  } catch (err) {
+    onRetry?.(err);
+    return await task();
+  }
+}
+
 // --- 가격 해시 가드 ---
 // 핵심 가격이 직전 성공 실행과 같으면(주말·휴일 가능성) 생성을 건너뛴다.
 // FORCE_REGENERATE는 파일 중복 가드뿐 아니라 이 가드도 우회한다.
@@ -28,10 +61,14 @@ export function readLastDataHash(hashPath: string): string | null {
 }
 
 // --- 발행 묶음 저장 ---
-// 순서: HTML → 인덱스 → 가격 해시(마지막).
-// 해시는 리포트가 실제로 저장된 뒤에만 기록한다 — 생성·저장 실패 후 같은 작업
-// 디렉터리에서 재시도할 때 해시 가드가 "동일 데이터"로 오판해 리포트 없이
-// exit 0 하던 문제(F08) 방지.
+// 순서: HTML → 프리뷰 PNG → 인덱스 → 가격 해시(마지막). ETF 파이프라인
+// (scripts/run-etf.ts: saveReport → saveReportPreviewImage → updateReportsIndex)과 같은 순서.
+// - PNG는 1회 재시도 후에도 실패하면 throw한다. 예전엔 실패를 무시하고 HTML·인덱스를
+//   정상 결과로 남겨, PNG 없는 리포트가 완료로 고착되고 Telegram 발송이 없는 이미지를 가리켰다(F03).
+// - 인덱스 항목은 모든 자산이 준비된 뒤에 쓴다 — 인덱스 항목이 "발행 완료" 표시.
+// - 해시는 리포트가 실제로 저장된 뒤에만 기록한다 — 생성·저장 실패 후 같은 작업
+//   디렉터리에서 재시도할 때 해시 가드가 "동일 데이터"로 오판해 리포트 없이
+//   exit 0 하던 문제(F08) 방지.
 
 export interface MarketReportBundle {
   date: string; // YYYY-MM-DD
@@ -48,12 +85,16 @@ export interface MarketBundlePaths {
   hashPath: string;
 }
 
+export type RenderPreview = (date: string, headline: string, subline: string) => Promise<string>;
+
 export interface SaveBundleOptions {
+  renderPreview: RenderPreview; // run.ts에선 lib/market/preview의 saveMarketPreviewImage
   log?: (message: string) => void;
 }
 
 export interface SaveBundleResult {
   filePath: string;
+  previewPath: string;
   isUpdate: boolean;
   totalReports: number;
 }
@@ -68,7 +109,7 @@ function loadIndexOrEmpty(indexPath: string, fallbackLastUpdated: string): Repor
 export async function saveMarketReportBundle(
   bundle: MarketReportBundle,
   paths: MarketBundlePaths,
-  options: SaveBundleOptions = {},
+  options: SaveBundleOptions,
 ): Promise<SaveBundleResult> {
   const log = options.log ?? console.log;
   const fileName = `${bundle.date}.html`;
@@ -78,7 +119,14 @@ export async function saveMarketReportBundle(
   fs.writeFileSync(filePath, bundle.html, "utf-8");
   log(`💾 리포트 저장: ${filePath}`);
 
-  // 2) 인덱스
+  // 2) 링크 프리뷰 PNG (Telegram sendPhoto + og:image) — 1회 재시도, 그래도 실패하면 throw
+  const previewPath = await retryOnce(
+    () => options.renderPreview(bundle.date, bundle.headline, bundle.subline),
+    (err) => log(`⚠️  프리뷰 이미지 생성 실패 — 1회 재시도합니다: ${err instanceof Error ? err.message : String(err)}`),
+  );
+  log(`🖼️  프리뷰 이미지: ${previewPath}`);
+
+  // 3) 인덱스
   const index = loadIndexOrEmpty(paths.indexPath, bundle.generatedAt);
   const meta: ReportMeta = {
     date: bundle.date,
@@ -101,8 +149,8 @@ export async function saveMarketReportBundle(
   fs.writeFileSync(paths.indexPath, JSON.stringify(index, null, 2), "utf-8");
   log(`📁 인덱스 업데이트 완료 (총 ${index.reports.length}건)`);
 
-  // 3) 가격 해시 — 반드시 마지막
+  // 4) 가격 해시 — 반드시 마지막
   fs.writeFileSync(paths.hashPath, bundle.priceHash, "utf-8");
 
-  return { filePath, isUpdate, totalReports: index.reports.length };
+  return { filePath, previewPath, isUpdate, totalReports: index.reports.length };
 }
