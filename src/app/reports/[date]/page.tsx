@@ -1,10 +1,26 @@
 import fs from "fs";
 import path from "path";
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import type { ReportsIndex } from "../../../../lib/types";
 
 interface PageProps {
   params: Promise<{ date: string }>;
+}
+
+// 없는 리포트·잘못된 날짜는 HTTP 404 — ETF 페이지(src/app/etf-reports/[date])와 동일.
+// 예전엔 안내 컴포넌트를 200으로 반환해 가짜 날짜도 "건강한 리포트"로 판정됐다(F13).
+// 날짜 형식 검사는 경로 조작(../ 등) 차단도 겸한다.
+function validateDate(date: string): void {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) notFound();
+}
+
+function reportHtmlPath(date: string): string {
+  return path.join(process.cwd(), "public", "reports", `${date}.html`);
+}
+
+function ensureReportExists(date: string): void {
+  if (!fs.existsSync(reportHtmlPath(date))) notFound();
 }
 
 function getReportMeta(date: string) {
@@ -16,6 +32,9 @@ function getReportMeta(date: string) {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { date } = await params;
+  // 페이지와 같은 기준(날짜 형식 → HTML 존재)으로 404 — 메타데이터만 인덱스를 따라가지 않도록
+  validateDate(date);
+  ensureReportExists(date);
   const report = getReportMeta(date);
 
   const headline = report?.headline || "iM AI Market Report";
@@ -58,7 +77,7 @@ export async function generateStaticParams() {
 }
 
 function getReportContent(date: string): string | null {
-  const filePath = path.join(process.cwd(), "public", "reports", `${date}.html`);
+  const filePath = reportHtmlPath(date);
   if (!fs.existsSync(filePath)) return null;
 
   const html = fs.readFileSync(filePath, "utf-8");
@@ -78,7 +97,7 @@ function getReportContent(date: string): string | null {
 }
 
 function getReportStyles(date: string): string {
-  const filePath = path.join(process.cwd(), "public", "reports", `${date}.html`);
+  const filePath = reportHtmlPath(date);
   if (!fs.existsSync(filePath)) return "";
 
   const html = fs.readFileSync(filePath, "utf-8");
@@ -95,28 +114,10 @@ function getReportStyles(date: string): string {
 
 export default async function ReportPage({ params }: PageProps) {
   const { date } = await params;
+  validateDate(date);
   const content = getReportContent(date);
 
-  if (!content) {
-    return (
-      <div className="max-w-3xl mx-auto px-4 py-20 text-center">
-        <div className="bg-[var(--card)] rounded-2xl p-12 border border-[var(--border)]">
-          <h1 className="text-lg font-bold mb-3 text-[var(--text)]">
-            리포트를 찾을 수 없습니다
-          </h1>
-          <p className="text-[var(--text-sub)] text-sm mb-6">
-            {date} 날짜의 리포트가 존재하지 않습니다.
-          </p>
-          <a
-            href="/archive"
-            className="text-sm text-[var(--teal)] hover:underline font-medium"
-          >
-            ← 아카이브로 돌아가기
-          </a>
-        </div>
-      </div>
-    );
-  }
+  if (!content) notFound();
 
   const styles = getReportStyles(date);
 
