@@ -215,6 +215,22 @@
   `data/etf-evidence-log.json`의 `krxSession`에 남는다. 설계 전문:
   [`docs/superpowers/specs/2026-09-20-etf-data-accuracy-design.md`](./docs/superpowers/specs/2026-09-20-etf-data-accuracy-design.md).
 
+### 도착 감시 (2026-10-16, 감사 F06)
+
+생성 workflow가 아예 돌지 않은 날(트리거 누락)과 돌았지만 미발송·결과 불명으로 끝난 날을 독립적으로
+잡는다. 판정은 `scripts/check-delivery.ts <market|etf> [YYYY-MM-DD]` — 한국 휴장일은 통과, 영업일에는
+그날 리포트 커밋의 `telegram/<kind>` status가 `success`일 때만 통과하고 아니면 exit 1(→ GitHub 실패 메일).
+
+| 경로 | 시각(KST) | 비고 |
+|------|-----------|------|
+| `ops/macmini/monitor.sh` + `com.yalkongs.dailyreport.monitor.{market,etf}.plist` | 월~금 07:45 market · 09:00 etf | `delivery-monitor.yml`을 dispatch. 2차 트리거(07:20·08:40) 이후 |
+| `.github/workflows/delivery-monitor.yml` schedule | 같은 시각(UTC cron) | 늦은 백업 — GitHub schedule은 수 시간 지연된다 |
+
+- 경보 수단은 **GitHub Actions 실패 메일**이다(저장소 소유자 알림 설정 필요).
+- 발송 결과가 불명(pending/error 잔존)이면 이제 `Resolve delivery` step이 실패한다(이전엔 경고만 남기고 녹색).
+  자동 재발송은 하지 않는다 — 구독자 채널을 확인한 뒤 필요하면 `resend_telegram_only=true`로 수동 재발송.
+- 발송 직전에 텔레그램이 가져갈 프리뷰 PNG(200 + `image/png`)와 본문(200)을 확인하고, 아니면 보내지 않는다.
+
 **⚠️ Timezone 규약.** launchd 시각은 맥미니 로컬(KST) 기준이다. GitHub `schedule`
 3순위 백업은 반대로 항상 UTC(`30 22 * * 0-4`) — 자정 UTC를 넘기면 요일 매핑이 깨진다.
 
@@ -281,6 +297,10 @@ npx tsx scripts/run-etf.ts
 
 # 5. (선택) Next.js 개발 서버
 npm run dev
+
+# 6. 테스트·타입 검사 (CI: .github/workflows/ci.yml — push·PR마다 자동 실행)
+npm test
+npm run typecheck
 ```
 
 특정 날짜로 백필 생성:
