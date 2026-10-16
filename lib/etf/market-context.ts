@@ -117,3 +117,10 @@ export async function collectIndexQuotes(): Promise<IndexQuote[]> {
     return { symbol: i.symbol, nameKo: i.nameKo, price, changePercent, asOf: sessionDate(q?.regularMarketTime, /^\^K[SQ]/.test(i.symbol) ? 'Asia/Seoul' : 'America/New_York') }
   }).filter(q => q.price !== null && q.changePercent !== null)
 }
+
+// F09 (2026-10-16 감사): 거시 수집기는 개별 오류를 null로 바꿔 fulfilled를 반환하므로, 바깥의
+// rejection 기반 실패 판정이 전량 장애를 놓쳤다. 핵심 지표가 모두 null이면 실패 소스로 본다.
+export function isMacroEmpty(macro: MacroContext | null | undefined): boolean {
+  if (!macro) return true
+  return [macro.usdKrw, macro.dxy, macro.vix, macro.us10y, macro.wti, macro.gold].every(v => v === null || v === undefined)
+}

@@ -7,7 +7,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { collectAllEtfData } from '../lib/etf/etf-data'
-import { collectIndexQuotes, collectMacroContext } from '../lib/etf/market-context'
+import { collectIndexQuotes, collectMacroContext, isMacroEmpty } from '../lib/etf/market-context'
 import { collectEconomicCalendar } from '../lib/economic-calendar'
 import { collectNews } from '../lib/etf/news'
 import { detectAnomalies } from '../lib/etf/analyzer'
@@ -31,11 +31,13 @@ import { renderMorningHtml, saveReport, saveReportPreviewImage } from '../lib/et
 // "no preview card" for the URL.
 import {
   validateData,
+  sanitizeQuotes,
   updateReportsIndex,
   loadJson,
   saveJson,
 } from '../lib/etf/pipeline-utils'
 import type { CollectedData, ReportMeta, MacroContext, AnomalyType } from '../lib/etf/types'
+import { KR_ETF_UNIVERSE, US_ETF_UNIVERSE } from '../lib/etf/universe'
 
 const LENS_LOG_PATH = 'data/etf-lens-log.json'
 const ANGLE_LOG_PATH = 'data/etf-narrative-angle-log.json'
@@ -114,14 +116,19 @@ async function main() {
     collectEconomicCalendar(),
   ])
 
-  const { quotes, flows, investorFlows, krx } = etfData.status === 'fulfilled'
+  const collected = etfData.status === 'fulfilled'
     ? etfData.value
     : { quotes: [], flows: [], investorFlows: [], krx: { basDd: null, session: 'none' as const } }
+  const { flows, investorFlows, krx } = collected
+  // F01: NaN·0·음수 가격은 결측으로(실패율에 반영, 렌더에 NaN 미노출)
+  const sanitized = sanitizeQuotes(collected.quotes)
+  if (sanitized.invalidCount > 0) console.warn(`  ⚠️ 비정상 가격 ${sanitized.invalidCount}건 → 결측 처리`)
+  const quotes = sanitized.quotes
 
   // Layer 0: 수집 실패 소스 기록 (allSettled rejection + KRX nav 전량 null)
   const failedSources: string[] = []
   if (etfData.status === 'rejected') failedSources.push('etf-quotes')
-  if (macro.status === 'rejected') failedSources.push('macro')
+  if (macro.status === 'rejected' || isMacroEmpty(macro.value)) failedSources.push('macro')
   if (news.status === 'rejected') failedSources.push('news')
   // C01: 지수 실측이 없으면 프롬프트가 지수 등락 수치를 쓰지 못하게 한다.
   if (indices.status === 'rejected' || indices.value.length === 0) failedSources.push('indices')
@@ -131,7 +138,8 @@ async function main() {
   // Step 2: 데이터 검증
   console.log('[2/8] 데이터 검증 중...')
   try {
-    validateData(quotes)
+    // F01: 실패율 분모는 유니버스 전체(시장별)
+    validateData(quotes, { KR: KR_ETF_UNIVERSE.length, US: US_ETF_UNIVERSE.length })
   } catch (e) {
     // 운영자 알림 = exit(1) → GitHub 스케줄 실패 자동 이메일(zero-wiring).
     console.error('[error] 데이터 검증 실패:', e)
