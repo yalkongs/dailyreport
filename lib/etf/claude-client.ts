@@ -160,6 +160,27 @@ ${lines.join('\n')}
 - 코스피200·나스닥100은 위 지수와 다른 지수입니다. 이 블록에 없으면 수치를 쓰지 마십시오.`
 }
 
+// C03 (2026-10-16): 미국 지표 일정 — 한국시간과 한국 정규장 관계. 10/14 CPI(한국시간 21:30)를
+// '오늘 국내 장중 방향을 뒤집는 변수'로 쓴 오류 대응.
+export function buildUsEventsBlock(events: import('../types').EconomicEvent[] | undefined, date: string): string {
+  const upcoming = (events ?? []).filter(e => {
+    const d = e.kstDate ?? e.date
+    return d >= date && d <= addDaysIso(date, 2)
+  })
+  if (upcoming.length === 0) return ''
+  const { formatEconomicEventLine } = require('../economic-calendar')
+  return `[미국 주요 지표 일정 — 한국시간]
+${upcoming.map(e => `- ${formatEconomicEventLine(e)}`).join('\n')}
+- 한국 장 마감 후 발표 지표는 오늘 국내 장중 관찰 대상이 아닙니다. "오늘 밤 발표, 국내 반영은 다음 거래일"로 쓰고, 그 결과가 오늘 장중 방향을 정한다고 쓰지 마십시오.
+
+`
+}
+
+function addDaysIso(date: string, n: number): string {
+  const [y, m, d] = date.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10)
+}
+
 function formatPromptEtf(q: Pick<CollectedData['quotes'][number], 'ticker' | 'name' | 'market'>): string {
   if (q.market === 'KR') {
     return `${q.name} (${q.ticker.replace(/\.(KS|KQ)$/i, '')})`
@@ -316,7 +337,7 @@ ${topUs.slice(-5).reverse().map(q => `${formatPromptEtf(q)}: ${q.changePercent?.
 
 ${buildIndexBlock(data.indices)}
 
-${buildMacroBlock(data.macro, data.failedSources)}
+${buildUsEventsBlock(data.usEvents, data.date)}${buildMacroBlock(data.macro, data.failedSources)}
 
 ${(() => {
   // Phase F2 (2026-05-24): ETF 측 catalyst 자동 추출.

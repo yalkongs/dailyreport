@@ -127,7 +127,8 @@ export interface NewsHeadline {
 
 export interface EconomicEvent {
   date: string;
-  time?: string;
+  time?: string; // C03: 한국시간 발표 시각 "HH:MM" (미국 지표는 ET 기준 공식 시각을 환산)
+  kstDate?: string; // C03: 한국시간 발표 날짜 (FOMC처럼 한국시간으로 다음 날이 되는 경우)
   country: string;
   event: string;
   importance: number; // 1-5

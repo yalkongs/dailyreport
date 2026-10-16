@@ -62,6 +62,11 @@ const PATTERN_A = /(오늘|내일|모레)\s*\(\s*(\d{1,2})\/(\d{1,2})\s*[,·]?\s
 // 패턴 B: 상대어 없는 (M/D)(요일)  예) "07/23(목)"
 const PATTERN_B = /(\d{1,2})\/(\d{1,2})\s*\(\s*([월화수목금토일])\s*\)/g
 
+// 패턴 C (2026-10-16 감사 C03): "10월 22일(수)"·"10월 22일 수요일" — 숫자 날짜(M/D)만 보던 탓에
+// Market16의 "10월 22일(수)"(실제 목요일)를 놓쳤다.
+const PATTERN_C = /(\d{1,2})월\s*(\d{1,2})일\s*\(\s*([월화수목금토일])(?:요일)?\s*\)/g
+const PATTERN_D = /(\d{1,2})월\s*(\d{1,2})일\s+([월화수목금토일])요일/g
+
 export function checkAndFixTemporal(text: string, reportDate: string): TemporalCheckResult {
   const softFixes: string[] = []
   const violations: string[] = []
@@ -108,6 +113,23 @@ export function checkAndFixTemporal(text: string, reportDate: string): TemporalC
     softFixes.push(`요일 교정 [${mm}/${dd}]: ${wd}→${expectedWd}`)
     return corrected
   })
+
+  const fixKoreanDate = (match: string, mm: string, dd: string, wd: string): string => {
+    const month = Number(mm)
+    const day = Number(dd)
+    if (month < 1 || month > 12 || day < 1 || day > 31) return match
+    const { date } = resolveAnchorDate(month, day, reportDate)
+    const expectedWd = koreanWeekday(date)
+    if (wd === expectedWd) return match
+    // 요일 문자는 '일' 뒤에서만 치환 — "22일"의 '일'과 요일 '일'(일요일)이 겹치는 오염 방지
+    const dayIdx = match.indexOf('일') + 1
+    const corrected = match.slice(0, dayIdx) + match.slice(dayIdx).replace(wd, expectedWd)
+    assertJsonSafe(corrected)
+    softFixes.push(`요일 교정 [${mm}월 ${dd}일]: ${wd}→${expectedWd}`)
+    return corrected
+  }
+  fixed = fixed.replace(PATTERN_C, fixKoreanDate)
+  fixed = fixed.replace(PATTERN_D, fixKoreanDate)
 
   return { fixed, softFixes, violations }
 }

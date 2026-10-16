@@ -33,6 +33,19 @@ export interface KrMacroEvent {
   importance: 1 | 2 | 3 | 4 | 5;
   description?: string;    // 짧은 컨텍스트
   source?: string;         // 출처 URL 또는 라벨 (운영자 검증용)
+  // C03 (2026-10-16): 공식 기관 일정에서 날짜를 확인했으면 true, 관례·패턴 추정이면 false.
+  confirmed?: boolean;
+  time?: string;           // 발표 시각 "HH:MM" (KST, 확인된 경우만)
+}
+
+/**
+ * 추정 일정 판정. confirmed 필드가 없던 옛 캐시는 description 의 추정 표기로 판단한다.
+ * (10/15 고용동향: 설명엔 '입력예정일 10-16 · 추정'인데 date 10-15 로 들어가 '오늘'로 승격됐다.)
+ */
+export function isEstimatedKrMacroEvent(e: KrMacroEvent): boolean {
+  if (e.confirmed === true) return false;
+  if (e.confirmed === false) return true;
+  return /추정|잠정|관례|예상일|전후/.test(e.description ?? "");
 }
 
 export interface KrMacroCalendarCache {
@@ -101,9 +114,12 @@ export function formatKrMacroEventLine(e: KrMacroEvent, todayDate?: string): str
   const stars = "★".repeat(e.importance) + "☆".repeat(5 - e.importance);
   const md = e.date.slice(5).replace("-", "/"); // 05-30 → 05/30
   const dow = koreanWeekday(e.date);
-  const todayMarker = e.date === todayDate ? " (오늘)" : "";
+  const estimated = isEstimatedKrMacroEvent(e);
+  // 추정 일정에는 '(오늘)'을 붙이지 않는다 — 확정 당일 변수로 승격되는 것을 막는다.
+  const todayMarker = e.date === todayDate && !estimated ? " (오늘)" : "";
+  const status = estimated ? " [발표일 추정 — 확정 아님]" : e.time ? ` ${e.time} KST` : "";
   const desc = e.description ? ` — ${e.description}` : "";
-  return `${md}(${dow}) ${stars} ${e.name}${todayMarker}${desc}`;
+  return `${md}(${dow}) ${stars} ${e.name}${todayMarker}${status}${desc}`;
 }
 
 /**

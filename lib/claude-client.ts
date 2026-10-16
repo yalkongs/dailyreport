@@ -8,6 +8,7 @@ import type {
   HistoricalComparison,
   ReportContent,
 } from "./types";
+import { formatEconomicEventLine } from "./economic-calendar";
 import { renderReport } from "./report-renderer";
 import { BANNED_METAPHORS } from "./banned-metaphors";
 import { renderVoiceExemplars } from "./voice-exemplars";
@@ -207,10 +208,12 @@ function buildContextBlock(context: ContextData | null, ctx?: AntiRepetitionCont
   }
 
   if (context.economicCalendar.length > 0) {
-    block += `\n### 경제 캘린더 (오늘~내일)\n`;
+    block += `\n### 경제 캘린더 (한국시간 기준)\n`;
+    // C03: 날짜·한국시간·한국 정규장과의 관계를 함께 준다(날짜 없이 이름만 주던 때 미국 밤 발표를 '오늘 장중'으로 썼다).
+    block += `⚠️ 한국 장 마감 후(15:30 이후) 발표되는 지표의 결과로 오늘 국내 장중 흐름을 설명하지 마십시오. 이미 발표된 지표는 실제 발표치가 입력에 있을 때만 수치를 씁니다.\n`;
     for (const e of context.economicCalendar) {
       const vals = [e.actual && `실제: ${e.actual}`, e.forecast && `예상: ${e.forecast}`, e.previous && `이전: ${e.previous}`].filter(Boolean).join(", ");
-      block += `- [${e.country}] ${e.event} (중요도: ${e.importance}/5)${vals ? ` — ${vals}` : ""}\n`;
+      block += `- ${formatEconomicEventLine(e)} (중요도: ${e.importance}/5)${vals ? ` — ${vals}` : ""}\n`;
     }
   }
 
@@ -299,7 +302,9 @@ function buildReportPrompt(data: MarketDataCollection, ctx: AntiRepetitionContex
 ${lines}
 
 위 일정은 web_search 기반 자동 수집 캐시이며 일부는 패턴 추정입니다. 각 항목의 description 에 출처·확실성 표기가 있습니다.
-- **오늘 발표 예정인 지표가 있으면** 본문 또는 watchPoints 에서 명시적으로 언급하십시오.
+- **(오늘) 표시가 붙은 확정 일정**이 있으면 본문 또는 watchPoints 에서 명시적으로 언급하십시오.
+- **[발표일 추정] 항목은 '오늘'의 핵심 변수로 쓰지 마십시오.** "이번 주 발표 예상" 정도로만 쓰고, 그 일정을 전제로 한 당일 행동 지침을 만들지 마십시오.
+- 요일은 위 날짜 옆 괄호의 요일만 쓰십시오.
 - 한국은행 금통위·CPI 같은 ★★★★★ 이벤트는 본문 narrative 의 forward catalyst 로 부각.
 - 추정 일정(description 에 "추정" 표기) 은 "예정" 또는 "관례상 N월 N일 전후" 같은 완곡한 표현 사용.
 `;
@@ -625,9 +630,10 @@ export async function generateReport(
       .sort((a, b) => b.importance - a.importance)
       .slice(0, 8)
       .map((e) => ({
-        date: formatCalendarDate(e.date),
+        // C03: 한국시간 날짜·시각으로 표시(FOMC는 한국시간 다음 날 새벽).
+        date: formatCalendarDate(e.kstDate ?? e.date),
         country: e.country,
-        event: e.event,
+        event: e.time ? `${e.event} · ${e.time} KST` : e.event,
         importance: e.importance,
       }));
     console.log(`📅 캘린더: 실제 경제 데이터에서 ${content.calendar.length}건 사용 (Claude 생성 대체)`);

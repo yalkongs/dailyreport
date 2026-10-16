@@ -114,6 +114,8 @@ export interface CollectedData {
   news: NewsItem[]
   analysisLens: string
   indices?: IndexQuote[]
+  // C03 (2026-10-16): 미국 주요 지표 일정(한국시간 환산). FRED 키가 없으면 빈 배열.
+  usEvents?: import('../types').EconomicEvent[]
   // 최근 7일 헤드라인. 프롬프트에 주입하여 Claude가 동일·유사 문장 반복을 피하게 함.
   // optional — 비어있거나 undefined면 프롬프트에서 해당 블록 생략.
   recentHeadlines?: string[]

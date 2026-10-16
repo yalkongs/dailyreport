@@ -8,6 +8,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { collectAllEtfData } from '../lib/etf/etf-data'
 import { collectIndexQuotes, collectMacroContext } from '../lib/etf/market-context'
+import { collectEconomicCalendar } from '../lib/economic-calendar'
 import { collectNews } from '../lib/etf/news'
 import { detectAnomalies } from '../lib/etf/analyzer'
 import {
@@ -105,11 +106,12 @@ async function main() {
 
   // Step 1: 데이터 수집 (병렬)
   console.log('[1/8] 데이터 수집 중...')
-  const [etfData, macro, news, indices] = await Promise.allSettled([
+  const [etfData, macro, news, indices, usEvents] = await Promise.allSettled([
     collectAllEtfData(date),
     collectMacroContext(),
     collectNews(),
     collectIndexQuotes(),
+    collectEconomicCalendar(),
   ])
 
   const { quotes, flows, investorFlows, krx } = etfData.status === 'fulfilled'
@@ -167,6 +169,7 @@ async function main() {
     macro: macro.status === 'fulfilled' ? macro.value : {} as MacroContext,
     news: news.status === 'fulfilled' ? news.value : [],
     indices: indices.status === 'fulfilled' ? indices.value : [],
+    usEvents: usEvents.status === 'fulfilled' ? usEvents.value : [],
     analysisLens,
     narrativeAngle,
     recentHeadlines,
