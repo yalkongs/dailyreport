@@ -42,7 +42,8 @@ export function describeWeekdayRhythm(role: WeekdayRole, reportType: "market" | 
   if (role === "friday_recap") {
     const extra = reportType === "market"
       ? "한 주 동안의 winner/loser 자산군 한 줄씩, 다음 주에 살펴볼 변수(미국 지표 발표·한국 매크로 등) 를 soWhat 또는 calendar 에서 정리."
-      : "한 주의 ETF winner/loser 를 closingLine 직전에 짧게 회고, 다음 주에 살펴볼 ETF 군이나 지표를 closingLine 으로 닫음."
+      // C05 (2026-10-16): ETF 입력에는 주간 수익률이 없다. 주간 순위를 요구하면 하루 등락을 주간으로 쓴다.
+      : "입력의 ETF 등락률은 모두 직전 거래일 하루 기준이라 주간 수익률·주간 순위를 만들 수 없습니다. '이번 주 -X%'처럼 쓰지 말고, 이번 주에 반복된 흐름은 수치 없이 짧게 회고한 뒤 다음 주에 살펴볼 ETF 군이나 지표를 closingLine 으로 닫음."
     // 묶음 3(2026-09-30): 헤드라인 톤 줄은 market에만. ETF는 "~한 금요일"·"한 주를 닫다" 틀의 원인이었다.
     const headlineLine = reportType === "market"
       ? `- 헤드라인은 "한 주를 닫는" 톤. "이번 주 X를 정리한 X요일" 같은 회고 색을 입혀도 좋음.\n`

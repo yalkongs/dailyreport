@@ -170,3 +170,47 @@ test("렌더 회귀: 그룹 시세가 없으면 매칭표·이슈 카드 폴백�
   assert.doesNotMatch(html, /배당/);
   assert.doesNotMatch(html, /자금이 몰리는/);
 });
+
+// C08 (2026-10-16 감사): 히트맵 집계가 의미를 지우지 않는다 — 레버리지·인버스 상쇄 평균, 미국·국내
+// 세션 혼합 평균 금지. 국내 평균은 1배 ETF만.
+function heatCells(html: string): Map<string, string> {
+  const heat = section(html, "ETF Market Heatmap");
+  const cells = new Map<string, string>();
+  for (const m of heat.matchAll(/<div class="heat-name">([^<]+)<\/div>\s*<div class="heat-meta">[^<]*<\/div>\s*<div class="heat-value">([^<]+)<\/div>/g)) {
+    cells.set(m[1], m[2]);
+  }
+  return cells;
+}
+
+test("히트맵: 레버리지·인버스를 평균내지 않고, 국내 평균은 전술형을 뺀 1배 ETF만", () => {
+  const quotes = [
+    { ...quote("069500.KS", "KODEX 200"), changePercent: 1.1 },
+    { ...quote("122630.KS", "KODEX 레버리지"), changePercent: -16.42 },
+    { ...quote("252670.KS", "KODEX 200선물인버스2X"), changePercent: 15.79 },
+  ];
+  const html = renderMorningHtml(REPORT, data(quotes));
+  const cells = heatCells(html);
+  assert.ok(![...cells.keys()].some(k => /레버리지|인버스/.test(k)), `전술형 타일 없음: ${[...cells.keys()]}`);
+  const krAvg = [...cells.entries()].find(([k]) => /국내 1배/.test(k));
+  assert.ok(krAvg, "국내 1배 ETF 평균 타일");
+  assert.equal(krAvg[1], "+1.10%");
+});
+
+test("히트맵: 미국·국내 시세를 한 타일에서 평균내지 않는다", () => {
+  const quotes = [
+    { ...quote("SOXX", "iShares Semiconductor ETF"), changePercent: -0.91 },
+    { ...quote("091160.KS", "KODEX 반도체"), changePercent: -11.94 },
+    { ...quote("XLE", "Energy Select Sector SPDR"), changePercent: 1.0 },
+    { ...quote("261220.KS", "KODEX WTI원유선물(H)"), changePercent: 3.0 },
+  ];
+  const cells = heatCells(renderMorningHtml(REPORT, data(quotes)));
+  assert.equal(cells.get("미국 반도체"), "-0.91%");
+  assert.equal(cells.get("국내 반도체"), "-11.94%");
+  assert.equal(cells.get("미국 에너지"), "+1.00%");
+});
+
+test("거시 코너: alternative.me 공포탐욕은 암호화폐 지표로 표기한다", () => {
+  const html = renderMorningHtml(REPORT, data([quote("069500.KS", "KODEX 200")]));
+  assert.doesNotMatch(html, />Fear&amp;Greed</);
+  assert.match(html, /코인 공포탐욕/);
+});

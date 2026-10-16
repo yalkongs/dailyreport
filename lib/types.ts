@@ -115,6 +115,7 @@ export interface SidewaysAnalysis {
 export interface NewsHeadline {
   title: string;
   source: string;
+  url?: string; // C09 (2026-10-16): 기사 원문 링크(http/https만)
   category: "global" | "korea" | "economy" | "semiconductor";
   pubDate?: string;
   // Phase 1.5 (2026-05-21): 발행 경과 시간(시간 단위). 신선도 정렬·표시용.
@@ -127,7 +128,8 @@ export interface NewsHeadline {
 
 export interface EconomicEvent {
   date: string;
-  time?: string;
+  time?: string; // C03: 한국시간 발표 시각 "HH:MM" (미국 지표는 ET 기준 공식 시각을 환산)
+  kstDate?: string; // C03: 한국시간 발표 날짜 (FOMC처럼 한국시간으로 다음 날이 되는 경우)
   country: string;
   event: string;
   importance: number; // 1-5
@@ -171,6 +173,13 @@ export interface HistoricalComparison {
   oneMonthAgo?: number;
   threeMonthsAgo?: number;
   oneYearAgo?: number;
+  // C05 (2026-10-16): 각 기준값의 실제 종가 날짜(YYYY-MM-DD)와 주간 누적 기준(이번 주 월요일 이전 마지막 종가).
+  oneWeekAgoDate?: string;
+  oneMonthAgoDate?: string;
+  threeMonthsAgoDate?: string;
+  oneYearAgoDate?: string;
+  weekToDateBase?: number;
+  weekToDateBaseDate?: string;
 }
 
 export interface ContextError {

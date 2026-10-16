@@ -6,6 +6,7 @@
 
 import { fetchWithTimeout } from "./fetch-utils";
 import type { EconomicEvent } from "./types";
+import { etToKst, describeKrSession } from "./release-time";
 
 interface FredRelease {
   id: number;
@@ -15,6 +16,25 @@ interface FredRelease {
 
 interface FredReleaseResponse {
   releases?: FredRelease[];
+}
+
+// C03 (2026-10-16): 주요 릴리즈의 공식 발표 시각(미국 동부 현지). 한국시간으로 환산해 붙인다.
+const RELEASE_TIME_ET: Record<number, string> = {
+  10: "08:30", // CPI
+  50: "08:30", // Employment Situation
+  46: "08:30", // PPI
+  53: "08:30", // GDP
+  21: "14:00", // FOMC 성명
+  19: "09:15", // Industrial Production
+  13: "09:15", // G.17
+  83: "08:30", // Retail Sales
+  18: "08:30", // Housing Starts
+};
+
+/** 프롬프트용 한 줄 — 한국시간 날짜·시각과 한국 정규장과의 관계. */
+export function formatEconomicEventLine(e: EconomicEvent): string {
+  const when = e.time ? `${(e.kstDate ?? e.date).slice(5).replace("-", "/")} ${e.time} KST · ${describeKrSession(e.time)}` : `${e.date.slice(5).replace("-", "/")} (시각 미상)`;
+  return `[${e.country}] ${e.event} — ${when}`;
 }
 
 // 주요 FRED 릴리즈 ID와 중요도 매핑
@@ -56,11 +76,14 @@ export async function collectEconomicCalendar(): Promise<EconomicEvent[]> {
     for (const release of data.releases) {
       const importance = IMPORTANT_RELEASES[release.id] || 0;
       if (importance >= 3) {
+        const timeEt = RELEASE_TIME_ET[release.id];
+        const kst = timeEt ? etToKst(release.date, timeEt) : null;
         events.push({
           date: release.date,
           country: "US",
           event: release.name,
           importance,
+          ...(kst ? { time: kst.time, kstDate: kst.date } : {}),
         });
       }
     }

@@ -7,6 +7,8 @@ import { selectStoryCharacters } from './story-characters'
 import { QUOTABLE_SOURCES } from '../quotable-sources'
 import { buildMorningStrategyInput } from './morning-strategy'
 import { validateMorningReportQuality } from './report-quality'
+import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS } from '../claude-budget'
+import { EVIDENCE_RULES } from '../evidence-rules'
 import { normalizeMorningReportLanguage } from './report-language'
 import { buildMorningNarrativePlan } from './morning-report-plan'
 import { describeAngle, ETF_NARRATIVE_ANGLES, type EtfNarrativeAngle } from './narrative-angle'
@@ -16,7 +18,8 @@ import { buildTemporalFramingBlock } from '../temporal-framing'
 // Lazy initialization: env vars may not be loaded at module parse time
 let _client: Anthropic | null = null
 function getClient(): Anthropic {
-  if (!_client) _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  // F07: 요청 상한·SDK 재시도를 명시(기본 10분·2회는 job 상한 15분과 맞지 않았다).
+  if (!_client) _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, timeout: CLAUDE_REQUEST_TIMEOUT_MS, maxRetries: CLAUDE_MAX_RETRIES })
   return _client
 }
 
@@ -110,8 +113,9 @@ export async function generateMorningReportRaw(data: CollectedData): Promise<Mor
 }
 
 // P0 (2026-04-24): Tier 1 fallback용. 외부에서 직접 호출해 검증할 때 사용.
+// 2026-10-16: 축소판 검증에서는 사실 검증을 경고로만 남긴다(전송 > 침묵).
 export function validateMorningReport(report: MorningReport, data: CollectedData): void {
-  validateMorningReportQuality(report, data, buildMorningStrategyInput(data))
+  validateMorningReportQuality(report, data, buildMorningStrategyInput(data), { factChecksAsWarnings: true })
 }
 
 function formatPromptNumber(value: number | null | undefined, digits = 0): string {
@@ -128,14 +132,56 @@ export function buildMacroBlock(macro: import('./types').MacroContext, failedSou
   const warn = failedSources?.includes('macro')
     ? '⚠️ 거시 데이터 수집 실패 — 아래 수치는 신뢰할 수 없습니다(직전 영업일 기준으로도 보지 마십시오).\n'
     : ''
+  // C02: 환율은 수준과 변화 방향을 함께 준다(방향 없이 수준만 주면 '원화 약세=손실' 오서술이 났다).
+  const fxChange = typeof macro.usdKrwChangePercent === 'number' && macro.usdKrw !== null
+    ? ` (전일 대비 ${macro.usdKrwChangePercent >= 0 ? '+' : ''}${macro.usdKrwChangePercent.toFixed(2)}% · ${macro.usdKrwChangePercent >= 0 ? '원화 약세' : '원화 강세'})`
+    : ''
   return `[거시 지표]
-${warn}USD/KRW: ${formatPromptNumber(macro.usdKrw, 0)}
+${warn}USD/KRW: ${formatPromptNumber(macro.usdKrw, 0)}${fxChange}
 VIX: ${formatPromptNumber(macro.vix, 2)}
 MOVE: ${formatPromptNumber(macro.moveIndex, 2)}
-공포탐욕: ${formatPromptNumber(macro.fearGreed, 0)}
+코인 공포탐욕: ${formatPromptNumber(macro.fearGreed, 0)} (alternative.me 암호화폐 심리 지표 — 주식 심리 지표 아님)
 US 10Y: ${formatPromptNumber(macro.us10y, 2)}%
 WTI: ${formatPromptNumber(macro.wti, 1)}
 Gold: ${formatPromptNumber(macro.gold, 0)}`
+}
+
+// C01 (2026-10-16): 실제 지수 블록. ETF 등락을 지수 등락으로 부르지 않도록 지수 값을 따로 준다.
+export function buildIndexBlock(indices: import('./types').IndexQuote[] | undefined): string {
+  if (!indices || indices.length === 0) {
+    return `[지수 실측]
+⚠️ 지수 시세 수집 실패 — 코스피·코스닥·S&P500·나스닥·다우의 등락률 수치를 쓰지 마십시오. ETF 등락은 ETF 이름으로만 씁니다.`
+  }
+  const lines = indices.map(i => {
+    const pct = i.changePercent as number
+    const date = i.asOf ? `, ${i.asOf.slice(5).replace('-', '/')} 종가` : ''
+    return `${i.nameKo}: ${formatPromptNumber(i.price, 2)} (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%${date})`
+  })
+  return `[지수 실측 — ETF와 구분]
+${lines.join('\n')}
+- 코스피·코스닥·S&P500·나스닥·다우 등 **지수 등락은 이 블록 값만** 인용합니다. SPY·QQQ·KODEX 200 같은 ETF 등락률을 지수 등락률로 부르지 마십시오(ETF 수치는 ETF 이름으로).
+- 코스피200·나스닥100은 위 지수와 다른 지수입니다. 이 블록에 없으면 수치를 쓰지 마십시오.`
+}
+
+// C03 (2026-10-16): 미국 지표 일정 — 한국시간과 한국 정규장 관계. 10/14 CPI(한국시간 21:30)를
+// '오늘 국내 장중 방향을 뒤집는 변수'로 쓴 오류 대응.
+export function buildUsEventsBlock(events: import('../types').EconomicEvent[] | undefined, date: string): string {
+  const upcoming = (events ?? []).filter(e => {
+    const d = e.kstDate ?? e.date
+    return d >= date && d <= addDaysIso(date, 2)
+  })
+  if (upcoming.length === 0) return ''
+  const { formatEconomicEventLine } = require('../economic-calendar')
+  return `[미국 주요 지표 일정 — 한국시간]
+${upcoming.map(e => `- ${formatEconomicEventLine(e)}`).join('\n')}
+- 한국 장 마감 후 발표 지표는 오늘 국내 장중 관찰 대상이 아닙니다. "오늘 밤 발표, 국내 반영은 다음 거래일"로 쓰고, 그 결과가 오늘 장중 방향을 정한다고 쓰지 마십시오.
+
+`
+}
+
+function addDaysIso(date: string, n: number): string {
+  const [y, m, d] = date.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10)
 }
 
 function formatPromptEtf(q: Pick<CollectedData['quotes'][number], 'ticker' | 'name' | 'market'>): string {
@@ -249,10 +295,11 @@ export function buildMorningPrompt(data: CollectedData): string {
 - 전일 한국 증시와 간밤 미국 시장이 **서로 다른 방향**으로 움직인 경우, 그 차이를 **명시적으로** 언급하십시오. 한국 독자가 반사적으로 떠올리는 한국 흐름과 오늘 새벽 해외 흐름이 다를 수 있다는 점을 고려합니다.
 - 헤드라인에 한국 독자가 오해할 여지가 있는 애매어(지수/시장)를 쓰지 말고 **시장을 특정**하여 씁니다.
 
-[오늘의 시장 국면]
+[오늘의 시장 국면 — 미국 ETF·변동성 기준]
 ${strategy.regime.displayName}
-신뢰도: ${strategy.regime.confidence}
+규칙 점수: ${strategy.regime.confidence}/100 (규칙 합산값 — 확률이 아니므로 본문에 '확신도'·'신뢰도'로 쓰지 마십시오)
 요약: ${strategy.regime.summary}
+${strategy.regime.domestic?.stress ? `국내 시장 스트레스: 전일 KODEX 200 ${strategy.regime.domestic.move?.toFixed(2)}% 급락 — 미국 위험선호와 국내 급락을 구분해 쓰고, 제목·결론에서 '공격'·'위험선호'를 국내 투자자에게 단정하지 마십시오.` : ''}
 
 [오늘의 전략 결론]
 ${strategy.executiveSummary.title}
@@ -292,7 +339,9 @@ ${topUs.slice(-5).reverse().map(q => `${formatPromptEtf(q)}: ${q.changePercent?.
 하위: ${topKr.slice(-5).reverse().map(q => `${formatPromptEtf(q)} ${q.changePercent?.toFixed(2)}%`).join(' / ') || 'N/A'}
 거래대금 상위: ${topKr.filter(q => q.tradingValue !== undefined && q.tradingValue !== null).sort((a, b) => (b.tradingValue ?? 0) - (a.tradingValue ?? 0)).slice(0, 5).map(q => `${formatPromptEtf(q)} ${formatPromptNumber(q.tradingValue, 0)}원`).join(' / ') || 'N/A'}
 
-${buildMacroBlock(data.macro, data.failedSources)}
+${buildIndexBlock(data.indices)}
+
+${buildUsEventsBlock(data.usEvents, data.date)}${buildMacroBlock(data.macro, data.failedSources)}
 
 ${(() => {
   // Phase F2 (2026-05-24): ETF 측 catalyst 자동 추출.
@@ -346,6 +395,8 @@ ${data.recentHeadlines.map(h => `- ${h}`).join('\n')}
 - overnightBrief.narrative는 간밤 해외시장 사실과 거시지표만 씁니다.
 - overnightBrief.krImpact는 해외 ETF·환율·KRX 국내 ETF가 국내 개장에 미치는 연결만 씁니다.
 - usEtfHighlights.sectorNarrative는 섹터 흐름만 씁니다. 환율·괴리율·자금흐름 설명을 반복하지 마십시오.
+- **기간**: 입력의 ETF·지수 등락률은 모두 직전 거래일 하루(1D) 기준입니다. '이번 주·한 주간·주간' 수익률이나 주간 순위로 쓰지 마십시오.
+- **환율 효과 방향**: 원/달러가 오르면(원화 약세) 환노출 해외 ETF의 원화 환산 성과에 플러스, 내리면(원화 강세) 마이너스입니다. "원화 약세가 수익을 깎는다·상쇄한다"는 틀린 서술입니다. 오늘의 환산 효과는 [거시 지표]의 USD/KRW 전일 대비 방향으로 쓰고, 높은 환율에서 새로 담을 때의 반전 위험은 별도 문장으로 씁니다. 이름에 (H)가 붙은 환헤지 상품은 환율 영향이 작습니다.
 
 [cover.headline 작성 규칙]
 
@@ -390,6 +441,8 @@ ${data.recentHeadlines.map(h => `- ${h}`).join('\n')}
 - todayWatch.items의 title은 코드가 확정한 Today Watch 1~3의 제목을 그대로 씁니다.
 - todayWatch 각 항목의 body에는 ETF명 또는 수치가 최소 1개 들어가야 합니다.
 - 문장은 독자에게 상황을 설명하고 맥락을 건네주는 기자·애널리스트 어조로 씁니다. 단, 투자 권유나 단정적 매수 지시는 피하십시오.
+
+${EVIDENCE_RULES}
 
 [준법·표현 규칙]
 - **직접적인 매수 권유 어휘 금지**: "매수 후보", "접근 후보", "매수 검토", "신규 진입", "분할 접근", "비중 확대", "선호 ETF군" 등.

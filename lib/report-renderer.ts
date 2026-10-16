@@ -197,11 +197,16 @@ function renderMarketPulse(
     }
   }
 
+  // C08 (2026-10-16): 추세선은 다섯 시점을 같은 간격으로 그린다 — 실제 시간 간격이 아니라는 점과
+  // 색 기준(1년 전 대비)을 밝혀 일간 등락 색과 혼동하지 않게 한다.
+  const sparkNote = sparkMap.size > 0
+    ? `\n        <p class="pulse-note">추세선: 1년 전·3개월 전·1개월 전·1주 전·현재 5개 시점 비교(시간 간격 비례 아님). 추세선 색은 1년 전 대비, 숫자는 전일 대비입니다.</p>`
+    : "";
   return `
     <section class="section">
         <h2 class="section-title">시장 체온</h2>
         <div class="market-grid">
-${cardsHtml}        </div>
+${cardsHtml}        </div>${sparkNote}
     </section>`;
 }
 
@@ -345,6 +350,33 @@ function renderCalendar(content: ReportContent): string {
     </section>`;
 }
 
+export interface ReportSourceLink {
+  title: string;
+  source: string;
+  url?: string;
+}
+
+// C09 (2026-10-16): 리포트 작성 때 입력으로 준 뉴스 일부와 원문 링크. 본문 주장과 1:1 인용 목록이 아님을 밝힌다.
+function renderSources(sources: ReportSourceLink[] | undefined): string {
+  const items = (sources ?? []).slice(0, 6);
+  if (items.length === 0) return "";
+  const li = items.map((s) => {
+    const title = escapeHtml(s.title);
+    const titleHtml = s.url && /^https?:\/\//i.test(s.url)
+      ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${title}</a>`
+      : title;
+    return `<li>${titleHtml} <span class="source-meta">· ${escapeHtml(s.source)}</span></li>`;
+  }).join("\n            ");
+  return `
+    <section class="section">
+        <h2 class="section-title">참고한 뉴스</h2>
+        <p class="source-note">리포트 작성 때 입력으로 제공된 뉴스 중 일부입니다. 본문 각 문장과 1:1로 연결된 인용 목록은 아닙니다.</p>
+        <ul class="source-list">
+            ${li}
+        </ul>
+    </section>`;
+}
+
 function renderFooter(content: ReportContent): string {
   const legalItems = LEGAL_DISCLAIMER_ITEMS
     .map((item) => `<li>${escapeHtml(item)}</li>`)
@@ -373,7 +405,8 @@ export function renderReport(
   content: ReportContent,
   data: MarketDataCollection,
   historicalData: HistoricalComparison[],
-  mode?: "event" | "normal" | "quiet"
+  mode?: "event" | "normal" | "quiet",
+  sources?: ReportSourceLink[]
 ): string {
   const css = loadCSS();
 
@@ -393,6 +426,7 @@ export function renderReport(
     (isEvent || isQuiet) ? "" : renderCompass(content),  // event/quiet: 생략
     isQuiet ? "" : renderSoWhat(content),  // quiet: 생략
     renderCalendar(content),
+    renderSources(sources),
     renderFooter(content),
   ];
 

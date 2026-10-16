@@ -568,7 +568,7 @@ function formatMacro(macro: MacroContext): string {
   ${renderMacroItem('US 10Y', macro.us10y ? `${macro.us10y.toFixed(2)}%` : '-')}
   ${renderMacroItem('WTI', formatNumber(macro.wti, 1))}
   ${renderMacroItem('Gold', formatNumber(macro.gold, 0))}
-  ${renderMacroItem('Fear&Greed', formatNumber(macro.fearGreed, 0))}
+  ${renderMacroItem('코인 공포탐욕', formatNumber(macro.fearGreed, 0))}
 </div>`
 }
 
@@ -581,10 +581,10 @@ function renderStrategyDashboard(strategy: MorningStrategyInput, quotes: EtfQuot
     .filter(score => ['riskAppetite', 'koreaTransmission'].includes(score.key) && score.score > 0)
     .slice(0, 2)
     .map(scoreSummaryText)
-  const confidenceText = strategy.regime.confidence >= 75 ? '높음' : strategy.regime.confidence >= 60 ? '중간 이상' : '중간 이하'
+  // C06: 이 숫자는 미국 ETF·변동성 규칙을 합산한 점수다. 검증된 확률처럼 읽히는 '확신도'라 부르지 않는다.
   return `<div class="section">
   <div class="section-title">오늘 시장 국면 판단</div>
-  <p class="narrative" style="margin-bottom:16px">${e(strategy.regime.summary)} 전략 확신도는 ${e(confidenceText)}(${e(String(strategy.regime.confidence))}/100)입니다. ${e(headwinds.length ? `제한 요인: ${headwinds.join(' · ')}` : `우호 요인: ${tailwinds.join(' · ') || '뚜렷한 방향성 제한'}`)}</p>
+  <p class="narrative" style="margin-bottom:16px">${e(strategy.regime.summary)} 규칙 점수는 ${e(String(strategy.regime.confidence))}/100입니다(미국 ETF·변동성 규칙 합산, 검증된 확률 아님). ${e(headwinds.length ? `제한 요인: ${headwinds.join(' · ')}` : `우호 요인: ${tailwinds.join(' · ') || '뚜렷한 방향성 제한'}`)}</p>
   ${strategy.scores.map(score => `
     <div class="score-row">
       <div class="score-label">${e(score.displayLabel)}</div>
@@ -820,10 +820,10 @@ function renderTodayChecklist(report: MorningReport, quotes: EtfQuote[]): string
 function renderBigPicture(report: MorningReport, data: CollectedData): string {
   const text = report.narrativeNotes?.bigPicture?.trim()
   if (!text) return ''
-  const angleLabel = data.narrativeAngle ? `서사 앵글: ${data.narrativeAngle.replace(/_/g, ' ')}` : '오늘의 큰 그림'
+  // C09: '서사 앵글·분석 렌즈'는 생성 내부 용어라 독자에게 노출하지 않는다.
   return `<div class="section big-picture">
   <div class="section-title">Big Picture</div>
-  <div class="big-picture-meta">${e(angleLabel)} · 분석 렌즈: ${e(data.analysisLens)}</div>
+  <div class="big-picture-meta">오늘의 큰 그림</div>
   <div class="big-picture-body">${renderReportText(text, data.quotes)}</div>
 </div>`
 }
@@ -841,7 +841,7 @@ function renderStoryOpening(report: MorningReport, data: CollectedData): string 
   // Tier 2: Claude storySpine 우선, 없으면 Tier 1 하드코딩 fallback
   const spine = report.narrativeNotes?.storySpine
   const act1Note = spine?.act1?.trim() || `${primaryName}의 거래대금이 함께 따라와야 이 신호가 실제로 움직이는 흐름이 됩니다.`
-  const act2Note = spine?.act2?.trim() || `${gateName}는 기초지수가 오른 폭과 환율이 깎아내는 폭을 나눠 보는 게 중요합니다.`
+  const act2Note = spine?.act2?.trim() || `${gateName}는 기초지수 등락과 원/달러 환율 변화를 나눠 봐야 원화 기준 성과가 보입니다.`
   const act3Note = spine?.act3?.trim() || '당장의 가격 움직임보다 거래대금과 NAV 괴리가 말해주는 이야기를 먼저 읽어봅니다.'
 
   return `<div class="story-card">
@@ -1025,7 +1025,7 @@ function checklistActionText(index: number): string {
 
 function checklistAvoidText(index: number): string {
   if (index === 0) return '미국 ETF가 강하다고 국내 ETF를 장 시작 직후 따라잡는 건 위험합니다.'
-  if (index === 1) return '환율 부담이 큰 구간에서는, 환노출 해외 ETF를 단번에 늘리지 않는 게 좋습니다.'
+  if (index === 1) return '환율이 높은 구간에서 환노출 해외 ETF를 단번에 늘리면, 이후 원화 강세 때 환산 손실을 크게 입을 수 있습니다.'
   return '레버리지·인버스는 장기 보유 후보가 아닙니다. 오늘 하루 안에 끝낼 전술형으로만 다룹니다.'
 }
 
@@ -1045,7 +1045,7 @@ function quoteLabel(q: EtfQuote | undefined, fallback: string): string {
 function renderGlobalKrMatching(data: CollectedData): string {
   const pairs = [
     { theme: '미국 S&P 500', global: ['SPY', 'VOO'], kr: ['360750.KS'], check: '환율 방향과 S&P 500 선물이 같은 편을 들어주는지가 오늘의 관전 포인트입니다.' },
-    { theme: '미국 나스닥 100', global: ['QQQ'], kr: ['133690.KS'], check: '성장주 강세가 원화 약세의 부담을 이겨낼 만큼인지 가늠해 봅니다.' },
+    { theme: '미국 나스닥 100', global: ['QQQ'], kr: ['133690.KS'], check: '나스닥 등락과 원/달러 환율 변화가 원화 기준 성과에 각각 얼마나 기여했는지 나눠 봅니다.' },
     { theme: '반도체', global: ['SOXX'], kr: ['091160.KS', '396500.KS', '471760.KS'], check: '미국 반도체 흐름이 국내 거래대금 증가로 실제 이어지는지가 열쇠입니다.' },
     { theme: '장기 미국채', global: ['TLT', 'IEF'], kr: ['458250.KS', '305080.KS'], check: '미국 10년 금리와 TLT가 같은 방향을 가리키는지 봐야 판단이 깔끔합니다.' },
   ]
@@ -1120,15 +1120,18 @@ function renderGlobalKoreaBridge(data: CollectedData): string {
 }
 
 function renderMarketHeatmap(data: CollectedData): string {
+  // C08 (2026-10-16 감사): 평균이 의미를 지우지 않게 묶는다. 미국·국내는 거래 세션이 달라 한 타일에서
+  // 평균내지 않고, 레버리지·인버스는 반대 노출이 상쇄되므로 평균 타일을 두지 않는다(전술 경고 보드에
+  // 각각 표시). 국내 평균은 전술형을 뺀 1배 ETF만.
   const groups = [
     { name: '미국 대표지수', meta: 'SPY·QQQ·IWM', tickers: ['SPY', 'QQQ', 'IWM'] },
-    { name: '반도체·AI', meta: 'SOXX·국내 반도체', tickers: ['SOXX', '091160.KS', '396500.KS'] },
-    { name: '한국 ETF', meta: '수집 국내 ETF 평균', tickers: data.quotes.filter(q => q.market === 'KR').map(q => q.ticker).slice(0, 80) },
+    { name: '미국 반도체', meta: 'SOXX', tickers: ['SOXX'] },
+    { name: '국내 반도체', meta: 'KODEX 반도체·TIGER 반도체TOP10·TIGER AI반도체핵심공정', tickers: ['091160.KS', '396500.KS', '471760.KS'] },
+    { name: '국내 1배 ETF', meta: '수집 국내 ETF 평균(레버리지·인버스 제외)', tickers: data.quotes.filter(q => q.market === 'KR' && !isTacticalEtf(q)).map(q => q.ticker).slice(0, 80) },
     { name: '환노출 해외', meta: '국내 상장 미국 ETF', tickers: ['360750.KS', '133690.KS'] },
     { name: '채권', meta: 'TLT·IEF·BND', tickers: ['TLT', 'IEF', 'BND'] },
     { name: '금·원자재', meta: 'GLD·USO·DBC', tickers: ['GLD', 'USO', 'DBC'] },
-    { name: '에너지', meta: 'XLE·원유', tickers: ['XLE', '261220.KS'] },
-    { name: '레버리지/인버스', meta: '국내 전술형', tickers: ['122630.KS', '252670.KS'] },
+    { name: '미국 에너지', meta: 'XLE', tickers: ['XLE'] },
   ]
 
   const cells = groups
@@ -1154,7 +1157,7 @@ function renderMarketHeatmap(data: CollectedData): string {
   <div class="section-title">ETF Market Heatmap</div>
   <div class="heatmap-grid">${cells}</div>
   <div class="legend"><span>1D 기준</span><span>-3% 이하</span><span>-1~-3%</span><span>-1~+1%</span><span>+1~+3%</span><span>+3% 이상</span></div>
-  <p class="heat-sub">모든 수치는 1D 기준입니다. 표본 수 2개 이하는 시장 대표값이 아니라 참고값입니다. 5D 흐름은 12개월 시계열 수집 후 표시합니다.</p>
+  <p class="heat-sub">모든 수치는 1D 기준입니다. 미국 타일은 간밤 미국 장, 국내 타일은 직전 한국 장 기준이며 서로 섞어 평균내지 않습니다. 표본 수 2개 이하는 시장 대표값이 아니라 참고값입니다. 5D 흐름은 12개월 시계열 수집 후 표시합니다.</p>
 </div>`
 }
 
@@ -1172,7 +1175,7 @@ function renderIssueEtfs(data: CollectedData): string {
   const issues = [
     { title: '반도체·AI', reason: '미국 반도체 흐름이 국내 반도체 ETF 거래대금으로 이어지는지가 오늘의 관전 포인트입니다.', tickers: ['SOXX', '091160.KS', '396500.KS'] },
     { title: '장기채·금리', reason: '미국 10년 금리의 움직임이 장기채 ETF 가격에 어떻게 새겨지는지 읽어냅니다.', tickers: ['TLT', 'IEF', '458250.KS'] },
-    { title: '환노출 미국주식', reason: 'S&P500·나스닥이 오른 폭과 원/달러 환율이 깎아낸 폭을 따로 떼어 계산해 봅니다.', tickers: ['360750.KS', '133690.KS'] },
+    { title: '환노출 미국주식', reason: 'S&P500·나스닥 등락과 원/달러 환율 변화를 따로 떼어, 원화 기준 성과가 어디서 왔는지 계산해 봅니다.', tickers: ['360750.KS', '133690.KS'] },
     { title: '레버리지·인버스', reason: 'NAV와 괴리 상태를 먼저 확인한 뒤에야 장 초반 진입을 고민할 수 있는 상품군입니다.', tickers: ['122630.KS', '252670.KS'] },
     { title: '금·원자재', reason: '지정학 변수와 달러 방향이 원자재 ETF에 같은 신호를 보내는지 맞춰 봅니다.', tickers: ['GLD', 'SLV', 'USO', '132030.KS'] },
   ]
@@ -1398,13 +1401,14 @@ function formatKstDateTime(value: string): string {
 function renderNewsSources(data: CollectedData): string {
   const usedNews = selectRelevantNews(data)
   if (usedNews.length === 0) return ''
+  // C09: 입력으로 받은 뉴스 중 키워드로 고른 일부다 — '전략에 사용한' 인용 목록처럼 부르지 않고 원문 링크를 단다.
   return `<div class="section">
-  <div class="section-title">전략에 사용한 뉴스 출처</div>
-  <p class="narrative" style="margin-bottom:12px">뉴스는 가격과 거시지표를 보완하는 참고 자료로만 사용합니다. 기사 본문을 확인하지 않은 단정 표현은 전략 근거로 쓰지 않습니다.</p>
+  <div class="section-title">참고한 뉴스</div>
+  <p class="narrative" style="margin-bottom:12px">리포트 작성 때 입력으로 제공된 뉴스 중 일부입니다. 본문 각 문장과 1:1로 연결된 인용 목록은 아니며, 기사 본문을 확인하지 않은 단정 표현은 근거로 쓰지 않습니다.</p>
   <div class="source-list">
     ${usedNews.map(item => `
     <div class="source-item">
-      <strong>${e(item.title)}</strong><br>
+      ${/^https?:\/\//i.test(item.url) ? `<a class="source-link" href="${e(item.url)}" target="_blank" rel="noopener noreferrer">${e(item.title)}</a>` : `<strong>${e(item.title)}</strong>`}<br>
       ${e(item.source)} · ${e(formatKstDateTime(item.publishedAt))} · ${e(sourceDomain(item.url))}
     </div>`).join('')}
   </div>

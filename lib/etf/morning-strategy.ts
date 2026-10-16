@@ -148,12 +148,14 @@ function buildScores(data: CollectedData): StrategyScore[] {
     {
       key: 'dollarPressure',
       label: '달러압력',
-      displayLabel: '원화환율 부담',
+      // C02: 점수는 환율 '수준' 기준이다. 높은 수준은 신규 해외 진입의 반전 위험이지
+      // 보유분의 손실이 아니다(원화 약세는 환노출 보유분의 원화 환산에 플러스).
+      displayLabel: '환율 수준 부담',
       score: clampScore(dollarScore),
-      stance: scoreLabel(dollarScore, '원화 투자자 환율 부담', '중립', '환율 부담 완화'),
+      stance: scoreLabel(dollarScore, '환율 고점 — 신규 진입 반전 위험', '중립', '환율 부담 완화'),
       displayLevel: pressureLevel(dollarScore),
       evidence: [
-        ev('USD/KRW', fmtNum(data.macro.usdKrw, 0), '환노출형 해외 ETF의 원화 성과에 직접 영향을 줍니다.'),
+        ev('USD/KRW', fmtNum(data.macro.usdKrw, 0), '오르면 환노출 해외 ETF의 원화 환산에 플러스, 높은 수준의 신규 진입은 원화 강세 반전 위험입니다.'),
         ev('DXY', fmtNum(data.macro.dxy), '달러 전반의 강도를 봅니다.'),
       ],
     },
@@ -269,8 +271,8 @@ function buildEtfGroupStrategies(data: CollectedData, scores: StrategyScore[]): 
     rationale: dollar >= 2 ? '달러가 강한 국면이라면 이미 들고 있는 몫에는 보탬이지만, 새로 담는 비용은 부담스러워집니다.' : '환율 부담이 크지 않다면 환율보다 지수 흐름을 먼저 놓고 봐도 괜찮습니다.',
     actionGuide: dollar >= 2 ? '보유분 평가엔 환율 효과를 반영하되, 새로 담는 결정은 한 박자 늦추는 게 합리적입니다.' : '환율보다 기초지수 방향이 오늘의 우선순위입니다.',
     confirmSignal: 'USD/KRW가 안정되고 기초지수까지 강해지는 조합이 만들어져야 편입 조건이 나아집니다.',
-    avoid: '원화 약세가 진행되는 구간에서 환노출 ETF를 한꺼번에 키우는 건 위험합니다.',
-    evidence: [ev('USD/KRW', fmtNum(data.macro.usdKrw, 0), '환노출 ETF의 원화 성과 변수입니다.')],
+    avoid: '환율이 크게 오른 상태에서 환노출 ETF를 한꺼번에 키우면, 이후 원화 강세 때 환산 손실이 커집니다.',
+    evidence: [ev('USD/KRW', fmtNum(data.macro.usdKrw, 0), '오르면 환노출 ETF의 원화 성과에 플러스, 내리면 마이너스입니다.')],
   })
 
   strategies.push({
@@ -320,6 +322,14 @@ function buildRiskAlerts(data: CollectedData, scores: StrategyScore[]): RiskAler
   return alerts
 }
 
+// C06 (2026-10-16 감사): 국내 시장 스트레스. 국면 점수는 미국 ETF·VIX 중심이라 국내 급락을 보지 못한다.
+// KODEX 200(코스피200 추종 1배)의 전일 등락이 -3% 이하이면 급락일로 본다.
+export const DOMESTIC_STRESS_THRESHOLD = -3
+export function assessDomesticStress(data: CollectedData): { move: number | null; stress: boolean } {
+  const move = data.quotes.find(q => q.ticker === '069500.KS')?.changePercent ?? null
+  return { move, stress: move !== null && move <= DOMESTIC_STRESS_THRESHOLD }
+}
+
 function buildExecutiveSummary(
   regime: MorningStrategyInput['regime'],
   strategies: EtfGroupStrategy[],
@@ -330,19 +340,26 @@ function buildExecutiveSummary(
   const cautionGroups = strategies.filter(s => s.stance === '경계').map(s => s.group).slice(0, 3)
   const volatility = scores.find(s => s.key === 'volatilityPressure')?.score ?? 0
   const dollar = scores.find(s => s.key === 'dollarPressure')?.score ?? 0
+  const domesticStress = regime.domestic?.stress === true
   const tacticalStance = regime.label === 'risk_off'
     ? '방어'
     : volatility >= 2
       ? '관망'
-      : regime.label === 'risk_on' && dollar <= 1
-        ? '공격'
-        : '균형'
+      // C06: 국내 급락일에는 미국 위험선호만으로 '공격'을 최상단 결론으로 두지 않는다(무조건 방어로 뒤집지도 않음).
+      : domesticStress
+        ? '조건부'
+        : regime.label === 'risk_on' && dollar <= 1
+          ? '공격'
+          : '균형'
   const avoidToday = dollar >= 2
     ? '환율이 높은 구간에서 환노출 해외 ETF를 장 초반에 한 번에 늘리는 행동입니다.'
     : volatility >= 1
       ? '변동성이 커진 구간에서 레버리지 ETF를 시장가로 추격하는 행동입니다.'
       : '상승률 상위 ETF를 근거 확인 없이 뒤따라가는 행동입니다.'
-  const title = regime.label === 'risk_on' && dollar >= 2
+  const domesticMove = regime.domestic?.move
+  const title = domesticStress && regime.label !== 'risk_off' && domesticMove !== null && domesticMove !== undefined
+    ? `미국은 ${regime.displayName} 쪽이지만 국내는 전일 KODEX 200 ${domesticMove.toFixed(2)}% 급락입니다. 국내 개장 흐름을 확인한 뒤 판단하는 조건부 접근이 기준입니다.`
+    : regime.label === 'risk_on' && dollar >= 2
     ? '위험자산은 열려 있지만 환율 때문에 추격보다 단계적 판단입니다.'
     : regime.label === 'risk_on'
       ? `위험자산 선호입니다. 오늘은 ${tacticalStance} 접근이 기준입니다.`
@@ -374,11 +391,16 @@ export function buildMorningStrategyInput(data: CollectedData): MorningStrategyI
   const confidence = Math.min(90, 50 + Math.abs(regimeScore) * 15 + Math.abs(volatility) * 5)
   const hasRealFlowData = hasRealFundFlowData(data)
   const etfGroupStrategies = buildEtfGroupStrategies(data, scores)
+  const domestic = assessDomesticStress(data)
+  const domesticNote = domestic.stress && domestic.move !== null
+    ? ` 다만 국내는 전일 KODEX 200 ${domestic.move.toFixed(2)}% 급락으로, 미국 국면 판정과 따로 봐야 합니다.`
+    : ''
   const regime = {
     label,
     displayName,
     confidence,
-    summary: `${displayName} 국면입니다. 핵심 변수는 ${scores.filter(s => s.score !== 0).slice(0, 3).map(s => s.displayLabel).join(', ') || '방향성 부재'}입니다.`,
+    summary: `${displayName} 국면입니다(미국 ETF·변동성 기준). 핵심 변수는 ${scores.filter(s => s.score !== 0).slice(0, 3).map(s => s.displayLabel).join(', ') || '방향성 부재'}입니다.${domesticNote}`,
+    domestic,
   }
 
   return {

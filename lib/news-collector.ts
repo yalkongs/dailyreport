@@ -142,12 +142,16 @@ export function parseRssItems(xml: string, source: string, category: NewsHeadlin
     if (!title) continue;
 
     const pubDate = pubDateMatch?.[1]?.trim();
+    // C09: 기사 원문 링크 보존(출처 추적). http/https 외 스킴은 버린다.
+    const linkMatch = itemXml.match(/<link><!\[CDATA\[(.*?)\]\]><\/link>|<link>(.*?)<\/link>/);
+    const link = decodeEntities((linkMatch?.[1] || linkMatch?.[2] || "").trim());
     const item: NewsHeadline = {
       title: decodeEntities(title),
       source,
       category,
       pubDate,
       publishedHoursAgo: hoursSince(pubDate),
+      ...(/^https?:\/\//i.test(link) ? { url: link } : {}),
     };
 
     // 실질 요약 소스만 description 발췌(그 외 소스는 snippet 미설정).

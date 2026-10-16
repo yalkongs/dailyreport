@@ -72,6 +72,8 @@ function buildUserPrompt(start: string, end: string): string {
     "importance": 1 | 2 | 3 | 4 | 5;   // 1=낮음 5=매우높음
     "description"?: string;    // 짧은 컨텍스트, 추측 여부 등
     "source"?: string;         // 출처 URL 또는 라벨
+    "confirmed": boolean;      // 공식 기관 발표 일정에서 날짜를 확인했으면 true, 관례·패턴 추정이면 false
+    "time"?: string;           // 공식 발표 시각 "HH:MM"(KST) — 확인된 경우만
   }>;
 }
 \`\`\`
@@ -81,6 +83,7 @@ function buildUserPrompt(start: string, end: string): string {
 - 같은 날 여러 발표가 있어도 각각 별도 객체로.
 - importance 기준: 5=한국은행 금통위·CPI / 4=고용·GDP·BOK 경제전망 / 3=산업생산·무역수지 / 2=선물옵션 만기 / 1=기타
 - 검색 출처가 한국은행/통계청 공식 사이트면 source 필드에 도메인 명시.
+- **date 에는 공식 일정에 적힌 날짜를 넣으십시오.** 공식 일정에 날짜가 없어 관례로 추정했다면 confirmed:false 로 표시하고, 다른 출처에 확정 날짜가 있으면 그 날짜와 confirmed:true 를 쓰십시오. 추정 날짜와 확정 날짜가 다르면 확정 날짜를 우선합니다.
 - **JSON 만 반환.** 다른 텍스트 일절 없음.`;
 }
 
@@ -126,6 +129,8 @@ function validateEvent(e: unknown): KrMacroEvent | null {
     importance: imp,
     description: typeof o.description === "string" ? o.description : undefined,
     source: typeof o.source === "string" ? o.source : undefined,
+    ...(typeof o.confirmed === "boolean" ? { confirmed: o.confirmed } : {}),
+    ...(typeof o.time === "string" && /^\d{2}:\d{2}$/.test(o.time) ? { time: o.time } : {}),
   };
 }
 

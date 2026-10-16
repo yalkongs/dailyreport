@@ -14,6 +14,7 @@
 // 내부에서 applySoftFixesInPlace 를 먼저 호출해 검증 직전에 자동 교정을 적용.
 // 외부 호출자(claude-client, run-etf)는 기존 호출만으로 새 구조의 이점을 얻음.
 
+import { findNumericClaimMismatches } from './numeric-claims'
 import type { CollectedData, MorningReport, MorningStrategyInput } from './types'
 // 정합성 검사 (2026-07-22): R1 카드-산문 / R2 시점 / R3 출처 인용.
 import { checkCharacterProseConsistency } from './story-characters'
@@ -220,6 +221,31 @@ function splitSentences(text: string): string[] {
     .filter(Boolean)
 }
 
+// C02 (2026-10-16 감사): 원/달러 상승(원화 약세)은 환노출 해외 ETF의 원화 환산 성과에 플러스다.
+// "원화 약세 → 환율 손실이 수익을 상쇄" 같은 반대 방향 서술을 잡는다. 같은 문장에 원화 강세·반전이
+// 함께 나오면(높은 환율에서 진입한 뒤 원화가 강해질 위험) 정상 서술이므로 통과시킨다.
+const FX_LOSS_WORDS = /환율\s*손실|환손실|환차손|환산\s*손실|깎|상쇄/
+const FX_REVERSAL_WORDS = /원화\s*강세|강세로|반전|되돌|돌아서/
+export function findFxDirectionErrors(text: string): string[] {
+  const errors: string[] = []
+  for (const sentence of splitSentences(text)) {
+    const wrong = /환율이?\s*깎/.test(sentence) ||
+      (/원화\s*약세/.test(sentence) && FX_LOSS_WORDS.test(sentence) && !FX_REVERSAL_WORDS.test(sentence))
+    if (wrong) errors.push(sentence.length > 80 ? `${sentence.slice(0, 80)}…` : sentence)
+  }
+  return errors
+}
+
+// C05 (2026-10-16 감사): ETF 입력의 등락률은 모두 1일 기준이다. "이번 주 KODEX 반도체 -11.94%"처럼
+// 하루 수익률을 주간 수익률로 쓰는 문장을 잡는다(부호 있는 %나 방향어가 붙은 %만 — 예상치 등은 제외).
+const WEEK_WORDS = /이번\s*주|금주|한\s*주\s*(?:간|동안)?|주간/
+const DIRECTIONAL_PERCENT = /[+\-−]\s?\d+(?:\.\d+)?%|\d+(?:\.\d+)?%\s*(?:대\s*)?(?:하락|상승|급락|급등|내려|올라|밀려|빠져|반등)/
+export function findWeeklyReturnClaims(text: string): string[] {
+  return splitSentences(text)
+    .filter(s => WEEK_WORDS.test(s) && DIRECTIONAL_PERCENT.test(s))
+    .map(s => (s.length > 80 ? `${s.slice(0, 80)}…` : s))
+}
+
 function duplicateSentences(text: string): string[] {
   // P1+보강 [M2] (2026-04-24): 중복 검출 하한 18자 → 14자.
   // Story Spine 1막과 간밤 시장 요약이 동일 문장을 반복 출력하는 사례 대응.
@@ -324,10 +350,17 @@ export function applyConsistencySoftFixesInPlace(
   }
 }
 
+export interface MorningQualityOptions {
+  // 사실 검증(수치 대조·주간 둔갑·환율 방향)을 위반 대신 경고로 남긴다. 마지막 축소판(Tier 1)
+  // 검증에서 쓴다 — 운영 원칙 "품질 낮아도 전송 > 침묵"(F02 유지 결정, 2026-10-16).
+  factChecksAsWarnings?: boolean
+}
+
 export function validateMorningReportQuality(
   report: MorningReport,
   data: CollectedData,
-  strategy: MorningStrategyInput
+  strategy: MorningStrategyInput,
+  options: MorningQualityOptions = {}
 ): void {
   // P1: 검증 전에 소프트 픽스를 먼저 적용. 가벼운 문체 이슈로 재생성하지 않도록.
   const fixesApplied = applySoftFixesInPlace(report)
@@ -363,6 +396,26 @@ export function validateMorningReportQuality(
 
   // R1: Characters 카드-산문 정합 (data.quotes 로 배정 재계산).
   violations.push(...checkCharacterProseConsistency(report, data.quotes))
+
+  // 사실 검증(2026-10-16 감사 C01·C02·C04·C05) — 정상 시도에서는 재생성 사유, 축소판에서는 경고.
+  const factViolations: string[] = []
+  const numeric = findNumericClaimMismatches(text, data.quotes, data.indices)
+  if (numeric.length > 0) {
+    factViolations.push(`수치가 입력 데이터와 다름(지수/ETF 혼동·카드와 본문 불일치): ${numeric.slice(0, 3).join(' / ')}`)
+  }
+  const weekly = findWeeklyReturnClaims(text)
+  if (weekly.length > 0) {
+    factViolations.push(`주간 수익률 서술(입력은 1일 등락률뿐): ${weekly.slice(0, 2).join(' / ')}`)
+  }
+  const fxErrors = findFxDirectionErrors(text)
+  if (fxErrors.length > 0) {
+    factViolations.push(`환율 방향 오류(원화 약세는 환노출 원화 환산에 플러스): ${fxErrors.slice(0, 2).join(' / ')}`)
+  }
+  if (options.factChecksAsWarnings) {
+    for (const v of factViolations) console.warn(`  [fact-warn] ${v}`)
+  } else {
+    violations.push(...factViolations)
+  }
 
   const adviceMatches = findMatches(text, INVESTMENT_ADVICE_PATTERNS)
   if (adviceMatches.length > 0) {

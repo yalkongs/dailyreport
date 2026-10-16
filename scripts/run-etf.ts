@@ -7,7 +7,9 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { collectAllEtfData } from '../lib/etf/etf-data'
-import { collectMacroContext } from '../lib/etf/market-context'
+import { collectIndexQuotes, collectMacroContext, isMacroEmpty } from '../lib/etf/market-context'
+import { collectEconomicCalendar } from '../lib/economic-calendar'
+import { ETF_GENERATION_BUDGET_MS, makeDeadline } from '../lib/claude-budget'
 import { collectNews } from '../lib/etf/news'
 import { detectAnomalies } from '../lib/etf/analyzer'
 import {
@@ -30,11 +32,13 @@ import { renderMorningHtml, saveReport, saveReportPreviewImage } from '../lib/et
 // "no preview card" for the URL.
 import {
   validateData,
+  sanitizeQuotes,
   updateReportsIndex,
   loadJson,
   saveJson,
 } from '../lib/etf/pipeline-utils'
 import type { CollectedData, ReportMeta, MacroContext, AnomalyType } from '../lib/etf/types'
+import { KR_ETF_UNIVERSE, US_ETF_UNIVERSE } from '../lib/etf/universe'
 
 const LENS_LOG_PATH = 'data/etf-lens-log.json'
 const ANGLE_LOG_PATH = 'data/etf-narrative-angle-log.json'
@@ -105,28 +109,38 @@ async function main() {
 
   // Step 1: 데이터 수집 (병렬)
   console.log('[1/8] 데이터 수집 중...')
-  const [etfData, macro, news] = await Promise.allSettled([
+  const [etfData, macro, news, indices, usEvents] = await Promise.allSettled([
     collectAllEtfData(date),
     collectMacroContext(),
     collectNews(),
+    collectIndexQuotes(),
+    collectEconomicCalendar(),
   ])
 
-  const { quotes, flows, investorFlows, krx } = etfData.status === 'fulfilled'
+  const collected = etfData.status === 'fulfilled'
     ? etfData.value
     : { quotes: [], flows: [], investorFlows: [], krx: { basDd: null, session: 'none' as const } }
+  const { flows, investorFlows, krx } = collected
+  // F01: NaN·0·음수 가격은 결측으로(실패율에 반영, 렌더에 NaN 미노출)
+  const sanitized = sanitizeQuotes(collected.quotes)
+  if (sanitized.invalidCount > 0) console.warn(`  ⚠️ 비정상 가격 ${sanitized.invalidCount}건 → 결측 처리`)
+  const quotes = sanitized.quotes
 
   // Layer 0: 수집 실패 소스 기록 (allSettled rejection + KRX nav 전량 null)
   const failedSources: string[] = []
   if (etfData.status === 'rejected') failedSources.push('etf-quotes')
-  if (macro.status === 'rejected') failedSources.push('macro')
+  if (macro.status === 'rejected' || isMacroEmpty(macro.value)) failedSources.push('macro')
   if (news.status === 'rejected') failedSources.push('news')
+  // C01: 지수 실측이 없으면 프롬프트가 지수 등락 수치를 쓰지 못하게 한다.
+  if (indices.status === 'rejected' || indices.value.length === 0) failedSources.push('indices')
   const krQuotes = quotes.filter(q => q.market === 'KR')
   if (krQuotes.length > 0 && krQuotes.every(q => q.nav === null)) failedSources.push('krx-nav')
 
   // Step 2: 데이터 검증
   console.log('[2/8] 데이터 검증 중...')
   try {
-    validateData(quotes)
+    // F01: 실패율 분모는 유니버스 전체(시장별)
+    validateData(quotes, { KR: KR_ETF_UNIVERSE.length, US: US_ETF_UNIVERSE.length })
   } catch (e) {
     // 운영자 알림 = exit(1) → GitHub 스케줄 실패 자동 이메일(zero-wiring).
     console.error('[error] 데이터 검증 실패:', e)
@@ -163,6 +177,8 @@ async function main() {
     investorFlows,
     macro: macro.status === 'fulfilled' ? macro.value : {} as MacroContext,
     news: news.status === 'fulfilled' ? news.value : [],
+    indices: indices.status === 'fulfilled' ? indices.value : [],
+    usEvents: usEvents.status === 'fulfilled' ? usEvents.value : [],
     analysisLens,
     narrativeAngle,
     recentHeadlines,
@@ -184,7 +200,13 @@ async function main() {
   const MAX_CLAUDE_ATTEMPTS = 2
   let report: Awaited<ReturnType<typeof generateMorningReport>> | undefined
   let lastError: unknown
+  // F07: 생성 단계 예산 — 넘기면 새 호출을 시작하지 않는다(다음 트리거가 새 runner에서 재시도).
+  const deadline = makeDeadline(ETF_GENERATION_BUDGET_MS)
   for (let attempt = 1; attempt <= MAX_CLAUDE_ATTEMPTS; attempt++) {
+    if (attempt > 1 && !deadline.canStartCall()) {
+      console.warn(`[warn] 생성 예산 초과(${Math.round(deadline.elapsedMs() / 1000)}초) — ${attempt}회차 생략, Tier 1 fallback으로`)
+      break
+    }
     try {
       report = await generateMorningReport(data)
       if (attempt > 1) {
@@ -203,6 +225,11 @@ async function main() {
 
   // P0 fallback: narrativeNotes 만 drop해서 Tier 1 하드코딩 본문으로 렌더링
   if (!report) {
+    if (!deadline.canStartCall()) {
+      console.error(`[error] 생성 예산 초과(${Math.round(deadline.elapsedMs() / 1000)}초) — fallback 호출 생략. 다음 트리거가 재시도합니다.`)
+      console.error('[error] 원인:', lastError)
+      process.exit(1)
+    }
     try {
       console.log('[5b/8] Tier 1 fallback — narrativeNotes drop 후 재검증')
       const raw = await generateMorningReportRaw(data)

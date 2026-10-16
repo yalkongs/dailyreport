@@ -264,7 +264,20 @@ export function mergeKrxIntoQuotes(
   session: KrxSession,
 ): EtfQuote[] {
   if (session !== 'prev-session') return quotes
-  return quotes.map(q => {
+  // F09 (2026-10-16 감사): Yahoo에서 빠진 국내 유니버스 종목을 정상 KRX 전일 행으로 복구한다
+  // (이전엔 Yahoo에 있는 종목만 순회해 Yahoo 장애 시 KRX가 살아 있어도 국내 시세가 0개였다).
+  const present = new Set(quotes.map(q => q.ticker))
+  const recovered: EtfQuote[] = []
+  for (const [ticker, krx] of krxMap) {
+    const def = getEtfByTicker(ticker)
+    if (present.has(ticker) || !def || def.market !== 'KR' || krx.close === null || krx.close === undefined) continue
+    recovered.push({
+      ticker, name: krx.name || def.name, market: 'KR',
+      price: null, change: null, changePercent: null, volume: null, aum: null,
+      nav: null, premiumDiscount: null, trackingError: null, prev20AvgVolume: null,
+    })
+  }
+  return [...quotes, ...recovered].map(q => {
     const krx = krxMap.get(q.ticker)
     if (!krx) return q
     const name = krx.name || q.name

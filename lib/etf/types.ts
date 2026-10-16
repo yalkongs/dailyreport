@@ -57,6 +57,8 @@ export interface InvestorFlow {
 // 거시 컨텍스트
 export interface MacroContext {
   usdKrw: number | null
+  // C02 (2026-10-16): 원/달러 전일 대비 변화율. +는 원화 약세(환노출 해외 ETF 원화 환산에 플러스).
+  usdKrwChangePercent?: number | null
   dxy: number | null
   vix: number | null
   moveIndex: number | null
@@ -92,6 +94,16 @@ export interface Anomaly {
 }
 
 // 파이프라인 수집 데이터 전체
+// C01 (2026-10-16): 실제 지수 시세. ETF 등락(SPY·QQQ·KODEX 200)을 지수 등락으로 부르지 않게
+// 코스피·나스닥 등 지수 값을 따로 수집한다. asOf는 해당 시세의 거래일(KST 날짜).
+export interface IndexQuote {
+  symbol: string
+  nameKo: string
+  price: number | null
+  changePercent: number | null
+  asOf: string | null
+}
+
 export interface CollectedData {
   reportType: ReportType
   date: string           // YYYY-MM-DD
@@ -101,6 +113,9 @@ export interface CollectedData {
   macro: MacroContext
   news: NewsItem[]
   analysisLens: string
+  indices?: IndexQuote[]
+  // C03 (2026-10-16): 미국 주요 지표 일정(한국시간 환산). FRED 키가 없으면 빈 배열.
+  usEvents?: import('../types').EconomicEvent[]
   // 최근 7일 헤드라인. 프롬프트에 주입하여 Claude가 동일·유사 문장 반복을 피하게 함.
   // optional — 비어있거나 undefined면 프롬프트에서 해당 블록 생략.
   recentHeadlines?: string[]
@@ -158,7 +173,7 @@ export interface MorningStrategyInput {
   generatedAt: string
   executiveSummary: {
     title: string
-    tacticalStance: '공격' | '균형' | '방어' | '관망'
+    tacticalStance: '공격' | '균형' | '방어' | '관망' | '조건부'
     preferredGroups: string[]
     watchGroups: string[]
     cautionGroups: string[]
@@ -167,8 +182,10 @@ export interface MorningStrategyInput {
   regime: {
     label: 'risk_on' | 'neutral' | 'risk_off'
     displayName: string
-    confidence: number
+    confidence: number // 규칙 점수(미국 ETF·VIX 중심 합산). 검증된 확률·확신도가 아니다.
     summary: string
+    // C06 (2026-10-16): 국내 시장 스트레스 — 미국 국면과 따로 판단한다.
+    domestic?: { move: number | null; stress: boolean }
   }
   scores: StrategyScore[]
   etfGroupStrategies: EtfGroupStrategy[]
