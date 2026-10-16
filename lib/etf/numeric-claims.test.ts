@@ -125,3 +125,11 @@ test('검증기: 지수 수치 오류는 정상 시도에서 위반, 축소판�
   assert.match(errorOf(() => validateMorningReportQuality(report(), DATA, buildMorningStrategyInput(DATA))), /수치가 입력 데이터와 다름/)
   assert.doesNotMatch(errorOf(() => validateMorningReportQuality(report(), DATA, buildMorningStrategyInput(DATA), { factChecksAsWarnings: true })), /수치가 입력 데이터와 다름/)
 })
+
+test('허용오차는 표기 자릿수 기준: 7.57%를 7.5%·7.6%로 쓴 것은 통과, 7.4%는 위반', () => {
+  const idx: IndexQuote[] = [{ symbol: '^KS11', nameKo: '코스피', price: 5554, changePercent: -7.57, asOf: '2026-10-15' }]
+  assert.deepEqual(check('전 거래일 코스피가 7.5% 급락했습니다.', idx), [])
+  assert.deepEqual(check('전 거래일 코스피가 7.6% 급락했습니다.', idx), [])
+  assert.equal(check('전 거래일 코스피가 7.4% 급락했습니다.', idx).length, 1)
+  assert.equal(check('전 거래일 코스피가 -7.62% 밀렸습니다.', idx).length, 1) // 두 자리는 복사값이어야
+})
