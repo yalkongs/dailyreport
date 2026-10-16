@@ -173,7 +173,7 @@ export interface MorningStrategyInput {
   generatedAt: string
   executiveSummary: {
     title: string
-    tacticalStance: '공격' | '균형' | '방어' | '관망'
+    tacticalStance: '공격' | '균형' | '방어' | '관망' | '조건부'
     preferredGroups: string[]
     watchGroups: string[]
     cautionGroups: string[]
@@ -182,8 +182,10 @@ export interface MorningStrategyInput {
   regime: {
     label: 'risk_on' | 'neutral' | 'risk_off'
     displayName: string
-    confidence: number
+    confidence: number // 규칙 점수(미국 ETF·VIX 중심 합산). 검증된 확률·확신도가 아니다.
     summary: string
+    // C06 (2026-10-16): 국내 시장 스트레스 — 미국 국면과 따로 판단한다.
+    domestic?: { move: number | null; stress: boolean }
   }
   scores: StrategyScore[]
   etfGroupStrategies: EtfGroupStrategy[]

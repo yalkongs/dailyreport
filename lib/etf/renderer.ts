@@ -581,10 +581,10 @@ function renderStrategyDashboard(strategy: MorningStrategyInput, quotes: EtfQuot
     .filter(score => ['riskAppetite', 'koreaTransmission'].includes(score.key) && score.score > 0)
     .slice(0, 2)
     .map(scoreSummaryText)
-  const confidenceText = strategy.regime.confidence >= 75 ? '높음' : strategy.regime.confidence >= 60 ? '중간 이상' : '중간 이하'
+  // C06: 이 숫자는 미국 ETF·변동성 규칙을 합산한 점수다. 검증된 확률처럼 읽히는 '확신도'라 부르지 않는다.
   return `<div class="section">
   <div class="section-title">오늘 시장 국면 판단</div>
-  <p class="narrative" style="margin-bottom:16px">${e(strategy.regime.summary)} 전략 확신도는 ${e(confidenceText)}(${e(String(strategy.regime.confidence))}/100)입니다. ${e(headwinds.length ? `제한 요인: ${headwinds.join(' · ')}` : `우호 요인: ${tailwinds.join(' · ') || '뚜렷한 방향성 제한'}`)}</p>
+  <p class="narrative" style="margin-bottom:16px">${e(strategy.regime.summary)} 규칙 점수는 ${e(String(strategy.regime.confidence))}/100입니다(미국 ETF·변동성 규칙 합산, 검증된 확률 아님). ${e(headwinds.length ? `제한 요인: ${headwinds.join(' · ')}` : `우호 요인: ${tailwinds.join(' · ') || '뚜렷한 방향성 제한'}`)}</p>
   ${strategy.scores.map(score => `
     <div class="score-row">
       <div class="score-label">${e(score.displayLabel)}</div>

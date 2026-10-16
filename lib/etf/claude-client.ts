@@ -292,10 +292,11 @@ export function buildMorningPrompt(data: CollectedData): string {
 - 전일 한국 증시와 간밤 미국 시장이 **서로 다른 방향**으로 움직인 경우, 그 차이를 **명시적으로** 언급하십시오. 한국 독자가 반사적으로 떠올리는 한국 흐름과 오늘 새벽 해외 흐름이 다를 수 있다는 점을 고려합니다.
 - 헤드라인에 한국 독자가 오해할 여지가 있는 애매어(지수/시장)를 쓰지 말고 **시장을 특정**하여 씁니다.
 
-[오늘의 시장 국면]
+[오늘의 시장 국면 — 미국 ETF·변동성 기준]
 ${strategy.regime.displayName}
-신뢰도: ${strategy.regime.confidence}
+규칙 점수: ${strategy.regime.confidence}/100 (규칙 합산값 — 확률이 아니므로 본문에 '확신도'·'신뢰도'로 쓰지 마십시오)
 요약: ${strategy.regime.summary}
+${strategy.regime.domestic?.stress ? `국내 시장 스트레스: 전일 KODEX 200 ${strategy.regime.domestic.move?.toFixed(2)}% 급락 — 미국 위험선호와 국내 급락을 구분해 쓰고, 제목·결론에서 '공격'·'위험선호'를 국내 투자자에게 단정하지 마십시오.` : ''}
 
 [오늘의 전략 결론]
 ${strategy.executiveSummary.title}

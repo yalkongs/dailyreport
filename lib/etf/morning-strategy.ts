@@ -322,6 +322,14 @@ function buildRiskAlerts(data: CollectedData, scores: StrategyScore[]): RiskAler
   return alerts
 }
 
+// C06 (2026-10-16 감사): 국내 시장 스트레스. 국면 점수는 미국 ETF·VIX 중심이라 국내 급락을 보지 못한다.
+// KODEX 200(코스피200 추종 1배)의 전일 등락이 -3% 이하이면 급락일로 본다.
+export const DOMESTIC_STRESS_THRESHOLD = -3
+export function assessDomesticStress(data: CollectedData): { move: number | null; stress: boolean } {
+  const move = data.quotes.find(q => q.ticker === '069500.KS')?.changePercent ?? null
+  return { move, stress: move !== null && move <= DOMESTIC_STRESS_THRESHOLD }
+}
+
 function buildExecutiveSummary(
   regime: MorningStrategyInput['regime'],
   strategies: EtfGroupStrategy[],
@@ -332,19 +340,26 @@ function buildExecutiveSummary(
   const cautionGroups = strategies.filter(s => s.stance === '경계').map(s => s.group).slice(0, 3)
   const volatility = scores.find(s => s.key === 'volatilityPressure')?.score ?? 0
   const dollar = scores.find(s => s.key === 'dollarPressure')?.score ?? 0
+  const domesticStress = regime.domestic?.stress === true
   const tacticalStance = regime.label === 'risk_off'
     ? '방어'
     : volatility >= 2
       ? '관망'
-      : regime.label === 'risk_on' && dollar <= 1
-        ? '공격'
-        : '균형'
+      // C06: 국내 급락일에는 미국 위험선호만으로 '공격'을 최상단 결론으로 두지 않는다(무조건 방어로 뒤집지도 않음).
+      : domesticStress
+        ? '조건부'
+        : regime.label === 'risk_on' && dollar <= 1
+          ? '공격'
+          : '균형'
   const avoidToday = dollar >= 2
     ? '환율이 높은 구간에서 환노출 해외 ETF를 장 초반에 한 번에 늘리는 행동입니다.'
     : volatility >= 1
       ? '변동성이 커진 구간에서 레버리지 ETF를 시장가로 추격하는 행동입니다.'
       : '상승률 상위 ETF를 근거 확인 없이 뒤따라가는 행동입니다.'
-  const title = regime.label === 'risk_on' && dollar >= 2
+  const domesticMove = regime.domestic?.move
+  const title = domesticStress && regime.label !== 'risk_off' && domesticMove !== null && domesticMove !== undefined
+    ? `미국은 ${regime.displayName} 쪽이지만 국내는 전일 KODEX 200 ${domesticMove.toFixed(2)}% 급락입니다. 국내 개장 흐름을 확인한 뒤 판단하는 조건부 접근이 기준입니다.`
+    : regime.label === 'risk_on' && dollar >= 2
     ? '위험자산은 열려 있지만 환율 때문에 추격보다 단계적 판단입니다.'
     : regime.label === 'risk_on'
       ? `위험자산 선호입니다. 오늘은 ${tacticalStance} 접근이 기준입니다.`
@@ -376,11 +391,16 @@ export function buildMorningStrategyInput(data: CollectedData): MorningStrategyI
   const confidence = Math.min(90, 50 + Math.abs(regimeScore) * 15 + Math.abs(volatility) * 5)
   const hasRealFlowData = hasRealFundFlowData(data)
   const etfGroupStrategies = buildEtfGroupStrategies(data, scores)
+  const domestic = assessDomesticStress(data)
+  const domesticNote = domestic.stress && domestic.move !== null
+    ? ` 다만 국내는 전일 KODEX 200 ${domestic.move.toFixed(2)}% 급락으로, 미국 국면 판정과 따로 봐야 합니다.`
+    : ''
   const regime = {
     label,
     displayName,
     confidence,
-    summary: `${displayName} 국면입니다. 핵심 변수는 ${scores.filter(s => s.score !== 0).slice(0, 3).map(s => s.displayLabel).join(', ') || '방향성 부재'}입니다.`,
+    summary: `${displayName} 국면입니다(미국 ETF·변동성 기준). 핵심 변수는 ${scores.filter(s => s.score !== 0).slice(0, 3).map(s => s.displayLabel).join(', ') || '방향성 부재'}입니다.${domesticNote}`,
+    domestic,
   }
 
   return {
