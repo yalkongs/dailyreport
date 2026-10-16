@@ -1,0 +1,191 @@
+CHECK tests
+✔ ETF job은 dispatch only=both·only=market에서 돌지 않는다 (0.209125ms)
+ℹ tests 242
+ℹ suites 0
+ℹ pass 242
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1500.123375
+
+
+CHECK types
+
+
+CHECK lint
+
+> dailyreport@0.1.0 lint
+> eslint
+
+
+/Users/yalkongs/Project/dailyreport/lib/claude-client.ts
+  177:62  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  274:86  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  280:66  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  321:53  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/Users/yalkongs/Project/dailyreport/lib/etf/claude-client.prompt.test.ts
+  25:158  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/yalkongs/Project/dailyreport/lib/etf/claude-client.ts
+  210:67  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  225:53  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  299:60  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/Users/yalkongs/Project/dailyreport/lib/etf/renderer.ts
+   871:10  warning  'renderStorySpine' is defined but never used  @typescript-eslint/no-unused-vars
+  1009:10  warning  'uniqueQuotes' is defined but never used      @typescript-eslint/no-unused-vars
+
+/Users/yalkongs/Project/dailyreport/scripts/run.ts
+  343:11  warning  'watchTopics' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/yalkongs/Project/dailyreport/src/app/layout.tsx
+  24:13  error  Do not use an `<a>` element to navigate to `/`. Use `<Link />` from `next/link` instead. See: https://nextjs.org/docs/messages/no-html-link-for-pages  @next/next/no-html-link-for-pages
+  31:15  error  Do not use an `<a>` element to navigate to `/`. Use `<Link />` from `next/link` instead. See: https://nextjs.org/docs/messages/no-html-link-for-pages  @next/next/no-html-link-for-pages
+
+✖ 13 problems (10 errors, 3 warnings)
+
+
+
+CHECK build
+
+> dailyreport@0.1.0 build
+> next build
+
+▲ Next.js 16.2.3 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+Turbopack build encountered 1 warnings:
+./next.config.ts
+Encountered unexpected file in NFT list
+A file was traced that indicates that the whole project was traced unintentionally. Somewhere in the import trace below, there are:
+- filesystem operations (like path.join, path.resolve or fs.readFile), or
+- very dynamic requires (like require('./' + foo)).
+To resolve this, you can
+- remove them if possible, or
+- only use them in development, or
+- make sure they are statically scoped to some subfolder: path.join(process.cwd(), 'data', bar), or
+- add ignore comments: path.join(/*turbopackIgnore: true*/ process.cwd(), bar)
+
+Import trace:
+  Server Component:
+    ./next.config.ts
+    ./lib/preview/brand-logo.ts
+    ./lib/preview/preview-card.ts
+    ./lib/etf/report-preview.ts
+    ./src/app/etf-reports/[date]/page.tsx
+
+
+✓ Compiled successfully in 1269ms
+  Running TypeScript ...
+  Finished TypeScript in 1284ms ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/265) ...
+  Generating static pages using 9 workers (66/265) 
+  Generating static pages using 9 workers (132/265) 
+  Generating static pages using 9 workers (198/265) 
+✓ Generating static pages using 9 workers (265/265) in 929ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/og
+├ ○ /archive
+├ ● /etf-reports/[date]
+│ ├ /etf-reports/2026-04-16
+│ ├ /etf-reports/2026-04-17
+│ ├ /etf-reports/2026-04-20
+│ └ [+121 more paths]
+└ ● /reports/[date]
+  ├ /reports/2026-10-15
+  ├ /reports/2026-10-14
+  ├ /reports/2026-10-13
+  └ [+132 more paths]
+
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+
+
+CHECK reproduce
+A01_market_preview_failure_persists: preview throws → exit 0 + HTML/index saved, PNG absent; retry exits 0 without repairing PNG (collection still runs)
+A02_market_force_does_not_bypass_hash: FORCE_REGENERATE=true logs regeneration intent but identical price hash skips the second generation
+A03_market_local_failed_generation_poison: same workspace: failed generation writes hash; retry skips with exit 0 and no report (not persisted by a failed fresh Actions runner)
+A04_etf_survivor_denominator: universe 100: one returned quote passes as 1/1; NaN and negative prices also pass
+A05_etf_yahoo_failure_loses_krx_quote: valid previous-session KRX row + Yahoo outage → zero quotes; merge cannot create a quote missing from Yahoo
+A06_etf_macro_failure_is_fulfilled: every macro source fails → fulfilled object with all-null values; outer rejection-based failedSources misses macro outage
+A07_etf_fallback_calls_failed_api_again: two API failures → fallback makes a third API call → exit 1; Tier 1 is a prose-validation fallback, not an API outage fallback
+A08_market_hard_violation_fail_open: out-of-window date hard violation returned by API on all three attempts → invalid content still rendered and returned successfully
+A09_delivery_resolves_report_sha_but_polls_head: resolve selects report-sha for retry; both deployment polling steps independently assign SHA from current checkout HEAD
+A10_delivery_lookup_error_exits_green: GitHub status lookup failure → action=unknown + warning, exit 0; no failure email is guaranteed by this path
+A11_etf_body_read_timeout_cleared_early: 10ms timeout + response headers immediately + body delayed 60ms → successful result, signal never aborted; body read is outside timeout
+A12_cross_kind_git_push_race: two kinds each commit + pull before either pushes → market push succeeds, ETF push rejected; separate per-kind concurrency does not serialize publication
+A13_etf_invented_return_passes_quality: input SOXX changePercent=1, generated headline/body claim +99.99%; quality validator accepts both
+A14_deployment_api_error_aborts_retry_loop: actual polling shell under bash -e -o pipefail: first gh 503 exits immediately, only one call; documented 60-iteration retry never runs
+{
+  "baseline": "e5f8ef0aa4e22e724d968860f10bb0568452ca72",
+  "passed": 14,
+  "evidence": [
+    {
+      "id": "A01_market_preview_failure_persists",
+      "detail": "preview throws → exit 0 + HTML/index saved, PNG absent; retry exits 0 without repairing PNG (collection still runs)"
+    },
+    {
+      "id": "A02_market_force_does_not_bypass_hash",
+      "detail": "FORCE_REGENERATE=true logs regeneration intent but identical price hash skips the second generation"
+    },
+    {
+      "id": "A03_market_local_failed_generation_poison",
+      "detail": "same workspace: failed generation writes hash; retry skips with exit 0 and no report (not persisted by a failed fresh Actions runner)"
+    },
+    {
+      "id": "A04_etf_survivor_denominator",
+      "detail": "universe 100: one returned quote passes as 1/1; NaN and negative prices also pass"
+    },
+    {
+      "id": "A05_etf_yahoo_failure_loses_krx_quote",
+      "detail": "valid previous-session KRX row + Yahoo outage → zero quotes; merge cannot create a quote missing from Yahoo"
+    },
+    {
+      "id": "A06_etf_macro_failure_is_fulfilled",
+      "detail": "every macro source fails → fulfilled object with all-null values; outer rejection-based failedSources misses macro outage"
+    },
+    {
+      "id": "A07_etf_fallback_calls_failed_api_again",
+      "detail": "two API failures → fallback makes a third API call → exit 1; Tier 1 is a prose-validation fallback, not an API outage fallback"
+    },
+    {
+      "id": "A08_market_hard_violation_fail_open",
+      "detail": "out-of-window date hard violation returned by API on all three attempts → invalid content still rendered and returned successfully"
+    },
+    {
+      "id": "A09_delivery_resolves_report_sha_but_polls_head",
+      "detail": "resolve selects report-sha for retry; both deployment polling steps independently assign SHA from current checkout HEAD"
+    },
+    {
+      "id": "A10_delivery_lookup_error_exits_green",
+      "detail": "GitHub status lookup failure → action=unknown + warning, exit 0; no failure email is guaranteed by this path"
+    },
+    {
+      "id": "A11_etf_body_read_timeout_cleared_early",
+      "detail": "10ms timeout + response headers immediately + body delayed 60ms → successful result, signal never aborted; body read is outside timeout"
+    },
+    {
+      "id": "A12_cross_kind_git_push_race",
+      "detail": "two kinds each commit + pull before either pushes → market push succeeds, ETF push rejected; separate per-kind concurrency does not serialize publication"
+    },
+    {
+      "id": "A13_etf_invented_return_passes_quality",
+      "detail": "input SOXX changePercent=1, generated headline/body claim +99.99%; quality validator accepts both"
+    },
+    {
+      "id": "A14_deployment_api_error_aborts_retry_loop",
+      "detail": "actual polling shell under bash -e -o pipefail: first gh 503 exits immediately, only one call; documented 60-iteration retry never runs"
+    }
+  ]
+}

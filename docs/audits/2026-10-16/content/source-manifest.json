@@ -1,0 +1,151 @@
+{
+  "reviewDateKst": "2026-10-16",
+  "reviewedArtifacts": "manifest.json",
+  "inputs": [
+    {
+      "file": "market-snapshot-2026-10-12.json",
+      "kind": "retained-published-market-snapshot",
+      "commit": "8eee7998ad878149dd78504b6353391ade736930",
+      "url": "https://github.com/yalkongs/dailyreport/blob/8eee7998ad878149dd78504b6353391ade736930/data/market-snapshot.json",
+      "sha256": "009a2a519a44305edeb9dae423010ef6369a81a74bb9a15e5b037fec44ef84f2"
+    },
+    {
+      "file": "market-snapshot-2026-10-13.json",
+      "kind": "retained-published-market-snapshot",
+      "commit": "b2caac304c14193e1aec8761c335857fac8c2a83",
+      "url": "https://github.com/yalkongs/dailyreport/blob/b2caac304c14193e1aec8761c335857fac8c2a83/data/market-snapshot.json",
+      "sha256": "0d49060ec189b02127466b9f25291288f35147a3f8ef39c3a63001cf47e10540"
+    },
+    {
+      "file": "market-snapshot-2026-10-14.json",
+      "kind": "retained-published-market-snapshot",
+      "commit": "313ef4146265663fe0abdbd9c0bf73fd4b9a5268",
+      "url": "https://github.com/yalkongs/dailyreport/blob/313ef4146265663fe0abdbd9c0bf73fd4b9a5268/data/market-snapshot.json",
+      "sha256": "a82a1b4ad066a7b10bbd70f7977708d7dc9a002634cd841ab9764da43425749f"
+    },
+    {
+      "file": "market-snapshot-2026-10-15.json",
+      "kind": "retained-published-market-snapshot",
+      "commit": "eb655a64e45a3c6f9d6ea367766ba40b32b37994",
+      "url": "https://github.com/yalkongs/dailyreport/blob/eb655a64e45a3c6f9d6ea367766ba40b32b37994/data/market-snapshot.json",
+      "sha256": "09426e0680e98b57be6b870aa9f371aa0f53897833375abfa8cc24bba1e4ca33"
+    },
+    {
+      "file": "market-snapshot-2026-10-16.json",
+      "kind": "retained-published-market-snapshot",
+      "commit": "d17fa6999b788fe0da2322f6395204ad11b5baa3",
+      "url": "https://github.com/yalkongs/dailyreport/blob/d17fa6999b788fe0da2322f6395204ad11b5baa3/data/market-snapshot.json",
+      "sha256": "8288678c13339b11daed396198b89974ada2699aae1b859549854cb9a38442d1"
+    },
+    {
+      "file": "yahoo-history.json",
+      "kind": "historical-requery-not-original-generation-input",
+      "sha256": "5169c0ad45712c4f4254e5a41654095c68a2661c4ea8bb6a21d3f612c2bce983"
+    },
+    {
+      "file": "kr-macro-calendar-input.json",
+      "kind": "local-weekly-calendar-input",
+      "sha256": "cb016696fa983c95f05f76c8a5f02d020847c658960ee70290fd16e8358610e1"
+    },
+    {
+      "file": "regime-probe.json",
+      "kind": "reduced-input-diagnostic-not-full-replay",
+      "sha256": "2688864bfd4460a47794bc8e69f344e16c30cfcdc2655e8a8d2620d59062353c"
+    },
+    {
+      "file": "krx-history.json",
+      "kind": "unsuccessful-independent-requery-no-data",
+      "sha256": "e5e5a20d2b0029eb9b923148aba296b375c528de0d3b24384e4d935ad29126a1"
+    },
+    {
+      "file": "regime-check-result.json",
+      "kind": "executed-reduced-input-diagnostic",
+      "sha256": "fa90eb8e8dc183ce3fd7011122a6f1ef42b553fb6e84c1d77db788dd26182f53"
+    },
+    {
+      "file": "calculations.json",
+      "kind": "executed-offline-calculations",
+      "sha256": "2c159d6c03bd6ed99da353fe10770c71348575804b88d0b8b996c86fcaba0c43"
+    }
+  ],
+  "officialChecks": [
+    {
+      "id": "cpi",
+      "url": "https://www.bls.gov/news.release/archives/cpi_10142026.htm",
+      "observed": "September CPI release: 2026-10-14 08:30 ET; YoY headline 3.7%, previous 3.4%, core 2.6%; release converts to 21:30 KST."
+    },
+    {
+      "id": "employment",
+      "url": "https://www.mods.go.kr/newsPln.es?mid=a10305000000&oa_mm=10",
+      "observed": "October monthly release plan lists September employment at 2026-10-16 08:00 KST."
+    },
+    {
+      "id": "bok",
+      "url": "https://www.bok.or.kr/portal/singl/mainEvent/listCldr.do?date=2026-10&menuNo=200035",
+      "observed": "Monetary policy meeting: 2026-10-22, Thursday."
+    },
+    {
+      "id": "fx",
+      "url": "https://www.samsungfund.com/etf/insight/guide/view07.do",
+      "observed": "Unhedged products benefit from exchange-rate rises, all else equal."
+    },
+    {
+      "id": "sentiment",
+      "url": "https://alternative.me/crypto/fear-and-greed-index/",
+      "observed": "The index is for the crypto market and currently Bitcoin, not a broad US-equity index."
+    }
+  ],
+  "operationsEvidence": {
+    "url": "https://github.com/yalkongs/dailyreport/actions/runs/38811601059",
+    "observedLogLine": "2026-10-15T21:41:05.7917346Z 투자자 수급: 없음"
+  },
+  "limitations": [
+    "Source API JSON and original generated JSON/prompt were not persisted by the pipeline.",
+    "Historical Yahoo rows were re-queried during review; rows dated 2026-10-16 are not used in preopen verification.",
+    "KRX_AUTH_KEY is absent locally; historical KRX response rows were not independently re-queried.",
+    "Report scanner values are used as published internal consistency evidence, not as independent original KRX proof.",
+    "Article-level causal claims without original text remain unsupported, not proven false.",
+    "Desktop headers inspected for two latest pages; mobile and all long-page visual states were not inspected."
+  ],
+  "codeRevision": {
+    "commit": "e5f8ef0aa4e22e724d968860f10bb0568452ca72",
+    "files": [
+      {
+        "file": "lib/etf/claude-client.ts",
+        "sha256": "328cb77419ac5218b9b5f691388265f84203691597e83adde420dae8f2c5f33b"
+      },
+      {
+        "file": "lib/etf/morning-report-plan.ts",
+        "sha256": "c61543abb6da3fa5e27e33e45d4f73211330708c073fa0da2b41f73701d34088"
+      },
+      {
+        "file": "lib/etf/narrative-angle.ts",
+        "sha256": "10157ed9c37cd2fa7cd597b6963a6bb8794f6c02aeeca3d3188d201c8a448073"
+      },
+      {
+        "file": "lib/etf/renderer.ts",
+        "sha256": "a8b6c43cef9c01cc1d9b2cd9b5c79a62ad5b6a4391b1505ce4a0b555e899b945"
+      },
+      {
+        "file": "lib/etf/morning-strategy.ts",
+        "sha256": "652f797c75412f4fe141ce9815f845d6964fc4a030177b4ab34bcbbcfa5c6707"
+      },
+      {
+        "file": "lib/etf/market-context.ts",
+        "sha256": "037eba79db82dbb3f005dfcb44b8191f5db13caafefba5bec67e7394cf4a1ea2"
+      },
+      {
+        "file": "lib/market-data.ts",
+        "sha256": "71b60988f73af4a44b74b7b956c712e3c83dd1283c2f2d4525f3d14665354d59"
+      },
+      {
+        "file": "lib/chart-generator.ts",
+        "sha256": "681d7dfba255885915c19a00f0b882a9885c13bdd63d536217f7ee396603f9ca"
+      },
+      {
+        "file": "lib/weekday-rhythm.ts",
+        "sha256": "e77e482df5a4908f80d0b4dd030bd26a8dc519a5d2168d8b18c21af189004b9d"
+      }
+    ]
+  }
+}

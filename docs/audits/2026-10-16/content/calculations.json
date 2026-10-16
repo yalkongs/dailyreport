@@ -1,0 +1,177 @@
+{
+  "entity_comparisons": [
+    {
+      "report_date": "2026-10-13",
+      "source_session": "2026-10-12",
+      "etf_report_kospi_claim_pct": -3.81,
+      "kospi_return_pct": -3.6476,
+      "kodex_200_return_pct": -3.8287,
+      "claim_note": ""
+    },
+    {
+      "report_date": "2026-10-14",
+      "source_session": "2026-10-13",
+      "etf_report_kospi_claim_pct": -6.21,
+      "kospi_return_pct": -5.4649,
+      "kodex_200_return_pct": -6.2546,
+      "claim_note": ""
+    },
+    {
+      "report_date": "2026-10-16",
+      "source_session": "2026-10-15",
+      "etf_report_kospi_claim_pct": -8.0,
+      "kospi_return_pct": -7.5654,
+      "kodex_200_return_pct": -8.2063,
+      "claim_note": "10/16 body says more than 8%, not only a rounded headline"
+    }
+  ],
+  "market_snapshot_controls": [
+    {
+      "report_date": "2026-10-12",
+      "nasdaq_pct": 0.6356,
+      "soxx_pct": -0.6888,
+      "qqq_pct": 0.4936
+    },
+    {
+      "report_date": "2026-10-13",
+      "nasdaq_pct": -0.4395,
+      "soxx_pct": -2.601,
+      "qqq_pct": -0.6962
+    },
+    {
+      "report_date": "2026-10-14",
+      "nasdaq_pct": -0.1524,
+      "soxx_pct": -0.1744,
+      "qqq_pct": -0.3311
+    },
+    {
+      "report_date": "2026-10-15",
+      "nasdaq_pct": -1.8803,
+      "soxx_pct": -4.5008,
+      "qqq_pct": -1.9662
+    },
+    {
+      "report_date": "2026-10-16",
+      "nasdaq_pct": 0.0755,
+      "soxx_pct": -0.9068,
+      "qqq_pct": -0.1303
+    }
+  ],
+  "semiconductor_internal_consistency": {
+    "session": "2026-10-13",
+    "published_card_pct": -3.96,
+    "published_prose_band": "-8%대",
+    "independent_return_pct": -3.9611
+  },
+  "weekly_periods": {
+    "period": "2026-10-08 close to 2026-10-15 close; week-to-date at Friday preopen",
+    "kospi_wtd_pct": -16.1745,
+    "kospi_monday_close_to_thursday_pct": -13.0011,
+    "kodex_semiconductor_wtd_pct": -23.1822,
+    "kodex_semiconductor_last_session_pct": -11.9354
+  },
+  "illustrative_fx_arithmetic": [
+    {
+      "usd_asset_return_pct": 0,
+      "usdkrw_return_pct": 1,
+      "translated_krw_return_pct": 1.0
+    },
+    {
+      "usd_asset_return_pct": 0,
+      "usdkrw_return_pct": -1,
+      "translated_krw_return_pct": -1.0
+    },
+    {
+      "usd_asset_return_pct": -2,
+      "usdkrw_return_pct": 1,
+      "translated_krw_return_pct": -1.02
+    }
+  ],
+  "published_nav_arithmetic_controls": [
+    {
+      "ticker": "458250",
+      "price": 33040,
+      "nav": 32668.93,
+      "displayed_premium_pct": 1.14,
+      "calculated_premium_pct": 1.1358
+    },
+    {
+      "ticker": "091160",
+      "price": 112300,
+      "nav": 111893.12,
+      "displayed_premium_pct": 0.36,
+      "calculated_premium_pct": 0.3636
+    }
+  ],
+  "tactical_heatmap": {
+    "published_tactical_moves_pct": [
+      -16.42,
+      15.79
+    ],
+    "signed_mean_pct": -0.32,
+    "mean_absolute_move_pct": 16.11,
+    "note": "Both arithmetic calculations are correct; signed mean cancels opposite exposures and is not a volatility measure."
+  },
+  "calendar_controls": {
+    "cpi_release_kst": "2026-10-14T21:30:00+09:00",
+    "bok_2026_10_22_weekday": "Thursday",
+    "employment_official_release_kst": "2026-10-16T08:00:00+09:00"
+  },
+  "rate_change": {
+    "us10y_oct14": 5.190000057220459,
+    "us10y_oct15": 5.0889997482299805,
+    "change_percentage_points": -0.101
+  },
+  "text_controls": {
+    "etf-reports-2026-10-12.txt": {
+      "non_finance_links": 0,
+      "semiconductor_name_mentions": 16,
+      "soxx_minus_091_mentions": 0
+    },
+    "etf-reports-2026-10-13.txt": {
+      "non_finance_links": 0,
+      "semiconductor_name_mentions": 12,
+      "soxx_minus_091_mentions": 0
+    },
+    "etf-reports-2026-10-14.txt": {
+      "non_finance_links": 0,
+      "semiconductor_name_mentions": 13,
+      "soxx_minus_091_mentions": 0
+    },
+    "etf-reports-2026-10-15.txt": {
+      "non_finance_links": 0,
+      "semiconductor_name_mentions": 15,
+      "soxx_minus_091_mentions": 0
+    },
+    "etf-reports-2026-10-16.txt": {
+      "non_finance_links": 0,
+      "semiconductor_name_mentions": 15,
+      "soxx_minus_091_mentions": 10
+    },
+    "reports-2026-10-12.txt": {
+      "non_finance_links": 0,
+      "semiconductor_name_mentions": 0,
+      "soxx_minus_091_mentions": 0
+    },
+    "reports-2026-10-13.txt": {
+      "non_finance_links": 0,
+      "semiconductor_name_mentions": 0,
+      "soxx_minus_091_mentions": 0
+    },
+    "reports-2026-10-14.txt": {
+      "non_finance_links": 0,
+      "semiconductor_name_mentions": 0,
+      "soxx_minus_091_mentions": 0
+    },
+    "reports-2026-10-15.txt": {
+      "non_finance_links": 0,
+      "semiconductor_name_mentions": 0,
+      "soxx_minus_091_mentions": 0
+    },
+    "reports-2026-10-16.txt": {
+      "non_finance_links": 0,
+      "semiconductor_name_mentions": 0,
+      "soxx_minus_091_mentions": 0
+    }
+  }
+}

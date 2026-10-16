@@ -1,0 +1,279 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "index-identity",
+      "title": "ETF 보고서의 KOSPI 등락이 실제 지수와 다르다",
+      "queries": [
+        {
+          "id": "index-comparison",
+          "source": {
+            "label": "발행 HTML·Market 스냅샷·Yahoo 과거 종가",
+            "metricDefinitions": [
+              {
+                "label": "검토 기준",
+                "definition": "같은 한국 거래일의 실제 KOSPI 수익률과 ETF 보고서의 KOSPI 서술을 비교했다."
+              }
+            ],
+            "caveats": [
+              "10/16 본문은 8% 넘게 하락했다고 서술했다.",
+              "과거 종가는 검토 시 재조회했으며 원래 ETF 생성 입력 전체는 보존되지 않았다."
+            ],
+            "links": [
+              {
+                "label": "10/14 ETF 발행물",
+                "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-14.html"
+              },
+              {
+                "label": "KOSPI 과거 종가",
+                "url": "https://finance.yahoo.com/quote/%5EKS11/history/"
+              }
+            ]
+          },
+          "rows": [
+            {
+              "발행일": "2026-10-13",
+              "ETF 서술(%)": -3.81,
+              "실제 KOSPI(%)": -3.6476,
+              "KODEX 200(%)": -3.8287
+            },
+            {
+              "발행일": "2026-10-14",
+              "ETF 서술(%)": -6.21,
+              "실제 KOSPI(%)": -5.4649,
+              "KODEX 200(%)": -6.2546
+            },
+            {
+              "발행일": "2026-10-16",
+              "ETF 서술(%)": -8.0,
+              "실제 KOSPI(%)": -7.5654,
+              "KODEX 200(%)": -8.2063
+            }
+          ],
+          "columns": [
+            "발행일",
+            "ETF 서술(%)",
+            "실제 KOSPI(%)",
+            "KODEX 200(%)"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fx-sign",
+      "title": "원화 약세가 환노출 ETF의 환율 손실이라는 설명은 방향이 반대다",
+      "queries": [
+        {
+          "id": "fx-structure",
+          "source": {
+            "label": "삼성자산운용 가이드·10/16 ETF 발행물",
+            "metricDefinitions": [
+              {
+                "label": "검토 기준",
+                "definition": "달러 자산 가격이 같을 때 USD/KRW 상승은 환노출 자산의 원화 환산 가치를 높인다."
+              }
+            ],
+            "caveats": [
+              "설명용 단순 환산이며 특정 ETF의 실제 수익률 계산이 아니다. 보수·헤지·추적오차·괴리는 제외했다."
+            ],
+            "links": [
+              {
+                "label": "환헤지·환노출 가이드",
+                "url": "https://www.samsungfund.com/etf/insight/guide/view07.do"
+              },
+              {
+                "label": "10/16 ETF 발행물",
+                "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-16.html"
+              }
+            ]
+          },
+          "methods": [
+            {
+              "language": "calculation",
+              "code": "KRW return = (1 + USD asset return) × (1 + USD/KRW change) − 1\nUSD asset 0%, USD/KRW +1% → KRW +1%"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "event-timing",
+      "title": "공식 발표일과 한국 거래 세션이 서술과 어긋난다",
+      "queries": [
+        {
+          "id": "official-events",
+          "source": {
+            "label": "BLS 발표문·국가데이터처 10월 보도계획",
+            "metricDefinitions": [
+              {
+                "label": "검토 기준",
+                "definition": "CPI는 한국시간 10/14 21:30이며 9월 고용동향 계획은 10/16 08:00이다."
+              }
+            ],
+            "caveats": [
+              "고용 일정의 정확한 조회 URL은 감사 문서에 보존했다."
+            ],
+            "links": [
+              {
+                "label": "BLS 9월 CPI",
+                "url": "https://www.bls.gov/news.release/archives/cpi_10142026.htm"
+              },
+              {
+                "label": "10/14 ETF 발행물",
+                "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-14.html"
+              },
+              {
+                "label": "10/15 Market 발행물",
+                "url": "https://dailyreport-eta.vercel.app/reports/2026-10-15.html"
+              }
+            ]
+          },
+          "methods": [
+            {
+              "language": "calculation",
+              "code": "2026-10-14 08:30 America/New_York = 2026-10-14 21:30 Asia/Seoul"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "period-binding",
+      "title": "ETF의 하루 수익률이 주간 수익률로 서술됐다",
+      "queries": [
+        {
+          "id": "weekly-check",
+          "source": {
+            "label": "KODEX 반도체 과거 종가·10/16 ETF 발행물",
+            "metricDefinitions": [
+              {
+                "label": "검토 기준",
+                "definition": "금요일 개장 전 WTD는 이번 주 이전 마지막 한국 거래일인 10/8 종가부터 10/15 종가까지다."
+              }
+            ],
+            "caveats": [
+              "10/9는 한국 휴장일이다. 10/16 당일 시세는 대조에서 제외했다."
+            ],
+            "links": [
+              {
+                "label": "10/16 ETF 발행물",
+                "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-16.html"
+              },
+              {
+                "label": "KODEX 반도체 과거 종가",
+                "url": "https://finance.yahoo.com/quote/091160.KS/history/"
+              }
+            ]
+          },
+          "rows": [
+            {
+              "구분": "발행물의 이번 주 서술",
+              "수익률(%)": -11.94
+            },
+            {
+              "구분": "10/15 하루 재계산",
+              "수익률(%)": -11.9354
+            },
+            {
+              "구분": "10/8→10/15 WTD 재계산",
+              "수익률(%)": -23.1822
+            }
+          ],
+          "columns": [
+            "구분",
+            "수익률(%)"
+          ],
+          "methods": [
+            {
+              "language": "calculation",
+              "code": "Daily: (112300 / 127520 − 1) × 100\nWTD: (112300 / 146190 − 1) × 100"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "internal-consistency",
+      "title": "같은 ETF의 카드와 설명에서 낙폭이 다르다",
+      "queries": [
+        {
+          "id": "semiconductor-card",
+          "source": {
+            "label": "10/14 ETF 발행물·KODEX 반도체 종가",
+            "metricDefinitions": [
+              {
+                "label": "검토 기준",
+                "definition": "KODEX 반도체 카드의 -3.96%와 본문의 -8%대 하락 설명은 같은 종목·전일을 가리킨다."
+              }
+            ],
+            "caveats": [],
+            "links": [
+              {
+                "label": "10/14 ETF 발행물",
+                "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-14.html"
+              }
+            ]
+          },
+          "methods": [
+            {
+              "language": "calculation",
+              "code": "(133350 / 138850 − 1) × 100 = −3.9611%"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "strategy-scope",
+      "title": "공격 접근과 65점은 국내 급락을 직접 반영하는 판단이 아니다",
+      "queries": [
+        {
+          "id": "rule-scope",
+          "source": {
+            "label": "실제 전략 함수·오프라인 진단",
+            "metricDefinitions": [
+              {
+                "label": "검토 기준",
+                "definition": "위험선호 국면은 미국 ETF·HYG·변동성으로 계산되며 국내 ETF 낙폭은 국면 계산에 들어가지 않는다."
+              }
+            ],
+            "caveats": [
+              "미국/거시 관측값을 축약한 입력과 합성 국내 수익률을 사용한 진단이다. 원래 전체 100종목 입력의 재생 시험은 아니다.",
+              "65점은 검증된 성공 확률이 아니라 규칙 산식의 출력이다."
+            ],
+            "links": [
+              {
+                "label": "전략 계산 코드",
+                "url": "https://github.com/yalkongs/dailyreport/blob/e5f8ef0aa4e22e724d968860f10bb0568452ca72/lib/etf/morning-strategy.ts"
+              },
+              {
+                "label": "10/16 ETF 발행물",
+                "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-16.html"
+              }
+            ]
+          },
+          "rows": [
+            {
+              "합성 국내 수익률(%)": 0,
+              "국면": "risk_on",
+              "점수": 65,
+              "태도": "공격"
+            },
+            {
+              "합성 국내 수익률(%)": -40,
+              "국면": "risk_on",
+              "점수": 65,
+              "태도": "공격"
+            }
+          ],
+          "columns": [
+            "합성 국내 수익률(%)",
+            "국면",
+            "점수",
+            "태도"
+          ]
+        }
+      ]
+    }
+  ]
+}

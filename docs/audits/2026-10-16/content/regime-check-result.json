@@ -1,0 +1,157 @@
+{
+  "scope": "Reduced observed US/macro inputs and synthetic KR counterfactuals; not original full generation input.",
+  "sourceSha256": "652f797c75412f4fe141ce9815f845d6964fc4a030177b4ab34bcbbcfa5c6707",
+  "inputs": {
+    "date": "2026-10-16",
+    "quotes": [
+      {
+        "ticker": "SPY",
+        "name": "SPY",
+        "market": "US",
+        "changePercent": 0.28,
+        "price": 100,
+        "premiumDiscount": null,
+        "nav": null,
+        "tradingValue": null
+      },
+      {
+        "ticker": "QQQ",
+        "name": "QQQ",
+        "market": "US",
+        "changePercent": -0.13,
+        "price": 100,
+        "premiumDiscount": null,
+        "nav": null,
+        "tradingValue": null
+      },
+      {
+        "ticker": "IWM",
+        "name": "IWM",
+        "market": "US",
+        "changePercent": 1.3671339948530425,
+        "price": 100,
+        "premiumDiscount": null,
+        "nav": null,
+        "tradingValue": null
+      },
+      {
+        "ticker": "HYG",
+        "name": "HYG",
+        "market": "US",
+        "changePercent": 0.4166120361872361,
+        "price": 100,
+        "premiumDiscount": null,
+        "nav": null,
+        "tradingValue": null
+      },
+      {
+        "ticker": "TLT",
+        "name": "TLT",
+        "market": "US",
+        "changePercent": 1.37,
+        "price": 100,
+        "premiumDiscount": null,
+        "nav": null,
+        "tradingValue": null
+      },
+      {
+        "ticker": "SOXX",
+        "name": "SOXX",
+        "market": "US",
+        "changePercent": -0.91,
+        "price": 100,
+        "premiumDiscount": null,
+        "nav": null,
+        "tradingValue": null
+      },
+      {
+        "ticker": "XLE",
+        "name": "XLE",
+        "market": "US",
+        "changePercent": -1.58,
+        "price": 100,
+        "premiumDiscount": null,
+        "nav": null,
+        "tradingValue": null
+      },
+      {
+        "ticker": "GLD",
+        "name": "GLD",
+        "market": "US",
+        "changePercent": 1.79,
+        "price": 100,
+        "premiumDiscount": null,
+        "nav": null,
+        "tradingValue": null
+      },
+      {
+        "ticker": "SLV",
+        "name": "SLV",
+        "market": "US",
+        "changePercent": 3.39,
+        "price": 100,
+        "premiumDiscount": null,
+        "nav": null,
+        "tradingValue": null
+      }
+    ],
+    "macro": {
+      "vix": 16.46,
+      "moveIndex": 102.49,
+      "usdKrw": 1341,
+      "dxy": 102,
+      "us10y": 5.09,
+      "wti": 96.1
+    },
+    "news": [],
+    "flows": []
+  },
+  "results": [
+    {
+      "scenario": "synthetic-KR-0pct",
+      "regime": {
+        "label": "risk_on",
+        "displayName": "위험자산 선호",
+        "confidence": 65,
+        "summary": "위험자산 선호 국면입니다. 핵심 변수는 위험자산 선호도, 원자재·물가 부담입니다."
+      },
+      "executiveSummary": {
+        "title": "위험자산 선호입니다. 오늘은 공격 접근이 기준입니다.",
+        "tacticalStance": "공격",
+        "preferredGroups": [
+          "미국 대표지수 ETF",
+          "금·원자재 ETF"
+        ],
+        "watchGroups": [
+          "반도체·AI ETF",
+          "레버리지·인버스 ETF"
+        ],
+        "cautionGroups": [],
+        "avoidToday": "상승률 상위 ETF를 근거 확인 없이 뒤따라가는 행동입니다."
+      }
+    },
+    {
+      "scenario": "synthetic-KR--40pct",
+      "regime": {
+        "label": "risk_on",
+        "displayName": "위험자산 선호",
+        "confidence": 65,
+        "summary": "위험자산 선호 국면입니다. 핵심 변수는 위험자산 선호도, 원자재·물가 부담입니다."
+      },
+      "executiveSummary": {
+        "title": "위험자산 선호입니다. 오늘은 공격 접근이 기준입니다.",
+        "tacticalStance": "공격",
+        "preferredGroups": [
+          "미국 대표지수 ETF",
+          "금·원자재 ETF"
+        ],
+        "watchGroups": [
+          "반도체·AI ETF",
+          "레버리지·인버스 ETF"
+        ],
+        "cautionGroups": [],
+        "avoidToday": "상승률 상위 ETF를 근거 확인 없이 뒤따라가는 행동입니다."
+      }
+    }
+  ]
+}

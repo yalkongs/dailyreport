@@ -1,0 +1,1091 @@
+[
+  {
+    "symbol": "^KS11",
+    "meta": {
+      "currency": "KRW",
+      "symbol": "^KS11",
+      "exchangeName": "KSC",
+      "fullExchangeName": "KSE",
+      "instrumentType": "INDEX",
+      "firstTradeDate": "1996-12-11T00:00:00.000Z",
+      "regularMarketTime": "2026-10-16T03:56:40.000Z",
+      "hasPrePostMarketData": false,
+      "gmtoffset": 32400,
+      "timezone": "KST",
+      "exchangeTimezoneName": "Asia/Seoul",
+      "regularMarketPrice": 5758.02,
+      "regularMarketChangePercent": 3.669,
+      "fulldayPrice": 5758.02,
+      "fulldayChange": 203.8,
+      "fulldayChangePercent": 3.669,
+      "fiftyTwoWeekHigh": 9385.59,
+      "fiftyTwoWeekLow": 3675.82,
+      "regularMarketDayHigh": 5758.02,
+      "regularMarketDayLow": 5590.33,
+      "regularMarketVolume": 197658,
+      "longName": "KOSPI Composite Index",
+      "shortName": "KOSPI Composite Index",
+      "chartPreviousClose": 6625.93,
+      "priceHint": 2,
+      "currentTradingPeriod": {
+        "pre": {
+          "timezone": "KST",
+          "end": "2026-10-16T00:00:00.000Z",
+          "start": "2026-10-15T22:30:00.000Z",
+          "gmtoffset": 32400
+        },
+        "regular": {
+          "timezone": "KST",
+          "end": "2026-10-16T06:00:00.000Z",
+          "start": "2026-10-16T00:00:00.000Z",
+          "gmtoffset": 32400
+        },
+        "post": {
+          "timezone": "KST",
+          "end": "2026-10-16T09:00:00.000Z",
+          "start": "2026-10-16T06:00:00.000Z",
+          "gmtoffset": 32400
+        }
+      },
+      "dataGranularity": "1d",
+      "range": "",
+      "validRanges": [
+        "1d",
+        "5d",
+        "1mo",
+        "3mo",
+        "6mo",
+        "1y",
+        "2y",
+        "5y",
+        "10y",
+        "ytd",
+        "max"
+      ]
+    },
+    "quotes": [
+      {
+        "date": "2026-10-08T00:00:00.000Z",
+        "high": 6810.830078125,
+        "volume": 302500,
+        "open": 6808.68017578125,
+        "low": 6625.93017578125,
+        "close": 6625.93017578125,
+        "adjclose": 6625.93017578125
+      },
+      {
+        "date": "2026-10-12T00:00:00.000Z",
+        "high": 6589.68994140625,
+        "volume": 340600,
+        "open": 6578.169921875,
+        "low": 6368.490234375,
+        "close": 6384.240234375,
+        "adjclose": 6384.240234375
+      },
+      {
+        "date": "2026-10-13T00:00:00.000Z",
+        "high": 6198.4599609375,
+        "volume": 423100,
+        "open": 6186.080078125,
+        "low": 5911.10986328125,
+        "close": 6035.35009765625,
+        "adjclose": 6035.35009765625
+      },
+      {
+        "date": "2026-10-14T00:00:00.000Z",
+        "high": 6190.64990234375,
+        "volume": 372800,
+        "open": 6062.080078125,
+        "low": 5944.64990234375,
+        "close": 6008.81005859375,
+        "adjclose": 6008.81005859375
+      },
+      {
+        "date": "2026-10-15T00:00:00.000Z",
+        "high": 5751.4501953125,
+        "volume": 385800,
+        "open": 5673.009765625,
+        "low": 5450.81005859375,
+        "close": 5554.22021484375,
+        "adjclose": 5554.22021484375
+      },
+      {
+        "date": "2026-10-16T00:00:00.000Z",
+        "high": 5758.02001953125,
+        "volume": 197658,
+        "open": 5653.990234375,
+        "low": 5590.330078125,
+        "close": 5758.02001953125,
+        "adjclose": 5758.02001953125
+      }
+    ]
+  },
+  {
+    "symbol": "^IXIC",
+    "meta": {
+      "currency": "USD",
+      "symbol": "^IXIC",
+      "exchangeName": "NIM",
+      "fullExchangeName": "Nasdaq GIDS",
+      "instrumentType": "INDEX",
+      "firstTradeDate": "1971-02-05T14:30:00.000Z",
+      "regularMarketTime": "2026-10-15T21:15:59.000Z",
+      "hasPrePostMarketData": false,
+      "gmtoffset": -14400,
+      "timezone": "EDT",
+      "exchangeTimezoneName": "America/New_York",
+      "regularMarketPrice": 26713.025,
+      "regularMarketChangePercent": 0.076,
+      "fulldayPrice": 26713.025,
+      "fulldayChange": 20.156,
+      "fulldayChangePercent": 0.076,
+      "fiftyTwoWeekHigh": 27722.75,
+      "fiftyTwoWeekLow": 20690.25,
+      "regularMarketDayHigh": 26754.016,
+      "regularMarketDayLow": 26308.846,
+      "regularMarketVolume": 9708091000,
+      "longName": "NASDAQ Composite",
+      "shortName": "NASDAQ Composite",
+      "chartPreviousClose": 27538.69,
+      "priceHint": 2,
+      "currentTradingPeriod": {
+        "pre": {
+          "timezone": "EDT",
+          "start": "2026-10-16T08:00:00.000Z",
+          "end": "2026-10-16T13:30:00.000Z",
+          "gmtoffset": -14400
+        },
+        "regular": {
+          "timezone": "EDT",
+          "start": "2026-10-16T13:30:00.000Z",
+          "end": "2026-10-16T20:00:00.000Z",
+          "gmtoffset": -14400
+        },
+        "post": {
+          "timezone": "EDT",
+          "start": "2026-10-16T20:00:00.000Z",
+          "end": "2026-10-17T00:00:00.000Z",
+          "gmtoffset": -14400
+        }
+      },
+      "dataGranularity": "1d",
+      "range": "",
+      "validRanges": [
+        "1d",
+        "5d",
+        "1mo",
+        "3mo",
+        "6mo",
+        "1y",
+        "2y",
+        "5y",
+        "10y",
+        "ytd",
+        "max"
+      ]
+    },
+    "quotes": [
+      {
+        "date": "2026-10-08T13:30:00.000Z",
+        "high": 27491.890625,
+        "volume": 8820120000,
+        "open": 27416.029296875,
+        "low": 27066.759765625,
+        "close": 27193.33984375,
+        "adjclose": 27193.33984375
+      },
+      {
+        "date": "2026-10-09T13:30:00.000Z",
+        "high": 27395.41015625,
+        "volume": 6845310000,
+        "open": 27342.26953125,
+        "low": 27254.029296875,
+        "close": 27366.169921875,
+        "adjclose": 27366.169921875
+      },
+      {
+        "date": "2026-10-12T13:30:00.000Z",
+        "high": 27376.66015625,
+        "volume": 6285170000,
+        "open": 27352.509765625,
+        "low": 27219.419921875,
+        "close": 27245.900390625,
+        "adjclose": 27245.900390625
+      },
+      {
+        "date": "2026-10-13T13:30:00.000Z",
+        "high": 27277.880859375,
+        "volume": 6986280000,
+        "open": 27138.73046875,
+        "low": 27116.080078125,
+        "close": 27204.380859375,
+        "adjclose": 27204.380859375
+      },
+      {
+        "date": "2026-10-14T13:30:00.000Z",
+        "high": 27134.2890625,
+        "volume": 8568280000,
+        "open": 27031.640625,
+        "low": 26602.119140625,
+        "close": 26692.869140625,
+        "adjclose": 26692.869140625
+      },
+      {
+        "date": "2026-10-15T13:30:00.000Z",
+        "high": 26754.01953125,
+        "volume": 10869960000,
+        "open": 26380.76953125,
+        "low": 26308.849609375,
+        "close": 26713.029296875,
+        "adjclose": 26713.029296875
+      }
+    ]
+  },
+  {
+    "symbol": "069500.KS",
+    "meta": {
+      "currency": "KRW",
+      "symbol": "069500.KS",
+      "exchangeName": "KSC",
+      "fullExchangeName": "KSE",
+      "instrumentType": "ETF",
+      "firstTradeDate": "2007-01-29T00:00:00.000Z",
+      "regularMarketTime": "2026-10-16T03:56:47.000Z",
+      "hasPrePostMarketData": false,
+      "gmtoffset": 32400,
+      "timezone": "KST",
+      "exchangeTimezoneName": "Asia/Seoul",
+      "regularMarketPrice": 90185,
+      "regularMarketChangePercent": 3.631,
+      "fulldayPrice": 90185,
+      "fulldayChange": 3160,
+      "fulldayChangePercent": 3.631,
+      "fiftyTwoWeekHigh": 152455,
+      "fiftyTwoWeekLow": 52250,
+      "regularMarketDayHigh": 90240,
+      "regularMarketDayLow": 87510,
+      "regularMarketVolume": 22219773,
+      "longName": "KODEX 200",
+      "shortName": "KODEX 200",
+      "chartPreviousClose": 105650,
+      "priceHint": 2,
+      "currentTradingPeriod": {
+        "pre": {
+          "timezone": "KST",
+          "end": "2026-10-16T00:00:00.000Z",
+          "start": "2026-10-15T22:30:00.000Z",
+          "gmtoffset": 32400
+        },
+        "regular": {
+          "timezone": "KST",
+          "end": "2026-10-16T06:00:00.000Z",
+          "start": "2026-10-16T00:00:00.000Z",
+          "gmtoffset": 32400
+        },
+        "post": {
+          "timezone": "KST",
+          "end": "2026-10-16T09:00:00.000Z",
+          "start": "2026-10-16T06:00:00.000Z",
+          "gmtoffset": 32400
+        }
+      },
+      "dataGranularity": "1d",
+      "range": "",
+      "validRanges": [
+        "1d",
+        "5d",
+        "1mo",
+        "3mo",
+        "6mo",
+        "1y",
+        "2y",
+        "5y",
+        "10y",
+        "ytd",
+        "max"
+      ]
+    },
+    "quotes": [
+      {
+        "date": "2026-10-08T00:00:00.000Z",
+        "high": 108660,
+        "volume": 24470186,
+        "open": 108510,
+        "low": 105650,
+        "close": 105650,
+        "adjclose": 105650
+      },
+      {
+        "date": "2026-10-12T00:00:00.000Z",
+        "high": 105000,
+        "volume": 29236913,
+        "open": 104360,
+        "low": 101275,
+        "close": 101605,
+        "adjclose": 101605
+      },
+      {
+        "date": "2026-10-13T00:00:00.000Z",
+        "high": 98755,
+        "volume": 41869608,
+        "open": 98410,
+        "low": 93600,
+        "close": 95250,
+        "adjclose": 95250
+      },
+      {
+        "date": "2026-10-14T00:00:00.000Z",
+        "high": 97860,
+        "volume": 31923229,
+        "open": 95715,
+        "low": 93665,
+        "close": 94805,
+        "adjclose": 94805
+      },
+      {
+        "date": "2026-10-15T00:00:00.000Z",
+        "high": 90575,
+        "volume": 44778477,
+        "open": 89565,
+        "low": 85300,
+        "close": 87025,
+        "adjclose": 87025
+      },
+      {
+        "date": "2026-10-16T00:00:00.000Z",
+        "high": 90240,
+        "volume": 22219773,
+        "open": 88635,
+        "low": 87510,
+        "close": 90185,
+        "adjclose": 90185
+      }
+    ]
+  },
+  {
+    "symbol": "SOXX",
+    "meta": {
+      "currency": "USD",
+      "symbol": "SOXX",
+      "exchangeName": "NGM",
+      "fullExchangeName": "NasdaqGM",
+      "instrumentType": "ETF",
+      "firstTradeDate": "2001-07-13T13:30:00.000Z",
+      "regularMarketTime": "2026-10-15T20:00:00.000Z",
+      "hasPrePostMarketData": true,
+      "gmtoffset": -14400,
+      "timezone": "EDT",
+      "exchangeTimezoneName": "America/New_York",
+      "regularMarketPrice": 514.71,
+      "regularMarketChangePercent": -0.907,
+      "fulldayPrice": 514.51,
+      "fulldayChange": -4.91,
+      "fulldayChangePercent": -0.945,
+      "fiftyTwoWeekHigh": 655.95,
+      "fiftyTwoWeekLow": 260.44,
+      "regularMarketDayHigh": 517.117,
+      "regularMarketDayLow": 495.79,
+      "regularMarketVolume": 16439132,
+      "longName": "iShares Semiconductor ETF",
+      "shortName": "iShares PHLX SOX Semiconductor ",
+      "chartPreviousClose": 582.82,
+      "priceHint": 2,
+      "currentTradingPeriod": {
+        "pre": {
+          "timezone": "EDT",
+          "end": "2026-10-16T13:30:00.000Z",
+          "start": "2026-10-16T08:00:00.000Z",
+          "gmtoffset": -14400
+        },
+        "regular": {
+          "timezone": "EDT",
+          "end": "2026-10-16T20:00:00.000Z",
+          "start": "2026-10-16T13:30:00.000Z",
+          "gmtoffset": -14400
+        },
+        "post": {
+          "timezone": "EDT",
+          "end": "2026-10-17T00:00:00.000Z",
+          "start": "2026-10-16T20:00:00.000Z",
+          "gmtoffset": -14400
+        }
+      },
+      "dataGranularity": "1d",
+      "range": "",
+      "validRanges": [
+        "1d",
+        "5d",
+        "1mo",
+        "3mo",
+        "6mo",
+        "1y",
+        "2y",
+        "5y",
+        "10y",
+        "ytd",
+        "max"
+      ]
+    },
+    "quotes": [
+      {
+        "date": "2026-10-08T13:30:00.000Z",
+        "high": 579.25,
+        "volume": 10355100,
+        "open": 573.2999877929688,
+        "low": 555.8099975585938,
+        "close": 563.280029296875,
+        "adjclose": 563.280029296875
+      },
+      {
+        "date": "2026-10-09T13:30:00.000Z",
+        "high": 571.3400268554688,
+        "volume": 5026300,
+        "open": 571.010009765625,
+        "low": 557.260009765625,
+        "close": 559.4000244140625,
+        "adjclose": 559.4000244140625
+      },
+      {
+        "date": "2026-10-12T13:30:00.000Z",
+        "high": 552.8699951171875,
+        "volume": 7195300,
+        "open": 552.6400146484375,
+        "low": 543.3400268554688,
+        "close": 544.8499755859375,
+        "adjclose": 544.8499755859375
+      },
+      {
+        "date": "2026-10-13T13:30:00.000Z",
+        "high": 544.3400268554688,
+        "volume": 8479700,
+        "open": 530.7100219726562,
+        "low": 527.1599731445312,
+        "close": 543.9000244140625,
+        "adjclose": 543.9000244140625
+      },
+      {
+        "date": "2026-10-14T13:30:00.000Z",
+        "high": 534.4199829101562,
+        "volume": 10900500,
+        "open": 531.8800048828125,
+        "low": 517.469970703125,
+        "close": 519.4199829101562,
+        "adjclose": 519.4199829101562
+      },
+      {
+        "date": "2026-10-15T13:30:00.000Z",
+        "high": 517.1199951171875,
+        "volume": 16480000,
+        "open": 500.42999267578125,
+        "low": 495.7799987792969,
+        "close": 514.7100219726562,
+        "adjclose": 514.7100219726562
+      }
+    ]
+  },
+  {
+    "symbol": "QQQ",
+    "meta": {
+      "currency": "USD",
+      "symbol": "QQQ",
+      "exchangeName": "NGM",
+      "fullExchangeName": "NasdaqGM",
+      "instrumentType": "ETF",
+      "firstTradeDate": "1999-03-10T14:30:00.000Z",
+      "regularMarketTime": "2026-10-15T20:00:00.000Z",
+      "hasPrePostMarketData": true,
+      "gmtoffset": -14400,
+      "timezone": "EDT",
+      "exchangeTimezoneName": "America/New_York",
+      "regularMarketPrice": 728,
+      "regularMarketChangePercent": -0.13,
+      "fulldayPrice": 728.62,
+      "fulldayChange": -0.33,
+      "fulldayChangePercent": -0.045,
+      "fiftyTwoWeekHigh": 762.86,
+      "fiftyTwoWeekLow": 555.6,
+      "regularMarketDayHigh": 729.43,
+      "regularMarketDayLow": 715.435,
+      "regularMarketVolume": 49058351,
+      "longName": "Invesco QQQ Trust",
+      "shortName": "Invesco QQQ Trust, Series 1",
+      "chartPreviousClose": 757.73,
+      "priceHint": 2,
+      "currentTradingPeriod": {
+        "pre": {
+          "timezone": "EDT",
+          "start": "2026-10-16T08:00:00.000Z",
+          "end": "2026-10-16T13:30:00.000Z",
+          "gmtoffset": -14400
+        },
+        "regular": {
+          "timezone": "EDT",
+          "start": "2026-10-16T13:30:00.000Z",
+          "end": "2026-10-16T20:00:00.000Z",
+          "gmtoffset": -14400
+        },
+        "post": {
+          "timezone": "EDT",
+          "start": "2026-10-16T20:00:00.000Z",
+          "end": "2026-10-17T00:00:00.000Z",
+          "gmtoffset": -14400
+        }
+      },
+      "dataGranularity": "1d",
+      "range": "",
+      "validRanges": [
+        "1d",
+        "5d",
+        "1mo",
+        "3mo",
+        "6mo",
+        "1y",
+        "2y",
+        "5y",
+        "10y",
+        "ytd",
+        "max"
+      ]
+    },
+    "quotes": [
+      {
+        "date": "2026-10-08T13:30:00.000Z",
+        "high": 757.1799926757812,
+        "volume": 49694800,
+        "open": 753.969970703125,
+        "low": 743.22998046875,
+        "close": 747.5800170898438,
+        "adjclose": 747.5800170898438
+      },
+      {
+        "date": "2026-10-09T13:30:00.000Z",
+        "high": 752.8699951171875,
+        "volume": 21162000,
+        "open": 752.5499877929688,
+        "low": 748.3699951171875,
+        "close": 751.27001953125,
+        "adjclose": 751.27001953125
+      },
+      {
+        "date": "2026-10-12T13:30:00.000Z",
+        "high": 749.7899780273438,
+        "volume": 25147700,
+        "open": 749.6900024414062,
+        "low": 744.8499755859375,
+        "close": 746.0399780273438,
+        "adjclose": 746.0399780273438
+      },
+      {
+        "date": "2026-10-13T13:30:00.000Z",
+        "high": 744.2000122070312,
+        "volume": 28738600,
+        "open": 739.52001953125,
+        "low": 738.8300170898438,
+        "close": 743.5700073242188,
+        "adjclose": 743.5700073242188
+      },
+      {
+        "date": "2026-10-14T13:30:00.000Z",
+        "high": 740.530029296875,
+        "volume": 52383600,
+        "open": 737.97998046875,
+        "low": 726.3900146484375,
+        "close": 728.9500122070312,
+        "adjclose": 728.9500122070312
+      },
+      {
+        "date": "2026-10-15T13:30:00.000Z",
+        "high": 729.4299926757812,
+        "volume": 49610000,
+        "open": 718.5499877929688,
+        "low": 715.4400024414062,
+        "close": 728,
+        "adjclose": 728
+      }
+    ]
+  },
+  {
+    "symbol": "091160.KS",
+    "meta": {
+      "currency": "KRW",
+      "symbol": "091160.KS",
+      "exchangeName": "KSC",
+      "fullExchangeName": "KSE",
+      "instrumentType": "ETF",
+      "firstTradeDate": "2007-01-29T00:00:00.000Z",
+      "regularMarketTime": "2026-10-16T04:01:57.000Z",
+      "hasPrePostMarketData": false,
+      "gmtoffset": 32400,
+      "timezone": "KST",
+      "exchangeTimezoneName": "Asia/Seoul",
+      "regularMarketPrice": 118010,
+      "regularMarketChangePercent": 5.085,
+      "fulldayPrice": 118010,
+      "fulldayChange": 5710,
+      "fulldayChangePercent": 5.085,
+      "fiftyTwoWeekHigh": 188760,
+      "fiftyTwoWeekLow": 52205,
+      "regularMarketDayHigh": 118090,
+      "regularMarketDayLow": 111910,
+      "regularMarketVolume": 2292227,
+      "longName": "Kodex Semicon",
+      "shortName": "KODEX SEMICON",
+      "chartPreviousClose": 146190,
+      "priceHint": 2,
+      "currentTradingPeriod": {
+        "pre": {
+          "timezone": "KST",
+          "start": "2026-10-15T22:30:00.000Z",
+          "end": "2026-10-16T00:00:00.000Z",
+          "gmtoffset": 32400
+        },
+        "regular": {
+          "timezone": "KST",
+          "start": "2026-10-16T00:00:00.000Z",
+          "end": "2026-10-16T06:00:00.000Z",
+          "gmtoffset": 32400
+        },
+        "post": {
+          "timezone": "KST",
+          "start": "2026-10-16T06:00:00.000Z",
+          "end": "2026-10-16T09:00:00.000Z",
+          "gmtoffset": 32400
+        }
+      },
+      "dataGranularity": "1d",
+      "range": "",
+      "validRanges": [
+        "1d",
+        "5d",
+        "1mo",
+        "3mo",
+        "6mo",
+        "1y",
+        "2y",
+        "5y",
+        "10y",
+        "ytd",
+        "max"
+      ]
+    },
+    "quotes": [
+      {
+        "date": "2026-10-08T00:00:00.000Z",
+        "high": 149250,
+        "volume": 1405035,
+        "open": 145300,
+        "low": 144600,
+        "close": 146190,
+        "adjclose": 146190
+      },
+      {
+        "date": "2026-10-12T00:00:00.000Z",
+        "high": 145265,
+        "volume": 2183065,
+        "open": 142235,
+        "low": 137950,
+        "close": 138850,
+        "adjclose": 138850
+      },
+      {
+        "date": "2026-10-13T00:00:00.000Z",
+        "high": 135000,
+        "volume": 3921437,
+        "open": 133090,
+        "low": 127600,
+        "close": 133350,
+        "adjclose": 133350
+      },
+      {
+        "date": "2026-10-14T00:00:00.000Z",
+        "high": 133665,
+        "volume": 2593546,
+        "open": 133300,
+        "low": 125357,
+        "close": 127520,
+        "adjclose": 127520
+      },
+      {
+        "date": "2026-10-15T00:00:00.000Z",
+        "high": 119485,
+        "volume": 5003251,
+        "open": 118000,
+        "low": 109035,
+        "close": 112300,
+        "adjclose": 112300
+      },
+      {
+        "date": "2026-10-16T00:00:00.000Z",
+        "high": 118090,
+        "volume": 2292227,
+        "open": 115000,
+        "low": 111910,
+        "close": 118010,
+        "adjclose": 118010
+      }
+    ]
+  },
+  {
+    "symbol": "IWM",
+    "meta": {
+      "currency": "USD",
+      "symbol": "IWM",
+      "exchangeName": "PCX",
+      "fullExchangeName": "NYSEArca",
+      "instrumentType": "ETF",
+      "firstTradeDate": "2000-05-26T13:30:00.000Z",
+      "regularMarketTime": "2026-10-15T20:00:00.000Z",
+      "hasPrePostMarketData": true,
+      "gmtoffset": -14400,
+      "timezone": "EDT",
+      "exchangeTimezoneName": "America/New_York",
+      "regularMarketPrice": 275.08,
+      "regularMarketChangePercent": 1.367,
+      "fulldayPrice": 275.73,
+      "fulldayChange": 4.36,
+      "fulldayChangePercent": 1.607,
+      "fiftyTwoWeekHigh": 305.18,
+      "fiftyTwoWeekLow": 228.9,
+      "regularMarketDayHigh": 275.19,
+      "regularMarketDayLow": 270.85,
+      "regularMarketVolume": 31921315,
+      "longName": "iShares Russell 2000 ETF",
+      "shortName": "iShares Russell 2000 Index Fund",
+      "chartPreviousClose": 277.7,
+      "priceHint": 2,
+      "currentTradingPeriod": {
+        "pre": {
+          "timezone": "EDT",
+          "start": "2026-10-16T08:00:00.000Z",
+          "end": "2026-10-16T13:30:00.000Z",
+          "gmtoffset": -14400
+        },
+        "regular": {
+          "timezone": "EDT",
+          "start": "2026-10-16T13:30:00.000Z",
+          "end": "2026-10-16T20:00:00.000Z",
+          "gmtoffset": -14400
+        },
+        "post": {
+          "timezone": "EDT",
+          "start": "2026-10-16T20:00:00.000Z",
+          "end": "2026-10-17T00:00:00.000Z",
+          "gmtoffset": -14400
+        }
+      },
+      "dataGranularity": "1d",
+      "range": "",
+      "validRanges": [
+        "1d",
+        "5d",
+        "1mo",
+        "3mo",
+        "6mo",
+        "1y",
+        "2y",
+        "5y",
+        "10y",
+        "ytd",
+        "max"
+      ]
+    },
+    "quotes": [
+      {
+        "date": "2026-10-08T13:30:00.000Z",
+        "high": 277.8299865722656,
+        "volume": 35710100,
+        "open": 276.32000732421875,
+        "low": 274.5199890136719,
+        "close": 277.57000732421875,
+        "adjclose": 277.57000732421875
+      },
+      {
+        "date": "2026-10-09T13:30:00.000Z",
+        "high": 279.8800048828125,
+        "volume": 18720300,
+        "open": 278.2099914550781,
+        "low": 277.4599914550781,
+        "close": 278.94000244140625,
+        "adjclose": 278.94000244140625
+      },
+      {
+        "date": "2026-10-12T13:30:00.000Z",
+        "high": 279.1400146484375,
+        "volume": 16770600,
+        "open": 278.4700012207031,
+        "low": 277.7900085449219,
+        "close": 277.8999938964844,
+        "adjclose": 277.8999938964844
+      },
+      {
+        "date": "2026-10-13T13:30:00.000Z",
+        "high": 278.70001220703125,
+        "volume": 27759000,
+        "open": 277.9800109863281,
+        "low": 275.4700012207031,
+        "close": 276.70001220703125,
+        "adjclose": 276.70001220703125
+      },
+      {
+        "date": "2026-10-14T13:30:00.000Z",
+        "high": 274.4599914550781,
+        "volume": 38042100,
+        "open": 273.3599853515625,
+        "low": 270.3500061035156,
+        "close": 271.3699951171875,
+        "adjclose": 271.3699951171875
+      },
+      {
+        "date": "2026-10-15T13:30:00.000Z",
+        "high": 275.19000244140625,
+        "volume": 32365500,
+        "open": 271.4200134277344,
+        "low": 270.8500061035156,
+        "close": 275.0799865722656,
+        "adjclose": 275.0799865722656
+      }
+    ]
+  },
+  {
+    "symbol": "HYG",
+    "meta": {
+      "currency": "USD",
+      "symbol": "HYG",
+      "exchangeName": "PCX",
+      "fullExchangeName": "NYSEArca",
+      "instrumentType": "ETF",
+      "firstTradeDate": "2007-04-11T13:30:00.000Z",
+      "regularMarketTime": "2026-10-15T20:00:00.000Z",
+      "hasPrePostMarketData": true,
+      "gmtoffset": -14400,
+      "timezone": "EDT",
+      "exchangeTimezoneName": "America/New_York",
+      "regularMarketPrice": 77.13,
+      "regularMarketChangePercent": 0.417,
+      "fulldayPrice": 77.13,
+      "fulldayChange": 0.36,
+      "fulldayChangePercent": 0.469,
+      "fiftyTwoWeekHigh": 81.33,
+      "fiftyTwoWeekLow": 76.39,
+      "regularMarketDayHigh": 77.21,
+      "regularMarketDayLow": 76.795,
+      "regularMarketVolume": 80514689,
+      "longName": "iShares iBoxx $ High Yield Corporate Bond ETF",
+      "shortName": "iShares iBoxx $ High Yield Corp",
+      "chartPreviousClose": 77.18,
+      "priceHint": 2,
+      "currentTradingPeriod": {
+        "pre": {
+          "timezone": "EDT",
+          "start": "2026-10-16T08:00:00.000Z",
+          "end": "2026-10-16T13:30:00.000Z",
+          "gmtoffset": -14400
+        },
+        "regular": {
+          "timezone": "EDT",
+          "start": "2026-10-16T13:30:00.000Z",
+          "end": "2026-10-16T20:00:00.000Z",
+          "gmtoffset": -14400
+        },
+        "post": {
+          "timezone": "EDT",
+          "start": "2026-10-16T20:00:00.000Z",
+          "end": "2026-10-17T00:00:00.000Z",
+          "gmtoffset": -14400
+        }
+      },
+      "dataGranularity": "1d",
+      "range": "",
+      "validRanges": [
+        "1d",
+        "5d",
+        "1mo",
+        "3mo",
+        "6mo",
+        "1y",
+        "2y",
+        "5y",
+        "10y",
+        "ytd",
+        "max"
+      ]
+    },
+    "quotes": [
+      {
+        "date": "2026-10-08T13:30:00.000Z",
+        "high": 77.18000030517578,
+        "volume": 44872800,
+        "open": 77.06999969482422,
+        "low": 76.9800033569336,
+        "close": 77.13999938964844,
+        "adjclose": 77.13999938964844
+      },
+      {
+        "date": "2026-10-09T13:30:00.000Z",
+        "high": 77.27999877929688,
+        "volume": 36922300,
+        "open": 77.20999908447266,
+        "low": 77.08999633789062,
+        "close": 77.2300033569336,
+        "adjclose": 77.2300033569336
+      },
+      {
+        "date": "2026-10-12T13:30:00.000Z",
+        "high": 77.38999938964844,
+        "volume": 21847900,
+        "open": 77.20999908447266,
+        "low": 77.18000030517578,
+        "close": 77.29000091552734,
+        "adjclose": 77.29000091552734
+      },
+      {
+        "date": "2026-10-13T13:30:00.000Z",
+        "high": 77.26000213623047,
+        "volume": 60522300,
+        "open": 77.2300033569336,
+        "low": 76.97000122070312,
+        "close": 77.08999633789062,
+        "adjclose": 77.08999633789062
+      },
+      {
+        "date": "2026-10-14T13:30:00.000Z",
+        "high": 76.88999938964844,
+        "volume": 63593200,
+        "open": 76.8499984741211,
+        "low": 76.75,
+        "close": 76.80999755859375,
+        "adjclose": 76.80999755859375
+      },
+      {
+        "date": "2026-10-15T13:30:00.000Z",
+        "high": 77.20999908447266,
+        "volume": 80597700,
+        "open": 76.87000274658203,
+        "low": 76.79000091552734,
+        "close": 77.12999725341797,
+        "adjclose": 77.12999725341797
+      }
+    ]
+  },
+  {
+    "symbol": "^TNX",
+    "meta": {
+      "currency": "USD",
+      "symbol": "^TNX",
+      "exchangeName": "CGI",
+      "fullExchangeName": "Cboe Indices",
+      "instrumentType": "INDEX",
+      "firstTradeDate": "1962-01-02T13:20:00.000Z",
+      "regularMarketTime": "2026-10-15T18:59:55.000Z",
+      "hasPrePostMarketData": false,
+      "gmtoffset": -18000,
+      "timezone": "CDT",
+      "exchangeTimezoneName": "America/Chicago",
+      "regularMarketPrice": 5.089,
+      "regularMarketChangePercent": -1.946,
+      "fulldayPrice": 5.089,
+      "fulldayChange": -0.101,
+      "fulldayChangePercent": -1.946,
+      "fiftyTwoWeekHigh": 5.364,
+      "fiftyTwoWeekLow": 3.947,
+      "regularMarketDayHigh": 5.106,
+      "regularMarketDayLow": 5.037,
+      "regularMarketVolume": 0,
+      "longName": "CBOE Interest Rate 10 Year T Note",
+      "shortName": "10-Year Bond",
+      "chartPreviousClose": 5.277,
+      "priceHint": 2,
+      "currentTradingPeriod": {
+        "pre": {
+          "timezone": "CDT",
+          "end": "2026-10-15T12:20:00.000Z",
+          "start": "2026-10-15T12:20:00.000Z",
+          "gmtoffset": -18000
+        },
+        "regular": {
+          "timezone": "CDT",
+          "end": "2026-10-15T19:00:00.000Z",
+          "start": "2026-10-15T12:20:00.000Z",
+          "gmtoffset": -18000
+        },
+        "post": {
+          "timezone": "CDT",
+          "end": "2026-10-15T19:00:00.000Z",
+          "start": "2026-10-15T19:00:00.000Z",
+          "gmtoffset": -18000
+        }
+      },
+      "dataGranularity": "1d",
+      "range": "",
+      "validRanges": [
+        "1d",
+        "5d",
+        "1mo",
+        "3mo",
+        "6mo",
+        "1y",
+        "2y",
+        "5y",
+        "10y",
+        "ytd",
+        "max"
+      ]
+    },
+    "quotes": [
+      {
+        "date": "2026-10-08T12:20:00.000Z",
+        "high": 5.330999851226807,
+        "volume": 0,
+        "open": 5.323999881744385,
+        "low": 5.2230000495910645,
+        "close": 5.230999946594238,
+        "adjclose": 5.230999946594238
+      },
+      {
+        "date": "2026-10-09T12:20:00.000Z",
+        "high": 5.28000020980835,
+        "volume": 0,
+        "open": 5.236000061035156,
+        "low": 5.234000205993652,
+        "close": 5.24399995803833,
+        "adjclose": 5.24399995803833
+      },
+      {
+        "date": "2026-10-12T12:20:00.000Z",
+        "high": 5.239999771118164,
+        "volume": 0,
+        "open": 5.239999771118164,
+        "low": 5.239999771118164,
+        "close": 5.239999771118164,
+        "adjclose": 5.239999771118164
+      },
+      {
+        "date": "2026-10-13T12:20:00.000Z",
+        "high": 5.236000061035156,
+        "volume": 0,
+        "open": 5.186999797821045,
+        "low": 5.184999942779541,
+        "close": 5.2170000076293945,
+        "adjclose": 5.2170000076293945
+      },
+      {
+        "date": "2026-10-14T12:20:00.000Z",
+        "high": 5.328999996185303,
+        "volume": 0,
+        "open": 5.196000099182129,
+        "low": 5.177000045776367,
+        "close": 5.190000057220459,
+        "adjclose": 5.190000057220459
+      },
+      {
+        "date": "2026-10-15T12:20:00.000Z",
+        "high": 5.105999946594238,
+        "volume": 0,
+        "open": 5.081000328063965,
+        "low": 5.036999702453613,
+        "close": 5.0889997482299805,
+        "adjclose": 5.0889997482299805
+      }
+    ]
+  }
+]

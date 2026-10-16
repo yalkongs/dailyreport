@@ -1,0 +1,1892 @@
+{
+  "version": 1,
+  "artifact": {
+    "identity": "Daily Market and ETF Today: ten published reports",
+    "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+    "view": "2026-10-12 to 2026-10-16 standalone reports; major narrative sections, selected scanner checks, latest desktop headers",
+    "revisionDefinition": "SHA256 of published-artifact manifest plus input/code provenance manifest at handoff; observations remain against the inspected unchanged production code and archived HTML."
+  },
+  "categories": [
+    {
+      "id": "source",
+      "label": "원천의 권위와 신뢰 근거",
+      "applicable": true,
+      "inventoryComplete": false,
+      "reason": "전체 주장·컴포넌트의 전수 목록은 미확정이며 중요 사례를 우선 검토했다.",
+      "assessment": "공식 일정·환율 구조를 대조했다. 기관 자금 이동·기업별 하락 원인의 증거는 부족하다."
+    },
+    {
+      "id": "values",
+      "label": "수치·기간의 정확성",
+      "applicable": true,
+      "inventoryComplete": false,
+      "reason": "전체 주장·컴포넌트의 전수 목록은 미확정이며 중요 사례를 우선 검토했다.",
+      "assessment": "지수/ETF 치환, 반도체 수치 충돌, 발표일·요일, 주간 기간 오류가 확인됐다. 나스닥 스냅샷 5일과 괴리율 산술 2건은 대조 범위에서 일치했다."
+    },
+    {
+      "id": "chart",
+      "label": "차트·라벨의 일치",
+      "applicable": true,
+      "inventoryComplete": false,
+      "reason": "전체 주장·컴포넌트의 전수 목록은 미확정이며 중요 사례를 우선 검토했다.",
+      "assessment": "레버리지/인버스 상쇄 집계와 다섯 시점 등간격 표시가 의미를 흐린다."
+    },
+    {
+      "id": "details",
+      "label": "출처의 추적 가능성",
+      "applicable": true,
+      "inventoryComplete": false,
+      "reason": "전체 주장·컴포넌트의 전수 목록은 미확정이며 중요 사례를 우선 검토했다.",
+      "assessment": "10편에 원문 인용 링크가 없고 전체 생성 입력·KRX 원본이 없어 재생 검증이 제한된다."
+    },
+    {
+      "id": "consistency",
+      "label": "표·서술·보고서 간 일관성",
+      "applicable": true,
+      "inventoryComplete": false,
+      "reason": "전체 주장·컴포넌트의 전수 목록은 미확정이며 중요 사례를 우선 검토했다.",
+      "assessment": "실제 지수/ETF, 카드/본문, CPI 한국 세션, 하루/주간 비교가 충돌한다."
+    },
+    {
+      "id": "controls",
+      "label": "데이터 품질 통제",
+      "applicable": true,
+      "inventoryComplete": false,
+      "reason": "전체 주장·컴포넌트의 전수 목록은 미확정이며 중요 사례를 우선 검토했다.",
+      "assessment": "실제 오류가 발행됐다. 입력 범위·시점·종목 식별·기간 결속과 최종 본문 검증이 필요하다."
+    },
+    {
+      "id": "conclusions",
+      "label": "결론의 근거",
+      "applicable": true,
+      "inventoryComplete": false,
+      "reason": "전체 주장·컴포넌트의 전수 목록은 미확정이며 중요 사례를 우선 검토했다.",
+      "assessment": "환율 효과, 기관 자금 이동, 금리 방향, 거래대금 해석과 공격 결론의 적용 범위가 불충분하다."
+    },
+    {
+      "id": "clarity",
+      "label": "설명의 명확성",
+      "applicable": true,
+      "inventoryComplete": false,
+      "reason": "전체 주장·컴포넌트의 전수 목록은 미확정이며 중요 사례를 우선 검토했다.",
+      "assessment": "수준/변화·일간/주간·미국/한국의 구분이 흐리고 같은 사실의 반복이 많다."
+    },
+    {
+      "id": "visual",
+      "label": "시각·읽기 일관성",
+      "applicable": true,
+      "inventoryComplete": false,
+      "reason": "전체 주장·컴포넌트의 전수 목록은 미확정이며 중요 사례를 우선 검토했다.",
+      "assessment": "최신 두 페이지의 데스크톱 상단은 읽을 수 있었다. 모바일·긴 페이지 전체 시각 검증은 미완료다."
+    },
+    {
+      "id": "useful",
+      "label": "독자의 질문과 정보 완결성",
+      "applicable": true,
+      "inventoryComplete": false,
+      "reason": "전체 주장·컴포넌트의 전수 목록은 미확정이며 중요 사례를 우선 검토했다.",
+      "assessment": "핵심 CPI의 실제값, 비교 가능한 거래대금, 주간 수익률과 정확한 관찰 시점이 부족하다."
+    }
+  ],
+  "units": [
+    {
+      "id": "index-identities",
+      "label": "KOSPI·나스닥과 ETF의 비교 그룹",
+      "kind": "comparison",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "values": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "calculations.json#entity_comparisons",
+                "calculations.json#market_snapshot_controls",
+                "../content-review.md#C01"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C01",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "consistency": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "calculations.json#entity_comparisons",
+                "calculations.json#market_snapshot_controls",
+                "../content-review.md#C01"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C01",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "controls": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "calculations.json#entity_comparisons",
+                "calculations.json#market_snapshot_controls",
+                "../content-review.md#C01"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C01",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "clarity": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "calculations.json#entity_comparisons",
+                "calculations.json#market_snapshot_controls",
+                "../content-review.md#C01"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C01",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "fx-sign",
+      "label": "환노출 ETF 환율 효과",
+      "kind": "claim",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "source": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-16.txt:298",
+                "source-manifest.json#officialChecks/fx",
+                "../../../../lib/etf/renderer.ts:1048"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C02",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "values": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-16.txt:298",
+                "source-manifest.json#officialChecks/fx",
+                "../../../../lib/etf/renderer.ts:1048"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C02",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "conclusions": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-16.txt:298",
+                "source-manifest.json#officialChecks/fx",
+                "../../../../lib/etf/renderer.ts:1048"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C02",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "controls": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-16.txt:298",
+                "source-manifest.json#officialChecks/fx",
+                "../../../../lib/etf/renderer.ts:1048"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C02",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "clarity": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-16.txt:298",
+                "source-manifest.json#officialChecks/fx",
+                "../../../../lib/etf/renderer.ts:1048"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C02",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "employment-date",
+      "label": "9월 고용동향 발표일",
+      "kind": "claim",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "values": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "reports-2026-10-15.txt:71",
+                "source-manifest.json#officialChecks/employment",
+                "kr-macro-calendar-input.json"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C03-employment",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "consistency": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "reports-2026-10-15.txt:71",
+                "source-manifest.json#officialChecks/employment",
+                "kr-macro-calendar-input.json"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C03-employment",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "controls": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "reports-2026-10-15.txt:71",
+                "source-manifest.json#officialChecks/employment",
+                "kr-macro-calendar-input.json"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C03-employment",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "useful": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "reports-2026-10-15.txt:71",
+                "source-manifest.json#officialChecks/employment",
+                "kr-macro-calendar-input.json"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C03-employment",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "cpi-session",
+      "label": "CPI 발표의 한국 거래 세션",
+      "kind": "claim",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "values": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-14.txt:78",
+                "reports-2026-10-14.txt:78",
+                "calculations.json#calendar_controls"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C03-cpi",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "consistency": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-14.txt:78",
+                "reports-2026-10-14.txt:78",
+                "calculations.json#calendar_controls"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C03-cpi",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "controls": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-14.txt:78",
+                "reports-2026-10-14.txt:78",
+                "calculations.json#calendar_controls"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C03-cpi",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "useful": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-14.txt:78",
+                "reports-2026-10-14.txt:78",
+                "calculations.json#calendar_controls"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C03-cpi",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bok-weekday",
+      "label": "금통위 요일",
+      "kind": "claim",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "values": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "reports-2026-10-16.txt:95",
+                "calculations.json#calendar_controls"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C03-bok",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "controls": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "reports-2026-10-16.txt:95",
+                "calculations.json#calendar_controls"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C03-bok",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "semiconductor-card-prose",
+      "label": "KODEX 반도체 카드와 설명",
+      "kind": "comparison",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "values": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-14.txt:38",
+                "etf-reports-2026-10-14.txt:82",
+                "yahoo-history.json#091160.KS"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C04",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "consistency": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-14.txt:38",
+                "etf-reports-2026-10-14.txt:82",
+                "yahoo-history.json#091160.KS"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C04",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "controls": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-14.txt:38",
+                "etf-reports-2026-10-14.txt:82",
+                "yahoo-history.json#091160.KS"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C04",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "weekly-etf",
+      "label": "금요일 ETF 주간 결론",
+      "kind": "claim",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "values": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-16.txt:705",
+                "calculations.json#weekly_periods"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C05-etf",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "consistency": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-16.txt:705",
+                "calculations.json#weekly_periods"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C05-etf",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "controls": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-16.txt:705",
+                "calculations.json#weekly_periods"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C05-etf",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "useful": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-16.txt:705",
+                "calculations.json#weekly_periods"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C05-etf",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "weekly-market",
+      "label": "금요일 Market 주간 비교",
+      "kind": "claim",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "values": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "reports-2026-10-16.txt:4",
+                "reports-2026-10-16.txt:74",
+                "calculations.json#weekly_periods"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C05-market",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "consistency": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "reports-2026-10-16.txt:4",
+                "reports-2026-10-16.txt:74",
+                "calculations.json#weekly_periods"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C05-market",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "controls": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "reports-2026-10-16.txt:4",
+                "reports-2026-10-16.txt:74",
+                "calculations.json#weekly_periods"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C05-market",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "conclusions": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "reports-2026-10-16.txt:4",
+                "reports-2026-10-16.txt:74",
+                "calculations.json#weekly_periods"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C05-market",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "clarity": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "reports-2026-10-16.txt:4",
+                "reports-2026-10-16.txt:74",
+                "calculations.json#weekly_periods"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C05-market",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "regime-conclusion",
+      "label": "국내 급락일 공격 접근과 확신도",
+      "kind": "claim",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "conclusions": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-16.txt:10",
+                "regime-check-result.json",
+                "regime-check.cjs",
+                "../../../../lib/etf/morning-strategy.ts:367"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C06",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "clarity": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-16.txt:10",
+                "regime-check-result.json",
+                "regime-check.cjs",
+                "../../../../lib/etf/morning-strategy.ts:367"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C06",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "institution-flows",
+      "label": "기관 주식 매도 자금의 채권 이동",
+      "kind": "claim",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "source": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "reports-2026-10-16.txt:62",
+                "source-manifest.json#operationsEvidence"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C07-flows",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "conclusions": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "reports-2026-10-16.txt:62",
+                "source-manifest.json#operationsEvidence"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C07-flows",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "auto-cause",
+      "label": "현대차·기아와 KOSPI 낙폭의 인과",
+      "kind": "claim",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "source": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "reports-2026-10-13.txt:59",
+                "../content-review.md#C07"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C07-auto",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "conclusions": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "reports-2026-10-13.txt:59",
+                "../content-review.md#C07"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C07-auto",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "yield-direction",
+      "label": "미국 10년물 수준과 방향",
+      "kind": "claim",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "values": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-16.txt:67",
+                "calculations.json#rate_change"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C07-yield",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "conclusions": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-16.txt:67",
+                "calculations.json#rate_change"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C07-yield",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "clarity": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-16.txt:67",
+                "calculations.json#rate_change"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C07-yield",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "turnover-condition",
+      "label": "30분 거래대금 관찰 조건",
+      "kind": "claim",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "conclusions": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-16.txt:84",
+                "../content-review.md#C07"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C07-turnover",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "clarity": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-16.txt:84",
+                "../content-review.md#C07"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C07-turnover",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "useful": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-16.txt:84",
+                "../content-review.md#C07"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C07-turnover",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "tactical-average",
+      "label": "레버리지·인버스 평균 표시",
+      "kind": "component",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "chart": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "calculations.json#tactical_heatmap",
+                "etf-reports-2026-10-16.txt:330"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C08-tactical",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "clarity": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "calculations.json#tactical_heatmap",
+                "etf-reports-2026-10-16.txt:330"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C08-tactical",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "semiconductor-average",
+      "label": "미국·한국 반도체 단순 평균",
+      "kind": "component",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "chart": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-16.txt:312",
+                "etf-reports-2026-10-16.txt:344"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C08-semiconductor",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "clarity": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "etf-reports-2026-10-16.txt:312",
+                "etf-reports-2026-10-16.txt:344"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C08-semiconductor",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "sparse-sparkline",
+      "label": "Market 다섯 시점 스파크라인",
+      "kind": "component",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "chart": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "../../../../lib/chart-generator.ts:31",
+                "../../../../lib/chart-generator.ts:62",
+                "../content-review.md#C08"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C08-sparkline",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "clarity": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "../../../../lib/chart-generator.ts:31",
+                "../../../../lib/chart-generator.ts:62",
+                "../content-review.md#C08"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C08-sparkline",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "sentiment-label",
+      "label": "ETF 공포탐욕 지표 대상 시장",
+      "kind": "component",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "clarity": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "source-manifest.json#officialChecks/sentiment",
+                "etf-reports-2026-10-16.txt:211",
+                "../../../../lib/etf/market-context.ts:51"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C08-sentiment",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "cpi-values",
+      "label": "CPI 중심 설명의 실제값 누락",
+      "kind": "question",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "useful": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "reports-2026-10-15.txt",
+                "source-manifest.json#officialChecks/cpi"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C09-cpi",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "repetition",
+      "label": "ETF16 주요 설명 섹션의 반복",
+      "kind": "comparison",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "clarity": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "calculations.json#text_controls/etf-reports-2026-10-16.txt",
+                "etf-reports-2026-10-16.txt"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C09-repeat",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        },
+        "useful": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "calculations.json#text_controls/etf-reports-2026-10-16.txt",
+                "etf-reports-2026-10-16.txt"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C09-repeat",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "sources-etf-reports-2026-10-12",
+      "label": "etf-reports 2026-10-12 출처 링크",
+      "kind": "component",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "details": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "manifest.json#etf-reports-2026-10-12.txt",
+                "../../../../lib/etf/renderer.ts:1400"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C09-sources",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "sources-etf-reports-2026-10-13",
+      "label": "etf-reports 2026-10-13 출처 링크",
+      "kind": "component",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "details": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "manifest.json#etf-reports-2026-10-13.txt",
+                "../../../../lib/etf/renderer.ts:1400"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C09-sources",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "sources-etf-reports-2026-10-14",
+      "label": "etf-reports 2026-10-14 출처 링크",
+      "kind": "component",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "details": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "manifest.json#etf-reports-2026-10-14.txt",
+                "../../../../lib/etf/renderer.ts:1400"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C09-sources",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "sources-etf-reports-2026-10-15",
+      "label": "etf-reports 2026-10-15 출처 링크",
+      "kind": "component",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "details": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "manifest.json#etf-reports-2026-10-15.txt",
+                "../../../../lib/etf/renderer.ts:1400"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C09-sources",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "sources-etf-reports-2026-10-16",
+      "label": "etf-reports 2026-10-16 출처 링크",
+      "kind": "component",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "details": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "manifest.json#etf-reports-2026-10-16.txt",
+                "../../../../lib/etf/renderer.ts:1400"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C09-sources",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "sources-reports-2026-10-12",
+      "label": "reports 2026-10-12 출처 링크",
+      "kind": "component",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "details": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "manifest.json#reports-2026-10-12.txt",
+                "../../../../lib/etf/renderer.ts:1400"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C09-sources",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "sources-reports-2026-10-13",
+      "label": "reports 2026-10-13 출처 링크",
+      "kind": "component",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "details": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "manifest.json#reports-2026-10-13.txt",
+                "../../../../lib/etf/renderer.ts:1400"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C09-sources",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "sources-reports-2026-10-14",
+      "label": "reports 2026-10-14 출처 링크",
+      "kind": "component",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "details": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "manifest.json#reports-2026-10-14.txt",
+                "../../../../lib/etf/renderer.ts:1400"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C09-sources",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "sources-reports-2026-10-15",
+      "label": "reports 2026-10-15 출처 링크",
+      "kind": "component",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "details": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "manifest.json#reports-2026-10-15.txt",
+                "../../../../lib/etf/renderer.ts:1400"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C09-sources",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "sources-reports-2026-10-16",
+      "label": "reports 2026-10-16 출처 링크",
+      "kind": "component",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "details": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "failed",
+              "evidence": [
+                "manifest.json#reports-2026-10-16.txt",
+                "../../../../lib/etf/renderer.ts:1400"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": [
+            {
+              "id": "C09-sources",
+              "status": "open",
+              "checkIds": [
+                "observed-check"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "nasdaq-controls",
+      "label": "나스닥 주요 표 5일 대조",
+      "kind": "comparison",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "values": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "passed",
+              "evidence": [
+                "calculations.json#market_snapshot_controls"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": []
+        }
+      }
+    },
+    {
+      "id": "nav-controls",
+      "label": "ETF 괴리율 산술 2건",
+      "kind": "comparison",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "values": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "passed",
+              "evidence": [
+                "calculations.json#published_nav_arithmetic_controls"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": []
+        }
+      }
+    },
+    {
+      "id": "desktop-market",
+      "label": "최신 Market 데스크톱 표지",
+      "kind": "component",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "visual": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "passed",
+              "evidence": [
+                "Browser screenshot observed: https://dailyreport-eta.vercel.app/reports/2026-10-16 (header only)"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": []
+        }
+      }
+    },
+    {
+      "id": "desktop-etf",
+      "label": "최신 ETF 데스크톱 표지",
+      "kind": "component",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "visual": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "passed",
+              "evidence": [
+                "Browser screenshot observed: https://dailyreport-eta.vercel.app/etf-reports/2026-10-16 (header only)"
+              ],
+              "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a"
+            }
+          ],
+          "findings": []
+        }
+      }
+    },
+    {
+      "id": "mobile-long-page",
+      "label": "모바일·전체 페이지 시각 품질",
+      "kind": "question",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "visual": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "unverified",
+              "evidence": []
+            }
+          ],
+          "findings": []
+        }
+      }
+    },
+    {
+      "id": "full-krx-original",
+      "label": "전체 ETF 원시 KRX 값의 진위",
+      "kind": "question",
+      "revision": "4dfe673d7e53e5bbb787bbdfb59f0fcbd16e502ab0d33f99d1a4297e29ea432a",
+      "categories": {
+        "source": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "unverified",
+              "evidence": [
+                "krx-history.json",
+                "manifest.json#limits"
+              ]
+            }
+          ],
+          "findings": []
+        },
+        "values": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "unverified",
+              "evidence": [
+                "krx-history.json",
+                "manifest.json#limits"
+              ]
+            }
+          ],
+          "findings": []
+        },
+        "controls": {
+          "checks": [
+            {
+              "id": "observed-check",
+              "state": "unverified",
+              "evidence": [
+                "krx-history.json",
+                "manifest.json#limits"
+              ]
+            }
+          ],
+          "findings": []
+        }
+      }
+    }
+  ]
+}

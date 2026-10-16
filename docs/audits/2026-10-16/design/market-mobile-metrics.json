@@ -1,0 +1,79 @@
+{
+  "headings": [
+    {
+      "text": "코스피 7.5%, 한 주를 통째로 반납했다",
+      "width": 342,
+      "y": 190
+    },
+    {
+      "text": "시장 체온",
+      "width": 350,
+      "y": 534
+    },
+    {
+      "text": "오늘의 시장 이야기",
+      "width": 350,
+      "y": 1354
+    },
+    {
+      "text": "그래서, 무엇이 달라지나",
+      "width": 350,
+      "y": 6339
+    },
+    {
+      "text": "이번 주 주요 일정",
+      "width": 350,
+      "y": 8324
+    }
+  ],
+  "labels": [
+    {
+      "ancestors": [
+        {
+          "bg": "rgba(0, 0, 0, 0)",
+          "class": ""
+        },
+        {
+          "bg": "rgba(21, 101, 192, 0.35)",
+          "class": "pulse-card heat-down-5"
+        },
+        {
+          "bg": "rgba(0, 0, 0, 0)",
+          "class": "market-grid"
+        }
+      ],
+      "class": "label",
+      "color": "rgb(139, 157, 175)",
+      "font": "11px",
+      "tag": "DIV"
+    },
+    {
+      "ancestors": [
+        {
+          "bg": "rgba(0, 0, 0, 0)",
+          "class": "data-row"
+        },
+        {
+          "bg": "rgb(255, 255, 255)",
+          "class": "data-card"
+        },
+        {
+          "bg": "rgba(0, 0, 0, 0)",
+          "class": "narrative"
+        }
+      ],
+      "class": "data-label",
+      "color": "rgb(90, 101, 119)",
+      "font": "14px",
+      "tag": "SPAN"
+    }
+  ],
+  "page": [
+    390,
+    9631
+  ],
+  "viewport": [
+    390,
+    844
+  ]
+}

@@ -1,0 +1,422 @@
+{
+  "auditDateKst": "2026-10-16",
+  "repository": "/Users/yalkongs/Project/dailyreport",
+  "localCommit": "e5f8ef0aa4e22e724d968860f10bb0568452ca72",
+  "observedRemoteMain": "d361aac635fd4d9f0f4c6a019350bd2a2e6bb26f",
+  "runtime": {
+    "node": "25.6.1",
+    "npm": "11.17.0",
+    "workflowNode": "20",
+    "readmeNode": "24 LTS"
+  },
+  "checks": {
+    "existingTests": {
+      "files": 29,
+      "passed": 242,
+      "failed": 0,
+      "command": "node --import tsx --test --test-reporter=spec lib/*.test.ts lib/etf/*.test.ts"
+    },
+    "typescript": {
+      "exitCode": 0,
+      "command": "./node_modules/.bin/tsc --noEmit --incremental false"
+    },
+    "lint": {
+      "exitCode": 1,
+      "errors": 10,
+      "warnings": 3,
+      "command": "npm run lint"
+    },
+    "build": {
+      "exitCode": 0,
+      "warning": "unexpected NFT tracing; ETF route NFT lists 839 files, including unrelated docs and both report archives",
+      "command": "npm run build"
+    },
+    "shellSyntax": {
+      "exitCode": 0
+    },
+    "plistSyntax": {
+      "exitCode": 0
+    },
+    "auditHarnessLint": {
+      "exitCode": 0,
+      "command": "./node_modules/.bin/eslint docs/audits/2026-10-16/reproduce.cjs"
+    }
+  },
+  "offlineProbes": {
+    "baseline": "e5f8ef0aa4e22e724d968860f10bb0568452ca72",
+    "passed": 14,
+    "evidence": [
+      {
+        "id": "A01_market_preview_failure_persists",
+        "detail": "preview throws → exit 0 + HTML/index saved, PNG absent; retry exits 0 without repairing PNG (collection still runs)"
+      },
+      {
+        "id": "A02_market_force_does_not_bypass_hash",
+        "detail": "FORCE_REGENERATE=true logs regeneration intent but identical price hash skips the second generation"
+      },
+      {
+        "id": "A03_market_local_failed_generation_poison",
+        "detail": "same workspace: failed generation writes hash; retry skips with exit 0 and no report (not persisted by a failed fresh Actions runner)"
+      },
+      {
+        "id": "A04_etf_survivor_denominator",
+        "detail": "universe 100: one returned quote passes as 1/1; NaN and negative prices also pass"
+      },
+      {
+        "id": "A05_etf_yahoo_failure_loses_krx_quote",
+        "detail": "valid previous-session KRX row + Yahoo outage → zero quotes; merge cannot create a quote missing from Yahoo"
+      },
+      {
+        "id": "A06_etf_macro_failure_is_fulfilled",
+        "detail": "every macro source fails → fulfilled object with all-null values; outer rejection-based failedSources misses macro outage"
+      },
+      {
+        "id": "A07_etf_fallback_calls_failed_api_again",
+        "detail": "two API failures → fallback makes a third API call → exit 1; Tier 1 is a prose-validation fallback, not an API outage fallback"
+      },
+      {
+        "id": "A08_market_hard_violation_fail_open",
+        "detail": "out-of-window date hard violation returned by API on all three attempts → invalid content still rendered and returned successfully"
+      },
+      {
+        "id": "A09_delivery_resolves_report_sha_but_polls_head",
+        "detail": "resolve selects report-sha for retry; both deployment polling steps independently assign SHA from current checkout HEAD"
+      },
+      {
+        "id": "A10_delivery_lookup_error_exits_green",
+        "detail": "GitHub status lookup failure → action=unknown + warning, exit 0; no failure email is guaranteed by this path"
+      },
+      {
+        "id": "A11_etf_body_read_timeout_cleared_early",
+        "detail": "10ms timeout + response headers immediately + body delayed 60ms → successful result, signal never aborted; body read is outside timeout"
+      },
+      {
+        "id": "A12_cross_kind_git_push_race",
+        "detail": "two kinds each commit + pull before either pushes → market push succeeds, ETF push rejected; separate per-kind concurrency does not serialize publication"
+      },
+      {
+        "id": "A13_etf_invented_return_passes_quality",
+        "detail": "input SOXX changePercent=1, generated headline/body claim +99.99%; quality validator accepts both"
+      },
+      {
+        "id": "A14_deployment_api_error_aborts_retry_loop",
+        "detail": "actual polling shell under bash -e -o pipefail: first gh 503 exits immediately, only one call; documented 60-iteration retry never runs"
+      }
+    ]
+  },
+  "operationalEvidence": {
+    "recentRuns": [
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-16T00:31:23Z",
+        "databaseId": 38829952545,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "schedule",
+        "headSha": "d361aac635fd4d9f0f4c6a019350bd2a2e6bb26f",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-15T23:40:07Z",
+        "databaseId": 38824945637,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "d361aac635fd4d9f0f4c6a019350bd2a2e6bb26f",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-15T23:15:06Z",
+        "databaseId": 38822440581,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "d17fa6999b788fe0da2322f6395204ad11b5baa3",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-15T22:20:06Z",
+        "databaseId": 38816381278,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "d17fa6999b788fe0da2322f6395204ad11b5baa3",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-15T21:40:08Z",
+        "databaseId": 38811607353,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "e5f8ef0aa4e22e724d968860f10bb0568452ca72",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-15T21:40:05Z",
+        "databaseId": 38811601059,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "e5f8ef0aa4e22e724d968860f10bb0568452ca72",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-15T00:39:59Z",
+        "databaseId": 38661321258,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "schedule",
+        "headSha": "6c1edca47f2df9fb9a1f4bc95e7f01d60b107d75",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-14T23:40:06Z",
+        "databaseId": 38655483414,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "6c1edca47f2df9fb9a1f4bc95e7f01d60b107d75",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-14T23:15:06Z",
+        "databaseId": 38652907955,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "eb655a64e45a3c6f9d6ea367766ba40b32b37994",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-14T22:20:06Z",
+        "databaseId": 38646913694,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "eb655a64e45a3c6f9d6ea367766ba40b32b37994",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-14T21:40:08Z",
+        "databaseId": 38642009015,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "645b564615c1ea44773146de1300f07eed98287e",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-14T21:40:06Z",
+        "databaseId": 38642003983,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "645b564615c1ea44773146de1300f07eed98287e",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-14T01:17:55Z",
+        "databaseId": 38494949705,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "schedule",
+        "headSha": "645b564615c1ea44773146de1300f07eed98287e",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-13T23:40:06Z",
+        "databaseId": 38485630187,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "645b564615c1ea44773146de1300f07eed98287e",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-13T23:15:06Z",
+        "databaseId": 38483073973,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "313ef4146265663fe0abdbd9c0bf73fd4b9a5268",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-13T22:20:06Z",
+        "databaseId": 38477075856,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "313ef4146265663fe0abdbd9c0bf73fd4b9a5268",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-13T21:40:08Z",
+        "databaseId": 38472319722,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "6adb5f79873d6c06edcc1370e1e4c5dde03e4e67",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-13T21:40:07Z",
+        "databaseId": 38472319003,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "6adb5f79873d6c06edcc1370e1e4c5dde03e4e67",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-13T03:05:33Z",
+        "databaseId": 38340043263,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "schedule",
+        "headSha": "6adb5f79873d6c06edcc1370e1e4c5dde03e4e67",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-12T23:40:07Z",
+        "databaseId": 38323332866,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "6adb5f79873d6c06edcc1370e1e4c5dde03e4e67",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-12T23:15:06Z",
+        "databaseId": 38321134396,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "b2caac304c14193e1aec8761c335857fac8c2a83",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-12T22:20:06Z",
+        "databaseId": 38316050506,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "b2caac304c14193e1aec8761c335857fac8c2a83",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-12T21:40:08Z",
+        "databaseId": 38312061169,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "02bd5384d092eedf0ba127146ae59c7bb6e775eb",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-12T21:40:06Z",
+        "databaseId": 38312057624,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "02bd5384d092eedf0ba127146ae59c7bb6e775eb",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-12T01:28:28Z",
+        "databaseId": 38192018608,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "schedule",
+        "headSha": "02bd5384d092eedf0ba127146ae59c7bb6e775eb",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-11T23:40:05Z",
+        "databaseId": 38185138308,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "02bd5384d092eedf0ba127146ae59c7bb6e775eb",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-11T23:15:04Z",
+        "databaseId": 38183569187,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "8eee7998ad878149dd78504b6353391ade736930",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-11T22:20:07Z",
+        "databaseId": 38180003337,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "8eee7998ad878149dd78504b6353391ade736930",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-11T21:40:08Z",
+        "databaseId": 38177315973,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "c67a159afadf8b6931993891e81ae468b874b451",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-11T21:40:05Z",
+        "databaseId": 38177312301,
+        "displayTitle": "Generate Daily Market Report",
+        "event": "workflow_dispatch",
+        "headSha": "c67a159afadf8b6931993891e81ae468b874b451",
+        "status": "completed"
+      }
+    ],
+    "marketPrimary": {
+      "runId": 38811601059,
+      "reportSha": "d17fa6999b788fe0da2322f6395204ad11b5baa3",
+      "telegramSuccessKst": "2026-10-16T06:47:44+09:00"
+    },
+    "marketDuplicate": {
+      "runId": 38811607353,
+      "action": "skip",
+      "telegramStatus": "success"
+    },
+    "etfPrimary": {
+      "runId": 38822440581,
+      "reportSha": "d361aac635fd4d9f0f4c6a019350bd2a2e6bb26f",
+      "telegramSuccessKst": "2026-10-16T08:19:21+09:00",
+      "krxBasDd": "20261015",
+      "krxSession": "prev-session",
+      "quoteCoverage": "100/100"
+    },
+    "launchAgents": {
+      "installedPlistsMatchRepository": true,
+      "lastExitCode": {
+        "market": 0,
+        "etf": 0
+      },
+      "timezone": "Asia/Seoul"
+    },
+    "http": {
+      "reports/2026-10-16": 200,
+      "reports/2026-10-16-preview.png": 200,
+      "etf-reports/2026-10-16": 200,
+      "etf-reports/2026-10-16-preview.png": 200,
+      "reports/2099-01-01": 200,
+      "etf-reports/2099-01-01": 404
+    }
+  },
+  "scopeLimits": [
+    "No production code changes, dispatch, deployment, Telegram send, or paid model call performed by the audit.",
+    "Fault injection substitutes external dependencies; A14 executes actual polling shell with local gh/git stubs.",
+    "Synthetic defect reproductions do not establish their occurrence in production.",
+    "No independent inspection of the subscriber channel or full financial fact audit.",
+    "Tests run on local Node 25, not workflow Node 20."
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "date": "2026-10-12",
+  "dayOfWeek": "월",
+  "collectedAt": "2026-10-12T06:40:55+09:00",
+  "headline": "",
+  "items": [
+    {
+      "name": "코스피",
+      "value": "6,625.93",
+      "change": "-2.62%",
+      "changePercent": -2.6157017,
+      "direction": "down"
+    },
+    {
+      "name": "코스닥",
+      "value": "892.27",
+      "change": "-0.69%",
+      "changePercent": -0.68563753,
+      "direction": "down"
+    },
+    {
+      "name": "S&P 500",
+      "value": "7,811.54",
+      "change": "+0.59%",
+      "changePercent": 0.5946946,
+      "direction": "up"
+    },
+    {
+      "name": "나스닥",
+      "value": "27,366.17",
+      "change": "+0.64%",
+      "changePercent": 0.6357049,
+      "direction": "up"
+    },
+    {
+      "name": "다우존스",
+      "value": "51,654.95",
+      "change": "+0.83%",
+      "changePercent": 0.82634085,
+      "direction": "up"
+    },
+    {
+      "name": "원/달러",
+      "value": "1,341.1",
+      "change": "-0.11%",
+      "changePercent": -0.108753644,
+      "direction": "down"
+    },
+    {
+      "name": "WTI 원유",
+      "value": "$91.85",
+      "change": "+0.39%",
+      "changePercent": 0.3934863,
+      "direction": "up"
+    },
+    {
+      "name": "금",
+      "value": "$4,216.3",
+      "change": "+1.43%",
+      "changePercent": 1.4265049,
+      "direction": "up"
+    },
+    {
+      "name": "비트코인",
+      "value": "$83,422",
+      "change": "+0.54%",
+      "changePercent": 0.54092246,
+      "direction": "up"
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "scope": "Reduced observed core inputs and labeled synthetic KR counterfactuals; not the original full generation input.",
+  "results": [
+    {
+      "scenario": "observed-core-inputs",
+      "regime": {
+        "label": "risk_on",
+        "displayName": "위험자산 선호",
+        "confidence": 65,
+        "summary": "위험자산 선호 국면입니다. 핵심 변수는 위험자산 선호도, 원자재·물가 부담입니다."
+      },
+      "executiveSummary": {
+        "title": "위험자산 선호입니다. 오늘은 공격 접근이 기준입니다.",
+        "tacticalStance": "공격",
+        "preferredGroups": [
+          "미국 대표지수 ETF",
+          "금·원자재 ETF"
+        ],
+        "watchGroups": [
+          "반도체·AI ETF",
+          "레버리지·인버스 ETF"
+        ],
+        "cautionGroups": [],
+        "avoidToday": "상승률 상위 ETF를 근거 확인 없이 뒤따라가는 행동입니다."
+      }
+    },
+    {
+      "scenario": "synthetic-KR-flat",
+      "regime": {
+        "label": "risk_on",
+        "displayName": "위험자산 선호",
+        "confidence": 65,
+        "summary": "위험자산 선호 국면입니다. 핵심 변수는 위험자산 선호도, 원자재·물가 부담입니다."
+      },
+      "executiveSummary": {
+        "title": "위험자산 선호입니다. 오늘은 공격 접근이 기준입니다.",
+        "tacticalStance": "공격",
+        "preferredGroups": [
+          "미국 대표지수 ETF",
+          "금·원자재 ETF"
+        ],
+        "watchGroups": [
+          "반도체·AI ETF",
+          "레버리지·인버스 ETF"
+        ],
+        "cautionGroups": [],
+        "avoidToday": "상승률 상위 ETF를 근거 확인 없이 뒤따라가는 행동입니다."
+      }
+    },
+    {
+      "scenario": "synthetic-KR-crash",
+      "regime": {
+        "label": "risk_on",
+        "displayName": "위험자산 선호",
+        "confidence": 65,
+        "summary": "위험자산 선호 국면입니다. 핵심 변수는 위험자산 선호도, 원자재·물가 부담입니다."
+      },
+      "executiveSummary": {
+        "title": "위험자산 선호입니다. 오늘은 공격 접근이 기준입니다.",
+        "tacticalStance": "공격",
+        "preferredGroups": [
+          "미국 대표지수 ETF",
+          "금·원자재 ETF"
+        ],
+        "watchGroups": [
+          "반도체·AI ETF",
+          "레버리지·인버스 ETF"
+        ],
+        "cautionGroups": [],
+        "avoidToday": "상승률 상위 ETF를 근거 확인 없이 뒤따라가는 행동입니다."
+      }
+    }
+  ]
+}

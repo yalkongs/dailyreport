@@ -1,0 +1,154 @@
+{
+  "largeBlocks": [
+    {
+      "class": "big-picture-body",
+      "font": "16px",
+      "height": 904,
+      "length": 819,
+      "width": 315
+    },
+    {
+      "class": "story-title",
+      "font": "27px",
+      "height": 70,
+      "length": 29,
+      "width": 317
+    }
+  ],
+  "page": [
+    391,
+    26706
+  ],
+  "titles": [
+    {
+      "font": "25px",
+      "tag": "H1",
+      "text": "코스피 8% 급락, 금·원유는 올랐다",
+      "y": 257
+    },
+    {
+      "font": "13px",
+      "tag": "DIV",
+      "text": "Big Picture",
+      "y": 1092
+    },
+    {
+      "font": "13px",
+      "tag": "DIV",
+      "text": "Characters In The Story",
+      "y": 2918
+    },
+    {
+      "font": "13px",
+      "tag": "DIV",
+      "text": "오늘의 실행 체크리스트",
+      "y": 4383
+    },
+    {
+      "font": "13px",
+      "tag": "DIV",
+      "text": "Domestic ETF Action Board",
+      "y": 5863
+    },
+    {
+      "font": "13px",
+      "tag": "DIV",
+      "text": "Tactical ETF Warning Board",
+      "y": 7793
+    },
+    {
+      "font": "13px",
+      "tag": "DIV",
+      "text": "오늘 시장 국면 판단",
+      "y": 8386
+    },
+    {
+      "font": "13px",
+      "tag": "DIV",
+      "text": "Macro Corner",
+      "y": 9272
+    },
+    {
+      "font": "13px",
+      "tag": "DIV",
+      "text": "해외 신호가 국내 ETF에 미치는 영향",
+      "y": 9564
+    },
+    {
+      "font": "13px",
+      "tag": "DIV",
+      "text": "상세 글로벌-KR ETF 매칭",
+      "y": 10079
+    },
+    {
+      "font": "16px",
+      "tag": "SUMMARY",
+      "text": "상세 글로벌-KR ETF 매칭 보기",
+      "y": 10152
+    },
+    {
+      "font": "13px",
+      "tag": "DIV",
+      "text": "ETF군별 전략 지도",
+      "y": 10219
+    },
+    {
+      "font": "13px",
+      "tag": "DIV",
+      "text": "ETF Market Heatmap",
+      "y": 13790
+    },
+    {
+      "font": "13px",
+      "tag": "DIV",
+      "text": "간밤 시장 요약",
+      "y": 14731
+    },
+    {
+      "font": "13px",
+      "tag": "DIV",
+      "text": "Sector Narrative",
+      "y": 15748
+    },
+    {
+      "font": "13px",
+      "tag": "DIV",
+      "text": "오늘 이슈별 관찰 ETF",
+      "y": 16199
+    },
+    {
+      "font": "13px",
+      "tag": "DIV",
+      "text": "KR ETF Market Scanner — 참고 데이터",
+      "y": 17213
+    },
+    {
+      "font": "13px",
+      "tag": "DIV",
+      "text": "US ETF Market Scanner — 상승률 상위 5",
+      "y": 21882
+    },
+    {
+      "font": "13px",
+      "tag": "DIV",
+      "text": "US ETF Market Scanner — 하락률 하위 5",
+      "y": 23504
+    },
+    {
+      "font": "13px",
+      "tag": "DIV",
+      "text": "Risk Checklist",
+      "y": 25055
+    },
+    {
+      "font": "13px",
+      "tag": "DIV",
+      "text": "전략에 사용한 뉴스 출처",
+      "y": 25269
+    }
+  ],
+  "viewport": [
+    390,
+    844
+  ]
+}

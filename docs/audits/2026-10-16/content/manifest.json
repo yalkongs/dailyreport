@@ -1,0 +1,111 @@
+{
+  "reviewDateKst": "2026-10-16",
+  "reportDates": [
+    "2026-10-12",
+    "2026-10-13",
+    "2026-10-14",
+    "2026-10-15",
+    "2026-10-16"
+  ],
+  "reports": [
+    {
+      "kind": "etf-reports",
+      "date": "2026-10-12",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-12.html",
+      "sha256Html": "05c6e1d6fbfa3136af648d0c65acc5ea57bae55ccc3cf9a326c5e7e719e6521d",
+      "textFile": "etf-reports-2026-10-12.txt",
+      "linkCount": 197,
+      "nonFinanceLinks": []
+    },
+    {
+      "kind": "etf-reports",
+      "date": "2026-10-13",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-13.html",
+      "sha256Html": "376c1db12cd1d73e16924d3b65ae7d4386b534fe661625e629fb0e05d5245811",
+      "textFile": "etf-reports-2026-10-13.txt",
+      "linkCount": 201,
+      "nonFinanceLinks": []
+    },
+    {
+      "kind": "etf-reports",
+      "date": "2026-10-14",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-14.html",
+      "sha256Html": "2dcca9a087e183fa84ed7abc03170e4986f54338b7f01b19cb68994fc1f5c59a",
+      "textFile": "etf-reports-2026-10-14.txt",
+      "linkCount": 170,
+      "nonFinanceLinks": []
+    },
+    {
+      "kind": "etf-reports",
+      "date": "2026-10-15",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-15.html",
+      "sha256Html": "38cf1520894e91c51a92034c80a668b67dc3042178aeea0dc5166d64b605357e",
+      "textFile": "etf-reports-2026-10-15.txt",
+      "linkCount": 189,
+      "nonFinanceLinks": []
+    },
+    {
+      "kind": "etf-reports",
+      "date": "2026-10-16",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-16.html",
+      "sha256Html": "2cadb906eb2914a402b9b895d50558d0af54a8189be26a632c974eb35dc75580",
+      "textFile": "etf-reports-2026-10-16.txt",
+      "linkCount": 201,
+      "nonFinanceLinks": []
+    },
+    {
+      "kind": "reports",
+      "date": "2026-10-12",
+      "url": "https://dailyreport-eta.vercel.app/reports/2026-10-12.html",
+      "sha256Html": "e86ff73091d22ac2ecf614716d5b9cdd9947060aa9e9effbc1a0dbb0e8e88348",
+      "textFile": "reports-2026-10-12.txt",
+      "linkCount": 0,
+      "nonFinanceLinks": []
+    },
+    {
+      "kind": "reports",
+      "date": "2026-10-13",
+      "url": "https://dailyreport-eta.vercel.app/reports/2026-10-13.html",
+      "sha256Html": "a92aeee9126b76097d35d64ff0831f26430935d9a6d3a35dc799b10ab64e4220",
+      "textFile": "reports-2026-10-13.txt",
+      "linkCount": 0,
+      "nonFinanceLinks": []
+    },
+    {
+      "kind": "reports",
+      "date": "2026-10-14",
+      "url": "https://dailyreport-eta.vercel.app/reports/2026-10-14.html",
+      "sha256Html": "aeafef3dcea14ed71854909c95b71d7d984ef8fc15fb2888f1178ed7f5b38f27",
+      "textFile": "reports-2026-10-14.txt",
+      "linkCount": 0,
+      "nonFinanceLinks": []
+    },
+    {
+      "kind": "reports",
+      "date": "2026-10-15",
+      "url": "https://dailyreport-eta.vercel.app/reports/2026-10-15.html",
+      "sha256Html": "fb4b821f2a60be86583c67ad486a672b03a74db1d4719491ea0ba0a6109d0cea",
+      "textFile": "reports-2026-10-15.txt",
+      "linkCount": 0,
+      "nonFinanceLinks": []
+    },
+    {
+      "kind": "reports",
+      "date": "2026-10-16",
+      "url": "https://dailyreport-eta.vercel.app/reports/2026-10-16.html",
+      "sha256Html": "970dafccd8c5546a4b112139c18a242ab8026aafe4c153d1b51f1d2f526b5201",
+      "textFile": "reports-2026-10-16.txt",
+      "linkCount": 0,
+      "nonFinanceLinks": []
+    }
+  ],
+  "limits": [
+    "Source API JSON and original generated JSON/prompt were not persisted by the pipeline.",
+    "Historical Yahoo rows were re-queried during review; rows dated 2026-10-16 are not used in preopen verification.",
+    "KRX_AUTH_KEY is absent locally; historical KRX response rows were not independently re-queried.",
+    "Report scanner values are used as published internal consistency evidence, not as independent original KRX proof.",
+    "Article-level causal claims without original text remain unsupported, not proven false.",
+    "Desktop headers inspected for two latest pages; mobile and all long-page visual states were not inspected."
+  ],
+  "htmlArchive": "published-html.tar.gz"
+}
