@@ -248,7 +248,7 @@ Fine-grained PAT(Actions write 전용) 폐기가 정리 절차다. 남아 있으
 
 ## 사용 기술
 
-- **언어/런타임**: TypeScript 5 · Node.js 24 LTS · tsx
+- **언어/런타임**: TypeScript 5 · Node.js 20 (GitHub Actions `daily-report.yml`의 `node-version`) · tsx
 - **프레임워크**: Next.js 16 App Router · React 19 · Tailwind CSS 4
 - **AI**: Anthropic Claude Sonnet (`claude-sonnet-4-6`) · `max_tokens: 16384`
 - **데이터 소스**: Yahoo Finance · KRX OpenAPI · FRED · ECOS · Google News RSS · 연합뉴스 RSS
@@ -285,9 +285,13 @@ npm run dev
 
 특정 날짜로 백필 생성:
 ```bash
-REPORT_DATE=2026-04-30 npm run generate
+TEST_DATE=2026-04-30 FORCE_REGENERATE=true npm run generate
 ETF_REPORT_DATE=2026-04-30 FORCE_REGENERATE=true npx tsx scripts/run-etf.ts
 ```
+
+- Market의 날짜 override는 `TEST_DATE`(`lib/market-data.ts`), ETF는 `ETF_REPORT_DATE`(`scripts/run-etf.ts`)다. Market 생성(`npm run generate`)은 `REPORT_DATE`를 읽지 않는다.
+- 두 override 모두 **리포트 날짜 라벨·파일명만 바꾸고 시세는 실행 시점의 현재 데이터**를 쓴다. 과거 시세를 재현하는 백필이 아니다.
+- 같은 날짜의 리포트가 이미 있으면 중복 실행 가드가 종료시키므로 덮어쓰려면 `FORCE_REGENERATE=true`를 함께 준다.
 
 ---
 
