@@ -33,6 +33,15 @@ for (const [job, group] of [["market", "daily-report-market"], ["etf", "daily-re
     assert.equal(gated.length, 2);
   });
 
+  // 감사 F06: resolve는 결과 불명(unknown)이면 exit 1 — 그 실패가 job 실패(소유자 메일)로 드러나야 한다.
+  test(`${job}: Resolve delivery 실패(결과 불명)를 continue-on-error로 가리지 않는다`, () => {
+    const b = jobBlock(job);
+    const start = b.indexOf("- name: Resolve delivery");
+    const step = b.slice(start, b.indexOf("\n      - name: ", start + 1));
+    assert.match(step, /id: delivery/);
+    assert.doesNotMatch(step, /continue-on-error/);
+  });
+
   test(`${job}: 발송 step은 step output을 셸에 직접 보간하지 않는다 (env로만 전달)`, () => {
     const b = jobBlock(job);
     const run = b.slice(b.lastIndexOf("api.telegram.org") - 3000);

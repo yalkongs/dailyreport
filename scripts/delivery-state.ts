@@ -111,7 +111,7 @@ async function resolve(k: ReportKind): Promise<void> {
   console.log(`Resolve delivery: kind=${k} date=${date} sha=${reportSha ?? "-"} status=${telegramStatus ?? "none"} action=${decision.action} — ${decision.reason}`);
   if (decision.action === "unknown") {
     const msg = `${k} 리포트(${date}) 발송 결과 불명 — 자동 재발송하지 않았습니다. ${decision.reason}. 구독자 채널을 확인한 뒤 필요하면 workflow_dispatch(resend_telegram_only=true, only=${k})로 수동 재발송하십시오.`;
-    console.log(`::warning title=Telegram 발송 결과 불명::${msg}`);
+    console.log(`::error title=Telegram 발송 결과 불명::${msg}`);
     if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### ⚠️ ${msg}\n`);
   }
 
@@ -126,6 +126,11 @@ async function resolve(k: ReportKind): Promise<void> {
     resend: changed ? "false" : "true",
     ...(k === "etf" ? { anomaly_count: String(entry.anomalyCount), anomaly_breakdown: entry.breakdown } : {}),
   });
+
+  // 결과 불명은 자동 재발송하지 않지만(중복 방지), 녹색으로 끝나면 아무도 모른다(감사 F06).
+  // 출력·요약을 다 쓴 뒤 비정상 종료해 job을 실패시킨다 — GitHub가 소유자에게 실패 메일을 보낸다.
+  // 이후 배포 대기·발송 step은 실패로 건너뛰고, action=='send' 조건도 그대로 이중 방어한다.
+  if (decision.action === "unknown") process.exitCode = 1;
 }
 
 async function status(k: ReportKind, sha: string): Promise<void> {
