@@ -9,6 +9,7 @@ import type {
   ReportContent,
 } from "./types";
 import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS, MARKET_GENERATION_BUDGET_MS, makeDeadline } from "./claude-budget";
+import { EVIDENCE_RULES } from "./evidence-rules";
 import { formatEconomicEventLine } from "./economic-calendar";
 import { renderReport } from "./report-renderer";
 import { BANNED_METAPHORS } from "./banned-metaphors";
@@ -78,6 +79,8 @@ ${renderVoiceExemplars()}
 - ❌ **제공되지 않은 숫자 날조 금지**: 과거 비교가 필요하면 반드시 historicalComparison 필드 또는 [정책금리] 블록의 수치만 사용할 것. 해당 데이터가 없으면 과거 비교를 생략할 것.
 - ❌ **가상 통계/설문 결과 금지**: "최근 설문에 따르면" 등 출처 없는 통계를 만들어내지 말 것.
 ${POLICY_RATE_RULE}
+
+${EVIDENCE_RULES}
 
 ### 좋은 글 vs 나쁜 글 예시
 

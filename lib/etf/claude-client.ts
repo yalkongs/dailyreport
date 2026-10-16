@@ -8,6 +8,7 @@ import { QUOTABLE_SOURCES } from '../quotable-sources'
 import { buildMorningStrategyInput } from './morning-strategy'
 import { validateMorningReportQuality } from './report-quality'
 import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS } from '../claude-budget'
+import { EVIDENCE_RULES } from '../evidence-rules'
 import { normalizeMorningReportLanguage } from './report-language'
 import { buildMorningNarrativePlan } from './morning-report-plan'
 import { describeAngle, ETF_NARRATIVE_ANGLES, type EtfNarrativeAngle } from './narrative-angle'
@@ -440,6 +441,8 @@ ${data.recentHeadlines.map(h => `- ${h}`).join('\n')}
 - todayWatch.items의 title은 코드가 확정한 Today Watch 1~3의 제목을 그대로 씁니다.
 - todayWatch 각 항목의 body에는 ETF명 또는 수치가 최소 1개 들어가야 합니다.
 - 문장은 독자에게 상황을 설명하고 맥락을 건네주는 기자·애널리스트 어조로 씁니다. 단, 투자 권유나 단정적 매수 지시는 피하십시오.
+
+${EVIDENCE_RULES}
 
 [준법·표현 규칙]
 - **직접적인 매수 권유 어휘 금지**: "매수 후보", "접근 후보", "매수 검토", "신규 진입", "분할 접근", "비중 확대", "선호 ETF군" 등.
