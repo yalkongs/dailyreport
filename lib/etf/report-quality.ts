@@ -14,6 +14,7 @@
 // 내부에서 applySoftFixesInPlace 를 먼저 호출해 검증 직전에 자동 교정을 적용.
 // 외부 호출자(claude-client, run-etf)는 기존 호출만으로 새 구조의 이점을 얻음.
 
+import { findNumericClaimMismatches } from './numeric-claims'
 import type { CollectedData, MorningReport, MorningStrategyInput } from './types'
 // 정합성 검사 (2026-07-22): R1 카드-산문 / R2 시점 / R3 출처 인용.
 import { checkCharacterProseConsistency } from './story-characters'
@@ -349,10 +350,17 @@ export function applyConsistencySoftFixesInPlace(
   }
 }
 
+export interface MorningQualityOptions {
+  // 사실 검증(수치 대조·주간 둔갑·환율 방향)을 위반 대신 경고로 남긴다. 마지막 축소판(Tier 1)
+  // 검증에서 쓴다 — 운영 원칙 "품질 낮아도 전송 > 침묵"(F02 유지 결정, 2026-10-16).
+  factChecksAsWarnings?: boolean
+}
+
 export function validateMorningReportQuality(
   report: MorningReport,
   data: CollectedData,
-  strategy: MorningStrategyInput
+  strategy: MorningStrategyInput,
+  options: MorningQualityOptions = {}
 ): void {
   // P1: 검증 전에 소프트 픽스를 먼저 적용. 가벼운 문체 이슈로 재생성하지 않도록.
   const fixesApplied = applySoftFixesInPlace(report)
@@ -389,16 +397,24 @@ export function validateMorningReportQuality(
   // R1: Characters 카드-산문 정합 (data.quotes 로 배정 재계산).
   violations.push(...checkCharacterProseConsistency(report, data.quotes))
 
-  // C05: 하루 등락률을 주간 수익률로 쓴 문장.
+  // 사실 검증(2026-10-16 감사 C01·C02·C04·C05) — 정상 시도에서는 재생성 사유, 축소판에서는 경고.
+  const factViolations: string[] = []
+  const numeric = findNumericClaimMismatches(text, data.quotes, data.indices)
+  if (numeric.length > 0) {
+    factViolations.push(`수치가 입력 데이터와 다름(지수/ETF 혼동·카드와 본문 불일치): ${numeric.slice(0, 3).join(' / ')}`)
+  }
   const weekly = findWeeklyReturnClaims(text)
   if (weekly.length > 0) {
-    violations.push(`주간 수익률 서술(입력은 1일 등락률뿐): ${weekly.slice(0, 2).join(' / ')}`)
+    factViolations.push(`주간 수익률 서술(입력은 1일 등락률뿐): ${weekly.slice(0, 2).join(' / ')}`)
   }
-
-  // C02: 환노출 환율 효과 방향 오류.
   const fxErrors = findFxDirectionErrors(text)
   if (fxErrors.length > 0) {
-    violations.push(`환율 방향 오류(원화 약세는 환노출 원화 환산에 플러스): ${fxErrors.slice(0, 2).join(' / ')}`)
+    factViolations.push(`환율 방향 오류(원화 약세는 환노출 원화 환산에 플러스): ${fxErrors.slice(0, 2).join(' / ')}`)
+  }
+  if (options.factChecksAsWarnings) {
+    for (const v of factViolations) console.warn(`  [fact-warn] ${v}`)
+  } else {
+    violations.push(...factViolations)
   }
 
   const adviceMatches = findMatches(text, INVESTMENT_ADVICE_PATTERNS)

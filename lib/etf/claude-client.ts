@@ -110,8 +110,9 @@ export async function generateMorningReportRaw(data: CollectedData): Promise<Mor
 }
 
 // P0 (2026-04-24): Tier 1 fallback용. 외부에서 직접 호출해 검증할 때 사용.
+// 2026-10-16: 축소판 검증에서는 사실 검증을 경고로만 남긴다(전송 > 침묵).
 export function validateMorningReport(report: MorningReport, data: CollectedData): void {
-  validateMorningReportQuality(report, data, buildMorningStrategyInput(data))
+  validateMorningReportQuality(report, data, buildMorningStrategyInput(data), { factChecksAsWarnings: true })
 }
 
 function formatPromptNumber(value: number | null | undefined, digits = 0): string {
@@ -140,6 +141,23 @@ MOVE: ${formatPromptNumber(macro.moveIndex, 2)}
 US 10Y: ${formatPromptNumber(macro.us10y, 2)}%
 WTI: ${formatPromptNumber(macro.wti, 1)}
 Gold: ${formatPromptNumber(macro.gold, 0)}`
+}
+
+// C01 (2026-10-16): 실제 지수 블록. ETF 등락을 지수 등락으로 부르지 않도록 지수 값을 따로 준다.
+export function buildIndexBlock(indices: import('./types').IndexQuote[] | undefined): string {
+  if (!indices || indices.length === 0) {
+    return `[지수 실측]
+⚠️ 지수 시세 수집 실패 — 코스피·코스닥·S&P500·나스닥·다우의 등락률 수치를 쓰지 마십시오. ETF 등락은 ETF 이름으로만 씁니다.`
+  }
+  const lines = indices.map(i => {
+    const pct = i.changePercent as number
+    const date = i.asOf ? `, ${i.asOf.slice(5).replace('-', '/')} 종가` : ''
+    return `${i.nameKo}: ${formatPromptNumber(i.price, 2)} (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%${date})`
+  })
+  return `[지수 실측 — ETF와 구분]
+${lines.join('\n')}
+- 코스피·코스닥·S&P500·나스닥·다우 등 **지수 등락은 이 블록 값만** 인용합니다. SPY·QQQ·KODEX 200 같은 ETF 등락률을 지수 등락률로 부르지 마십시오(ETF 수치는 ETF 이름으로).
+- 코스피200·나스닥100은 위 지수와 다른 지수입니다. 이 블록에 없으면 수치를 쓰지 마십시오.`
 }
 
 function formatPromptEtf(q: Pick<CollectedData['quotes'][number], 'ticker' | 'name' | 'market'>): string {
@@ -295,6 +313,8 @@ ${topUs.slice(-5).reverse().map(q => `${formatPromptEtf(q)}: ${q.changePercent?.
 상위: ${topKr.slice(0, 5).map(q => `${formatPromptEtf(q)} ${q.changePercent?.toFixed(2)}%`).join(' / ') || 'N/A'}
 하위: ${topKr.slice(-5).reverse().map(q => `${formatPromptEtf(q)} ${q.changePercent?.toFixed(2)}%`).join(' / ') || 'N/A'}
 거래대금 상위: ${topKr.filter(q => q.tradingValue !== undefined && q.tradingValue !== null).sort((a, b) => (b.tradingValue ?? 0) - (a.tradingValue ?? 0)).slice(0, 5).map(q => `${formatPromptEtf(q)} ${formatPromptNumber(q.tradingValue, 0)}원`).join(' / ') || 'N/A'}
+
+${buildIndexBlock(data.indices)}
 
 ${buildMacroBlock(data.macro, data.failedSources)}
 

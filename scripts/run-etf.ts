@@ -7,7 +7,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { collectAllEtfData } from '../lib/etf/etf-data'
-import { collectMacroContext } from '../lib/etf/market-context'
+import { collectIndexQuotes, collectMacroContext } from '../lib/etf/market-context'
 import { collectNews } from '../lib/etf/news'
 import { detectAnomalies } from '../lib/etf/analyzer'
 import {
@@ -105,10 +105,11 @@ async function main() {
 
   // Step 1: 데이터 수집 (병렬)
   console.log('[1/8] 데이터 수집 중...')
-  const [etfData, macro, news] = await Promise.allSettled([
+  const [etfData, macro, news, indices] = await Promise.allSettled([
     collectAllEtfData(date),
     collectMacroContext(),
     collectNews(),
+    collectIndexQuotes(),
   ])
 
   const { quotes, flows, investorFlows, krx } = etfData.status === 'fulfilled'
@@ -120,6 +121,8 @@ async function main() {
   if (etfData.status === 'rejected') failedSources.push('etf-quotes')
   if (macro.status === 'rejected') failedSources.push('macro')
   if (news.status === 'rejected') failedSources.push('news')
+  // C01: 지수 실측이 없으면 프롬프트가 지수 등락 수치를 쓰지 못하게 한다.
+  if (indices.status === 'rejected' || indices.value.length === 0) failedSources.push('indices')
   const krQuotes = quotes.filter(q => q.market === 'KR')
   if (krQuotes.length > 0 && krQuotes.every(q => q.nav === null)) failedSources.push('krx-nav')
 
@@ -163,6 +166,7 @@ async function main() {
     investorFlows,
     macro: macro.status === 'fulfilled' ? macro.value : {} as MacroContext,
     news: news.status === 'fulfilled' ? news.value : [],
+    indices: indices.status === 'fulfilled' ? indices.value : [],
     analysisLens,
     narrativeAngle,
     recentHeadlines,

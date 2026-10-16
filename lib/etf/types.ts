@@ -94,6 +94,16 @@ export interface Anomaly {
 }
 
 // 파이프라인 수집 데이터 전체
+// C01 (2026-10-16): 실제 지수 시세. ETF 등락(SPY·QQQ·KODEX 200)을 지수 등락으로 부르지 않게
+// 코스피·나스닥 등 지수 값을 따로 수집한다. asOf는 해당 시세의 거래일(KST 날짜).
+export interface IndexQuote {
+  symbol: string
+  nameKo: string
+  price: number | null
+  changePercent: number | null
+  asOf: string | null
+}
+
 export interface CollectedData {
   reportType: ReportType
   date: string           // YYYY-MM-DD
@@ -103,6 +113,7 @@ export interface CollectedData {
   macro: MacroContext
   news: NewsItem[]
   analysisLens: string
+  indices?: IndexQuote[]
   // 최근 7일 헤드라인. 프롬프트에 주입하여 Claude가 동일·유사 문장 반복을 피하게 함.
   // optional — 비어있거나 undefined면 프롬프트에서 해당 블록 생략.
   recentHeadlines?: string[]
