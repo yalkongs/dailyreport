@@ -20,7 +20,7 @@ interface Claim {
   end: number
   value: number
   sign: -1 | 1 | 0
-  decimal: boolean
+  decimals: number // 표기된 소수 자릿수 — 허용오차를 정한다
   mode: 'exact' | 'band' | 'atLeast' | 'atMost' | 'approx'
 }
 
@@ -99,7 +99,7 @@ function findClaims(sentence: string): Claim[] {
       : suffix === '이하' || suffix === '미만' ? 'atMost'
       : suffix || approxBefore ? 'approx'
       : 'exact'
-    claims.push({ start, end, value, sign, decimal: m[2].includes('.'), mode })
+    claims.push({ start, end, value, sign, decimals: m[2].includes('.') ? m[2].split('.')[1].length : 0, mode })
   }
   return claims
 }
@@ -113,7 +113,8 @@ function claimMatches(c: Claim, actual: number): boolean {
     case 'atLeast': return a >= c.value
     case 'atMost': return a <= c.value
     case 'approx': return Math.abs(a - c.value) <= 1.0
-    default: return Math.abs(a - c.value) <= (c.decimal ? 0.06 : 0.6)
+    // 표기 자릿수만큼의 반올림·내림을 허용한다(7.57%를 '7.5%'로 쓴 정도는 재생성 사유가 아니다).
+    default: return Math.abs(a - c.value) <= (c.decimals >= 2 ? 0.03 : c.decimals === 1 ? 0.1 : 0.6)
   }
 }
 
