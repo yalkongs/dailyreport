@@ -500,7 +500,8 @@ export function validateMarketSummary(content: Pick<ReportContent, "summary" | "
   } else {
     if (cardText.length > CARD_LINE_MAX_CHARS) violations.push(`cardLine.text ${CARD_LINE_MAX_CHARS}자 초과(${cardText.length}자)`);
     if (/[?？]/.test(cardText) || cardText.startsWith("왜")) violations.push("cardLine.text 질문형·도치 금지");
-    if (/^[[【(][^\]】)]{1,10}[\]】)]/.test(cardText) || /^[가-힣A-Za-z0-9· ]{1,10}[:：]/.test(cardText)) {
+    // 라벨 = 글자로만 된 짧은 머리표("원인:"). 숫자는 제외 — "10:30 …"처럼 시각으로 시작하는 watch 한 줄을 오탐하지 않는다.
+    if (/^[[【(][^\]】)]{1,10}[\]】)]/.test(cardText) || /^[가-힣A-Za-z· ]{1,10}[:：]/.test(cardText)) {
       violations.push("cardLine.text 라벨 금지");
     }
   }

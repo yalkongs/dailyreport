@@ -74,6 +74,13 @@ test('검증: 태그는 길이에서 제외, % 한 개·오늘 줄 숫자는 허
   assert.deepEqual(validateMarketSummary({ ...OK, cardLine: { kind: 'watch', text: '가'.repeat(32) } }), [])
 })
 
+test('검증: 시각으로 시작하는 watch 한 줄은 라벨로 오인하지 않는다', () => {
+  for (const text of ['10:30 수출 통계가 첫 확인점입니다', '09:00 개장 직후 거래대금을 봅니다', '9:30 환율 흐름이 첫 확인점입니다']) {
+    assert.deepEqual(validateMarketSummary({ ...OK, cardLine: { kind: 'watch', text } }), [], text)
+  }
+  assert.ok(validateMarketSummary({ ...OK, cardLine: { kind: 'watch', text: '확인점: 환율' } }).length > 0)
+})
+
 // ── 요약 문장 ──────────────────────────────────────────────────────────
 
 test('요약 문장: 90자 초과면 문장 경계에서 자르고, 소수점은 문장 끝으로 보지 않는다', () => {
