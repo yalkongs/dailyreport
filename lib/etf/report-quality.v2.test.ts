@@ -340,3 +340,84 @@ test('카드 문구 게이트: 자산군 슬롯이 하나도 없는 날은 라�
   const msg = validate(r, makeData([]))
   assert.doesNotMatch(msg, /holdingLabel|미리보기 카드 문구/)
 })
+
+// ─── M4 (Ruling 25): 마지막 축소판에서는 준법(매수·매도 권유)과 진짜 필수 필드 누락만 막고, 나머지는 경고로 ─────
+// 1·2회차는 그대로 재생성 사유. 범주마다 "1회차 위반 / 마지막 시도 통과 + 경고"를 함께 본다.
+const ORDINALS = ['첫째', '둘째', '셋째', '넷째', '다섯째', '여섯째', '일곱째', '여덟째', '아홉째', '열째', '열한째', '열두째', '열셋째', '열넷째', '열다섯째', '열여섯째', '열일곱째', '열여덟째']
+const newsData = (): CollectedData => ({
+  ...makeData(),
+  news: [{ title: '연준 위원 금리 발언', source: 'Reuters', publishedAt: '2026-10-18T22:00:00Z', url: 'https://example.com/a', publishedHoursAgo: 8 }],
+})
+const LAST_ATTEMPT_DOWNGRADES: Array<[string, RegExp, (r: MorningReport) => void, () => CollectedData]> = [
+  ['시점(상대시제 불능)', /상대시제/, r => { r.todayChecks[2].invalidation = '오늘(10/23, 금) 발표가 예상보다 강하면 금리 안정 가설을 접습니다' }, makeData],
+  ['"에 따르면" 8회 이상', /"에 따르면" 인용이 8회/, r => {
+    const cite = (i: number) => `블룸버그에 따르면 ${ORDINALS[i]} 흐름은 서로 다른 신호를 보냈습니다.`
+    r.summary.overseas = cite(0); r.summary.domestic = cite(1); r.summary.focus = cite(2)
+    r.assetCards.forEach((c, i) => { c.reason = cite(3 + i) })
+  }, makeData],
+  ['자금 유입·유출 표현', /fund flow/, r => { r.assetCards[1].reason = '외국인 자금 유입이 대형주 하락을 일부 받쳤습니다.' }, makeData],
+  ['뉴스 단정(시장에서는 ~ 예상)', /뉴스 제목 이상의 단정/, r => { r.assetCards[4].reason = '시장에서는 연내 금리 인하를 예상하는 분위기가 짙어졌습니다.' }, newsData],
+  ['USD/KRW 쉼표 누락', /USD\/KRW 천 단위 쉼표/, r => { r.assetCards[2].reason = 'USD/KRW 1420 수준이 환노출 상품의 원화 환산 성과를 받쳤습니다.' }, makeData],
+  ['원화 긴 숫자', /원화 금액은 억 원\/조 원/, r => { r.assetCards[1].reason = '대형주 ETF에 거래대금 1234567890원이 몰렸습니다.' }, makeData],
+  ['확인/점검/봅니다 과다', /확인\/점검\/봅니다 문장이 과도/, r => { r.tacticalWarning = ORDINALS.map(o => `${o} 지점을 확인합니다.`).join(' ') }, makeData],
+  ['.KS 코드 표기', /종목명 \(6자리 코드\)/, r => { r.assetCards[0].reason = '091160.KS 흐름이 메모리 가격 둔화 보도에 약했습니다.' }, makeData],
+  ['코드 괄호 누락', /괄호로 감싸야/, r => { r.assetCards[0].reason = 'KODEX 반도체 091160 흐름이 메모리 가격 둔화 보도에 약했습니다.' }, makeData],
+  ['커버 애매어(시장 단독)', /커버\(헤드라인\/서브라인\)/, r => { r.cover.subline = '간밤 시장 분위기는 조용했지만 오늘 개장 흐름이 관건으로 남았습니다.' }, makeData],
+]
+
+for (const [label, pattern, set, data] of LAST_ATTEMPT_DOWNGRADES) {
+  test(`M4 ${label}: 1회차는 위반, 마지막 시도는 경고만 남기고 통과`, (t) => {
+    const first = validReport(); set(first)
+    assert.match(validate(first, data()), pattern)
+    const warn = t.mock.method(console, 'warn', () => {})
+    const last = validReport(); set(last)
+    assert.equal(validateLast(last, data()), '')
+    assert.ok(warn.mock.calls.some(c => pattern.test(String(c.arguments[0]))), `${label} 경고 기록`)
+  })
+}
+
+test('M4: 마지막 시도에도 투자 권유는 다른 경고 범주와 섞여도 그대로 막는다', (t) => {
+  t.mock.method(console, 'warn', () => {})
+  const r = validReport()
+  r.assetCards[1].reason = '외국인 자금 유입이 대형주 하락을 일부 받쳤습니다.'
+  r.assetCards[0].ifConsidering = '반등이 나오면 매수하세요.'
+  const msg = validateLast(r)
+  assert.match(msg, /투자 권유성 표현/)
+  assert.doesNotMatch(msg, /fund flow/)
+})
+
+// ─── M5: 형식이 깨진 card — 문자열 card는 없는 것으로, 마지막 시도엔 주제 슬롯 key + 확인 항목 첫 줄로 만든다 ─────
+test('M5: 문자열 card는 던지지 않고 필수 필드 누락으로(1·2회차 재생성 사유)', () => {
+  const r = validReport() as unknown as Record<string, unknown>; r.card = '반도체 흐름을 지켜볼 때입니다'
+  assert.match(validate(r as unknown as MorningReport), /필수 필드 누락: card\.key, card\.line/)
+  const absent = validReport() as unknown as Record<string, unknown>; delete absent.card
+  assert.match(validate(absent as unknown as MorningReport), /필수 필드 누락: card\.key, card\.line/)
+})
+
+test('M5: 마지막 시도에 card가 문자열·누락이면 주제 슬롯 key와 첫 확인 항목으로 만들고 경고', (t) => {
+  const warn = t.mock.method(console, 'warn', () => {})
+  for (const broken of ['반도체 흐름을 지켜볼 때입니다', undefined, null, 42]) {
+    const r = validReport() as unknown as Record<string, unknown>
+    if (broken === undefined) delete r.card; else r.card = broken
+    assert.equal(validateLast(r as unknown as MorningReport), '', String(broken))
+    assert.deepEqual(r.card, { key: 'kr-semi', line: '국내 반도체 ETF 개장 흐름' })
+  }
+  assert.ok(warn.mock.calls.some(c => /\[struct-fix\] card 없음/.test(String(c.arguments[0]))))
+})
+
+test('M5: 마지막 시도에 card.line만 비어도 첫 확인 항목으로 채운다(key는 그대로)', (t) => {
+  t.mock.method(console, 'warn', () => {})
+  const r = validReport(); r.card = { key: 'kr-large', line: '  ' }
+  assert.equal(validateLast(r), '')
+  assert.deepEqual(r.card, { key: 'kr-large', line: '국내 반도체 ETF 개장 흐름' })
+})
+
+test('M5: 확인 항목이 없으면 오늘 핵심(summary.focus)으로 — 확인 항목 누락 자체는 그대로 막는다', (t) => {
+  t.mock.method(console, 'warn', () => {})
+  const r = validReport() as unknown as Record<string, unknown>
+  delete r.card; delete r.todayChecks
+  const msg = validateLast(r as unknown as MorningReport)
+  assert.match(msg, /필수 필드 누락: todayChecks/)
+  assert.doesNotMatch(msg, /card\./)
+  assert.deepEqual(r.card, { key: 'kr-semi', line: '개장 직후 반도체 ETF가 낙폭을 줄이는지가 오늘의 핵심입니다.' })
+})

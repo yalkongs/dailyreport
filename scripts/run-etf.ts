@@ -13,11 +13,7 @@ import { collectEconomicCalendar } from '../lib/economic-calendar'
 import { ETF_GENERATION_BUDGET_MS, makeDeadline } from '../lib/claude-budget'
 import { collectNews } from '../lib/etf/news'
 import { detectAnomalies } from '../lib/etf/analyzer'
-import {
-  generateMorningReport,
-  generateMorningReportRaw,
-  validateMorningReport,
-} from '../lib/etf/claude-client'
+import { generateMorningReportWithFallback } from '../lib/etf/claude-client'
 import { selectAnalysisLens } from '../lib/etf/analysis-lens'
 import { selectNarrativeAngle } from '../lib/etf/narrative-angle'
 import { analyzeEtfMode } from '../lib/etf/etf-mode'
@@ -197,57 +193,17 @@ async function main() {
   console.log(`[4a/8] ETF 모드: ${data.etfMode.mode} — ${data.etfMode.reason}`)
   console.log(`[4b/8] 근거 tier: ${data.etfEvidence.tier} — ${data.etfEvidence.reason}`)
 
-  // Step 5: Claude 분석 (최대 2회 시도 + Tier 1 fallback)
-  // P0 (2026-04-24): 기존 3회 재시도는 대증요법(패턴 좁히기)에 의존해 왔음.
-  // 2026-10-17 출력 스키마 개편: 2회 검증 실패 시 마지막으로 한 번 더 생성해 축소판 검증
-  // (validateMorningReport — 사실 검증 경고·구조 교정, F02 "전송 > 침묵"·Ruling 10)을 통과하면 발송한다.
-  console.log('[5/8] Claude 리포트 생성 중...')
-  const MAX_CLAUDE_ATTEMPTS = 2
-  let report: Awaited<ReturnType<typeof generateMorningReport>> | undefined
-  let lastError: unknown
+  // Step 5: Claude 분석 — 엄격 검증 최대 2회 + Tier 1 재생성·축소판 검증(generateMorningReportWithFallback).
+  // I2 (Ruling 23, F02 "전송 > 침묵"): Tier 1 호출을 못 하거나(예산) 실패·파싱 실패해도 파싱된 앞선 결과가 있으면
+  // 그중 가장 나은 것을 축소판으로 검증해 발송한다. 준법(투자 권유)·필수 필드 누락만 막는다.
   // F07: 생성 단계 예산 — 넘기면 새 호출을 시작하지 않는다(다음 트리거가 새 runner에서 재시도).
-  const deadline = makeDeadline(ETF_GENERATION_BUDGET_MS)
-  for (let attempt = 1; attempt <= MAX_CLAUDE_ATTEMPTS; attempt++) {
-    if (attempt > 1 && !deadline.canStartCall()) {
-      console.warn(`[warn] 생성 예산 초과(${Math.round(deadline.elapsedMs() / 1000)}초) — ${attempt}회차 생략, Tier 1 fallback으로`)
-      break
-    }
-    try {
-      report = await generateMorningReport(data)
-      if (attempt > 1) {
-        console.log(`  ✓ ${attempt}회차에서 성공`)
-      }
-      break
-    } catch (e) {
-      lastError = e
-      if (attempt < MAX_CLAUDE_ATTEMPTS) {
-        console.warn(`[warn] Claude API ${attempt}/${MAX_CLAUDE_ATTEMPTS}회 실패, 재시도:`, (e as Error).message)
-      } else {
-        console.warn(`[warn] Claude API ${MAX_CLAUDE_ATTEMPTS}회 모두 실패. Tier 1 fallback 시도:`, (e as Error).message)
-      }
-    }
-  }
-
-  // P0 fallback: 재생성 + 축소판 검증 — 사실 검증·중복 문장은 경고, 고칠 수 있는 구조 문제는 교정(Ruling 10).
-  // 필수 필드 누락·준법(투자 권유) 위반만 발송을 막는다.
-  if (!report) {
-    if (!deadline.canStartCall()) {
-      console.error(`[error] 생성 예산 초과(${Math.round(deadline.elapsedMs() / 1000)}초) — fallback 호출 생략. 다음 트리거가 재시도합니다.`)
-      console.error('[error] 원인:', lastError)
+  console.log('[5/8] Claude 리포트 생성 중...')
+  const report = await generateMorningReportWithFallback(data, { deadline: makeDeadline(ETF_GENERATION_BUDGET_MS) })
+    .catch((e: unknown): never => {
+      // 발송할 결과가 없다 — exit(1)이 GitHub 실패 메일(운영자 알림)이 되고, 07:20 2차 트리거가 재시도한다.
+      console.error('[error]', e instanceof Error ? e.message : e)
       process.exit(1)
-    }
-    try {
-      console.log('[5b/8] Tier 1 fallback — 재생성 후 사실 검증은 경고로만 남기고 재검증')
-      const raw = await generateMorningReportRaw(data)
-      validateMorningReport(raw, data)
-      report = raw
-      console.log('  ✓ Tier 1 fallback 성공 — 사실 검증 경고([fact-warn])가 있으면 로그를 확인하십시오')
-    } catch (fallbackErr) {
-      console.error('[error] Tier 1 fallback도 실패:', (fallbackErr as Error).message)
-      console.error('[error] 원인:', lastError)
-      process.exit(1)
-    }
-  }
+    })
 
   // Step 6: HTML 렌더링
   console.log('[6/8] HTML 렌더링 중...')

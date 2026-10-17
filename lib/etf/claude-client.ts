@@ -14,8 +14,8 @@ import {
 // R3 (2026-07-22): 본문에 이름 인용 가능한 매체 화이트리스트.
 import { QUOTABLE_SOURCES } from '../quotable-sources'
 import { buildMorningStrategyInput } from './morning-strategy'
-import { validateMorningReportQuality } from './report-quality'
-import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS } from '../claude-budget'
+import { assessMorningReportQuality, formatMorningQualityError, validateMorningReportQuality } from './report-quality'
+import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS, ETF_GENERATION_BUDGET_MS, makeDeadline } from '../claude-budget'
 import { EVIDENCE_RULES } from '../evidence-rules'
 import { normalizeMorningReportLanguage } from './report-language'
 import { describeAngle, ETF_NARRATIVE_ANGLES, type EtfNarrativeAngle } from './narrative-angle'
@@ -85,25 +85,12 @@ function extractJsonFromResponse(response: Anthropic.Message, reportType: string
   return text
 }
 
-export async function generateMorningReport(data: CollectedData): Promise<MorningReport> {
-  const report = await generateMorningReportRaw(data)
-  validateMorningReportQuality(report, data, buildMorningStrategyInput(data))
-  return report
-}
-
-// P0 (2026-04-24): validator 재시도 소진 시 fallback 경로에서 사용.
-// 생성·파싱·언어 정규화까지 수행하되 품질 검증은 하지 않는다.
-// 2026-10-17: run-etf.ts의 마지막 시도는 이 결과를 validateMorningReport(사실 검증·중복 문장은 경고,
-// 고칠 수 있는 구조 문제는 교정)로 검증해 발송한다(전송 > 침묵, F02·Ruling 10).
+// 생성·파싱·언어 정규화까지 수행하되 품질 검증은 하지 않는다(검증·재시도는 generateMorningReportWithFallback).
 export async function generateMorningReportRaw(data: CollectedData): Promise<MorningReport> {
   const prompt = buildMorningPrompt(data)
   const response = await getClient().messages.create({
     model: 'claude-sonnet-4-6',
-    // Tier 2 — narrativeNotes 5 섹션(~30 문장) 추가로 출력이 4096 토큰을 넘어
-    // 잘리는 현상 관측(4/22 저녁 로컬 테스트). 8192로 상향.
-    // Plan B (2026-04-28) — bigPicture 4~6문장 + storySpine 각 act 3~5문장
-    // + characters/resolutions 길이 확장으로 8192도 잘림(2026-04-28 테스트).
-    // 16384로 상향해 충분한 여유 확보. (2026-10-17 새 스키마는 훨씬 짧다 — 상한은 여유로 유지.)
+    // 출력 상한은 여유로 둔다(새 스키마 응답은 이보다 훨씬 짧다 — 잘림 방지용 안전 여유).
     max_tokens: 16384,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: prompt }],
@@ -119,12 +106,109 @@ export async function generateMorningReportRaw(data: CollectedData): Promise<Mor
   return normalizeMorningReportLanguage(report)
 }
 
-// P0 (2026-04-24): Tier 1 fallback용. 외부에서 직접 호출해 검증할 때 사용.
-// 2026-10-16: 축소판 검증에서는 사실 검증을 경고로만 남긴다(전송 > 침묵).
-// 2026-10-17 (Ruling 10): 코드가 고칠 수 있는 구조 문제(todayChecks 초과·card.key·슬롯 밖/중복 카드)는 교정하고,
+// 축소판 검증(마지막 시도) — Tier 1 fallback 결과와, 마지막 생성을 쓰지 못했을 때의 앞선 결과에 쓴다.
+// 2026-10-16: 사실 검증은 경고로만 남긴다(전송 > 침묵).
+// 2026-10-17 (Ruling 10): 코드가 고칠 수 있는 구조 문제(todayChecks 초과·card.key·슬롯 밖/중복 카드·card 없음)는 교정하고,
 // card.line 길이·질문형과 중복 문장은 경고로만 남긴다. 필수 필드 누락·투자 권유는 그대로 막는다.
+// M4 (Ruling 25): 시점·인용 빈도·자금 흐름 표현·뉴스 단정·표기 형식 검사도 경고로만 남긴다.
 export function validateMorningReport(report: MorningReport, data: CollectedData): void {
   validateMorningReportQuality(report, data, buildMorningStrategyInput(data), { factChecksAsWarnings: true })
+}
+
+type Deadline = ReturnType<typeof makeDeadline>
+
+export interface MorningGenerationOptions {
+  // 테스트용 주입. 기본: 실제 Claude 호출(generateMorningReportRaw)·ETF 생성 예산(F07).
+  generateRaw?: (data: CollectedData) => Promise<MorningReport>
+  deadline?: Deadline
+  maxAttempts?: number
+}
+
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e)
+}
+
+/**
+ * ETF 리포트 생성 — 엄격 검증 최대 maxAttempts(2)회 → Tier 1 재생성 + 축소판 검증(validateMorningReport).
+ * I2 (Ruling 23, F02 "전송 > 침묵"): 파싱된 결과를 버리지 않는다. Tier 1 호출을 못 하거나(예산) 실패·파싱 실패하거나
+ * 그 결과가 축소판 검증에도 걸리면, 앞선 결과를 가장 나은 것부터(카드 문구만 어긋난 결과 > 위반이 가장 적은 결과 >
+ * 가장 최근 결과) 엄격 검증 전 원본으로 축소판 검증해 처음 통과하는 것을 경고와 함께 돌려준다.
+ * 준법(매수·매도 권유)·진짜 필수 필드 누락은 축소판에서도 막는다. 발송할 결과가 없으면 던진다(호출 쪽이 exit 1).
+ */
+export async function generateMorningReportWithFallback(
+  data: CollectedData,
+  options: MorningGenerationOptions = {},
+): Promise<MorningReport> {
+  const generateRaw = options.generateRaw ?? generateMorningReportRaw
+  const deadline = options.deadline ?? makeDeadline(ETF_GENERATION_BUDGET_MS)
+  const maxAttempts = options.maxAttempts ?? 2
+  const strategy = buildMorningStrategyInput(data)
+  // 엄격 검증에 걸린 결과 — report는 검증(soft fix·교정)이 손대기 전 원본, base는 카드 문구 외 위반 수.
+  const kept: Array<{ report: MorningReport; base: number; violations: string[]; attempt: number }> = []
+  let lastError: unknown
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    if (attempt > 1 && !deadline.canStartCall()) {
+      console.warn(`[warn] 생성 예산 초과(${Math.round(deadline.elapsedMs() / 1000)}초) — ${attempt}회차 생략, Tier 1 fallback으로`)
+      break
+    }
+    let raw: MorningReport
+    try {
+      raw = await generateRaw(data)
+    } catch (e) {
+      lastError = e
+      console.warn(`[warn] Claude 생성 ${attempt}/${maxAttempts}회 실패(호출·파싱):`, errorMessage(e))
+      continue
+    }
+    const pristine = structuredClone(raw)
+    const quality = assessMorningReportQuality(raw, data, strategy)
+    if (quality.violations.length === 0) {
+      if (attempt > 1) console.log(`  ✓ ${attempt}회차에서 성공`)
+      return raw
+    }
+    lastError = new Error(formatMorningQualityError(quality.violations))
+    kept.push({ report: pristine, base: quality.violations.length - quality.cardViolations.length, violations: quality.violations, attempt })
+    console.warn(`[warn] ${attempt}/${maxAttempts}회 품질 검증 실패(위반 ${quality.violations.length}건, 그중 카드 문구 ${quality.cardViolations.length}건): ${quality.violations.join(' / ')}`)
+  }
+
+  // P0 fallback: 재생성 + 축소판 검증 — 준법·필수 필드 누락만 막고 나머지는 경고·교정(Ruling 10·25).
+  if (deadline.canStartCall()) {
+    let raw: MorningReport | undefined
+    try {
+      console.log('[5b/8] Tier 1 fallback — 재생성 후 축소판 검증(사실·형식 검사는 경고, 준법·필수 필드만 막음)')
+      raw = await generateRaw(data)
+    } catch (e) {
+      lastError = e
+      console.warn('[warn] Tier 1 fallback 호출 실패(호출·파싱):', errorMessage(e))
+    }
+    if (raw) {
+      try {
+        validateMorningReport(raw, data)
+        console.log('  ✓ Tier 1 fallback 성공 — 경고([*-warn]·[struct-fix])가 있으면 로그를 확인하십시오')
+        return raw
+      } catch (e) {
+        lastError = e
+        console.warn('[warn] Tier 1 fallback 결과도 축소판 검증 실패:', errorMessage(e))
+      }
+    }
+  } else {
+    console.warn(`[warn] 생성 예산 초과(${Math.round(deadline.elapsedMs() / 1000)}초) — Tier 1 fallback 호출 생략`)
+  }
+
+  // 앞선 결과를 가장 나은 것부터 축소판으로 — 같은 위반 수면 더 최근 결과.
+  const ranked = [...kept].sort((a, b) => a.base - b.base || b.attempt - a.attempt)
+  for (const candidate of ranked) {
+    try {
+      validateMorningReport(candidate.report, data)
+      console.warn(`[warn] 마지막 생성을 쓰지 못해 앞선 ${candidate.attempt}회차 결과로 발송 진행(축소판 검증 통과 — 엄격 검증 위반: ${candidate.violations.join(' / ')})`)
+      return candidate.report
+    } catch (e) {
+      lastError = e
+      console.warn(`[warn] 앞선 ${candidate.attempt}회차 결과도 축소판 검증 실패:`, errorMessage(e))
+    }
+  }
+
+  throw new Error(`[claude-client] ETF 리포트 생성 실패 — 발송할 결과 없음. 마지막 원인: ${errorMessage(lastError)}`)
 }
 
 function formatPromptNumber(value: number | null | undefined, digits = 0): string {
