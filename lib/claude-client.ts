@@ -519,6 +519,42 @@ export function validateMarketCardText(content: Pick<ReportContent, "cardLine" |
   return cardTextFits("market", { headline, line }).reasons.map((r) => `카드 ${r}`);
 }
 
+/**
+ * 필수 항목 검증 — 이게 없으면 렌더러가 던지거나 제목 없는 리포트가 되므로 발송 후보가 될 수 없다(Ruling 29).
+ * 누락 목록(빈 배열이면 통과). 던지지 않는다. 호출자(generateReport)가 기준 위반으로 합쳐 재생성하고,
+ * 앞선 결과 선택에서도 이 항목이 빠진 결과는 후보에서 뺀다.
+ * 필수는 cover(객체)·cover.headline(강조 태그를 벗겨도 비지 않는 문자열)·bigStory.content(비지 않은 배열)뿐 —
+ * 나머지(watchPoints·soWhat·calendar·compass·closingMessage·cover.subline)는 normalizeMarketOptionalParts 가 채운다.
+ */
+export function validateMarketRequired(content: unknown): string[] {
+  const c = content as Partial<ReportContent> | null | undefined;
+  const missing: string[] = [];
+  const cover = c?.cover;
+  if (typeof cover !== "object" || cover === null || Array.isArray(cover)) {
+    missing.push("cover 누락");
+  } else if (!stripEmphasisTags(typeof cover.headline === "string" ? cover.headline : "").trim()) {
+    missing.push("cover.headline 누락");
+  }
+  const blocks = c?.bigStory?.content;
+  if (!Array.isArray(blocks) || blocks.length === 0) missing.push("bigStory.content 누락");
+  return missing;
+}
+
+/**
+ * 선택 항목을 렌더·후속 로그가 던지지 않는 빈 값으로 맞춘다 — 발송하기로 한 content 에 한 번 적용한다.
+ * 배열(watchPoints·soWhat·calendar·compass)이 없거나 배열이 아니면 [], 문자열(closingMessage·cover.subline)이 없으면 ''.
+ * 필수 항목(validateMarketRequired)은 여기서 만들어 채우지 않는다. content 를 직접 고쳐 돌려준다.
+ */
+export function normalizeMarketOptionalParts(content: ReportContent): ReportContent {
+  const c = content as unknown as Record<string, unknown>;
+  for (const key of ["watchPoints", "soWhat", "calendar", "compass"]) {
+    if (!Array.isArray(c[key])) c[key] = [];
+  }
+  if (typeof content.closingMessage !== "string") content.closingMessage = "";
+  if (content.cover && typeof content.cover.subline !== "string") content.cover.subline = "";
+  return content;
+}
+
 const SUMMARY_DEFAULT_YESTERDAY = "어제 시장 흐름은 아래에서 정리했습니다.";
 const SUMMARY_DEFAULT_TODAY = "오늘 확인할 점은 아래 '오늘 볼 것'에서 정리했습니다.";
 const SUMMARY_DEFAULT_MY_ASSETS = "자산군별 판단 재료는 ETF Today에서 볼 수 있습니다.";
@@ -571,10 +607,14 @@ export async function generateReport(
   let content: ReportContent | null = null;
   let lastParseErr: unknown = null;
   // 파싱은 됐지만 위반이 남은 앞선 결과 중 가장 나은 것(I2·Ruling 23, F02 "전송 > 침묵").
+  // 후보: 필수 항목(cover.headline·bigStory.content, Ruling 29)을 갖춘 결과만 — 빠진 결과는 렌더러가 던지므로
+  //   위반 수가 같거나 더 적어 보여도 후보가 되지 않는다(재생성 사유일 뿐).
   // 선택: 카드 글자만 어긋난 결과(카드 외 위반 0) > 카드 외 위반이 가장 적은 결과 > 가장 최근 결과.
-  // 재생성을 이어가지 못하거나(예산 소진·후속 호출 실패·마지막 시도 파싱 실패) 마지막 시도에 위반이 더 많이 남으면
-  // 이 결과를 마지막 시도처럼(위반은 경고로만) 발송한다. 파싱된 결과가 한 번도 없을 때만 실패한다.
+  // 재생성을 이어가지 못하거나(예산 소진·후속 호출 실패·마지막 시도 파싱 실패·마지막 시도에 필수 항목 누락)
+  // 마지막 시도에 위반이 더 많이 남으면 이 결과를 마지막 시도처럼(위반은 경고로만) 발송한다.
+  // 후보가 한 번도 없을 때만 실패한다(파싱된 결과가 없거나, 파싱돼도 필수 항목을 갖춘 결과가 없을 때).
   let best: { content: ReportContent; base: string[]; card: string[]; attempt: number } | null = null;
+  let lastRequiredMissing: { attempt: number; fields: string[] } | null = null;
   let stopReason = "";
   const remaining = (k: { base: string[]; card: string[] }) => [...k.base, ...k.card].join(", ");
 
@@ -669,7 +709,9 @@ export async function generateReport(
         console.log(`⚠️ 비승인 출처 잔존: ${sourceFix.warnings.join(", ")}`);
       }
 
-      const baseViolations = [...temporal.violations, ...validateMarketSummary(parsed)];
+      const requiredMissing = validateMarketRequired(parsed);
+      if (requiredMissing.length > 0) lastRequiredMissing = { attempt, fields: requiredMissing };
+      const baseViolations = [...temporal.violations, ...requiredMissing, ...validateMarketSummary(parsed)];
       const citationCount = countCitationPhrases(sourceFix.fixed);
       if (citationCount >= 8) {
         baseViolations.push(`"에 따르면" 인용 ${citationCount}회 과다`);
@@ -685,9 +727,17 @@ export async function generateReport(
         console.log(`♻️ 정합성 위반 ${hardViolations.length}건 — 재생성 (${attempt + 1}/${maxRetries}): ${hardViolations.join(", ")}`);
         lastParseErr = new Error(`정합성 위반: ${hardViolations.join(", ")}`);
         // 같은 수면 더 최근 결과(<=). 카드 글자만 어긋난 결과는 카드 외 위반이 0이라 자연히 맨 앞이다.
-        if (!best || baseViolations.length <= best.base.length) {
+        // 필수 항목이 빠진 결과는 후보에서 뺀다 — 위반 수로 겨루면 갖춘 결과를 밀어낼 수 있다.
+        if (requiredMissing.length === 0 && (!best || baseViolations.length <= best.base.length)) {
           best = { content: parsed, base: baseViolations, card: cardViolations, attempt };
         }
+        continue;
+      }
+      if (requiredMissing.length > 0) {
+        // 마지막 시도인데 필수 항목이 없다 — 이 결과는 렌더할 수 없다. 파싱 실패처럼 다룬다:
+        // 필수 항목을 갖춘 앞선 결과가 있으면 루프 뒤에서 그 결과로 발송하고, 없으면 실패한다.
+        lastParseErr = new Error(`필수 항목 누락: ${requiredMissing.join(", ")}`);
+        console.error(`❌ 마지막 시도(${attempt}/${maxRetries})에 필수 항목 누락 — 이 결과는 발송할 수 없다: ${requiredMissing.join(", ")}`);
         continue;
       }
       if (hardViolations.length > 0) {
@@ -717,8 +767,15 @@ export async function generateReport(
     content = best.content;
   }
   if (!content) {
+    if (lastRequiredMissing) {
+      // 파싱은 됐지만 필수 항목을 갖춘 결과가 한 번도 없었다 — 제목·본문 없는 리포트는 만들 수 없으니 크게 실패한다.
+      throw new Error(`Market 리포트 필수 항목 누락 — ${lastRequiredMissing.attempt}회차 응답에 ${lastRequiredMissing.fields.join(", ")}, 필수 항목을 갖춘 앞선 결과도 없어 발송할 수 없습니다 (${maxRetries}회 시도): ${lastParseErr}`);
+    }
     throw new Error(`Claude JSON 파싱 실패 (${maxRetries}회 시도): ${lastParseErr}`);
   }
+
+  // 발송할 content 의 선택 항목을 빈 값으로 맞춘다 — 아래 로그·렌더·run.ts(내러티브 로그·인덱스)가 던지지 않게.
+  normalizeMarketOptionalParts(content);
 
   // JSON 콘텐츠 후처리: 금지 표현 검사
   const jsonStr = JSON.stringify(content);

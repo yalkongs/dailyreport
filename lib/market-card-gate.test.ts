@@ -5,7 +5,7 @@ import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import Anthropic from '@anthropic-ai/sdk'
 import { cardTextFits } from './preview/data-card'
-import { generateReport, validateMarketCardText } from './claude-client'
+import { generateReport, validateMarketCardText, validateMarketRequired, normalizeMarketOptionalParts } from './claude-client'
 
 const FITTING_HEADLINE = '코스피 급락 다음 날, 미 증시는 숨 고르기'
 const LONG_HEADLINE = '코스피 급락 다음 날 미 증시는 숨 고르기에 들어갔고 외국인 매도와 환율 부담이 한꺼번에 겹치며 투자자들의 관망이 길어졌습니다'
@@ -231,5 +231,137 @@ test('generateReport: 응답 최상위가 객체가 아니면(문자열·배열�
 test('generateReport: 객체가 아닌 응답은 앞선 결과로 남기지 않는다 — 뒤 호출이 실패하면 TypeError가 아니라 원래 오류로 실패', async (t) => {
   t.after(() => mock.restoreAll())
   fakeStream(['null', new Error('Internal server error')])
+  await assert.rejects(generateReport(DATA), (e: Error) => /Internal server error/.test(e.message) && !(e instanceof TypeError))
+})
+
+// ── Ruling 29: 필수 항목(cover.headline·bigStory.content)은 기준 위반, 선택 항목은 비어도 렌더가 돈다 ──
+// 필수 항목이 빠진 결과는 렌더러가 던지므로 발송 후보가 될 수 없다 — 다시 쓰게 하고, 앞선 결과 선택에서도 밀린다.
+// 없는 항목만 지워 만든 응답(나머지는 정상)으로 "그 항목 하나 때문에" 갈리는지 본다.
+const without = (headline: string, ...keys: string[]) => {
+  const o = JSON.parse(reportJson(headline)) as Record<string, unknown>
+  for (const k of keys) delete o[k]
+  return JSON.stringify(o)
+}
+
+test('필수 항목 관문: 정상은 통과, cover·headline·bigStory.content 가 없거나 비면 위반으로 돌려준다(던지지 않는다)', () => {
+  const ok = JSON.parse(reportJson(FITTING_HEADLINE))
+  assert.deepEqual(validateMarketRequired(ok), [])
+  assert.deepEqual(validateMarketRequired({ ...ok, cover: { headline: FITTING_HEADLINE } }), []) // 부제는 선택
+
+  for (const cover of [undefined, null, '문자열', ['배열']]) {
+    const v = validateMarketRequired({ ...ok, cover })
+    assert.equal(v.length, 1, JSON.stringify(cover))
+    assert.match(v[0], /^cover /)
+  }
+  for (const headline of [undefined, '', '   ', '<strong></strong>', 42]) {
+    const v = validateMarketRequired({ ...ok, cover: { headline, subline: '부제' } })
+    assert.deepEqual(v, ['cover.headline 누락'], String(headline))
+  }
+  for (const bigStory of [undefined, null, '문자열', {}, { content: null }, { content: '본문' }, { content: {} }, { content: [] }]) {
+    assert.deepEqual(validateMarketRequired({ ...ok, bigStory }), ['bigStory.content 누락'], JSON.stringify(bigStory))
+  }
+  assert.deepEqual(validateMarketRequired({}), ['cover 누락', 'bigStory.content 누락'])
+  assert.doesNotThrow(() => validateMarketRequired(null))
+  assert.doesNotThrow(() => validateMarketRequired(undefined))
+})
+
+test('선택 항목 보정: 없거나 배열이 아니면 빈 값으로 채우고, 있는 값은 건드리지 않는다', () => {
+  const c = JSON.parse(reportJson(FITTING_HEADLINE))
+  delete c.watchPoints; delete c.cover.subline
+  c.soWhat = '배열 아님'; c.calendar = null; c.closingMessage = 42
+  const out = normalizeMarketOptionalParts(c)
+  assert.equal(out, c, '같은 객체를 고쳐 돌려준다')
+  assert.deepEqual([c.watchPoints, c.soWhat, c.calendar, c.compass], [[], [], [], []])
+  assert.equal(c.closingMessage, '')
+  assert.equal(c.cover.subline, '')
+
+  const kept = JSON.parse(reportJson(FITTING_HEADLINE))
+  kept.watchPoints = [{ badge: '오전', title: 't', description: 'd' }]
+  kept.compass = [{ label: 'l', title: 't', items: [] }]
+  normalizeMarketOptionalParts(kept)
+  assert.equal(kept.watchPoints.length, 1)
+  assert.equal(kept.compass.length, 1)
+  assert.equal(kept.closingMessage, '마무리')
+  assert.equal(kept.cover.subline, '부제')
+})
+
+test('generateReport: 1회차에 bigStory 가 없으면 다시 쓰게 하고, 갖춘 2회차 결과로 발송한다', async (t) => {
+  t.after(() => mock.restoreAll())
+  const { stream, logs } = fakeStream([without(OTHER_HEADLINE, 'bigStory'), reportJson(FITTING_HEADLINE)])
+  const { content, html } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 2)
+  assert.equal(content.cover.headline, FITTING_HEADLINE)
+  assert.match(html, /data-section="story"/)
+  assert.ok(logs.some((l) => /재생성 \(2\/3\).*bigStory\.content 누락/.test(l)))
+})
+
+test('generateReport: 1회차에 cover 가 없어도 같다 — 2회차 결과로 발송한다', async (t) => {
+  t.after(() => mock.restoreAll())
+  const { stream, logs } = fakeStream([without(OTHER_HEADLINE, 'cover'), reportJson(FITTING_HEADLINE)])
+  const { content } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 2)
+  assert.equal(content.cover.headline, FITTING_HEADLINE)
+  assert.ok(logs.some((l) => /재생성 \(2\/3\).*cover 누락/.test(l)))
+})
+
+test('generateReport: 1회차는 갖췄지만 카드 글자 위반, 2·3회차는 cover 가 없으면 1회차 결과로 발송한다', async (t) => {
+  t.after(() => mock.restoreAll())
+  const { stream, logs } = fakeStream([reportJson(LONG_HEADLINE), without(OTHER_HEADLINE, 'cover'), without(OTHER_HEADLINE, 'cover')])
+  const { content, html } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 3)
+  assert.equal(content.cover.headline, LONG_HEADLINE)
+  assert.match(html, /class="cover-headline"/)
+  const line = logs.find((l) => /앞선 결과로 발송 진행/.test(l))
+  assert.ok(line && /1회차/.test(line) && /카드 headline/.test(line), '앞선 결과로 보낸다는 것과 남은 위반을 밝힌다')
+})
+
+test('generateReport: 필수 항목이 빠진 결과는 위반 수가 같아도 앞선 결과 선택에서 밀린다(마지막 시도가 깨져도)', async (t) => {
+  t.after(() => mock.restoreAll())
+  // 1회: 어제 줄만 누락(위반 1건, 필수 항목은 갖춤) → 2회: bigStory 만 누락(위반 1건) → 3회: 깨진 응답
+  const { stream } = fakeStream([yesterdayOnlyMissing(LONG_HEADLINE), without(OTHER_HEADLINE, 'bigStory'), '깨진 응답'])
+  const { content, html } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 3)
+  assert.equal(content.cover.headline, LONG_HEADLINE)
+  assert.match(html, /data-section="story"/)
+})
+
+test('generateReport: 마지막 시도에 필수 항목이 빠지면 갖춘 앞선 결과로 발송한다', async (t) => {
+  t.after(() => mock.restoreAll())
+  const { stream, logs } = fakeStream([without(OTHER_HEADLINE, 'bigStory'), yesterdayOnlyMissing(LONG_HEADLINE), without(OTHER_HEADLINE, 'bigStory')])
+  const { content, html } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 3)
+  assert.equal(content.cover.headline, LONG_HEADLINE)
+  assert.match(html, /data-section="story"/)
+  const line = logs.find((l) => /앞선 결과로 발송 진행/.test(l))
+  assert.ok(line && /2회차/.test(line) && /필수 항목 누락/.test(line), line)
+})
+
+test('generateReport: watchPoints·soWhat·calendar·closingMessage·부제가 없어도 던지지 않고 렌더한다', async (t) => {
+  t.after(() => mock.restoreAll())
+  const o = JSON.parse(reportJson(FITTING_HEADLINE))
+  delete o.watchPoints; delete o.soWhat; delete o.calendar; delete o.closingMessage
+  o.cover = { headline: FITTING_HEADLINE }
+  const { stream } = fakeStream([JSON.stringify(o)])
+  const { content, html } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 1, '선택 항목 누락은 재생성 사유가 아니다')
+  assert.deepEqual([content.watchPoints, content.soWhat, content.calendar, content.compass], [[], [], [], []])
+  assert.equal(content.closingMessage, '')
+  assert.equal(content.cover.subline, '')
+  assert.match(html, /class="cover-headline"/)
+  assert.match(html, /data-section="story"/)
+  assert.doesNotMatch(html, /data-section="today"|data-section="meaning"/, '빈 섹션은 그리지 않는다')
+  assert.match(html, /data-section="footer"/)
+})
+
+test('generateReport: 모든 시도에서 bigStory 가 없으면 원인을 밝히며 실패한다', async (t) => {
+  t.after(() => mock.restoreAll())
+  const { stream } = fakeStream([without(FITTING_HEADLINE, 'bigStory')])
+  await assert.rejects(generateReport(DATA), (e: Error) => /필수 항목 누락/.test(e.message) && /bigStory\.content/.test(e.message) && !(e instanceof TypeError))
+  assert.equal(stream.mock.callCount(), 3)
+})
+
+test('generateReport: 필수 항목이 빠진 응답만 있고 뒤 호출이 실패하면 원래 오류로 실패한다(발송 후보 아님)', async (t) => {
+  t.after(() => mock.restoreAll())
+  fakeStream([without(FITTING_HEADLINE, 'cover'), new Error('Internal server error')])
   await assert.rejects(generateReport(DATA), (e: Error) => /Internal server error/.test(e.message) && !(e instanceof TypeError))
 })

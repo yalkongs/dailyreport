@@ -85,18 +85,3 @@ export function classifyTelegramResponse(body: string): { state: "success" | "fa
   }
   return { state: "error", detail: `ok 필드 없음: ${body.slice(0, 120)}` };
 }
-
-const ANOMALY_LABELS: Record<string, string> = {
-  premiumDiscount: "괴리율",
-  trackingError: "추적오차",
-  volumeSpike: "거래량",
-  consecutiveSell: "매도",
-};
-
-/** "괴리율 2/거래량 1/매도 1" 형태. 0건은 제외, 없으면 빈 문자열. */
-export function formatAnomalyBreakdown(breakdown: Record<string, number> | undefined): string {
-  return Object.entries(breakdown ?? {})
-    .filter(([, count]) => count > 0)
-    .map(([type, count]) => `${ANOMALY_LABELS[type] ?? type} ${count}`)
-    .join("/");
-}

@@ -13,7 +13,6 @@ export async function sendReportUrl(
   url: string,
   date: string,
   headline: string,
-  anomalyCount: number,
 ): Promise<void> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN
   const chatId = process.env.TELEGRAM_CHAT_ID
@@ -23,8 +22,7 @@ export async function sendReportUrl(
     return
   }
 
-  const alertLine = anomalyCount > 0 ? `\n이상 탐지: ${anomalyCount}건` : ''
-  const text = `${date} ETF 리포트\n\n${headline}${alertLine}\n\n${url}`
+  const text = `${date} ETF 리포트\n\n${headline}\n\n${url}`
 
   await sendMessage(botToken, chatId, text)
 }
