@@ -1,19 +1,19 @@
 // Market report preview card generator.
-// Mirrors lib/etf/report-preview.ts using the shared B-style template
-// from lib/preview/preview-card.ts. Output PNGs land at
-// public/reports/<date>-preview.png and are linked in Telegram via
+// 2026-10 개편: 최근 20거래일 코스피 스트라이프 데이터 카드(lib/preview/data-card.ts, 1080×1350).
+// Output PNGs land at public/reports/<date>-preview.png and are linked in Telegram via
 // sendPhoto for a guaranteed link-preview card.
 
 import * as fs from 'fs'
 import * as path from 'path'
 import {
-  PREVIEW_WIDTH,
-  PREVIEW_HEIGHT,
-  renderPreviewCardPng,
-} from '../preview/preview-card'
+  renderMarketCardSvg,
+  saveCardPng,
+} from '../preview/data-card'
+import type { StripeSession } from '../preview/data-card'
 
-export const MARKET_PREVIEW_IMAGE_WIDTH = PREVIEW_WIDTH
-export const MARKET_PREVIEW_IMAGE_HEIGHT = PREVIEW_HEIGHT
+// 카드 규격(1080×1350) — og:image 메타(report-renderer)와 같은 값.
+export const MARKET_PREVIEW_IMAGE_WIDTH = 1080
+export const MARKET_PREVIEW_IMAGE_HEIGHT = 1350
 
 export const MARKET_REPORTS_PUBLIC_DIR = 'reports'
 
@@ -28,31 +28,22 @@ export function marketPreviewPath(date: string): string {
 /**
  * Generates and saves the market preview PNG to
  * public/reports/<date>-preview.png. Returns the absolute file path.
+ * headline = 카드 제목, line = 제목 아래 한 줄(cardLine), sessions = 코스피 최근 거래일 등락(비면 스트라이프 자리는 중립색).
  */
 export async function saveMarketPreviewImage(
   date: string,
-  headline: string,
-  subline?: string,
+  input: { headline: string; line: string; sessions: StripeSession[] },
 ): Promise<string> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     throw new Error(`saveMarketPreviewImage: invalid date format "${date}"`)
   }
+  // marketPreviewPath 는 URL 경로(/reports/…)이므로 파일 쓰기에는 public/ 아래 절대 경로를 따로 만든다.
   const dir = path.join(process.cwd(), 'public', MARKET_REPORTS_PUBLIC_DIR)
   fs.mkdirSync(dir, { recursive: true })
-  const filename = marketPreviewFilename(date)
-  const filePath = path.join(dir, filename)
+  const filePath = path.join(dir, marketPreviewFilename(date))
 
-  await renderPreviewCardPng(
-    {
-      date,
-      sectionLabel: 'Market Today',
-      edition: 'MORNING DIGEST',
-      footer: '글로벌 시장 일일 리포트 · iMBank Market Today',
-      headline,
-      subline:
-        subline?.trim() ||
-        '오늘의 글로벌 금융 시장 흐름과 주요 지표 변화를 한눈에 정리합니다.',
-    },
+  await saveCardPng(
+    renderMarketCardSvg({ date, headline: input.headline, line: input.line, sessions: input.sessions }),
     filePath,
   )
 

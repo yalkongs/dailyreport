@@ -2,6 +2,7 @@ import YahooFinance from "yahoo-finance2";
 import { koreanWeekday } from "./market-calendar";
 import { pickCloseOnOrBefore, weekStartKst } from "./historical-baseline";
 import { sessionDate } from "./etf/market-context";
+import type { StripeSession } from "./preview/data-card";
 import type {
   MarketIndex,
   ForexData,
@@ -292,12 +293,6 @@ export async function collectHistoricalData(): Promise<HistoricalComparison[]> {
   }
 
   return results;
-}
-
-/** 미리보기 카드 스트라이프의 하루 — 거래일(KST YYYY-MM-DD)과 전 거래일 대비 등락률(%). */
-export interface StripeSession {
-  date: string;
-  pct: number;
 }
 
 /**
