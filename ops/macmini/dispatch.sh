@@ -2,8 +2,9 @@
 # 맥미니 launchd가 호출하는 아침 트리거 — GitHub workflow_dispatch를 1회 요청한다.
 # 실제 생성·발송은 GitHub Actions에서 돈다. 여기는 "알람 시계" 역할만.
 #
-#   dispatch.sh market|etf          정시/2차 트리거
-#   DRY_RUN=1 dispatch.sh market    dry_run=true로 요청 (발송·커밋 없음, 점검용)
+#   dispatch.sh both                06:40 정시·07:20 2차 트리거 — 마켓·ETF 리포트를 한 번에(launchd plist: com.yalkongs.dailyreport.morning)
+#   dispatch.sh market|etf          한쪽만 수동 점검·재발행용
+#   DRY_RUN=1 dispatch.sh both      dry_run=true로 요청 (발송·커밋 없음, 점검용)
 #
 # 요청이 겹쳐도(정시·2차·3순위 schedule·수동) job concurrency와
 # 중복 가드·발송 상태(scripts/delivery-state.ts)가 뒤 요청을 skip시킨다.
@@ -11,8 +12,8 @@ set -u
 
 ONLY="${1:-}"
 case "$ONLY" in
-  market|etf) ;;
-  *) echo "usage: dispatch.sh market|etf" >&2; exit 2 ;;
+  market|etf|both) ;;
+  *) echo "usage: dispatch.sh market|etf|both" >&2; exit 2 ;;
 esac
 
 REPO="yalkongs/dailyreport"

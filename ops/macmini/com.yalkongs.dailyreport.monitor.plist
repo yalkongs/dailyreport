@@ -8,17 +8,17 @@
 		<string>/opt/homebrew/bin:/usr/bin:/bin</string>
 	</dict>
 	<key>Label</key>
-	<string>com.yalkongs.dailyreport.monitor.market</string>
+	<string>com.yalkongs.dailyreport.monitor</string>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/bin/bash</string>
 		<string>/Users/yalkongs/Project/dailyreport/ops/macmini/monitor.sh</string>
-		<string>market</string>
+		<string>all</string>
 	</array>
 	<key>StandardErrorPath</key>
-	<string>/Users/yalkongs/Library/Logs/dailyreport/monitor-market.err.log</string>
+	<string>/Users/yalkongs/Library/Logs/dailyreport/monitor.err.log</string>
 	<key>StandardOutPath</key>
-	<string>/Users/yalkongs/Library/Logs/dailyreport/monitor-market.out.log</string>
+	<string>/Users/yalkongs/Library/Logs/dailyreport/monitor.out.log</string>
 	<key>StartCalendarInterval</key>
 	<array>
 		<dict>

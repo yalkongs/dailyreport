@@ -4,7 +4,8 @@
 # success가 아니면 그 job이 실패하고 GitHub가 소유자에게 메일을 보낸다. 여기는 dispatch.sh와 같은
 # "알람 시계" 역할만 한다(감사 F06).
 #
-#   monitor.sh market|etf       07:45(market)·09:00(etf) KST — launchd plist(com.yalkongs.dailyreport.monitor.*)
+#   monitor.sh all              07:45 KST 월~금 — 마켓·ETF 둘 다 판정, launchd plist(com.yalkongs.dailyreport.monitor)
+#   monitor.sh market|etf       한쪽만 수동 점검용
 #
 # ⚠️ 파일명으로 dispatch한다 — delivery-monitor.yml이 main(기본 브랜치)에 머지된 뒤에만 동작한다.
 #    맥미니가 죽은 날은 delivery-monitor.yml의 schedule(늦은 백업)이 대신한다.
@@ -12,8 +13,8 @@ set -u
 
 KIND="${1:-}"
 case "$KIND" in
-  market|etf) ;;
-  *) echo "usage: monitor.sh market|etf" >&2; exit 2 ;;
+  market|etf|all) ;;
+  *) echo "usage: monitor.sh market|etf|all" >&2; exit 2 ;;
 esac
 
 REPO="yalkongs/dailyreport"
