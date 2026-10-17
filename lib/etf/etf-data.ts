@@ -256,7 +256,8 @@ export async function collectUsEtfFlows(): Promise<EtfFlow[]> {
  * stale·none 에서는 KRX 값을 하나도 섞지 않는다 — D-1 가격과 D-2 NAV를 섞으면
  * validateData 의 가격/NAV 10% 검증이 리포트를 통째로 중단시키고, 오래된 괴리율이
  * 이상 탐지·"오늘 N개 관측" 문구로 '오늘'의 사실이 된다.
- * 국내 NAV가 전부 null이면 run-etf 가 'krx-nav' 실패로 기록한다(기존 경로).
+ * prev-session 인데도 국내 NAV가 전부 null일 때만 run-etf 가 'krx-nav' 실패로 기록한다(krxNavFailed, Ruling 22) —
+ * 06:40 실행의 stale·none 은 KRX 08:00 게시 전이라 정상이며 실패가 아니다.
  */
 export function mergeKrxIntoQuotes(
   quotes: EtfQuote[],

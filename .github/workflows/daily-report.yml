@@ -116,14 +116,18 @@ jobs:
           fc-cache -f
           fc-list :lang=ko | head -3
           # 카드 PNG 글꼴 Pretendard(저장소 assets/fonts, OFL)를 사용자 글꼴 폴더에 등록한다.
-          # 파일이 없거나 등록에 실패해도 리포트 생성을 막지 않는다(전송 > 침묵) — Noto CJK로 렌더되고 경고만 남긴다.
+          # 파일이 없거나 등록에 실패해도 리포트 생성을 막지 않는다(전송 > 침묵) — Noto CJK로 렌더되고, 실행 화면에
+          # 눈에 띄도록 ::error:: 주석을 남긴다(Ruling 24 — step은 실패시키지 않는다).
           if ls assets/fonts/Pretendard-*.otf >/dev/null 2>&1 \
              && mkdir -p ~/.local/share/fonts && cp assets/fonts/Pretendard-*.otf ~/.local/share/fonts/ \
              && fc-cache -f && fc-list | grep -i pretendard; then
             echo "Pretendard 설치 완료"
           else
-            echo "::warning::Pretendard 글꼴 설치·등록 실패(assets/fonts/Pretendard-*.otf) — 카드 PNG가 Noto CJK로 렌더됩니다"
+            echo "::error::Pretendard 글꼴 설치·등록 실패(assets/fonts/Pretendard-*.otf) — 카드 PNG가 Noto CJK로 렌더됩니다(발송은 계속)"
           fi
+          # 진단: 카드가 쓰는 굵기(제목 800·라벨 600)가 실제로 어느 글꼴로 잡히는지 항상 남긴다.
+          fc-match 'Pretendard:weight=800' || true
+          fc-match 'Pretendard:weight=600' || true
 
       - name: Generate market report
         id: report
@@ -138,14 +142,12 @@ jobs:
           # dry_run 전용 날짜 지정 — 휴장 판정·리포트 날짜가 이 날짜로 돈다(주말 dry-run). 운영 실행은 항상 빈 값.
           TEST_DATE: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && inputs.test_date || '' }}
         run: |
-          # test_date는 자유 입력 — 형식 확인 전에는 아래 node -e 소스·$GITHUB_OUTPUT에 보간하지 않는다(ETF는 run-etf.ts가 검사).
+          # test_date는 자유 입력 — 형식 확인 전에는 아래 $GITHUB_OUTPUT에 보간하지 않는다(ETF는 run-etf.ts가 검사).
           if [ -n "$TEST_DATE" ] && ! [[ "$TEST_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then echo "::error::test_date는 YYYY-MM-DD 형식이어야 합니다 — 리포트를 생성하지 않았습니다"; exit 1; fi
           npx tsx scripts/run.ts
+          # date만 내보낸다(커밋 메시지·dry-run 아티팩트 경로). 텔레그램 헤드라인은 deliver의 resolve가 인덱스에서 읽는다.
           REPORT_DATE=${TEST_DATE:-$(TZ=Asia/Seoul date +%Y-%m-%d)}
           echo "date=${REPORT_DATE}" >> $GITHUB_OUTPUT
-          # reports-index.json에서 헤드라인 추출
-          HEADLINE=$(node -e "const i=JSON.parse(require('fs').readFileSync('data/reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');console.log(r?.headline||'오늘의 시장 리포트')")
-          echo "headline=${HEADLINE}" >> $GITHUB_OUTPUT
 
       - name: Check for changes
         id: changes
@@ -249,14 +251,17 @@ jobs:
             sleep 10
           done
           fc-cache -f
-          # 카드 PNG 글꼴 Pretendard — market job의 같은 블록 주석 참조(없거나 실패해도 경고만).
+          # 카드 PNG 글꼴 Pretendard — market job의 같은 블록 주석 참조(없거나 실패해도 ::error:: 주석만, 발송은 계속).
           if ls assets/fonts/Pretendard-*.otf >/dev/null 2>&1 \
              && mkdir -p ~/.local/share/fonts && cp assets/fonts/Pretendard-*.otf ~/.local/share/fonts/ \
              && fc-cache -f && fc-list | grep -i pretendard; then
             echo "Pretendard 설치 완료"
           else
-            echo "::warning::Pretendard 글꼴 설치·등록 실패(assets/fonts/Pretendard-*.otf) — 카드 PNG가 Noto CJK로 렌더됩니다"
+            echo "::error::Pretendard 글꼴 설치·등록 실패(assets/fonts/Pretendard-*.otf) — 카드 PNG가 Noto CJK로 렌더됩니다(발송은 계속)"
           fi
+          # 진단: 카드가 쓰는 굵기(제목 800·라벨 600)가 실제로 어느 글꼴로 잡히는지 항상 남긴다.
+          fc-match 'Pretendard:weight=800' || true
+          fc-match 'Pretendard:weight=600' || true
 
       - name: Run ETF pipeline
         id: etf
@@ -271,15 +276,9 @@ jobs:
           ETF_REPORT_DATE: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && inputs.test_date || '' }}
         run: |
           npx tsx scripts/run-etf.ts
+          # date만 내보낸다(커밋 메시지·dry-run 아티팩트 경로). 헤드라인·이상 탐지 건수는 deliver의 resolve가 인덱스에서 읽는다.
           REPORT_DATE=${ETF_REPORT_DATE:-$(TZ=Asia/Seoul date +%Y-%m-%d)}
           echo "date=${REPORT_DATE}" >> $GITHUB_OUTPUT
-          HEADLINE=$(node -e "const i=JSON.parse(require('fs').readFileSync('data/etf-reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');console.log(r?.headline||'오늘의 ETF 리포트')")
-          ANOMALY_COUNT=$(node -e "const i=JSON.parse(require('fs').readFileSync('data/etf-reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');console.log(r?.anomalyCount||0)")
-          # Breakdown: "괴리율 2/거래량 1/매도 1" 형태. 0건은 빈 문자열.
-          ANOMALY_BREAKDOWN=$(node -e "const L={premiumDiscount:'괴리율',trackingError:'추적오차',volumeSpike:'거래량',consecutiveSell:'매도'};const i=JSON.parse(require('fs').readFileSync('data/etf-reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');const b=r?.anomalyBreakdown||{};const s=Object.entries(b).filter(([,c])=>c>0).map(([t,c])=>(L[t]||t)+' '+c).join('/');console.log(s)")
-          echo "headline=${HEADLINE}" >> $GITHUB_OUTPUT
-          echo "anomaly_count=${ANOMALY_COUNT}" >> $GITHUB_OUTPUT
-          echo "anomaly_breakdown=${ANOMALY_BREAKDOWN}" >> $GITHUB_OUTPUT
 
       - name: Check for changes
         id: changes

@@ -13,8 +13,10 @@ export const REPORT_SITE_NAME = 'iM뱅크'
 // og:description 최대 길이(메신저가 자체 글꼴로 보여 주는 설명 문구, spec §4 "약 80자 이내").
 export const REPORT_PREVIEW_DESCRIPTION_MAX_CHARS = 90
 
-export function reportPreviewTitle(headline: string): string {
-  return `iMBank ETF Today · ${headline.trim()}`
+// og:title = 제목(spec §4, Market과 같이 접두어 없이 — 텔레그램은 og:site_name "iM뱅크"를 위에 따로 보여 준다).
+// 제목이 비면 fallback(호출 쪽이 날짜 기반 "YYYY-MM-DD ETF Today"를 넘긴다).
+export function reportPreviewTitle(headline: string, fallback = 'ETF Today'): string {
+  return headline.trim() || fallback
 }
 
 function plainText(value: unknown): string {

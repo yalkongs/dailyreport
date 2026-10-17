@@ -21,6 +21,7 @@ import { renderStripesSvg } from "./preview/data-card";
 import { CARD_WIDTH, CARD_HEIGHT } from "./preview/card-size";
 import type { StripeSession } from "./preview/data-card";
 import { summarySentence } from "./market-summary";
+import { previousSessionLabel } from "./session-label";
 
 // --- 유틸리티 ---
 
@@ -131,11 +132,14 @@ function renderTitle(content: ReportContent): string {
     </section>`;
 }
 
-/** 세 줄 요약 상자 — 어제 / 오늘 볼 것 / 내 자산은(→ ETF Today). 요약이 없으면(옛 콘텐츠) 생략. */
+/**
+ * 세 줄 요약 상자 — 어제 / 오늘 볼 것 / 내 자산은(→ ETF Today). 요약이 없으면(옛 콘텐츠) 생략.
+ * M6: 첫 줄 라벨은 직전 한국 거래일 라벨(월요일 '지난 금요일', 휴장 다음 날 '직전 거래일'). 모델 문장은 그대로.
+ */
 function renderSummary(content: ReportContent, date: string): string {
   const s = content.summary;
   const rows: Array<{ label: string; text: string; href?: string }> = [
-    { label: "어제", text: s?.yesterday ?? "" },
+    { label: previousSessionLabel(date), text: s?.yesterday ?? "" },
     { label: "오늘 볼 것", text: s?.today ?? "" },
     { label: "내 자산은", text: s?.myAssets ?? "", href: `/etf-reports/${date}` },
   ].filter((r) => r.text.trim());
@@ -323,10 +327,11 @@ ${cardsHtml}        </div>${sparkNote}`,
   };
 }
 
-function renderBigStory(content: ReportContent): string {
+function renderBigStory(content: ReportContent, date: string): string {
+  // M6: 월요일·휴장 다음 날엔 "어제"가 아니다 — 직전 한국 거래일 라벨(어제·지난 금요일·직전 거래일).
   let html = `
     <section class="section" data-section="story">
-        <h2 class="section-title">어제 무슨 일이 있었나</h2>
+        <h2 class="section-title">${previousSessionLabel(date)} 무슨 일이 있었나</h2>
         <div class="narrative">`;
 
   for (const block of content.bigStory.content) {
@@ -541,7 +546,7 @@ export function renderReport(
     renderTitle(content),
     renderSummary(content, data.date),
     renderKeyIndicators(data),
-    renderBigStory(content),
+    renderBigStory(content, data.date),
     renderWatchPoints(content),
     renderSoWhat(content),
     renderDetails(content, data, historicalData),

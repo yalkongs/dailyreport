@@ -170,3 +170,38 @@ test('새 스키마: 유지해야 할 공통 블록과 사실 규칙이 남아 �
   assert.match(p, /조건·관찰형/)
   assert.doesNotMatch(p, /확인 우선·관찰·경계로만/) // 제거한 전략 지도 블록의 잔재
 })
+
+// ─── I1 (Ruling 22): 06:40 실행에는 KRX 거래대금이 없다 — 종가×거래량 추정값으로, 추정임을 밝혀 준다 ───
+const vq = (ticker: string, name: string, price: number, volume: number, tradingValue?: number): EtfQuote => ({
+  ...pq(ticker, name, 0.5), price, volume, ...(tradingValue !== undefined ? { tradingValue } : {}),
+} as EtfQuote)
+
+test('거래대금 상위: KRX 거래대금이 없으면(06:40) 국내 종가×거래량 추정값을 추정 표기와 함께 준다', () => {
+  const p = buildMorningPrompt(withQuotes('2026-10-19', [
+    vq('069500.KS', 'KODEX 200', 40000, 1_000_000), // 400억
+    vq('091160.KS', 'KODEX 반도체', 50000, 3_000_000), // 1,500억
+    vq('SPY', 'SPDR S&P 500', 600, 90_000_000), // 미국은 이 줄에 넣지 않는다(국내 ETF 블록·원 단위)
+  ]))
+  const line = p.split('\n').find(l => l.includes('거래대금 상위'))
+  assert.ok(line, '거래대금 줄')
+  assert.doesNotMatch(line, /N\/A/)
+  assert.match(line, /추정/)
+  assert.match(line, /종가×거래량/)
+  assert.match(line, /KODEX 반도체 \(091160\) 150,000,000,000원 \/ KODEX 200 \(069500\) 40,000,000,000원/)
+  assert.doesNotMatch(line, /SPY/)
+})
+
+test('거래대금 상위: KRX 거래대금이 있으면 실제 값을 그대로(추정 표기 없이) 쓴다', () => {
+  const p = buildMorningPrompt(withQuotes('2026-10-19', [
+    vq('069500.KS', 'KODEX 200', 40000, 1_000_000, 41_000_000_000),
+    vq('091160.KS', 'KODEX 반도체', 50000, 3_000_000, 152_000_000_000),
+  ]))
+  const line = p.split('\n').find(l => l.includes('거래대금 상위'))
+  assert.ok(line)
+  assert.match(line, /^거래대금 상위: KODEX 반도체 \(091160\) 152,000,000,000원 \/ KODEX 200 \(069500\) 41,000,000,000원$/)
+})
+
+test('06:40 근거 상태: 실패한 데이터 소스에 krx-nav가 없다(KRX 미게시는 실패가 아님)', () => {
+  const p = buildMorningPrompt(makeData('2026-10-19', [], { tier: 'thin' }))
+  assert.match(p, /실패한 데이터 소스: 없음/)
+})

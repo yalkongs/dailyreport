@@ -5,7 +5,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { renderMorningHtml } from './renderer'
-import { reportPreviewDescription } from './report-preview'
+import { reportPreviewDescription, reportPreviewTitle } from './report-preview'
 import type { CollectedData, EtfQuote, MorningReport } from './types'
 
 const q = (ticker: string, name: string, pct: number) => ({ ticker, name, market: ticker.endsWith('.KS') ? 'KR' : 'US', price: 100, change: 0, changePercent: pct, volume: 1000, aum: null, nav: null, premiumDiscount: null, trackingError: null, prev20AvgVolume: null }) as EtfQuote
@@ -199,4 +199,29 @@ test('og:description: 길면 오늘 핵심은 그대로 두고 해외 신호를 
   assert.ok(head.endsWith('…'), head)
   assert.ok(overseas.startsWith(head.slice(0, -1)), head)
   assert.match(head, /(마감했고|보합권에서|금리 안정 속에|대형주는)…$/) // 쉼표·공백 경계에서 자름(어절 중간이 아님)
+})
+
+// M6 (Ruling 26): 모자이크 설명·자산군 카드의 고정 라벨 "어제"는 직전 한국 거래일에 맞춘다.
+test('고정 라벨: 금요일 발행은 어제, 월요일은 지난 금요일, 휴장 다음 날은 직전 거래일', () => {
+  const at = (date: string) => renderMorningHtml(report, { ...data, date })
+  for (const [date, label] of [['2026-10-16', '어제'], ['2026-10-19', '지난 금요일'], ['2026-10-12', '직전 거래일']] as const) {
+    const html = at(date)
+    assert.match(html, new RegExp(`<figcaption>${label} 분석한 ETF 등락\\(Korea·USA, 레버리지·인버스 제외\\)</figcaption>`), date)
+    assert.match(html, new RegExp(`aria-label="${label} 분석한 ETF 등락`), date)
+    assert.match(html, new RegExp(`<div class="field-label">${label} 움직임</div>`), date)
+    assert.match(html, new RegExp(`${label} 많이 움직인 자산군부터 놓았습니다`), date)
+    if (label !== '어제') assert.doesNotMatch(html.slice(html.indexOf('<body')), /어제 (분석한|움직임|많이 움직인)/, date)
+  }
+})
+
+// M2 (spec §4): og:title = 제목(Market과 같이 접두어 없이). 제목이 비면 날짜 기반 기본값.
+test('og:title·twitter:title은 제목 그대로(접두어 없음), 비면 날짜 기본값', () => {
+  const html = renderMorningHtml(report, data)
+  assert.match(html, /<meta property="og:title" content="반도체 ETF, 미국보다 훨씬 크게 빠졌다">/)
+  assert.match(html, /<meta name="twitter:title" content="반도체 ETF, 미국보다 훨씬 크게 빠졌다">/)
+  assert.doesNotMatch(html, /iMBank ETF Today ·/)
+  assert.equal(reportPreviewTitle('  제목만  '), '제목만')
+  assert.equal(reportPreviewTitle('', '2026-10-16 ETF Today'), '2026-10-16 ETF Today')
+  const untitled = renderMorningHtml({ ...report, cover: { headline: '', subline: '부제' } }, data)
+  assert.match(untitled, /<meta property="og:title" content="2026-10-16 ETF Today">/)
 })

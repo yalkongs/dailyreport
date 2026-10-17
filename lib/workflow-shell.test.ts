@@ -659,13 +659,15 @@ for (const flags of SHELL_MODES) {
 }
 
 // ── 글꼴 설치: Pretendard(카드 PNG 글꼴)는 있으면 등록, 없어도 step은 실패하지 않는다 ─────────────
-// 리포트 생성을 글꼴 때문에 막지 않는다(전송 > 침묵) — 없으면 Noto CJK로 렌더되고 경고만 남긴다.
+// 리포트 생성을 글꼴 때문에 막지 않는다(전송 > 침묵) — 없으면 Noto CJK로 렌더되고 ::error:: 주석을 남긴다(Ruling 24).
+// 진단용 fc-match(800·600) 출력은 성공·실패 모두 남는다.
 const fontStubs = {
   sudo: "exit 0", // apt-get update/install 성공으로 간주
   "fc-cache": "exit 0",
   "fc-list": `if [ "$1" = ":lang=ko" ]; then echo "Noto Sans CJK KR"; exit 0; fi
 for f in "$HOME"/.local/share/fonts/*.otf; do [ -e "$f" ] && echo "$f: Pretendard:style=Bold"; done
 exit 0`,
+  "fc-match": `echo "FCMATCH[$1]"`,
   sleep: "exit 0",
 };
 
@@ -675,25 +677,36 @@ for (const job of ["market", "etf"] as const) {
   for (const flags of SHELL_MODES) {
     const mode = flags.join(" ");
 
-    test(`${job} 글꼴 [bash ${mode}]: Pretendard 파일이 없어도 step은 성공하고 경고만 남긴다`, () => {
+    test(`${job} 글꼴 [bash ${mode}]: Pretendard 파일이 없어도 step은 성공하고 ::error:: 주석·fc-match 진단을 남긴다`, () => {
       const r = runStep(script, fontStubs, {}, flags);
       assert.equal(r.status, 0, r.out);
-      assert.match(r.out, /::warning::Pretendard/);
+      assert.match(r.out, /::error::Pretendard/);
+      assert.doesNotMatch(r.out, /::warning::Pretendard/);
+      assert.match(r.out, /FCMATCH\[Pretendard:weight=800\]/);
+      assert.match(r.out, /FCMATCH\[Pretendard:weight=600\]/);
     });
 
-    test(`${job} 글꼴 [bash ${mode}]: Pretendard 파일이 있으면 사용자 글꼴 폴더에 복사하고 등록한다`, () => {
+    test(`${job} 글꼴 [bash ${mode}]: Pretendard 파일이 있으면 사용자 글꼴 폴더에 복사하고 등록한다(fc-match 진단 포함)`, () => {
       const r = runStep(script, fontStubs, {}, flags, (w) => write(path.join(w, "assets", "fonts", "Pretendard-Bold.otf"), "otf"));
       assert.equal(r.status, 0, r.out);
       assert.ok(fs.existsSync(path.join(r.dir, ".local", "share", "fonts", "Pretendard-Bold.otf")), r.out);
-      assert.doesNotMatch(r.out, /::warning::Pretendard/);
-      assert.match(r.out, /Pretendard/);
+      assert.doesNotMatch(r.out, /::(?:error|warning)::Pretendard/);
+      assert.match(r.out, /Pretendard 설치 완료/);
+      assert.match(r.out, /FCMATCH\[Pretendard:weight=800\]/);
+      assert.match(r.out, /FCMATCH\[Pretendard:weight=600\]/);
+    });
+
+    test(`${job} 글꼴 [bash ${mode}]: fc-match가 실패해도 step은 성공한다`, () => {
+      const r = runStep(script, { ...fontStubs, "fc-match": "exit 1" }, {}, flags, (w) => write(path.join(w, "assets", "fonts", "Pretendard-Bold.otf"), "otf"));
+      assert.equal(r.status, 0, r.out);
+      assert.equal(r.calls("fc-match").length, 2, r.out);
     });
   }
 }
 
-// ── market test_date 형식 검사: node -e 소스·$GITHUB_OUTPUT에 보간되기 전에 거부한다 ─────────────────
-// test_date는 dispatch 화면의 자유 문자열이다. 따옴표·줄바꿈이 섞이면 헤드라인 추출 node -e 소스가 바뀌거나
-// GITHUB_OUTPUT에 임의의 출력 줄이 생긴다. 형식이 틀리면 생성 전에 step을 실패시킨다.
+// ── market test_date 형식 검사: $GITHUB_OUTPUT에 보간되기 전에 거부한다 ─────────────────
+// test_date는 dispatch 화면의 자유 문자열이다. 줄바꿈이 섞이면 GITHUB_OUTPUT에 임의의 출력 줄이 생긴다.
+// 형식이 틀리면 생성 전에 step을 실패시킨다. (예전 헤드라인 추출 node -e는 M1에서 제거 — node 호출이 없는지도 본다.)
 {
   const script = stepRun(jobBlock(dailyYml, "market"), "Generate market report");
   const genStubs = { npx: "exit 0", node: 'echo "헤드라인"' };
@@ -707,7 +720,7 @@ for (const job of ["market", "etf"] as const) {
     const mode = flags.join(" ");
 
     for (const [why, bad] of [
-      ["따옴표로 node -e 소스 탈출", "2026-10-16');require('child_process').execSync('id');('"],
+      ["따옴표·코드 섞임", "2026-10-16');require('child_process').execSync('id');('"],
       ["줄바꿈으로 GITHUB_OUTPUT 줄 추가", "2026-10-16\nheadline=x"],
       ["구분자 없음", "20261016"],
       ["뒤 공백", "2026-10-16 "],

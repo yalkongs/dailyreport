@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test lib/*.test.ts lib/etf/*.test.ts",
+    "test": "tsx --test lib/*.test.ts lib/etf/*.test.ts lib/preview/*.test.ts",
     "typecheck": "tsc --noEmit -p .",
     "generate": "tsx scripts/run.ts",
     "collect": "tsx scripts/collect-data.ts"

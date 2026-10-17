@@ -1,6 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toKrxBasDd, expectedKrxBasDd, resolveKrxSession, krxRequestOrder } from "./krx-session";
+import { toKrxBasDd, expectedKrxBasDd, resolveKrxSession, krxRequestOrder, krxNavFailed } from "./krx-session";
+import { analyzeEtfMode } from "./etf-mode";
+import { analyzeEtfEvidence } from "./etf-evidence";
+import type { CollectedData, EtfQuote, MacroContext } from "./types";
 
 test("toKrxBasDd: ISO 날짜를 KRX basDd로", () => {
   assert.equal(toKrxBasDd("2026-09-17"), "20260917");
@@ -48,4 +51,42 @@ test("krxRequestOrder: 직전 거래일을 먼저 요청하고, 그다음에야 
 
 test("krxRequestOrder: 백필(과거 reportDate)도 그 날짜의 직전 거래일을 먼저 요청한다", () => {
   assert.equal(krxRequestOrder("2026-09-16", "2026-09-28")[0], "20260915");
+});
+
+// ── I1 (Ruling 22): KRX OpenAPI는 08:00 KST 게시 — 06:40 실행에 KRX 값(NAV)이 없는 것은 실패가 아니다 ──
+
+function navQuote(ticker: string, nav: number | null, changePercent = 0.1): EtfQuote {
+  return {
+    ticker, name: ticker, market: ticker.endsWith(".KS") ? "KR" : "US",
+    price: 100, change: 0, changePercent, volume: 1000, aum: null, nav,
+    premiumDiscount: null, trackingError: null, prev20AvgVolume: null,
+  };
+}
+const NO_NAV_KR = [navQuote("069500.KS", null), navQuote("091160.KS", null), navQuote("SPY", null)];
+
+test("krxNavFailed: 06:40처럼 KRX 세션이 none·stale이면 국내 NAV가 전부 없어도 실패가 아니다", () => {
+  assert.equal(krxNavFailed("none", NO_NAV_KR), false);
+  assert.equal(krxNavFailed("stale", NO_NAV_KR), false);
+});
+
+test("krxNavFailed: 직전 거래일 세션(prev-session)을 받았는데 국내 NAV가 전부 없으면 실패", () => {
+  assert.equal(krxNavFailed("prev-session", NO_NAV_KR), true);
+});
+
+test("krxNavFailed: prev-session이어도 국내 NAV가 하나라도 있거나 국내 시세가 없으면 실패가 아니다", () => {
+  assert.equal(krxNavFailed("prev-session", [navQuote("069500.KS", 10050), navQuote("091160.KS", null)]), false);
+  assert.equal(krxNavFailed("prev-session", [navQuote("SPY", null)]), false);
+});
+
+test("06:40 데이터(KRX 없음): krx-nav 실패가 없어 ETF 모드 quiet·근거 strong이 막히지 않는다", () => {
+  const failedSources = krxNavFailed("none", NO_NAV_KR) ? ["krx-nav"] : [];
+  assert.deepEqual(failedSources, []);
+  const calm = [navQuote("SOXX", 0.2), navQuote("SPY", 0.1), ...NO_NAV_KR.slice(0, 2)];
+  const data: CollectedData = {
+    reportType: "morning", date: "2026-10-19", quotes: calm, flows: [], investorFlows: [],
+    macro: {} as MacroContext, analysisLens: "x",
+    news: [{ title: "삼성전자 노사 협상 타결", source: "x", publishedAt: "", url: "http://x", publishedHoursAgo: 1 }],
+  };
+  assert.equal(analyzeEtfMode(data, [], failedSources).mode, "quiet");
+  assert.equal(analyzeEtfEvidence(data, 0, failedSources).tier, "strong");
 });
