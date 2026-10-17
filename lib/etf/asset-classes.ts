@@ -1,0 +1,166 @@
+// lib/etf/asset-classes.ts
+//
+// 2026-10-17 아침 리포트 개편: ETF Today의 "자산군별 판단 재료" 카드 슬롯을 코드가 확정한다.
+// 모델은 슬롯(key)별 문장만 쓰고, 대표 ETF 예시와 등락률은 렌더러가 이 슬롯에서 직접 그린다.
+// 프롬프트·검증·렌더·미리보기 카드가 같은 슬롯을 쓰도록 계산을 한곳에 둔다.
+//
+// 분류 기준(유니버스 category·theme·foreignUnderlying, 레버리지·인버스는 isTacticalEtf로 제외):
+//   kr-large     국내 대형주      — KR, category 지수(코스닥150 제외: 대형주가 아님)
+//   kr-semi      국내 반도체·IT   — KR, theme 반도체·AI
+//   kr-sector    그날 움직인 섹터 — KR, 섹터·테마 중 theme이 있는 것(반도체·AI 제외), theme별 평균 |등락| 최대
+//   us-equity    미국 주식(환노출) — KR 해외지수 중 미국 대표지수 + US SPY·QQQ
+//   bonds        채권             — KR·US category 채권
+//   commodities  금·원자재        — KR·US category 대안 중 원자재(리츠·비트코인 제외)
+// 국내 슬롯(kr-*)은 국내 세션만 담는다 — foreignUnderlying(해외 기초지수) 국내 상장 ETF는 넣지 않는다.
+
+import type { EtfQuote } from './types'
+import { getEtfByTicker } from './universe'
+import { isTacticalEtf } from './story-characters'
+
+export type AssetClassKey = 'kr-large' | 'kr-semi' | 'kr-sector' | 'us-equity' | 'bonds' | 'commodities'
+
+export interface AssetRep { ticker: string; name: string; market: 'KR' | 'US'; pct: number }
+
+export interface AssetClassSlot {
+  key: AssetClassKey
+  label: string
+  holdingLabel: string
+  theme: string | null
+  reps: AssetRep[]
+  movePct: number
+}
+
+const SEMI_THEMES = new Set(['반도체', 'AI'])
+const US_BROAD_INDEX = new Set(['SPY', 'QQQ'])
+const COMMODITY_NAME = /골드|gold|silver|원유|oil|wti|commodity|원자재/i
+
+interface Candidate {
+  rep: AssetRep
+  category: string
+  theme: string | undefined
+  foreignUnderlying: boolean
+  defName: string
+}
+
+function toCandidates(quotes: EtfQuote[]): Candidate[] {
+  const out: Candidate[] = []
+  for (const q of quotes) {
+    const pct = q.changePercent
+    if (pct === null || pct === undefined || !Number.isFinite(pct)) continue
+    const def = getEtfByTicker(q.ticker)
+    if (!def) continue
+    if (isTacticalEtf(q) || isTacticalEtf({ ...q, name: def.name })) continue
+    out.push({
+      rep: { ticker: q.ticker, name: q.name, market: def.market, pct },
+      category: def.category,
+      theme: def.theme,
+      foreignUnderlying: def.foreignUnderlying === true,
+      defName: def.name,
+    })
+  }
+  return out
+}
+
+const byAbsPctDesc = (a: Candidate, b: Candidate) => Math.abs(b.rep.pct) - Math.abs(a.rep.pct)
+
+// 대표 ETF: 국내 |등락| 1위를 먼저, 둘째는 해외 |등락| 1위(슬롯에 해외가 있으면) 아니면 국내 2위.
+function pickReps(members: Candidate[]): AssetRep[] {
+  const kr = members.filter(m => m.rep.market === 'KR').slice().sort(byAbsPctDesc)
+  const us = members.filter(m => m.rep.market === 'US').slice().sort(byAbsPctDesc)
+  const reps: AssetRep[] = []
+  if (kr[0]) reps.push(kr[0].rep)
+  if (us[0]) reps.push(us[0].rep)
+  else if (kr[1]) reps.push(kr[1].rep)
+  return reps
+}
+
+function movePctOf(reps: AssetRep[]): number {
+  return (reps.find(r => r.market === 'KR') ?? reps[0]).pct
+}
+
+// 받침이 있으면 '을', 없으면 '를'. 한글 음절이 아니면 '를'.
+function objectParticle(word: string): '을' | '를' {
+  const last = word.trim().slice(-1)
+  const code = last.charCodeAt(0)
+  if (code < 0xac00 || code > 0xd7a3) return '를'
+  return (code - 0xac00) % 28 === 0 ? '를' : '을'
+}
+
+function holding(label: string): string {
+  return `${label}${objectParticle(label)} 갖고 있다면`
+}
+
+function pickSectorTheme(candidates: Candidate[]): { theme: string; members: Candidate[] } | null {
+  const groups = new Map<string, Candidate[]>()
+  for (const c of candidates) {
+    if (c.rep.market !== 'KR' || c.foreignUnderlying) continue
+    if (c.category !== '섹터' && c.category !== '테마') continue
+    if (!c.theme || SEMI_THEMES.has(c.theme)) continue
+    const list = groups.get(c.theme) ?? []
+    list.push(c)
+    groups.set(c.theme, list)
+  }
+  let best: { theme: string; members: Candidate[]; avg: number } | null = null
+  for (const [theme, members] of groups) {
+    const avg = members.reduce((sum, m) => sum + Math.abs(m.rep.pct), 0) / members.length
+    if (!best || avg > best.avg) best = { theme, members, avg }
+  }
+  return best ? { theme: best.theme, members: best.members } : null
+}
+
+export function buildAssetClassSlots(quotes: EtfQuote[]): AssetClassSlot[] {
+  const candidates = toCandidates(quotes)
+  const domestic = candidates.filter(c => c.rep.market === 'KR' && !c.foreignUnderlying)
+
+  const groups: Array<{ key: AssetClassKey; label: string; holdingLabel: string; theme: string | null; members: Candidate[] }> = [
+    {
+      key: 'kr-large', label: '국내 대형주', holdingLabel: holding('국내 대형주'), theme: null,
+      members: domestic.filter(c => c.category === '지수' && !/코스닥/.test(c.defName)),
+    },
+    {
+      key: 'kr-semi', label: '국내 반도체·IT', holdingLabel: holding('반도체'), theme: '반도체',
+      members: domestic.filter(c => c.theme !== undefined && SEMI_THEMES.has(c.theme)),
+    },
+  ]
+
+  const sector = pickSectorTheme(candidates)
+  if (sector) {
+    groups.push({ key: 'kr-sector', label: sector.theme, holdingLabel: holding(sector.theme), theme: sector.theme, members: sector.members })
+  }
+
+  groups.push(
+    {
+      key: 'us-equity', label: '미국 주식(환노출)', holdingLabel: holding('미국 주식'), theme: null,
+      members: candidates.filter(c =>
+        (c.rep.market === 'KR' && c.foreignUnderlying && c.category === '해외지수' && /미국/.test(c.defName)) ||
+        (c.rep.market === 'US' && US_BROAD_INDEX.has(c.rep.ticker))),
+    },
+    {
+      key: 'bonds', label: '채권', holdingLabel: holding('채권'), theme: null,
+      members: candidates.filter(c => c.category === '채권'),
+    },
+    {
+      key: 'commodities', label: '금·원자재', holdingLabel: holding('금·원자재'), theme: null,
+      members: candidates.filter(c => c.category === '대안' && (COMMODITY_NAME.test(c.defName) || COMMODITY_NAME.test(c.rep.name))),
+    },
+  )
+
+  const slots: AssetClassSlot[] = []
+  for (const g of groups) {
+    const reps = pickReps(g.members)
+    if (reps.length === 0) continue
+    slots.push({ key: g.key, label: g.label, holdingLabel: g.holdingLabel, theme: g.theme, reps, movePct: movePctOf(reps) })
+  }
+  // 중요도(|movePct|) 내림차순. 같은 값이면 위 정의 순서 유지(Array.prototype.sort는 안정 정렬).
+  return slots.sort((a, b) => Math.abs(b.movePct) - Math.abs(a.movePct))
+}
+
+// 링크 미리보기 카드의 "○○를 갖고 있다면" 자산군: 국내 슬롯 중 |movePct| 최대, 없으면 첫 슬롯.
+export function pickFeaturedSlot(slots: AssetClassSlot[]): AssetClassSlot | null {
+  let best: AssetClassSlot | null = null
+  for (const s of slots) {
+    if (!s.key.startsWith('kr-')) continue
+    if (!best || Math.abs(s.movePct) > Math.abs(best.movePct)) best = s
+  }
+  return best ?? slots[0] ?? null
+}
