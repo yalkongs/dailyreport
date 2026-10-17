@@ -77,15 +77,29 @@ test("dry_run일 때만 test_date를 TEST_DATE·ETF_REPORT_DATE로 전달", () =
   assert.match(stepBlock(jobBlock(wf, "etf"), "Run ETF pipeline"), /REPORT_DATE=\$\{ETF_REPORT_DATE:-\$\(TZ=Asia\/Seoul date \+%Y-%m-%d\)\}/);
 });
 
-// test_date는 사람이 dispatch 화면에 입력하는 자유 문자열 — 형식을 확인하기 전에는 node -e 소스·$GITHUB_OUTPUT에
+// test_date는 사람이 dispatch 화면에 입력하는 자유 문자열 — 형식을 확인하기 전에는 $GITHUB_OUTPUT에
 // 보간하지 않는다(ETF는 run-etf.ts가 ETF_REPORT_DATE 형식을 먼저 검사한다). 실제 거부 동작은 workflow-shell 테스트.
-test("market test_date는 YYYY-MM-DD만 받는다 — 생성·node -e·GITHUB_OUTPUT보다 먼저 검사", () => {
+test("market test_date는 YYYY-MM-DD만 받는다 — 생성·GITHUB_OUTPUT보다 먼저 검사", () => {
   const s = stepBlock(jobBlock(readWorkflow(), "market"), "Generate market report");
   const guard = s.indexOf('[[ "$TEST_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]');
   assert.ok(guard >= 0, "test_date 형식 검사 없음");
-  for (const later of ["npx tsx scripts/run.ts", 'node -e "', ">> $GITHUB_OUTPUT"]) {
+  for (const later of ["npx tsx scripts/run.ts", ">> $GITHUB_OUTPUT"]) {
     assert.ok(s.indexOf(later) >= 0 && guard < s.indexOf(later), later);
   }
+});
+
+// M1: 생성 step은 date만 내보낸다. 텔레그램 헤드라인·이상 탐지 건수는 deliver의 resolve(delivery-state.ts)가
+// 인덱스에서 읽는다 — 생성 step의 headline·anomaly 출력과 날짜를 JS 소스에 보간하던 node -e는 아무도 읽지 않던 죽은 코드.
+test("생성 step은 date만 GITHUB_OUTPUT에 쓰고 node -e로 날짜를 JS에 보간하지 않는다", () => {
+  const wf = readWorkflow();
+  for (const [job, step] of [["market", "Generate market report"], ["etf", "Run ETF pipeline"]] as const) {
+    const s = stepBlock(jobBlock(wf, job), step);
+    assert.doesNotMatch(s, /node -e/, job);
+    const outputs = [...s.matchAll(/echo "([a-z_]+)=[^"]*" >> \$GITHUB_OUTPUT/g)].map((m) => m[1]);
+    assert.deepEqual(outputs, ["date"], job);
+  }
+  // deliver는 생성 step 출력이 아니라 resolve 출력(steps.delivery_<kind>)을 쓴다.
+  assert.doesNotMatch(wf, /steps\.(?:report|etf)\.outputs\.(?:headline|anomaly_count|anomaly_breakdown)/);
 });
 
 test("dry_run일 때만 생성 HTML·PNG를 아티팩트로 업로드", () => {
@@ -114,6 +128,11 @@ test("텔레그램 링크에 utm_source=telegram, 글꼴 단계는 Pretendard도
     // 파일이 없어도 step이 실패하지 않게 if로 감싼다(bash -e) — 동작은 workflow-shell 테스트가 실행해 본다.
     assert.match(s, /if ls assets\/fonts\/Pretendard-\*\.otf >\/dev\/null 2>&1/, job);
     assert.match(s, /cp assets\/fonts\/Pretendard-\*\.otf ~\/\.local\/share\/fonts\//, job);
+    // Ruling 24: 실패는 ::error:: 주석(발송은 계속), 진단용 fc-match 800·600 출력은 항상 남긴다.
+    assert.match(s, /echo "::error::Pretendard/, job);
+    assert.doesNotMatch(s, /::warning::Pretendard/, job);
+    assert.match(s, /fc-match 'Pretendard:weight=800' \|\| true/, job);
+    assert.match(s, /fc-match 'Pretendard:weight=600' \|\| true/, job);
   }
   for (const kind of ["market", "etf"]) {
     const s = stepBlock(jobBlock(wf, "deliver"), `send ${kind}`);
@@ -386,8 +405,14 @@ const ciPath = path.join(WF_DIR, "ci.yml");
 const ciYml = fs.existsSync(ciPath) ? fs.readFileSync(ciPath, "utf8") : "";
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8")) as { scripts: Record<string, string> };
 
-test("package.json: npm test·typecheck가 한 명령으로 전체 테스트·타입 검사를 돈다", () => {
-  assert.equal(pkg.scripts.test, "tsx --test lib/*.test.ts lib/etf/*.test.ts");
+test("package.json: npm test·typecheck가 한 명령으로 전체 테스트(카드 lib/preview 포함)·타입 검사를 돈다", () => {
+  assert.equal(pkg.scripts.test, "tsx --test lib/*.test.ts lib/etf/*.test.ts lib/preview/*.test.ts");
+  // 테스트 파일이 있는 lib 하위 폴더는 모두 npm test(=CI)에 들어가야 한다 — 빠진 폴더는 CI가 영영 돌리지 않는다.
+  const libDir = path.join(__dirname);
+  const dirsWithTests = fs.readdirSync(libDir, { withFileTypes: true })
+    .filter((d) => d.isDirectory() && fs.readdirSync(path.join(libDir, d.name)).some((f) => f.endsWith(".test.ts")))
+    .map((d) => d.name);
+  for (const dir of dirsWithTests) assert.ok(pkg.scripts.test.includes(`lib/${dir}/*.test.ts`), `lib/${dir} 테스트가 npm test에 없음`);
   assert.equal(pkg.scripts.typecheck, "tsc --noEmit -p .");
 });
 
