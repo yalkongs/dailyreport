@@ -21,7 +21,7 @@ import {
   reportPreviewTitle,
   reportRouteUrl,
 } from './report-preview'
-// R1 (2026-07-22): 선택 로직은 story-characters.ts로 이동(렌더러·프롬프트·검증 공유).
+// 레버리지·인버스 판정(자산군 슬롯·미리보기 카드와 같은 규칙).
 import { isTacticalEtf } from './story-characters'
 import { buildAssetClassSlots, cardSlot, type AssetClassSlot, type AssetRep } from './asset-classes'
 import { buildMosaicTiles, renderEtfCardSvg, renderMosaicSvg, saveCardPng, type MosaicTile } from '../preview/data-card'
@@ -678,7 +678,7 @@ ${renderClientNotice(data)}`
       focus: filled(report.summary?.focus) ? polishKoreanText(report.summary.focus) : '',
     }),
     imageUrl: reportPreviewImageUrl(data.date, options.publicBaseUrl),
-    previewTitle: reportPreviewTitle(previewHeadline),
+    previewTitle: reportPreviewTitle(previewHeadline, `${data.date} ETF Today`),
   })
 }
 

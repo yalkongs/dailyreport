@@ -5,7 +5,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { renderMorningHtml } from './renderer'
-import { reportPreviewDescription } from './report-preview'
+import { reportPreviewDescription, reportPreviewTitle } from './report-preview'
 import type { CollectedData, EtfQuote, MorningReport } from './types'
 
 const q = (ticker: string, name: string, pct: number) => ({ ticker, name, market: ticker.endsWith('.KS') ? 'KR' : 'US', price: 100, change: 0, changePercent: pct, volume: 1000, aum: null, nav: null, premiumDiscount: null, trackingError: null, prev20AvgVolume: null }) as EtfQuote
@@ -199,4 +199,16 @@ test('og:description: 길면 오늘 핵심은 그대로 두고 해외 신호를 
   assert.ok(head.endsWith('…'), head)
   assert.ok(overseas.startsWith(head.slice(0, -1)), head)
   assert.match(head, /(마감했고|보합권에서|금리 안정 속에|대형주는)…$/) // 쉼표·공백 경계에서 자름(어절 중간이 아님)
+})
+
+// M2 (spec §4): og:title = 제목(Market과 같이 접두어 없이). 제목이 비면 날짜 기반 기본값.
+test('og:title·twitter:title은 제목 그대로(접두어 없음), 비면 날짜 기본값', () => {
+  const html = renderMorningHtml(report, data)
+  assert.match(html, /<meta property="og:title" content="반도체 ETF, 미국보다 훨씬 크게 빠졌다">/)
+  assert.match(html, /<meta name="twitter:title" content="반도체 ETF, 미국보다 훨씬 크게 빠졌다">/)
+  assert.doesNotMatch(html, /iMBank ETF Today ·/)
+  assert.equal(reportPreviewTitle('  제목만  '), '제목만')
+  assert.equal(reportPreviewTitle('', '2026-10-16 ETF Today'), '2026-10-16 ETF Today')
+  const untitled = renderMorningHtml({ ...report, cover: { headline: '', subline: '부제' } }, data)
+  assert.match(untitled, /<meta property="og:title" content="2026-10-16 ETF Today">/)
 })
