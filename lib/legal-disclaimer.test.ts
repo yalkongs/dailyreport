@@ -8,6 +8,8 @@ import type { CollectedData, EtfQuote, MorningReport } from "./etf/types";
 
 const MARKET_CONTENT: ReportContent = {
   cover: { headline: "테스트 제목", subline: "테스트 서브라인" },
+  summary: { yesterday: "어제 요약", today: "오늘 요약", myAssets: "내 자산 요약" },
+  cardLine: { kind: "watch", text: "카드 한 줄" },
   bigStory: { content: [{ type: "paragraph", text: "본문" }] },
   watchPoints: [],
   compass: [],

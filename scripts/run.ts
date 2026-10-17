@@ -333,7 +333,7 @@ async function main() {
     // Claude JSON 출력에서 직접 내러티브 요소 추출
     const soWhatTopics = reportContent.soWhat.map((s) => s.title);
     const watchTopics = reportContent.watchPoints.map((w) => w.title);
-    const compassTopics = reportContent.compass.map((c) => c.title);
+    const compassTopics = (reportContent.compass ?? []).map((c) => c.title);
     const lookingAhead = reportContent.watchPoints[0]?.title || "";
 
     const narrativeEntry = {

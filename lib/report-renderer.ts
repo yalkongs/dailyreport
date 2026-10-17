@@ -267,10 +267,11 @@ function renderWatchPoints(content: ReportContent): string {
 }
 
 function renderCompass(content: ReportContent): string {
-  if (content.compass.length === 0) return "";
+  const compass = content.compass ?? [];
+  if (compass.length === 0) return "";
 
   let boxes = "";
-  for (const section of content.compass) {
+  for (const section of compass) {
     boxes += renderCompassBox(section);
   }
 
