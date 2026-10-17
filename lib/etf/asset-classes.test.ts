@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { buildAssetClassSlots, pickFeaturedSlot } from './asset-classes'
+import { KR_ETF_UNIVERSE } from './universe'
 import type { EtfQuote } from './types'
 
 const q = (ticker: string, name: string, pct: number): EtfQuote => ({
@@ -71,7 +72,6 @@ test('그날 움직인 국내 섹터: 반도체·AI 제외, theme별 평균 |등
     q('449450.KS', 'PLUS K방산', 2.0),             // 방산 평균 (2.0 + 3.0) / 2 = 2.5
     q('463250.KS', 'TIGER K방산&우주', -3.0),
     q('157490.KS', 'TIGER 소프트웨어', 9.0),        // AI — 섹터 슬롯 후보 아님(kr-semi)
-    q('091170.KS', 'KODEX 은행', 7.0),             // theme 없음 — 섹터 슬롯 후보 아님
   ])
   const sector = s.find(x => x.key === 'kr-sector')!
   assert.equal(sector.label, '조선')
@@ -84,6 +84,43 @@ test('그날 움직인 국내 섹터: 반도체·AI 제외, theme별 평균 |등
   assert.equal(battery.holdingLabel, '2차전지를 갖고 있다면')
 })
 
+// Ruling 12: 유니버스의 국내 섹터·테마 전부에 theme이 있어 은행·자동차 같은 업종도 섹터 슬롯 후보가 된다.
+test('유니버스: 국내 섹터·테마 ETF는 전부 theme이 있다', () => {
+  const missing = KR_ETF_UNIVERSE.filter(e => (e.category === '섹터' || e.category === '테마') && !e.theme).map(e => e.name)
+  assert.deepEqual(missing, [])
+})
+
+test('그날 움직인 국내 섹터: 은행 +7%가 조선 +2%를 이긴다', () => {
+  const s = buildAssetClassSlots([
+    q('494670.KS', 'TIGER 조선TOP10', 2.0),
+    q('091170.KS', 'KODEX 은행', 7.0),
+  ])
+  const sector = s.find(x => x.key === 'kr-sector')!
+  assert.equal(sector.label, '은행')
+  assert.equal(sector.theme, '은행')
+  assert.equal(sector.holdingLabel, '은행을 갖고 있다면')
+  assert.deepEqual(sector.reps.map(r => r.ticker), ['091170.KS'])
+})
+
+test('같은 theme의 국내 ETF는 한 섹터로 묶인다(에너지화학 두 종 평균)', () => {
+  const s = buildAssetClassSlots([
+    q('117460.KS', 'KODEX 에너지화학', 3.0),
+    q('139250.KS', 'TIGER 200 에너지화학', 5.0),  // 에너지화학 평균 4.0
+    q('139270.KS', 'TIGER 200 금융', -3.5),
+    q('300610.KS', 'TIGER K게임', 1.0),
+  ])
+  const sector = s.find(x => x.key === 'kr-sector')!
+  assert.equal(sector.label, '에너지화학')
+  assert.equal(sector.holdingLabel, '에너지화학을 갖고 있다면')
+  assert.deepEqual(sector.reps.map(r => r.ticker), ['139250.KS', '117460.KS'])
+})
+
+test('TIGER 200 IT는 theme IT로 국내 반도체·IT 슬롯에 들어가고 섹터 후보가 아니다', () => {
+  const s = buildAssetClassSlots([q('139260.KS', 'TIGER 200 IT', -6.0), q('091170.KS', 'KODEX 은행', 1.0)])
+  assert.deepEqual(s.find(x => x.key === 'kr-semi')?.reps.map(r => r.ticker), ['139260.KS'])
+  assert.equal(s.find(x => x.key === 'kr-sector')?.label, '은행')
+})
+
 test('해외 기초지수 국내 상장 ETF는 국내 슬롯에 넣지 않는다(국내 세션만)', () => {
   const s = buildAssetClassSlots([
     q('390390.KS', 'KODEX 미국반도체', -6),                             // 미국 반도체 — kr-semi 아님
@@ -92,7 +129,24 @@ test('해외 기초지수 국내 상장 ETF는 국내 슬롯에 넣지 않는다
     q('133690.KS', 'TIGER 미국나스닥100', 1.5),
   ])
   assert.deepEqual(s.map(x => x.key), ['us-equity'])
-  assert.deepEqual(s[0].reps.map(r => r.ticker), ['133690.KS'])
+})
+
+// Ruling 13: us-equity = 국내 상장 해외 기초지수 주식형 중 이름에 '미국'(해외지수·섹터·테마, 채권·대안 제외) + SPY·QQQ.
+test('미국 주식 슬롯: KODEX 미국반도체도 포함, 미국채·미국달러 채권은 제외', () => {
+  const s = buildAssetClassSlots([
+    q('390390.KS', 'KODEX 미국반도체', -6),
+    q('133690.KS', 'TIGER 미국나스닥100', 1.5),
+    q('305080.KS', 'TIGER 미국채10년선물', 0.3),
+    q('329750.KS', 'TIGER 미국달러단기채권액티브', 0.1),
+    q('QQQ', 'Invesco NASDAQ-100 ETF', 0.9),
+    q('IWM', 'iShares Russell 2000 ETF', 3.0),                           // SPY·QQQ만
+  ])
+  const us = s.find(x => x.key === 'us-equity')!
+  assert.deepEqual(us.reps.map(r => r.ticker), ['390390.KS', 'QQQ'])
+  assert.equal(us.movePct, -6)
+  assert.deepEqual(s.find(x => x.key === 'bonds')?.reps.map(r => r.ticker), ['305080.KS', '329750.KS'])
+  const noUs = buildAssetClassSlots([q('390390.KS', 'KODEX 미국반도체', -6), q('133690.KS', 'TIGER 미국나스닥100', 1.5)])
+  assert.deepEqual(noUs[0].reps.map(r => r.ticker), ['390390.KS', '133690.KS']) // 해외 대표가 없으면 국내 2위
 })
 
 test('국내 대형주는 코스닥150을 넣지 않고, 원자재는 리츠·비트코인을 넣지 않는다', () => {

@@ -168,4 +168,5 @@ test('새 스키마: 유지해야 할 공통 블록과 사실 규칙이 남아 �
   assert.match(p, /\[준법·표현 규칙\]/)
   assert.match(p, /국내 시장 스트레스: 전일 KODEX 200 -8\.21% 급락/)
   assert.match(p, /조건·관찰형/)
+  assert.doesNotMatch(p, /확인 우선·관찰·경계로만/) // 제거한 전략 지도 블록의 잔재
 })

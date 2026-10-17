@@ -93,8 +93,8 @@ export async function generateMorningReport(data: CollectedData): Promise<Mornin
 
 // P0 (2026-04-24): validator 재시도 소진 시 fallback 경로에서 사용.
 // 생성·파싱·언어 정규화까지 수행하되 품질 검증은 하지 않는다.
-// 2026-10-17: run-etf.ts의 마지막 시도는 이 결과를 validateMorningReport(사실 검증은 경고만)로
-// 검증해 발송한다(전송 > 침묵, F02).
+// 2026-10-17: run-etf.ts의 마지막 시도는 이 결과를 validateMorningReport(사실 검증·중복 문장은 경고,
+// 고칠 수 있는 구조 문제는 교정)로 검증해 발송한다(전송 > 침묵, F02·Ruling 10).
 export async function generateMorningReportRaw(data: CollectedData): Promise<MorningReport> {
   const prompt = buildMorningPrompt(data)
   const response = await getClient().messages.create({
@@ -121,6 +121,8 @@ export async function generateMorningReportRaw(data: CollectedData): Promise<Mor
 
 // P0 (2026-04-24): Tier 1 fallback용. 외부에서 직접 호출해 검증할 때 사용.
 // 2026-10-16: 축소판 검증에서는 사실 검증을 경고로만 남긴다(전송 > 침묵).
+// 2026-10-17 (Ruling 10): 코드가 고칠 수 있는 구조 문제(todayChecks 초과·card.key·슬롯 밖/중복 카드)는 교정하고,
+// card.line 길이·질문형과 중복 문장은 경고로만 남긴다. 필수 필드 누락·투자 권유는 그대로 막는다.
 export function validateMorningReport(report: MorningReport, data: CollectedData): void {
   validateMorningReportQuality(report, data, buildMorningStrategyInput(data), { factChecksAsWarnings: true })
 }
@@ -472,7 +474,7 @@ ${EVIDENCE_RULES}
 - USD/KRW처럼 1,000 이상인 숫자는 반드시 쉼표를 넣어 "1,475"처럼 표기하십시오.
 - 국내 ETF는 반드시 "종목명 (6자리 코드)"로 표기하십시오. (cover.headline 제외 — [cover.headline 작성 규칙] 참조) "122630.KS KODEX 레버리지"나 "122630.KS" 형식은 금지입니다.
 - 자금 유입, 자금 유출, 순유입, 순유출, 영문 flow 표현을 쓰지 마십시오.
-- 매수/매도 지시를 하지 말고 ETF군별 확인 우선·관찰·경계로만 표현하십시오.
+- 매수/매도 지시를 하지 말고 판단 재료와 확인 조건으로만 표현하십시오.
 
 아래 JSON 형식으로만 응답하십시오:
 {

@@ -132,7 +132,116 @@ for (const [field, set] of FIELD_SETTERS) {
 test('(e) 축소판(factChecksAsWarnings)에서는 수치 오류가 위반 목록에 없다', () => {
   const r = validReport(); r.summary.domestic = BAD
   assert.doesNotMatch(validate(r, makeData(), true), /수치가 입력 데이터와 다름/)
-  assert.equal(validate(validReport(), makeData(), true), '')
+  // 같은 리포트가 1·2회차에서는 막히고, 마지막 시도에서는 다른 위반 없이 통과(발송)한다.
+  const again = validReport(); again.summary.domestic = BAD
+  assert.match(validate(again), /수치가 입력 데이터와 다름/)
+  const last = validReport(); last.summary.domestic = BAD
+  assert.equal(validate(last, makeData(), true), '')
+})
+
+// ─── Ruling 10: 마지막 축소판에서는 코드가 고칠 수 있는 구조 문제를 교정하고 경고만 남긴다 ─────
+const validateLast = (r: MorningReport, data: CollectedData = makeData()) => validate(r, data, true)
+
+test('마지막 시도: todayChecks가 3개를 넘으면 앞 3개만 남기고 통과', () => {
+  const r = validReport()
+  const firstThree = r.todayChecks.map(c => c.what)
+  r.todayChecks.push({ time: '22:00', what: '추가로 붙은 네 번째 항목', baseline: '없음', invalidation: '없음' })
+  assert.match(validate(structuredClone(r)), /오늘 확인할 것은 정확히 3개/) // 1·2회차는 재생성 사유
+  assert.equal(validateLast(r), '')
+  assert.deepEqual(r.todayChecks.map(c => c.what), firstThree)
+})
+
+test('마지막 시도: todayChecks가 1~2개면 경고만, 0개면 필수 필드 누락으로 막는다', () => {
+  const two = validReport(); two.todayChecks = two.todayChecks.slice(0, 2)
+  assert.equal(validateLast(two), '')
+  assert.equal(two.todayChecks.length, 2)
+  const none = validReport(); none.todayChecks = []
+  assert.match(validateLast(none), /필수 필드 누락: todayChecks/)
+  const absent = validReport() as unknown as Record<string, unknown>; delete absent.todayChecks
+  assert.match(validateLast(absent as unknown as MorningReport), /필수 필드 누락: todayChecks/)
+})
+
+test('마지막 시도: card.key가 슬롯에 없으면 주제 슬롯 key로 교정(console.warn 기록)', (t) => {
+  const warn = t.mock.method(console, 'warn', () => {})
+  const r = validReport(); r.card.key = 'kr-sector'
+  assert.equal(validateLast(r), '')
+  assert.equal(r.card.key, 'kr-semi')
+  assert.ok(warn.mock.calls.some(c => String(c.arguments[0]).includes('[struct-fix] card.key kr-sector → kr-semi')))
+})
+
+test('마지막 시도: 슬롯에 없는 key의 assetCards는 버린다', () => {
+  const r = validReport()
+  r.assetCards.push({ key: 'kr-sector', ifHolding: '섹터 순환 흐름을 지켜볼 때입니다.', ifConsidering: '섹터 쏠림이 이어지는지 먼저 볼 자리입니다.' })
+  assert.equal(validateLast(r), '')
+  assert.deepEqual(r.assetCards.map(c => c.key), ['kr-semi', 'kr-large', 'us-equity', 'commodities', 'bonds'])
+})
+
+test('assetCards key 중복: 1·2회차는 위반, 마지막 시도는 첫 카드만 남긴다', () => {
+  const dup = () => {
+    const r = validReport()
+    r.assetCards.push({ key: 'kr-semi', ifHolding: '중복으로 붙은 두 번째 반도체 카드입니다.', ifConsidering: '중복 카드의 신규 관점 문장입니다.' })
+    return r
+  }
+  assert.match(validate(dup()), /assetCards key 중복: kr-semi/)
+  const r = dup()
+  assert.equal(validateLast(r), '')
+  const semi = r.assetCards.filter(c => c.key === 'kr-semi')
+  assert.equal(semi.length, 1)
+  assert.equal(semi[0].ifHolding, '개장 30분 동안 낙폭이 줄어드는지 지켜볼 때입니다.')
+})
+
+test('마지막 시도: card.line이 길거나 질문형이어도 경고만(값은 그대로)', () => {
+  const long = validReport(); long.card.line = '반등인지 추가 하락인지 오전 흐름과 거래대금을 함께 지켜볼 때입니다'
+  assert.equal(validateLast(long), '')
+  assert.equal(long.card.line, '반등인지 추가 하락인지 오전 흐름과 거래대금을 함께 지켜볼 때입니다')
+  const question = validReport(); question.card.line = '반등이 이어질까요?'
+  assert.equal(validateLast(question), '')
+  assert.equal(question.card.line, '반등이 이어질까요?')
+})
+
+test('중복 문장: 1·2회차는 위반, 마지막 시도는 경고', () => {
+  const dup = () => {
+    const r = validReport()
+    r.assetCards[1].ifConsidering = r.assetCards[0].ifHolding
+    return r
+  }
+  assert.match(validate(dup()), /중복 문장 감지/)
+  assert.equal(validateLast(dup()), '')
+})
+
+test('중복 문장 검사는 짧은 구조 필드(baseline·time)를 보지 않는다', () => {
+  const r = validReport()
+  r.todayChecks[0].baseline = '전일 종가 대비 낙폭 축소 여부를 기준으로'
+  r.todayChecks[1].baseline = '전일 종가 대비 낙폭 축소 여부를 기준으로'
+  r.todayChecks[2].time = '09:00~09:30'
+  assert.equal(validate(r), '')
+})
+
+test('마지막 시도에도 진짜 필수 필드 누락과 투자 권유는 막는다', () => {
+  const missing = validReport(); missing.summary.overseas = ''
+  assert.match(validateLast(missing), /필수 필드 누락: summary\.overseas/)
+  const noContent = validReport(); noContent.assetCards[0].ifHolding = ''
+  assert.match(validateLast(noContent), /필수 필드 누락: assetCards\[0\]\.ifHolding/)
+  const advice = validReport(); advice.assetCards[0].ifConsidering = '반등이 나오면 매수하세요.'
+  assert.match(validateLast(advice), /투자 권유성 표현/)
+})
+
+test('card.key가 슬롯에 있지만 주제 슬롯과 다르면 경고만', () => {
+  const r = validReport(); r.card.key = 'kr-large'
+  assert.equal(validate(r), '')
+  assert.equal(r.card.key, 'kr-large')
+})
+
+test('card.line의 숫자는 경고만(숫자 자체가 뉴스일 때 카드에 쓸 수 있다)', () => {
+  const r = validReport(); r.card.line = '낙폭 10%대 이후 첫 거래일입니다'
+  assert.equal(validate(r), '')
+})
+
+test('비중 표현: 판단을 미루는 서술은 통과, 권유형 종결만 잡는다', () => {
+  const ok = validReport(); ok.assetCards[2].ifConsidering = '환노출 비중을 줄이는 것이 좋을지는 환율을 본 뒤 판단할 일입니다'
+  assert.equal(validate(ok), '')
+  const ng = validReport(); ng.assetCards[2].ifConsidering = '환노출 비중을 줄이는 것이 좋겠습니다.'
+  assert.match(validate(ng), /투자 권유성 표현/)
 })
 
 test('주간 수익률·환율 방향 오류도 새 필드에서 잡는다', () => {

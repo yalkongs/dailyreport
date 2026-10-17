@@ -6,9 +6,10 @@
 //
 // 분류 기준(유니버스 category·theme·foreignUnderlying, 레버리지·인버스는 isTacticalEtf로 제외):
 //   kr-large     국내 대형주      — KR, category 지수(코스닥150 제외: 대형주가 아님)
-//   kr-semi      국내 반도체·IT   — KR, theme 반도체·AI
-//   kr-sector    그날 움직인 섹터 — KR, 섹터·테마 중 theme이 있는 것(반도체·AI 제외), theme별 평균 |등락| 최대
-//   us-equity    미국 주식(환노출) — KR 해외지수 중 미국 대표지수 + US SPY·QQQ
+//   kr-semi      국내 반도체·IT   — KR, theme 반도체·AI·IT
+//   kr-sector    그날 움직인 섹터 — KR, 섹터·테마(반도체·AI·IT 제외), theme별 평균 |등락| 최대
+//                (유니버스의 국내 섹터·테마는 전부 theme이 있다 — 은행·자동차·금융 등)
+//   us-equity    미국 주식(환노출) — KR 해외 기초지수 주식형 중 이름에 '미국'(해외지수·섹터·테마) + US SPY·QQQ
 //   bonds        채권             — KR·US category 채권
 //   commodities  금·원자재        — KR·US category 대안 중 원자재(리츠·비트코인 제외)
 // 국내 슬롯(kr-*)은 국내 세션만 담는다 — foreignUnderlying(해외 기초지수) 국내 상장 ETF는 넣지 않는다.
@@ -30,8 +31,9 @@ export interface AssetClassSlot {
   movePct: number
 }
 
-const SEMI_THEMES = new Set(['반도체', 'AI'])
+const SEMI_THEMES = new Set(['반도체', 'AI', 'IT'])
 const US_BROAD_INDEX = new Set(['SPY', 'QQQ'])
+const NON_EQUITY = new Set(['채권', '대안'])
 const COMMODITY_NAME = /골드|gold|silver|원유|oil|wti|commodity|원자재/i
 
 interface Candidate {
@@ -132,7 +134,7 @@ export function buildAssetClassSlots(quotes: EtfQuote[]): AssetClassSlot[] {
     {
       key: 'us-equity', label: '미국 주식(환노출)', holdingLabel: holding('미국 주식'), theme: null,
       members: candidates.filter(c =>
-        (c.rep.market === 'KR' && c.foreignUnderlying && c.category === '해외지수' && /미국/.test(c.defName)) ||
+        (c.rep.market === 'KR' && c.foreignUnderlying && !NON_EQUITY.has(c.category) && /미국/.test(c.defName)) ||
         (c.rep.market === 'US' && US_BROAD_INDEX.has(c.rep.ticker))),
     },
     {

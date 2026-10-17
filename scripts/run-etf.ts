@@ -195,8 +195,8 @@ async function main() {
 
   // Step 5: Claude 분석 (최대 2회 시도 + Tier 1 fallback)
   // P0 (2026-04-24): 기존 3회 재시도는 대증요법(패턴 좁히기)에 의존해 왔음.
-  // 2026-10-17 출력 스키마 개편: 2회 검증 실패 시 마지막으로 한 번 더 생성해 사실 검증을
-  // 경고로만 남기는 검증(validateMorningReport, F02 "전송 > 침묵")을 통과하면 발송한다.
+  // 2026-10-17 출력 스키마 개편: 2회 검증 실패 시 마지막으로 한 번 더 생성해 축소판 검증
+  // (validateMorningReport — 사실 검증 경고·구조 교정, F02 "전송 > 침묵"·Ruling 10)을 통과하면 발송한다.
   console.log('[5/8] Claude 리포트 생성 중...')
   const MAX_CLAUDE_ATTEMPTS = 2
   let report: Awaited<ReturnType<typeof generateMorningReport>> | undefined
@@ -224,7 +224,8 @@ async function main() {
     }
   }
 
-  // P0 fallback: 재생성 + 사실 검증 경고 모드 검증(구조·준법 검사는 그대로 위반)
+  // P0 fallback: 재생성 + 축소판 검증 — 사실 검증·중복 문장은 경고, 고칠 수 있는 구조 문제는 교정(Ruling 10).
+  // 필수 필드 누락·준법(투자 권유) 위반만 발송을 막는다.
   if (!report) {
     if (!deadline.canStartCall()) {
       console.error(`[error] 생성 예산 초과(${Math.round(deadline.elapsedMs() / 1000)}초) — fallback 호출 생략. 다음 트리거가 재시도합니다.`)
