@@ -8,7 +8,7 @@
 
 한국 개인 투자자가 **장 개장 전 아침(06:40 KST 정시 트리거, 두 리포트 모두 08:00 전 도착)** 에 그날의 시장 흐름을 한 호흡으로 파악할 수 있는 보고서를 매일 자동으로 만든다.
 
-- **사실 정합성**: 수치·뉴스·이상 탐지 결과를 단정적으로 인용
+- **사실 정합성**: 수치·뉴스·거래량 급증 탐지 결과를 단정적으로 인용
 - **이야기**: 단편 데이터 나열이 아닌 한 호흡의 narrative
 - **실행 가능성**: 09:00 개장 후 무엇을 어떤 순서로 볼지를 구체적으로 안내
 - **신뢰성**: 새벽 자동화 + 검증 실패 시에도 Telegram 침묵 방지
@@ -17,21 +17,22 @@
 
 ## 두 개의 리포트
 
-### 1. Market Report — 거시 시장 해설
+2026-10-19 개편으로 두 리포트를 짧은 구성으로 바꿨다(섹션 순서는 아래 "리포트 구성"). 설계 전문: [`docs/superpowers/specs/2026-10-17-morning-reports-redesign-design.md`](./docs/superpowers/specs/2026-10-17-morning-reports-redesign-design.md).
 
-- 전 세계 시장(미·유럽·아시아)의 전일 흐름과 한국 개장 영향을 **paragraph 12+ 블록 + pullQuote + dataCard**로 풀어냄
-- 10가지 **narrativeAngle 로테이션** (산업 체인 추적 · 역사적 데자뷰 · 반대편 풍경 · 세대별 지갑 · 글로벌 도미노 · 숨은 변수 · 데이터 해부학 · 시간여행 · 직업별 풍경 · 구조적 렌즈)
-- 횡보 시장 자동 감지 시 **딥다이브 에세이 모드**로 전환
+### 1. Daily Market — 어제와 오늘
 
-### 2. ETF Report — 국내·해외 ETF 실행 가이드
+- 전일 한국·미국 시장의 **분위기를 말로** 풀고 오늘 볼 것을 알려 준다 — 세 줄 요약 + 핵심 지표 6개 + 4~6문단(사건 → 근거 있는 원인 → 시장 반응)
+- 오늘 볼 것은 최대 3개(한국시간 순서), 한국 시장에 주는 의미는 2~3개("확인되면 / 어긋나면")
+- 시장 모드(event/normal/quiet, 횡보 감지)는 "어제 무슨 일이 있었나"의 **분량 조절에만** 쓴다. 자산군 관점은 ETF Today가 맡는다
 
-- KRX OpenAPI · Yahoo Finance · FRED · ECOS · 뉴스 RSS 등 다층 데이터 소스 통합
-- **Big Picture 단락** (narrative spine 4~6문장) + Story Spine 3막 + Characters 4인 + Resolutions 3 시나리오 + Today Watch 체크리스트 + Strategy Map
-- 8가지 **narrativeAngle 로테이션** (글로벌→국내 전이 · 환율 양면성 · 섹터 분리 · 안전자산↔위험자산 · 구조 vs 일시 · 확인 지표 체인 · 시간대별 관전 · 어제와 오늘 갭)
-- **이상 탐지** 5종 (괴리율·AUM 변화·추적오차·거래량 스파이크·연속 매도) 자동 표시
+### 2. ETF Today — 내 자산군 관점
+
+- Yahoo Finance(전일 종가·등락, 거래대금은 가격×거래량 추정) · FRED · ECOS · 뉴스 RSS 등 다층 데이터 소스 통합. KRX OpenAPI(08:00 게시)는 06:40에 쓰지 않는다
+- 세 줄 요약 + **자산군별 판단 재료 카드 5~6개**(대표 ETF "예시", 등락은 코드 렌더) + 오늘 확인할 것 3가지 + 레버리지·인버스 주의(변동성 큰 날만)
+- **거래량 급증 탐지**는 유지된다(괴리율·NAV 기반 탐지는 06:40에 데이터가 없어 사라짐)
 - 모든 ETF 언급은 **Google Finance 링크 chip**으로 자동 변환
 
-> 2026-10-19 개편으로 **화면 구성**이 아래 "리포트 구성"처럼 짧게 바뀌었다. 위 목록의 Story Spine·Characters·전략 지도·괴리율 이상 탐지 등 화면에서 빠진 요소는 개편 전 설명이며, 거래량 급증 탐지와 수치·사실 검증은 그대로다. 설계 전문: [`docs/superpowers/specs/2026-10-17-morning-reports-redesign-design.md`](./docs/superpowers/specs/2026-10-17-morning-reports-redesign-design.md).
+> 개편 전(~2026-10-16) 구성 — Market의 paragraph 12+ 블록·pullQuote·dataCard·자산군 온도계·딥다이브 에세이 모드, ETF의 Big Picture·Story Spine·Characters·Resolutions·Strategy Map·괴리율 이상 탐지 5종 — 은 새 형식에서 화면에서 빠졌다. 과거 리포트 HTML과 주소는 그대로 남아 있다.
 
 ---
 
@@ -95,11 +96,11 @@ Vercel Web Analytics를 사이트 전체에 적용했다(`@vercel/analytics`, `s
 ```
 ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
 │ Data sources │→ │ Code pre-fill│→ │ Claude prompt│
-│              │  │ (전략·국면)    │  │ (서사·해설)    │
-│  • KRX OAPI  │  │              │  │              │
+│              │  │ (수치·슬롯)    │  │ (서사·해설)    │
+│  • KRX(생략) │  │              │  │              │
 │  • Yahoo Fin │  │ 수치·점수·     │  │ headline,    │
-│  • FRED      │  │ 슬롯·구조      │  │ bigPicture,  │
-│  • ECOS      │  │              │  │ narrativeNotes│
+│  • FRED      │  │ 슬롯·구조      │  │ 세 줄 요약,   │
+│  • ECOS      │  │              │  │ 카드 문장     │
 │  • Google RSS│  └──────────────┘  └──────────────┘
 └──────────────┘            ↓               ↓
                     ┌──────────────────────────┐
@@ -128,8 +129,8 @@ Vercel Web Analytics를 사이트 전체에 적용했다(`@vercel/analytics`, `s
 ## 핵심 특장점
 
 ### 1. 코드 vs Claude 역할 분담
-- **코드**: 수치, 시장 국면 점수, ETF 전략 지도, 이상 탐지 — 결정론적·검증 가능 영역
-- **Claude**: headline, narrative spine, prose 해설 — 자유로운 서술 영역
+- **코드**: 핵심 지표·ETF 등락·추정 거래대금 등 모든 숫자, 자산군 슬롯, 시장 모드(분량 조절), 거래량 급증 탐지 — 결정론적·검증 가능 영역
+- **Claude**: 제목, 세 줄 요약, 해석 문장 — 자유로운 서술 영역(문장 속 숫자는 수치 대조 검증을 거친다)
 - 양쪽이 보완: 코드는 "어떤 데이터인지", Claude는 "이게 무엇을 의미하는지"
 
 ### 2. 서사 앵글 시스템
@@ -183,13 +184,15 @@ Vercel Web Analytics를 사이트 전체에 적용했다(`@vercel/analytics`, `s
 │   ├── fred-data.ts / ecos-data.ts       # 거시 데이터
 │   ├── news-collector.ts                 # RSS 수집
 │   ├── report-renderer.ts                # HTML 생성
+│   ├── preview/data-card.ts              # 미리보기 카드·페이지 머리 띠(스트라이프·모자이크) 공용 SVG/PNG
 │   └── etf/                              # ETF 리포트 코드
 │       ├── claude-client.ts              # ETF Claude + 프롬프트
 │       ├── narrative-angle.ts            # 8종 ETF 앵글
 │       ├── analysis-lens.ts              # 7종 데이터 렌즈
-│       ├── etf-data.ts                   # KRX + Yahoo 통합
-│       ├── morning-strategy.ts           # ETF 전략 지도
-│       ├── analyzer.ts                   # 이상 탐지 5종
+│       ├── etf-data.ts                   # Yahoo 시세(전일 종가·등락·거래량), KRX는 날짜가 맞을 때만 병합
+│       ├── asset-classes.ts              # 자산군 슬롯(카드 순서·대표 ETF)
+│       ├── morning-strategy.ts           # (개편 전) ETF 전략 지도 — 화면에서 제거
+│       ├── analyzer.ts                   # 이상 탐지 — 거래량 급증 유지, 괴리율 계열은 개편 후 입력 없음
 │       ├── news.ts                       # ETF 전용 뉴스
 │       ├── renderer.ts                   # ETF HTML 렌더
 │       ├── report-quality.ts             # Soft + Hard 검증
@@ -213,7 +216,7 @@ Vercel Web Analytics를 사이트 전체에 적용했다(`@vercel/analytics`, `s
 1. **데이터 수집** (병렬): ETF 시세 + 자금흐름 + 투자자별 매매 + 거시 지표 + 뉴스
 2. **데이터 검증**: 100개 ETF 중 N개 이상 수집 성공 확인
 3. **분석 렌즈 + 서사 앵글 선택**: 최근 5일 미사용 우선 무작위
-4. **이상 탐지**: 5종 룰 (괴리율·추적오차 등)
+4. **이상 탐지**: 거래량 급증 룰(괴리율·추적오차 기반 탐지는 개편으로 입력 데이터가 없어 사라짐)
 5. **Claude 생성** (최대 2회): 시스템 프롬프트 + 데이터 슬롯 + 앵글 가이드 + 헤드라인 규칙
 6. **HTML 렌더링**: Tier 2 narrativeNotes 우선, 없으면 Tier 1 하드코딩
 7. **인덱스 갱신** + **앵글·렌즈 로그 저장**
@@ -253,7 +256,7 @@ gh workflow run 260067407 --ref main -f only=both -f dry_run=true -f force_regen
 
 #### 되돌리기
 
-순서: `ops/macmini/install.sh uninstall`(새 라벨 `morning`·`monitor` 제거) → 병합 커밋 revert → `ops/macmini/install.sh`(되돌려진 옛 스크립트가 이전 plist 4개 재설치). revert 후에는 옛 스크립트가 새 라벨을 모르므로 먼저 내리지 않으면 `launchctl bootout gui/$(id -u)/com.yalkongs.dailyreport.morning`(`.monitor`도 같이)으로 직접 내린다. 과거 리포트·주소는 영향 없음.
+순서: `ops/macmini/install.sh uninstall`(새 라벨 `morning`·`monitor` 제거) → `git revert -m 1 <병합 커밋>` → `ops/macmini/install.sh`(되돌려진 옛 스크립트가 이전 plist 4개 재설치). `uninstall` 없이 revert했다면 옛 스크립트가 새 라벨을 모르므로 직접 정리한다: `launchctl bootout gui/$(id -u)/com.yalkongs.dailyreport.morning`·`...monitor` 후 `rm ~/Library/LaunchAgents/com.yalkongs.dailyreport.{morning,monitor}.plist`(남기면 다음 로그인에 다시 올라온다). 과거 리포트·주소는 영향 없음.
 
 ### 아침 트리거 (맥미니 launchd → GitHub workflow_dispatch)
 
@@ -410,9 +413,8 @@ ETF_REPORT_DATE=2026-04-30 FORCE_REGENERATE=true npx tsx scripts/run-etf.ts
 
 ## 향후 개선 방향
 
-### Tier 3 — ETF 리포트 전면 리팩토링 (계획 단계)
-- 현재 ETF 본문은 슬롯 그리드 + Plan B의 bigPicture 절충. Market 리포트의 paragraph 12+ 자유 본문 패턴으로 전면 재설계 검토.
-- 코드 슬롯을 "데이터 입력"으로 격하하고 Claude가 본문을 완전히 풀어내는 방향.
+### Tier 3 — ETF 리포트 전면 리팩토링 (2026-10-19 개편으로 대체)
+- 당초 구상(Market의 paragraph 12+ 자유 본문 패턴 이식)은 하지 않았다. 대신 독자 중심의 짧은 구성(세 줄 요약·자산군 카드·확인 3가지)으로 바꿨다 — 위 "리포트 구성" 참조.
 
 ### 신뢰성 보강
 - GitHub Actions schedule drop 대응: 이중 cron (21:30 + 22:30 UTC) 또는 Dead-man 모니터링
