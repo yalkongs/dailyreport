@@ -29,7 +29,7 @@
 
 - Yahoo Finance(전일 종가·등락·거래량, 거래대금은 종가×거래량 추정) · FRED · ECOS · 뉴스 RSS 등 다층 데이터 소스 통합. KRX OpenAPI(전일분 ~08:00 게시)는 06:40에 보통 게시 전이라 병합되지 않는다(아래 "데이터 시점")
 - 세 줄 요약 + **자산군별 판단 재료 카드 최대 6개**(대표 ETF "예시", 등락은 코드 렌더, 데이터가 없는 자산군은 빠짐) + 오늘 확인할 것 3가지 + 레버리지·인버스 주의(변동성 큰 날만)
-- **이상 탐지**(`lib/etf/analyzer.ts`)는 화면에 그리지 않는다. ETF 모드(event/normal/quiet) 판정·근거 로그(`data/etf-evidence-log.json`)·텔레그램 캡션의 "이상 탐지: N건" 줄에만 쓰인다. 06:40에는 KRX NAV·괴리율이 보통 없어 추적오차·괴리율 룰은 입력이 없고 거래량 급증 룰이 남는다(KRX가 병합된 날은 괴리율 룰도 발동할 수 있다)
+- **이상 탐지**(`lib/etf/analyzer.ts`)는 화면에 그리지 않는다. ETF 모드(event/normal/quiet) 판정과 근거 로그(`data/etf-evidence-log.json`)에만 쓰인다(텔레그램 캡션에도 싣지 않는다). 06:40에는 KRX NAV·괴리율이 보통 없어 추적오차·괴리율 룰은 입력이 없고 거래량 급증 룰이 남는다(KRX가 병합된 날은 괴리율 룰도 발동할 수 있다)
 - ETF Today의 모든 ETF 언급은 **Google Finance 링크 chip**으로 자동 변환
 
 > 개편 전(~2026-10-16) 구성 — Market의 paragraph 12+ 블록·자산군 온도계, ETF의 Big Picture·Story Spine·Characters·Resolutions·Strategy Map·이상 탐지 카드 — 은 새 형식에서 화면에서 빠졌다(Market의 pullQuote는 0~1개로 줄었고 dataCard는 쓰지 않는다. 렌더러는 옛 콘텐츠용으로 두 블록을 그대로 그린다). 과거 리포트 HTML과 주소는 그대로 남아 있다.

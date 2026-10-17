@@ -349,8 +349,6 @@ for (const c of sendCases) {
     HEADLINE: "S&P 500 <상승>",
     IS_RESEND: "false",
     FORCE_RESEND: "false",
-    ANOMALY_COUNT: "0",
-    ANOMALY_BREAKDOWN: "",
   };
   const stubs = { curl: CURL_STUB, npx: NPX_STUB, sleep: "exit 0" };
   const telegramCalls = (r: ShellResult) => r.calls("curl").filter((l) => l.includes("api.telegram.org"));
@@ -371,9 +369,21 @@ for (const c of sendCases) {
       // caption은 여러 줄이라 호출 기록에서 줄이 나뉜다 — 링크 줄을 따로 찾는다.
       assert.ok(curls.some((l) => l.includes(`<a href="${page}">리포트 보기</a>`)), curls.join("\n"));
       assert.ok(curls.findIndex((l) => l.includes("api.telegram.org")) > curls.findIndex((l) => l.includes("-preview.png")));
+      // caption 모양: 머리말 → 제목(escape됨) → 날짜 → 링크 순으로 줄이 바로 이어진다 — 화면에 없는 이상 탐지 줄이 끼지 않는다(Ruling 30).
+      // (호출 기록은 빈 줄을 버린다.)
+      const caption = curls.join("\n");
+      assert.match(caption, /<b>iM AI (?:Market|ETF) Report<\/b>\n<b>S&amp;P 500 &lt;상승&gt;<\/b>\n\d{2}월 \d{2}일 [^\n]*\n<a href=/, caption);
+      assert.doesNotMatch(caption, /이상 탐지/);
       assert.equal(markCalls(r).length, 2, r.calls("npx").join("\n"));
       assert.match(markCalls(r)[0], new RegExp(`mark ${c.job} ${FAKE_SHA} pending`));
       assert.match(markCalls(r)[1], new RegExp(`mark ${c.job} ${FAKE_SHA} success`));
+    });
+
+    test(`${c.job} 발송 [bash ${mode}]: 예전 이상 탐지 env가 남아 있어도 caption에 이상 탐지 줄은 없다`, () => {
+      const r = runStep(script, stubs, { ...env, ANOMALY_COUNT: "5", ANOMALY_BREAKDOWN: "괴리율 5" }, flags);
+      assert.equal(r.status, 0, r.out);
+      assert.equal(telegramCalls(r).length, 1);
+      assert.doesNotMatch(r.calls("curl").join("\n"), /이상 탐지|괴리율/);
     });
 
     test(`${c.job} 발송 [bash ${mode}]: 첫 PNG 조회가 404여도 재확인해 통과하면 발송 (CDN 전파)`, () => {

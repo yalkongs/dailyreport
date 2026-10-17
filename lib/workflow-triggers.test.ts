@@ -88,7 +88,7 @@ test("market test_date는 YYYY-MM-DD만 받는다 — 생성·GITHUB_OUTPUT보�
   }
 });
 
-// M1: 생성 step은 date만 내보낸다. 텔레그램 헤드라인·이상 탐지 건수는 deliver의 resolve(delivery-state.ts)가
+// M1: 생성 step은 date만 내보낸다. 텔레그램 헤드라인은 deliver의 resolve(delivery-state.ts)가
 // 인덱스에서 읽는다 — 생성 step의 headline·anomaly 출력과 날짜를 JS 소스에 보간하던 node -e는 아무도 읽지 않던 죽은 코드.
 test("생성 step은 date만 GITHUB_OUTPUT에 쓰고 node -e로 날짜를 JS에 보간하지 않는다", () => {
   const wf = readWorkflow();
@@ -100,6 +100,15 @@ test("생성 step은 date만 GITHUB_OUTPUT에 쓰고 node -e로 날짜를 JS에 
   }
   // deliver는 생성 step 출력이 아니라 resolve 출력(steps.delivery_<kind>)을 쓴다.
   assert.doesNotMatch(wf, /steps\.(?:report|etf)\.outputs\.(?:headline|anomaly_count|anomaly_breakdown)/);
+});
+
+// Ruling 30: ETF 화면에 이상 탐지 섹션이 없다 — 텔레그램 캡션의 "이상 탐지: N건" 줄과 그 줄만 먹던 env가 남지 않는다.
+// KRX_API_KEY 는 어디서도 읽지 않는다(ETF는 KRX_AUTH_KEY).
+test("텔레그램 캡션에 이상 탐지 줄이 없고, 그 줄만 먹던 env와 안 쓰는 KRX_API_KEY 는 workflow에 없다", () => {
+  const wf = readWorkflow();
+  assert.doesNotMatch(wf, /이상 탐지|ANOMALY_|ALERT_LINE|anomaly_count|anomaly_breakdown/);
+  assert.doesNotMatch(wf, /KRX_API_KEY/);
+  assert.match(jobBlock(wf, "etf"), /KRX_AUTH_KEY: \$\{\{ secrets\.KRX_AUTH_KEY \}\}/);
 });
 
 test("dry_run일 때만 생성 HTML·PNG를 아티팩트로 업로드", () => {

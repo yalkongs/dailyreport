@@ -13,7 +13,6 @@ import {
   pickTelegramStatus,
   decideDelivery,
   classifyTelegramResponse,
-  formatAnomalyBreakdown,
 } from "../lib/delivery-state";
 
 const API = process.env.GITHUB_API_URL ?? "https://api.github.com";
@@ -94,21 +93,17 @@ export function findReportShaInHistory(k: ReportKind, date: string, git: GitRunn
   return findReportCommit(commits, k, date);
 }
 
-function readIndexEntry(k: ReportKind, date: string): { headline: string; anomalyCount: number; breakdown: string } {
+function readIndexEntry(k: ReportKind, date: string): { headline: string } {
   const file = k === "market" ? "data/reports-index.json" : "data/etf-reports-index.json";
   const fallback = k === "market" ? "오늘의 시장 리포트" : "오늘의 ETF 리포트";
   try {
     const idx = JSON.parse(fs.readFileSync(file, "utf-8")) as {
-      reports: { date: string; headline?: string; anomalyCount?: number; anomalyBreakdown?: Record<string, number> }[];
+      reports: { date: string; headline?: string }[];
     };
     const r = idx.reports.find((x) => x.date === date);
-    return {
-      headline: r?.headline || fallback,
-      anomalyCount: r?.anomalyCount || 0,
-      breakdown: formatAnomalyBreakdown(r?.anomalyBreakdown),
-    };
+    return { headline: r?.headline || fallback };
   } catch {
-    return { headline: fallback, anomalyCount: 0, breakdown: "" };
+    return { headline: fallback };
   }
 }
 
@@ -168,7 +163,6 @@ async function resolve(k: ReportKind): Promise<void> {
     headline: entry.headline,
     // 방금 생성한 정상 경로가 아니면 재발송 — Telegram 이미지 캐시를 피하려고 cache-bust 하고, 발송 직전 status를 재확인한다.
     resend: justGenerated ? "false" : "true",
-    ...(k === "etf" ? { anomaly_count: String(entry.anomalyCount), anomaly_breakdown: entry.breakdown } : {}),
   });
 
   // 결과 불명은 자동 재발송하지 않지만(중복 방지), 녹색으로 끝나면 아무도 모른다(감사 F06).

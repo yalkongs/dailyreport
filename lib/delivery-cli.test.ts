@@ -227,6 +227,8 @@ for (const [kind, idx] of [["market", 0], ["etf", 1]] as const) {
       assert.match(r.output, /^action=send$/m);
       assert.match(r.output, new RegExp(`^sha=${repo.shas[idx]}$`, "m"));
       assert.match(r.output, /^resend=false$/m);
+      // Ruling 30: ETF 화면에 이상 탐지 섹션이 없으므로 캡션 줄도, 그 줄만 먹던 resolve 출력도 없다.
+      assert.doesNotMatch(r.output, /^anomaly_/m);
     });
   });
 }
