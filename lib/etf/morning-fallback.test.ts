@@ -66,12 +66,16 @@ function adviceReport(headline: string): MorningReport {
   const r = validReport(headline); r.assetCards[0].ifConsidering = '반등이 나오면 매수하세요.'; return r
 }
 
-/** 호출 순서대로 응답(리포트 또는 오류)을 돌려주는 가짜 생성기. 매번 새 객체(structuredClone)로 준다. */
-function fakeGenerator(replies: Array<MorningReport | Error>) {
+/**
+ * 호출 순서대로 응답(리포트 또는 오류)을 돌려주는 가짜 생성기. 매번 새 객체(structuredClone)로 준다.
+ * 함수 응답은 그대로 호출한 결과를 준다(형식이 깨진 응답·검증 중 예외를 만드는 객체용).
+ */
+function fakeGenerator(replies: Array<MorningReport | Error | (() => unknown)>) {
   let calls = 0
   const generateRaw = async () => {
     const reply = replies[Math.min(calls++, replies.length - 1)]
     if (reply instanceof Error) throw reply
+    if (typeof reply === 'function') return reply() as MorningReport
     return structuredClone(reply)
   }
   return { generateRaw, calls: () => calls }
@@ -177,4 +181,51 @@ test('1·2회차가 모두 실패해도 Tier 1이 축소판을 통과하면 발�
   const gen = fakeGenerator([new Error('overloaded'), new Error('overloaded'), factReport('Tier1 결과')])
   const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) })
   assert.equal(report.cover.headline, 'Tier1 결과')
+})
+
+// ─── Ruling 28: 형식이 깨진 응답의 검증 중 예외가 함수 밖으로 새지 않는다(파싱 실패처럼 다음 시도로) ─────
+const broken = (patch: Record<string, unknown>) => () => ({ ...structuredClone(validReport()), ...patch })
+
+test('1회차 cover가 문자열이어도 던지지 않고 2회차 정상 결과로 발송한다', async (t) => {
+  quiet(t)
+  const gen = fakeGenerator([broken({ cover: '국내 반도체 급락' }), validReport('정상 2회차')])
+  const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) })
+  assert.equal(report.cover.headline, '정상 2회차')
+  assert.equal(gen.calls(), 2)
+})
+
+test('summary가 매번 문자열이면 TypeError가 아니라 필수 필드 누락으로 실패한다', async (t) => {
+  quiet(t)
+  const gen = fakeGenerator([broken({ summary: '요약 한 줄' })])
+  await assert.rejects(
+    generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) }),
+    (e: Error) => /필수 필드 누락: summary\.overseas/.test(e.message) && !/Cannot create property|TypeError/.test(e.message),
+  )
+  assert.equal(gen.calls(), 3) // 1·2회차·Tier 1 모두 돌았다
+})
+
+test('검증 중 예외가 나도(형식 깨짐) 파싱 실패처럼 다음 시도로 넘어간다', async (t) => {
+  const logs = quiet(t)
+  const throwing = () => {
+    const r = structuredClone(validReport()) as unknown as Record<string, unknown>
+    Object.defineProperty(r, 'summary', { enumerable: true, get() { throw new Error('형식이 깨진 응답') } })
+    return r
+  }
+  const gen = fakeGenerator([throwing, validReport('정상 2회차')])
+  const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) })
+  assert.equal(report.cover.headline, '정상 2회차')
+  assert.ok(logs.some(l => /응답 검증 중 오류[\s\S]*형식이 깨진 응답/.test(l)))
+})
+
+test('응답이 객체가 아니면(null·배열·문자열) 파싱 실패처럼 다음 시도로, 앞선 정상 결과는 그대로 쓴다', async (t) => {
+  quiet(t)
+  for (const bad of [null, [], '문자열']) {
+    const gen = fakeGenerator([() => bad, validReport('정상 2회차')])
+    const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) })
+    assert.equal(report.cover.headline, '정상 2회차', JSON.stringify(bad))
+  }
+  // 객체가 아닌 응답은 앞선 결과 후보에 들지 않는다 — 사실 위반 1회차가 Tier 1 실패 뒤 발송된다.
+  const gen = fakeGenerator([factReport('사실 위반 1회차'), () => null, new Error('Internal server error')])
+  const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) })
+  assert.equal(report.cover.headline, '사실 위반 1회차')
 })

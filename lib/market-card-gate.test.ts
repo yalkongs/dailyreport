@@ -195,3 +195,41 @@ test('generateReport: 첫 호출부터 API 오류면(파싱된 결과 없음) �
   fakeStream([new Error('Internal server error')])
   await assert.rejects(generateReport(DATA), /Internal server error/)
 })
+
+// ── Ruling 28: 형식이 깨진 응답의 검증 중 예외는 파싱 실패처럼 — 함수 밖으로 새지 않고 다음 시도·앞선 결과로 ──
+test('generateReport: 1회차 검증 중 예외가 나도 다음 시도로 넘어가 2회차 정상 결과로 발송한다', async (t) => {
+  t.after(() => mock.restoreAll())
+  const replies = [reportJson(LONG_HEADLINE), reportJson(FITTING_HEADLINE)]
+  const { stream, logs } = fakeStream(replies)
+  // 검증 단계(파싱 직후 정합성 검사의 JSON.stringify(parsed))에서 첫 번째로만 예외를 낸다.
+  // 프롬프트 조립의 JSON.stringify(data, null, 2)는 인자가 3개라 건드리지 않는다.
+  const original = JSON.stringify
+  let thrown = false
+  mock.method(JSON, 'stringify', (...args: Parameters<typeof JSON.stringify>) => {
+    if (!thrown && args.length === 1 && typeof args[0] === 'object' && args[0] !== null && 'cardLine' in args[0]) {
+      thrown = true
+      throw new TypeError('형식이 깨진 응답')
+    }
+    return original(...args)
+  })
+  const { content } = await generateReport(DATA)
+  assert.ok(thrown, '검증 중 예외가 실제로 났다')
+  assert.equal(stream.mock.callCount(), 2)
+  assert.equal(content.cover.headline, FITTING_HEADLINE)
+  assert.ok(logs.some((l) => /응답 검증 중 오류[\s\S]*형식이 깨진 응답/.test(l)))
+})
+
+test('generateReport: 응답 최상위가 객체가 아니면(문자열·배열·null) 파싱 실패처럼 — 다음 시도로 넘어간다', async (t) => {
+  t.after(() => mock.restoreAll())
+  const { stream, logs } = fakeStream(['"문자열 하나"', '[1, 2]', reportJson(FITTING_HEADLINE)])
+  const { content } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 3)
+  assert.equal(content.cover.headline, FITTING_HEADLINE)
+  assert.ok(logs.some((l) => /JSON 파싱 실패 \(시도 1\/3\)/.test(l)))
+})
+
+test('generateReport: 객체가 아닌 응답은 앞선 결과로 남기지 않는다 — 뒤 호출이 실패하면 TypeError가 아니라 원래 오류로 실패', async (t) => {
+  t.after(() => mock.restoreAll())
+  fakeStream(['null', new Error('Internal server error')])
+  await assert.rejects(generateReport(DATA), (e: Error) => /Internal server error/.test(e.message) && !(e instanceof TypeError))
+})

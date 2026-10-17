@@ -112,6 +112,10 @@ function applySoftFix(value: string | undefined): string | undefined {
   return next
 }
 
+function isObjectValue<T>(value: T): value is T & object {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
 // 형식이 깨진 응답(배열 아님·원소가 객체 아님)에서도 던지지 않도록 객체 원소만 고른다.
 function objectItems<T>(value: T[] | undefined): T[] {
   return Array.isArray(value) ? value.filter(item => typeof item === 'object' && item !== null) : []
@@ -125,11 +129,13 @@ export function applySoftFixesInPlace(report: MorningReport): string[] {
   const before = flattenMorningReport(report)
   const fixed: string[] = []
 
-  if (report.cover) {
+  // Ruling 28: 형식이 깨진 응답(문자열 cover·summary 등)에 속성을 쓰면 TypeError — 객체일 때만 고친다.
+  // 객체가 아니면 손대지 않고, 구조 검사가 필수 필드 누락으로 보고한다(card와 같은 처리, M5).
+  if (isObjectValue(report.cover)) {
     report.cover.headline = applySoftFix(report.cover.headline) ?? report.cover.headline
     report.cover.subline = applySoftFix(report.cover.subline) ?? report.cover.subline
   }
-  if (report.summary) {
+  if (isObjectValue(report.summary)) {
     report.summary.overseas = applySoftFix(report.summary.overseas) ?? report.summary.overseas
     report.summary.domestic = applySoftFix(report.summary.domestic) ?? report.summary.domestic
     report.summary.focus = applySoftFix(report.summary.focus) ?? report.summary.focus
@@ -146,7 +152,7 @@ export function applySoftFixesInPlace(report: MorningReport): string[] {
     check.invalidation = applySoftFix(check.invalidation) ?? check.invalidation
   }
   // M5: 형식이 깨진 응답의 문자열 card에 속성을 쓰면 TypeError — 객체일 때만(아니면 구조 검사가 없는 것으로 본다).
-  if (typeof report.card === 'object' && report.card !== null) {
+  if (isObjectValue(report.card)) {
     report.card.line = applySoftFix(report.card.line) ?? report.card.line
   }
   if (report.tacticalWarning !== undefined) {

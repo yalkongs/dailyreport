@@ -636,6 +636,10 @@ export async function generateReport(
     let parsed: ReportContent;
     try {
       parsed = JSON.parse(rawJson) as ReportContent;
+      // Ruling 28: 최상위가 객체가 아닌 JSON(문자열·배열·null)은 파싱 실패와 같다 — 앞선 결과 후보로 남기지 않는다.
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+        throw new Error(`JSON 최상위가 객체가 아님(${parsed === null ? "null" : Array.isArray(parsed) ? "array" : typeof parsed})`);
+      }
     } catch (parseErr) {
       lastParseErr = parseErr;
       console.error(`❌ JSON 파싱 실패 (시도 ${attempt}/${maxRetries}). 원문 길이:`, rawJson.length);
@@ -648,7 +652,9 @@ export async function generateReport(
 
     // R2·R3 (2026-07-22): 파싱 성공 직후 정합성 검사. 파싱 검증 완료된 JSON 문자열에
     // 시점·출처 soft fix 적용 후 re-parse. 교정 문자열은 JSON 메타문자 미포함이 보장됨.
-    {
+    // Ruling 28: 형식이 깨진 응답 때문에 검증 중 예외가 나면 파싱 실패처럼 다룬다 — 함수 밖으로 던지지 않고
+    // 기록·경고 뒤 다음 시도로(마지막 시도면 루프 뒤 앞선 결과 발송 경로로).
+    try {
       const reportDate = data.date;
       const todaySources = (context?.news ?? []).map((n) => n.source);
       const canonical = JSON.stringify(parsed);
@@ -694,6 +700,10 @@ export async function generateReport(
           console.log(`⚠️ 정합성 위반 잔존(발송 진행): ${hardViolations.join(", ")}`);
         }
       }
+    } catch (validationErr) {
+      lastParseErr = validationErr;
+      console.error(`❌ 응답 검증 중 오류(시도 ${attempt}/${maxRetries}) — 파싱 실패처럼 다음 시도로: ${validationErr instanceof Error ? validationErr.message : String(validationErr)}`);
+      continue;
     }
 
     content = parsed;
@@ -702,7 +712,7 @@ export async function generateReport(
 
   if (!content && best) {
     // 마지막 호출을 못 했거나(예산) 실패했거나 파싱되지 않았다 — 앞선 결과를 마지막 시도처럼(위반은 경고로만) 발송한다.
-    const why = stopReason || `마지막 시도 JSON 파싱 실패: ${lastParseErr}`;
+    const why = stopReason || `마지막 시도 JSON 파싱·검증 실패: ${lastParseErr}`;
     console.log(`⚠️ 재생성을 이어가지 못해(${why}) 앞선 결과로 발송 진행(${best.attempt}회차, 남은 위반: ${remaining(best)})`);
     content = best.content;
   }

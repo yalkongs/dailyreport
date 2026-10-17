@@ -128,6 +128,14 @@ function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e)
 }
 
+function isReportObject(value: unknown): value is MorningReport {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function describeKind(value: unknown): string {
+  return value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value
+}
+
 /**
  * ETF 리포트 생성 — 엄격 검증 최대 maxAttempts(2)회 → Tier 1 재생성 + 축소판 검증(validateMorningReport).
  * I2 (Ruling 23, F02 "전송 > 침묵"): 파싱된 결과를 버리지 않는다. Tier 1 호출을 못 하거나(예산) 실패·파싱 실패하거나
@@ -160,8 +168,19 @@ export async function generateMorningReportWithFallback(
       console.warn(`[warn] Claude 생성 ${attempt}/${maxAttempts}회 실패(호출·파싱):`, errorMessage(e))
       continue
     }
-    const pristine = structuredClone(raw)
-    const quality = assessMorningReportQuality(raw, data, strategy)
+    // Ruling 28: 형식이 깨진 응답(객체 아님·검증 중 예외)은 파싱 실패처럼 다룬다 — 함수 밖으로 던지지 않고 다음 시도로
+    // (2회차·Tier 1·앞선 결과 발송이 살아 있게). 객체가 아닌 응답은 앞선 결과 후보에도 넣지 않는다.
+    let pristine: MorningReport
+    let quality: ReturnType<typeof assessMorningReportQuality>
+    try {
+      if (!isReportObject(raw)) throw new Error(`응답 최상위가 객체가 아님(${describeKind(raw)})`)
+      pristine = structuredClone(raw)
+      quality = assessMorningReportQuality(raw, data, strategy)
+    } catch (e) {
+      lastError = e
+      console.warn(`[warn] ${attempt}/${maxAttempts}회 응답 검증 중 오류(형식 깨짐 — 파싱 실패처럼 다음 시도로):`, errorMessage(e))
+      continue
+    }
     if (quality.violations.length === 0) {
       if (attempt > 1) console.log(`  ✓ ${attempt}회차에서 성공`)
       return raw
