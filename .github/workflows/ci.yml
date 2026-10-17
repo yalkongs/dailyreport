@@ -31,7 +31,8 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # 운영 workflow와 같은 러너 이미지로 고정(spec §9 — 기본 이미지가 Ubuntu 26으로 바뀌는 2026-10-19~ 대비).
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout repository

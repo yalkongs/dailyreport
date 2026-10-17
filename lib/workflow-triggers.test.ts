@@ -3,75 +3,244 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-const yml = fs.readFileSync(path.join(__dirname, "..", ".github", "workflows", "daily-report.yml"), "utf8");
+const WF_DIR = path.join(__dirname, "..", ".github", "workflows");
+
+/** daily-report.yml 원문. */
+function readWorkflow(): string {
+  return fs.readFileSync(path.join(WF_DIR, "daily-report.yml"), "utf8");
+}
+
+const yml = readWorkflow();
 
 /** `  <name>:` 로 시작하는 job 블록 텍스트(다음 최상위 job 직전까지). */
-function jobBlock(name: string): string {
-  const start = yml.indexOf(`\n  ${name}:\n`);
+function jobBlock(wf: string, name: string): string {
+  const start = wf.indexOf(`\n  ${name}:\n`);
   assert.ok(start >= 0, `job '${name}' 없음`);
-  const rest = yml.slice(start + 1);
+  const rest = wf.slice(start + 1);
   const next = rest.slice(1).search(/\n  [a-z][a-z-]*:\n/);
   return next < 0 ? rest : rest.slice(0, next + 1);
 }
 
-
+/** job 수준(4칸 들여쓰기) `if: ${{ … }}` 식. step의 if(8칸)는 보지 않는다. */
+function jobIf(wf: string, name: string): string {
+  const m = jobBlock(wf, name).match(/\n    if: \$\{\{ (.*) \}\}\n/);
+  assert.ok(m, `job '${name}'에 job 수준 if 없음`);
+  return m[1];
+}
 
 test("권한: commit status를 쓸 수 있다 (발송 상태 기록)", () => {
   assert.match(yml, /\n  statuses: write/);
 });
 
-for (const [job, group] of [["market", "daily-report-market"], ["etf", "daily-report-etf"]] as const) {
-  test(`${job}: 같은 종류의 job은 직렬로 돈다 (concurrency, 진행 중 실행을 취소하지 않음)`, () => {
-    const b = jobBlock(job);
+for (const [job, group] of [["market", "daily-report-market"], ["etf", "daily-report-etf"], ["deliver", "daily-report-deliver"]] as const) {
+  test(`${job}: 같은 job은 실행(run) 간 직렬로 돈다 (concurrency, 진행 중 실행을 취소하지 않음)`, () => {
+    const b = jobBlock(yml, job);
     assert.match(b, new RegExp(`concurrency:\\n      group: ${group}\\n      cancel-in-progress: false`));
   });
+}
 
-  test(`${job}: Resolve delivery step이 있고, 배포 대기·발송은 action=='send'일 때만 돈다`, () => {
-    const b = jobBlock(job);
-    assert.match(b, new RegExp(`npx tsx scripts/delivery-state\\.ts resolve ${job}`));
-    const gated = b.match(/if: steps\.delivery\.outputs\.action == 'send'/g) ?? [];
-    assert.equal(gated.length, 2);
-  });
+// ── 2026-10-19 개편: 병렬 생성 + 단일 발송 job(spec §5) ─────────────────────────────────
 
-  // 감사 F06: resolve는 결과 불명(unknown)이면 exit 1 — 그 실패가 job 실패(소유자 메일)로 드러나야 한다.
-  test(`${job}: Resolve delivery 실패(결과 불명)를 continue-on-error로 가리지 않는다`, () => {
-    const b = jobBlock(job);
-    const start = b.indexOf("- name: Resolve delivery");
-    const step = b.slice(start, b.indexOf("\n      - name: ", start + 1));
-    assert.match(step, /id: delivery/);
+test("병렬 생성: market·etf job은 서로 needs 없음, only=both·schedule에서 둘 다 실행", () => {
+  const wf = readWorkflow();
+  assert.ok(!jobBlock(wf, "etf").includes("needs: market"));
+  assert.match(jobIf(wf, "etf"), /schedule[\s\S]*only == 'both'|only == 'both'[\s\S]*schedule/);
+  assert.match(jobIf(wf, "market"), /only != 'etf'/);
+});
+
+test("생성 job은 텔레그램을 보내지 않고, deliver job이 market → etf 순으로 보낸다", () => {
+  const wf = readWorkflow();
+  assert.ok(!jobBlock(wf, "market").includes("api.telegram.org"));
+  assert.ok(!jobBlock(wf, "etf").includes("api.telegram.org"));
+  const d = jobBlock(wf, "deliver");
+  assert.match(d, /needs:\s*\[\s*market,\s*etf\s*\]/);
+  assert.match(d, /always\(\) && !cancelled\(\)/);
+  assert.match(d, /group: daily-report-deliver/);
+  assert.ok(d.indexOf("resolve market") < d.indexOf("resolve etf"));
+});
+
+test("모든 workflow는 ubuntu-24.04 고정", () => {
+  for (const f of ["daily-report.yml", "delivery-monitor.yml", "refresh-kr-macro.yml", "ci.yml"]) {
+    const s = fs.readFileSync(path.join(WF_DIR, f), "utf8");
+    assert.ok(!s.includes("ubuntu-latest"), f);
+    assert.match(s, /runs-on: ubuntu-24\.04/, f);
+  }
+});
+
+test("dry_run일 때만 test_date를 TEST_DATE·ETF_REPORT_DATE로 전달", () => {
+  const wf = readWorkflow();
+  assert.match(wf, /test_date:/);
+  assert.match(wf, /TEST_DATE: \$\{\{ \(inputs\.dry_run == true \|\| inputs\.dry_run == 'true'\) && inputs\.test_date \|\| '' \}\}/);
+  assert.match(wf, /ETF_REPORT_DATE: \$\{\{ \(inputs\.dry_run == true \|\| inputs\.dry_run == 'true'\) && inputs\.test_date \|\| '' \}\}/);
+  // 리포트 날짜(커밋 메시지·아티팩트 경로)도 지정 날짜를 따른다 — 비어 있으면 오늘(KST).
+  assert.match(stepBlock(jobBlock(wf, "market"), "Generate market report"), /REPORT_DATE=\$\{TEST_DATE:-\$\(TZ=Asia\/Seoul date \+%Y-%m-%d\)\}/);
+  assert.match(stepBlock(jobBlock(wf, "etf"), "Run ETF pipeline"), /REPORT_DATE=\$\{ETF_REPORT_DATE:-\$\(TZ=Asia\/Seoul date \+%Y-%m-%d\)\}/);
+});
+
+// test_date는 사람이 dispatch 화면에 입력하는 자유 문자열 — 형식을 확인하기 전에는 node -e 소스·$GITHUB_OUTPUT에
+// 보간하지 않는다(ETF는 run-etf.ts가 ETF_REPORT_DATE 형식을 먼저 검사한다). 실제 거부 동작은 workflow-shell 테스트.
+test("market test_date는 YYYY-MM-DD만 받는다 — 생성·node -e·GITHUB_OUTPUT보다 먼저 검사", () => {
+  const s = stepBlock(jobBlock(readWorkflow(), "market"), "Generate market report");
+  const guard = s.indexOf('[[ "$TEST_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]');
+  assert.ok(guard >= 0, "test_date 형식 검사 없음");
+  for (const later of ["npx tsx scripts/run.ts", 'node -e "', ">> $GITHUB_OUTPUT"]) {
+    assert.ok(s.indexOf(later) >= 0 && guard < s.indexOf(later), later);
+  }
+});
+
+test("dry_run일 때만 생성 HTML·PNG를 아티팩트로 업로드", () => {
+  const wf = readWorkflow();
+  for (const job of ["market", "etf"]) {
+    const b = jobBlock(wf, job);
+    assert.match(b, /actions\/upload-artifact@v4/, job);
+    assert.match(b, /if: \$\{\{ inputs\.dry_run == true \|\| inputs\.dry_run == 'true' \}\}/, job);
+  }
+  const m = stepBlock(jobBlock(wf, "market"), "Upload dry-run");
+  assert.match(m, /public\/reports\/\$\{\{ steps\.report\.outputs\.date \}\}\.html/);
+  assert.match(m, /public\/reports\/\$\{\{ steps\.report\.outputs\.date \}\}-preview\.png/);
+  assert.match(m, /retention-days: 3/);
+  const e = stepBlock(jobBlock(wf, "etf"), "Upload dry-run");
+  assert.match(e, /public\/etf-reports\/\$\{\{ steps\.etf\.outputs\.date \}\}\.html/);
+  assert.match(e, /public\/etf-reports\/\$\{\{ steps\.etf\.outputs\.date \}\}-preview\.png/);
+  assert.match(e, /retention-days: 3/);
+});
+
+test("텔레그램 링크에 utm_source=telegram, 글꼴 단계는 Pretendard도 설치", () => {
+  const wf = readWorkflow();
+  assert.match(wf, /utm_source=telegram/);
+  assert.match(wf, /assets\/fonts\/Pretendard/);
+  for (const job of ["market", "etf"]) {
+    const s = stepBlock(jobBlock(wf, job), "Install Korean fonts");
+    // 파일이 없어도 step이 실패하지 않게 if로 감싼다(bash -e) — 동작은 workflow-shell 테스트가 실행해 본다.
+    assert.match(s, /if ls assets\/fonts\/Pretendard-\*\.otf >\/dev\/null 2>&1/, job);
+    assert.match(s, /cp assets\/fonts\/Pretendard-\*\.otf ~\/\.local\/share\/fonts\//, job);
+  }
+  for (const kind of ["market", "etf"]) {
+    const s = stepBlock(jobBlock(wf, "deliver"), `send ${kind}`);
+    assert.match(s, new RegExp(`REPORT_URL="https://dailyreport-eta\\.vercel\\.app/${kind === "market" ? "reports" : "etf-reports"}/\\$\\{REPORT_DATE\\}\\?utm_source=telegram"`));
+  }
+});
+
+test("생성 job은 outputs.changed를 내보내고, deliver는 그 값을 resolve의 CHANGED로 받는다", () => {
+  const wf = readWorkflow();
+  for (const job of ["market", "etf"] as const) {
+    assert.match(jobBlock(wf, job), /\n    outputs:\n      changed: \$\{\{ steps\.changes\.outputs\.changed \}\}\n/, job);
+    assert.match(stepBlock(jobBlock(wf, "deliver"), `resolve ${job}`), new RegExp(`CHANGED: \\$\\{\\{ needs\\.${job}\\.outputs\\.changed \\}\\}`));
+  }
+});
+
+// js-yaml로 실제 파싱 — 문자열 검사가 놓치는 들여쓰기·구조 오류를 잡는다.
+// (js-yaml은 eslint를 통해 설치되는 개발 의존성. 타입 선언이 없어 require로 불러온다.)
+const yaml = require("js-yaml") as { load: (src: string) => unknown };
+
+interface WfStep { name?: string; id?: string; if?: string; run?: string; uses?: string; env?: Record<string, unknown>; with?: Record<string, unknown> }
+interface WfJob { needs?: string[] | string; if?: string; "runs-on"?: string; outputs?: Record<string, string>; steps: WfStep[] }
+interface Wf {
+  on: { workflow_dispatch?: { inputs?: Record<string, { type?: string; default?: unknown; options?: string[] }> }; schedule?: { cron: string }[] };
+  jobs: Record<string, WfJob>;
+}
+
+test("네 workflow 모두 YAML로 파싱되고, 모든 job은 ubuntu-24.04", () => {
+  for (const f of ["daily-report.yml", "delivery-monitor.yml", "refresh-kr-macro.yml", "ci.yml"]) {
+    const wf = yaml.load(fs.readFileSync(path.join(WF_DIR, f), "utf8")) as Wf;
+    const jobs = Object.entries(wf.jobs);
+    assert.ok(jobs.length > 0, f);
+    for (const [name, job] of jobs) assert.equal(job["runs-on"], "ubuntu-24.04", `${f}:${name}`);
+  }
+});
+
+test("daily-report 구조(YAML): market·etf 병렬, deliver가 둘을 기다림, test_date 입력, deliver 단계 순서", () => {
+  const wf = yaml.load(readWorkflow()) as Wf;
+  assert.deepEqual(Object.keys(wf.jobs), ["market", "etf", "deliver"]);
+  assert.equal(wf.jobs.market.needs, undefined);
+  assert.equal(wf.jobs.etf.needs, undefined);
+  assert.deepEqual(wf.jobs.deliver.needs, ["market", "etf"]);
+  assert.equal(wf.jobs.deliver.if, "${{ always() && !cancelled() }}");
+  for (const job of ["market", "etf"]) assert.deepEqual(wf.jobs[job].outputs, { changed: "${{ steps.changes.outputs.changed }}" });
+  const inputs = wf.on.workflow_dispatch!.inputs!;
+  assert.equal(inputs.test_date.type, "string");
+  assert.equal(inputs.test_date.default, "");
+  assert.deepEqual(inputs.only.options, ["both", "market", "etf"]);
+  const names = wf.jobs.deliver.steps.map((s) => s.name ?? s.uses ?? "");
+  const order = ["resolve market", "wait vercel market", "send market", "resolve etf", "wait vercel etf", "send etf"].map((p) =>
+    names.findIndex((n) => n.startsWith(p)),
+  );
+  assert.ok(order.every((i) => i >= 0), names.join(" | "));
+  assert.deepEqual([...order].sort((a, b) => a - b), order, names.join(" | "));
+  // 생성 job에는 발송 쪽 단계가 남아 있지 않다.
+  for (const job of ["market", "etf"]) {
+    for (const s of wf.jobs[job].steps) {
+      assert.doesNotMatch(`${s.name ?? ""}\n${s.run ?? ""}`, /delivery-state\.ts|api\.telegram\.org|Wait for Vercel/, `${job}: ${s.name}`);
+    }
+  }
+});
+
+/** deliver job의 step(이름 접두어)을 YAML에서 찾는다. */
+function deliverStep(prefix: string): WfStep {
+  const wf = yaml.load(readWorkflow()) as Wf;
+  const s = wf.jobs.deliver.steps.find((x) => (x.name ?? "").startsWith(prefix));
+  assert.ok(s, `deliver step '${prefix}' 없음`);
+  return s;
+}
+
+// 전송 > 침묵(F02): step if에 상태 함수가 없으면 Actions가 success()를 암묵적으로 붙인다. 그러면 market 쪽
+// 단계가 하나라도 실패(결과 불명 exit 1·배포 대기 실패·자산 확인 실패)했을 때 etf 단계가 모두 건너뛰어진다.
+// 그래서 !cancelled()로 다른 종류의 실패와 무관하게 돌리고, 대신 배포 대기 성공(outcome)을 직접 확인한다
+// (!cancelled()가 암묵적 성공 조건을 없애므로 이 확인이 없으면 Vercel 실패 뒤에도 발송한다).
+// 각 묶음은 그 생성 job이 이번 실행 대상이었을 때만 돈다 — only=market 재발송이 ETF까지 재발송하지 않게.
+// (실제 판정은 workflow-shell 테스트가 step 조건을 평가해 돌려 본다.)
+test("deliver step 조건: 종류별 묶음은 서로 막지 않고, 배포 확인 없이는 보내지 않으며, 실행 대상이 아닌 종류는 건드리지 않는다", () => {
+  for (const kind of ["market", "etf"]) {
+    assert.equal(deliverStep(`resolve ${kind}`).id, `delivery_${kind}`);
+    assert.equal(deliverStep(`wait vercel ${kind}`).id, `vercel_${kind}`);
+    assert.equal(deliverStep(`resolve ${kind}`).if, `\${{ !cancelled() && needs.${kind}.result != 'skipped' }}`);
+    assert.equal(deliverStep(`wait vercel ${kind}`).if, `\${{ !cancelled() && steps.delivery_${kind}.outputs.action == 'send' }}`);
+    assert.equal(
+      deliverStep(`send ${kind}`).if,
+      `\${{ !cancelled() && steps.delivery_${kind}.outputs.action == 'send' && steps.vercel_${kind}.outcome == 'success' }}`,
+    );
+  }
+});
+
+// 감사 F06: resolve는 결과 불명(unknown)이면 exit 1 — 그 실패가 job 실패(소유자 메일)로 드러나야 한다.
+for (const kind of ["market", "etf"] as const) {
+  test(`deliver ${kind}: resolve step이 있고, 결과 불명(exit 1)을 continue-on-error로 가리지 않는다`, () => {
+    const d = jobBlock(yml, "deliver");
+    assert.match(d, new RegExp(`npx tsx scripts/delivery-state\\.ts resolve ${kind}`));
+    const step = stepBlock(d, `resolve ${kind}`);
+    assert.match(step, new RegExp(`id: delivery_${kind}`));
     assert.doesNotMatch(step, /continue-on-error/);
+    assert.doesNotMatch(d, /continue-on-error/);
   });
 
-  test(`${job}: 발송 step은 step output을 셸에 직접 보간하지 않는다 (env로만 전달)`, () => {
-    const b = jobBlock(job);
-    const run = b.slice(b.lastIndexOf("api.telegram.org") - 3000);
-    assert.doesNotMatch(run, /="\$\{\{ steps\./);
-    assert.doesNotMatch(b, /\n\s+set -x/);
+  test(`deliver ${kind}: 발송 step은 step output을 셸에 직접 보간하지 않는다 (env로만 전달)`, () => {
+    const s = stepBlock(jobBlock(yml, "deliver"), `send ${kind}`);
+    assert.doesNotMatch(s.slice(s.indexOf("run: |")), /\$\{\{/);
+    assert.match(s, new RegExp(`REPORT_SHA: \\$\\{\\{ steps\\.delivery_${kind}\\.outputs\\.sha \\}\\}`));
+    assert.doesNotMatch(jobBlock(yml, "deliver"), /\n\s+set -x/);
   });
 
-  test(`${job}: 발송 전 pending 기록 → 응답 분류 → 결과 기록`, () => {
-    const b = jobBlock(job);
-    assert.match(b, new RegExp(`delivery-state\\.ts mark ${job} "\\$REPORT_SHA" pending`));
-    assert.match(b, /delivery-state\.ts classify/);
-    assert.match(b, new RegExp(`delivery-state\\.ts mark ${job} "\\$REPORT_SHA" "\\$STATE"`));
-    assert.match(b, /--max-time 30/);
+  test(`deliver ${kind}: 발송 전 pending 기록 → 응답 분류 → 결과 기록`, () => {
+    const s = stepBlock(jobBlock(yml, "deliver"), `send ${kind}`);
+    assert.match(s, new RegExp(`delivery-state\\.ts mark ${kind} "\\$REPORT_SHA" pending`));
+    assert.match(s, /delivery-state\.ts classify/);
+    assert.match(s, new RegExp(`delivery-state\\.ts mark ${kind} "\\$REPORT_SHA" "\\$STATE"`));
+    assert.match(s, /--max-time 30/);
+  });
+
+  test(`deliver ${kind}: 발송 직전 재확인은 재발송 경로에서만 하고, 조회 실패는 조용히 넘기지 않는다`, () => {
+    const s = stepBlock(jobBlock(yml, "deliver"), `send ${kind}`);
+    assert.match(s, /if \[ "\$IS_RESEND" = "true" \] && \[ "\$FORCE_RESEND" != "true" \]; then/);
+    assert.match(s, new RegExp(`delivery-state\\.ts status ${kind} "\\$REPORT_SHA"`));
+    assert.match(s, /success\|pending\)/);
+    assert.match(s, /::error::발송 상태 재확인 실패/);
+    assert.match(s, /::error::Telegram \$\{STATE\} 이후 상태 기록 실패/);
   });
 }
 
-for (const job of ["market", "etf"] as const) {
-  test(`${job}: 발송 직전 재확인은 재발송 경로에서만 하고, 조회 실패는 조용히 넘기지 않는다`, () => {
-    const b = jobBlock(job);
-    assert.match(b, /if \[ "\$IS_RESEND" = "true" \] && \[ "\$FORCE_RESEND" != "true" \]; then/);
-    assert.match(b, /success\|pending\)/);
-    assert.match(b, /::error::발송 상태 재확인 실패/);
-    assert.match(b, /::error::Telegram \$\{STATE\} 이후 상태 기록 실패/);
-  });
-}
-
-
-// 감사 F05: market·etf·주간 매크로 갱신은 concurrency 그룹이 달라 같은 main에 동시에 push한다.
-// rebase 실패를 `|| true`로 삼키고 push를 한 번만 하던 구조를 제한 재시도로 바꿨다.
-const macroYml = fs.readFileSync(path.join(__dirname, "..", ".github", "workflows", "refresh-kr-macro.yml"), "utf8");
+// 감사 F05: market·etf·주간 매크로 갱신은 같은 main에 동시에 push한다(2026-10-19부터 market·etf는 같은
+// 실행 안에서도 병렬). rebase 실패를 `|| true`로 삼키고 push를 한 번만 하던 구조를 제한 재시도로 바꿨다.
+const macroYml = fs.readFileSync(path.join(WF_DIR, "refresh-kr-macro.yml"), "utf8");
 
 /** 블록에서 `- name: <prefix>…` step 텍스트(다음 step 직전까지). */
 function stepBlock(block: string, namePrefix: string): string {
@@ -82,8 +251,8 @@ function stepBlock(block: string, namePrefix: string): string {
 }
 
 const pushSteps: [string, string][] = [
-  ["market", stepBlock(jobBlock("market"), "Commit and push report")],
-  ["etf", stepBlock(jobBlock("etf"), "Commit and push ETF report")],
+  ["market", stepBlock(jobBlock(yml, "market"), "Commit and push report")],
+  ["etf", stepBlock(jobBlock(yml, "etf"), "Commit and push ETF report")],
   ["refresh-kr-macro", stepBlock(macroYml, "Commit and push")],
 ];
 for (const [label, step] of pushSteps) {
@@ -102,13 +271,13 @@ for (const [label, step] of pushSteps) {
 
 // 감사 F03: Vercel success만으로는 이 날짜의 PNG가 실제로 올라갔는지 모른다. 발송 step이
 // 텔레그램에 넘길 바로 그 URL을 발송(pending 기록) 전에 확인한다.
-for (const [job, sendStep] of [["market", "Send Telegram notification"], ["etf", "Send ETF Telegram notification"]] as const) {
-  test(`${job}: 발송 전에 텔레그램이 가져갈 프리뷰 PNG·본문 URL을 실제로 확인한다`, () => {
-    const s = stepBlock(jobBlock(job), sendStep);
+for (const kind of ["market", "etf"] as const) {
+  test(`deliver ${kind}: 발송 전에 텔레그램이 가져갈 프리뷰 PNG·본문 URL을 실제로 확인한다`, () => {
+    const s = stepBlock(jobBlock(yml, "deliver"), `send ${kind}`);
     const ogDef = s.lastIndexOf('OG_IMAGE_URL="https://dailyreport-eta.vercel.app/');
     const check = s.indexOf(`-w '%{http_code} %{content_type}' "$OG_IMAGE_URL"`);
     const pageCheck = s.indexOf(`-w '%{http_code} %{content_type}' "$REPORT_URL"`);
-    const pending = s.indexOf(`delivery-state.ts mark ${job} "$REPORT_SHA" pending`);
+    const pending = s.indexOf(`delivery-state.ts mark ${kind} "$REPORT_SHA" pending`);
     const telegram = s.indexOf("api.telegram.org");
     assert.ok(ogDef >= 0 && check >= 0 && pageCheck >= 0 && pending >= 0 && telegram >= 0);
     assert.ok(ogDef < check, "자산 확인이 OG_IMAGE_URL 정의보다 앞");
@@ -128,31 +297,47 @@ test("market·etf push는 main으로 rebase한다 (checkout ref: main과 일치)
   assert.match(pushSteps[1][1], /commit \*\*뒤\*\*에 와야 한다/);
 });
 
-test("ETF 파이프라인 step에도 FORCE_REGENERATE가 전달된다", () => {
-  assert.match(jobBlock("etf"), /FORCE_REGENERATE: \$\{\{ inputs\.force_regenerate == true && 'true' \|\| 'false' \}\}/);
+// 운영 실행은 항상 최신 main을 체크아웃한다(재실행 non-fast-forward 인시던트). dry_run만 실행한 ref(github.sha)를
+// 체크아웃한다 — 브랜치 dry-run(전환 전 검증)이 main의 옛 코드가 아니라 그 브랜치 코드를 돌리게. dry_run은 커밋·발송이 없다.
+test("checkout: 운영 실행은 ref main, dry_run만 실행한 ref", () => {
+  const wf = yaml.load(readWorkflow()) as Wf;
+  for (const job of ["market", "etf", "deliver"]) {
+    const co = wf.jobs[job].steps.find((s) => s.uses === "actions/checkout@v4");
+    assert.equal(co?.with?.ref, "${{ (inputs.dry_run == true || inputs.dry_run == 'true') && github.sha || 'main' }}", job);
+  }
+  const co = wf.jobs.deliver.steps.find((s) => s.uses === "actions/checkout@v4");
+  assert.equal(co?.with?.["fetch-depth"], 0);
 });
 
-test("schedule과 job 분기 조건은 그대로다 — 트리거 분리는 inputs.only로만", () => {
+test("ETF 파이프라인 step에도 FORCE_REGENERATE가 전달된다", () => {
+  assert.match(jobBlock(yml, "etf"), /FORCE_REGENERATE: \$\{\{ inputs\.force_regenerate == true && 'true' \|\| 'false' \}\}/);
+});
+
+test("schedule은 하나(3순위 백업), job 분기는 inputs.only로", () => {
   assert.match(yml, /- cron: '30 22 \* \* 0-4'/);
   assert.equal((yml.match(/- cron:/g) ?? []).length, 1);
-  assert.match(jobBlock("market"), /if: \$\{\{ inputs\.only != 'etf' \}\}/);
-  assert.match(jobBlock("etf"), /if: \$\{\{ always\(\) && \(github\.event_name == 'schedule' \|\| inputs\.only == 'etf'\) \}\}/);
+  assert.match(jobBlock(yml, "market"), /\n    if: \$\{\{ inputs\.only != 'etf' \}\}\n/);
+  assert.match(jobBlock(yml, "etf"), /\n    if: \$\{\{ github\.event_name == 'schedule' \|\| inputs\.only == 'both' \|\| inputs\.only == 'etf' \}\}\n/);
 });
 
-// 2026-09-30: 외부 호출(예: 폐기된 cron-job.org의 only=both)이 KRX 게시(~08:00) 전에 ETF를
-// 먼저 발송해 08:15 정상 실행을 중복 가드로 막은 사고 방지. ETF는 schedule 또는 only=etf에서만.
-test("ETF job은 dispatch only=both·only=market에서 돌지 않는다", () => {
-  const cond = jobBlock("etf").match(/if: \$\{\{ (.*) \}\}/)![1];
-  const evalCond = (event: string, only: string) =>
-    new Function("github", "inputs", `return ${cond.replace(/always\(\)/g, "true")}`)({ event_name: event }, { only });
-  assert.equal(evalCond("workflow_dispatch", "both"), false);
-  assert.equal(evalCond("workflow_dispatch", "market"), false);
-  assert.equal(evalCond("workflow_dispatch", "etf"), true);
-  assert.equal(evalCond("schedule", ""), true);
+// 2026-10-19: Market·ETF가 06:40·07:20 트리거(only=both)를 공유한다. ETF는 더 이상 KRX 게시(~08:00)를
+// 기다리지 않는다(전일 종가 기준) — only=both에서 ETF를 막던 2026-09-30 규칙은 폐기.
+test("job 실행 대상: both·schedule은 둘 다, market·etf는 그 종류만", () => {
+  const evalCond = (job: string, event: string, only: string) =>
+    new Function("github", "inputs", `return ${jobIf(yml, job)}`)({ event_name: event }, event === "schedule" ? {} : { only });
+  for (const [event, only, market, etf] of [
+    ["workflow_dispatch", "both", true, true],
+    ["workflow_dispatch", "market", true, false],
+    ["workflow_dispatch", "etf", false, true],
+    ["schedule", "", true, true],
+  ] as const) {
+    assert.equal(evalCond("market", event, only), market, `market ${event} ${only}`);
+    assert.equal(evalCond("etf", event, only), etf, `etf ${event} ${only}`);
+  }
 });
 
 // ── delivery-monitor.yml: 독립 도착 감시(감사 F06c) ─────────────────────────────────────
-const monitorPath = path.join(__dirname, "..", ".github", "workflows", "delivery-monitor.yml");
+const monitorPath = path.join(WF_DIR, "delivery-monitor.yml");
 const monitorYml = fs.existsSync(monitorPath) ? fs.readFileSync(monitorPath, "utf8") : "";
 
 /** UTC cron 'M H * * a-b'를 KST 시각·요일(0=일)로 바꾼다. */
@@ -172,23 +357,19 @@ function monitorKind(event: string, schedule: string, kind: string): string {
   return new Function("github", "inputs", `return ${expr}`)({ event_name: event, event: { schedule } }, { kind });
 }
 
-test("delivery-monitor: 수동 실행(kind)과 schedule 백업(KST 07:45 market·09:00 etf, 월~금)", () => {
+test("delivery-monitor: schedule 백업 하나(KST 07:45 월~금)가 두 리포트(all)를 감시", () => {
   assert.ok(monitorYml, "delivery-monitor.yml 없음");
-  assert.match(monitorYml, /workflow_dispatch:\n    inputs:\n      kind:/);
-  assert.match(monitorYml, /options: \[market, etf\]/);
   const crons = [...monitorYml.matchAll(/- cron: '([^']+)'/g)].map((x) => x[1]);
-  assert.equal(crons.length, 2);
-  const byKind = Object.fromEntries(crons.map((c) => [monitorKind("schedule", c, ""), cronToKst(c)]));
-  // 어느 cron이 발화했는지로 종류를 고른다 — cron 문자열 오타면 엉뚱한 종류를 감시한다.
-  assert.deepEqual(byKind, {
-    market: { hhmm: "07:45", weekdays: [1, 2, 3, 4, 5] },
-    etf: { hhmm: "09:00", weekdays: [1, 2, 3, 4, 5] },
-  });
+  assert.deepEqual(crons, ["45 22 * * 0-4"]);
+  assert.deepEqual(cronToKst(crons[0]), { hhmm: "07:45", weekdays: [1, 2, 3, 4, 5] });
+  assert.equal(monitorKind("schedule", crons[0], ""), "all");
 });
 
-test("delivery-monitor: dispatch는 입력 kind를 그대로 쓴다", () => {
-  assert.equal(monitorKind("workflow_dispatch", "", "market"), "market");
-  assert.equal(monitorKind("workflow_dispatch", "", "etf"), "etf");
+test("delivery-monitor: dispatch 입력 kind(all 기본, market·etf 선택)를 그대로 쓴다", () => {
+  assert.match(monitorYml, /workflow_dispatch:\n    inputs:\n      kind:/);
+  assert.match(monitorYml, /options: \[all, market, etf\]/);
+  assert.match(monitorYml, /default: all/);
+  for (const k of ["all", "market", "etf"]) assert.equal(monitorKind("workflow_dispatch", "", k), k);
 });
 
 test("delivery-monitor: 읽기 전용 최소 권한, check-delivery를 env로 받은 KIND로 실행", () => {
@@ -201,7 +382,7 @@ test("delivery-monitor: 읽기 전용 최소 권한, check-delivery를 env로 �
 });
 
 // ── ci.yml: 변경을 막는 자동 검증(감사 F11) ────────────────────────────────────────────
-const ciPath = path.join(__dirname, "..", ".github", "workflows", "ci.yml");
+const ciPath = path.join(WF_DIR, "ci.yml");
 const ciYml = fs.existsSync(ciPath) ? fs.readFileSync(ciPath, "utf8") : "";
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8")) as { scripts: Record<string, string> };
 
