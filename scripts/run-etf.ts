@@ -7,6 +7,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { collectAllEtfData } from '../lib/etf/etf-data'
+import { krxNavFailed } from '../lib/etf/krx-session'
 import { collectIndexQuotes, collectMacroContext, isMacroEmpty } from '../lib/etf/market-context'
 import { collectEconomicCalendar } from '../lib/economic-calendar'
 import { ETF_GENERATION_BUDGET_MS, makeDeadline } from '../lib/claude-budget'
@@ -128,7 +129,7 @@ async function main() {
   if (sanitized.invalidCount > 0) console.warn(`  ⚠️ 비정상 가격 ${sanitized.invalidCount}건 → 결측 처리`)
   const quotes = sanitized.quotes
 
-  // Layer 0: 수집 실패 소스 기록 (allSettled rejection + KRX nav 전량 null)
+  // Layer 0: 수집 실패 소스 기록 (allSettled rejection + 직전 거래일 KRX 세션인데 국내 NAV 전량 null)
   const failedSources: string[] = []
   if (etfData.status === 'rejected') failedSources.push('etf-quotes')
   if (macro.status === 'rejected' || isMacroEmpty(macro.value)) failedSources.push('macro')
@@ -136,8 +137,9 @@ async function main() {
   // C01: 지수 실측이 없으면 프롬프트가 지수 등락 수치를 쓰지 못하게 한다.
   if (indices.status === 'rejected' || indices.value.length === 0) failedSources.push('indices')
   console.log(`  지수 실측 ${indices.status === 'fulfilled' ? indices.value.length : 0}건 · 미국 지표 일정 ${usEvents.status === 'fulfilled' ? usEvents.value.length : 0}건`)
-  const krQuotes = quotes.filter(q => q.market === 'KR')
-  if (krQuotes.length > 0 && krQuotes.every(q => q.nav === null)) failedSources.push('krx-nav')
+  // Ruling 22: KRX는 08:00 KST 게시 — 06:40 실행(세션 none·stale)에 NAV가 없는 것은 실패가 아니다.
+  // 직전 거래일 세션을 받아 병합했는데 NAV가 비어 있을 때만 실패(모드 quiet·근거 strong 판정에 반영).
+  if (krxNavFailed(krx.session, quotes)) failedSources.push('krx-nav')
 
   // Step 2: 데이터 검증
   console.log('[2/8] 데이터 검증 중...')

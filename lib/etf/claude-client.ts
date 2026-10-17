@@ -224,6 +224,26 @@ ${lines}
 ${cardLine}`
 }
 
+// 국내 ETF 거래대금 상위 5 (원). KRX 거래대금(tradingValue)이 있으면 그 값을 쓴다.
+// I1 (Ruling 22): KRX OpenAPI는 08:00 KST 게시라 06:40 실행엔 거래대금이 없다 — 그때는 렌더러의 '추정 거래대금'과
+// 같은 종가×거래량 참고값으로 순위를 주고, 추정값임을 줄 머리에 밝힌다(실측처럼 인용하지 않게).
+function buildKrTradingValueLine(krQuotes: EtfQuote[]): string {
+  const top = (rows: Array<{ q: EtfQuote; value: number }>) => rows
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5)
+    .map(({ q, value }) => `${formatPromptEtf(q)} ${formatPromptNumber(value, 0)}원`)
+    .join(' / ')
+  const actual = krQuotes
+    .filter(q => typeof q.tradingValue === 'number' && Number.isFinite(q.tradingValue))
+    .map(q => ({ q, value: q.tradingValue as number }))
+  if (actual.length > 0) return `거래대금 상위: ${top(actual)}`
+  const estimated = krQuotes
+    .filter(q => typeof q.price === 'number' && typeof q.volume === 'number' && Number.isFinite(q.price) && Number.isFinite(q.volume))
+    .map(q => ({ q, value: (q.price as number) * (q.volume as number) }))
+  if (estimated.length === 0) return '거래대금 상위: N/A'
+  return `거래대금 상위(추정 — 종가×거래량 참고값, KRX 거래대금 미게시): ${top(estimated)}`
+}
+
 // 레버리지·인버스 주의는 코드가 조건(|등락| 10% 이상)을 판단해 작성/생략을 지시한다. 검증도 같은 조건.
 function buildTacticalBlock(alert: EtfQuote | null): string {
   const rule = alert
@@ -346,7 +366,7 @@ ${topUs.slice(-5).reverse().map(q => `${formatPromptEtf(q)}: ${q.changePercent?.
 [국내 ETF 핵심 움직임 — 전일 종가 기준]
 상위: ${topKr.slice(0, 5).map(q => `${formatPromptEtf(q)} ${q.changePercent?.toFixed(2)}%`).join(' / ') || 'N/A'}
 하위: ${topKr.slice(-5).reverse().map(q => `${formatPromptEtf(q)} ${q.changePercent?.toFixed(2)}%`).join(' / ') || 'N/A'}
-거래대금 상위: ${topKr.filter(q => q.tradingValue !== undefined && q.tradingValue !== null).sort((a, b) => (b.tradingValue ?? 0) - (a.tradingValue ?? 0)).slice(0, 5).map(q => `${formatPromptEtf(q)} ${formatPromptNumber(q.tradingValue, 0)}원`).join(' / ') || 'N/A'}
+${buildKrTradingValueLine(topKr)}
 
 ${buildIndexBlock(data.indices)}
 
