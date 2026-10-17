@@ -85,6 +85,7 @@
   letter-spacing: -0.02em;
   color: #111827;
   margin-bottom: 8px;
+  text-wrap: balance;
 }
 .cover-subline {
   font-size: 15px;

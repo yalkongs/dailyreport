@@ -88,6 +88,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title,
       description,
+      siteName: 'iM뱅크',
       type: 'article',
       url: canonicalUrl,
       images: [{

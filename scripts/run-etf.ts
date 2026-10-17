@@ -25,6 +25,8 @@ import { appendEtfEvidenceLog } from '../lib/etf/etf-evidence-log'
 import { getMarketCalendarInfo, describeMarketCalendar, isYearCovered } from '../lib/market-calendar'
 // (2026-05-25) holiday-notice 임포트 제거 — 한국 휴장 시 silent skip 정책으로 변경.
 import { renderMorningHtml, saveReport, saveReportPreviewImage } from '../lib/etf/renderer'
+import { buildAssetClassSlots, cardSlot } from '../lib/etf/asset-classes'
+import { buildMosaicTiles } from '../lib/preview/data-card'
 // NOTE: Only the error-notification path is imported. The success-path
 // Telegram send was moved to the GitHub Actions workflow so that the
 // message is dispatched AFTER git push + Vercel redeploy — otherwise
@@ -253,7 +255,15 @@ async function main() {
     'https://dailyreport-eta.vercel.app'
   const html = renderMorningHtml(report, data, { publicBaseUrl })
   saveReport(html, date)
-  await saveReportPreviewImage(date, report.cover.headline, report.cover.subline)
+  // 미리보기 카드(spec §4): report.card.key 자산군의 "○○를 갖고 있다면" + 그 자산군 구성원 ETF 타일 강조.
+  // card.key가 슬롯에 없으면 주제 슬롯(pickFeaturedSlot)으로 — 페이지 모자이크와 같은 슬롯(cardSlot).
+  const slot = cardSlot(buildAssetClassSlots(data.quotes), report.card.key)
+  await saveReportPreviewImage(date, {
+    headline: report.cover.headline,
+    holdingLabel: slot?.holdingLabel ?? '',
+    line: report.card.line,
+    tiles: buildMosaicTiles(data.quotes, slot ? new Set(slot.memberTickers) : null),
+  })
 
   // Step 7: 인덱스 업데이트
   console.log('[7/8] 인덱스 갱신 중...')

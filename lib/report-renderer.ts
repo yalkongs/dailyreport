@@ -18,6 +18,7 @@ import { buildSparklineMap } from "./chart-generator";
 import { stripEmphasisTags } from "./html-entities";
 import { LEGAL_DISCLAIMER_ITEMS, LEGAL_DISCLAIMER_TITLE } from "./legal-disclaimer";
 import { renderStripesSvg } from "./preview/data-card";
+import { CARD_WIDTH, CARD_HEIGHT } from "./preview/card-size";
 import type { StripeSession } from "./preview/data-card";
 import { summarySentence } from "./market-summary";
 
@@ -77,8 +78,8 @@ function renderHead(content: ReportContent, date: string, css: string): string {
 <meta property="og:site_name" content="iM뱅크">
 <meta property="og:type" content="article">
 <meta property="og:image" content="https://dailyreport-eta.vercel.app/reports/${date}-preview.png">
-<meta property="og:image:width" content="1080">
-<meta property="og:image:height" content="1350">
+<meta property="og:image:width" content="${CARD_WIDTH}">
+<meta property="og:image:height" content="${CARD_HEIGHT}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${headline}">
 <meta name="twitter:description" content="${description}">

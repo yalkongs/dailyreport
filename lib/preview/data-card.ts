@@ -11,14 +11,16 @@ import { koreanWeekday } from '../market-calendar'
 import { getEtfByTicker } from '../etf/universe'
 import { isTacticalEtf } from '../etf/story-characters'
 import type { EtfQuote } from '../etf/types'
+import { CARD_WIDTH, CARD_HEIGHT } from './card-size'
 
 export interface StripeSession { date: string; pct: number }          // date YYYY-MM-DD(KST 거래일)
 export interface MosaicTile { ticker: string; market: 'KR' | 'US'; category: string; pct: number; featured: boolean }
 export interface MarketCardInput { date: string; headline: string; line: string; sessions: StripeSession[] }
 export interface EtfCardInput { date: string; headline: string; holdingLabel: string; line: string; tiles: MosaicTile[] }
 
-const CARD_W = 1080
-const CARD_H = 1350
+// 카드 크기는 import 없는 card-size.ts에 둔다(Next 페이지가 sharp 없이 og:image 크기를 쓰도록).
+const CARD_W = CARD_WIDTH
+const CARD_H = CARD_HEIGHT
 const FONT_FAMILY = "Pretendard, 'Noto Sans CJK KR', 'Noto Sans KR', sans-serif"
 const FONT_ATTR = `font-family="${FONT_FAMILY}"`
 const MIN_FONT_PX = 40   // spec §4: 카드 글자 최소 크기
@@ -117,11 +119,12 @@ const MAX_TILES_PER_MARKET = 50
 
 /**
  * 모자이크에 올릴 타일: 결측·레버리지·인버스 제외, 시장별로 [자산군 순서, 등락률 오름차순] 정렬(최대 50).
- * 결과는 KR 전체 → US 전체 순. featuredTheme과 같은 theme의 ETF는 featured.
+ * 결과는 KR 전체 → US 전체 순. featuredTickers에 든 ETF는 featured(검은 테두리) —
+ * 호출 쪽은 카드 자산군 슬롯의 구성원(AssetClassSlot.memberTickers)을 넘긴다(Ruling 21: 테마 문자열이 아니라 슬롯 구성원).
  */
 export function buildMosaicTiles(
   quotes: Array<{ ticker: string; name: string; market: 'KR' | 'US'; changePercent: number | null }>,
-  featuredTheme: string | null,
+  featuredTickers: ReadonlySet<string> | null,
 ): MosaicTile[] {
   const tiles: MosaicTile[] = []
   for (const market of ['KR', 'US'] as const) {
@@ -136,7 +139,7 @@ export function buildMosaicTiles(
           market,
           category: def?.category ?? '기타',
           pct: q.changePercent as number,
-          featured: featuredTheme !== null && def?.theme === featuredTheme,
+          featured: featuredTickers?.has(q.ticker) ?? false,
         }
       })
       .sort((a, b) => ((CATEGORY_ORDER[a.category] ?? 9) - (CATEGORY_ORDER[b.category] ?? 9)) || (a.pct - b.pct))

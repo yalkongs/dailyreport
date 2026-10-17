@@ -17,7 +17,9 @@
 import { findNumericClaimMismatches } from './numeric-claims'
 import type { CollectedData, MorningReport, MorningStrategyInput } from './types'
 // 2026-10-17 출력 스키마 개편: 자산군 카드 key·카드 key는 코드가 확정한 슬롯 안에서만.
-import { buildAssetClassSlots, findTacticalAlert, pickFeaturedSlot, TACTICAL_WARNING_MIN_ABS_PCT } from './asset-classes'
+import { buildAssetClassSlots, cardSlot, findTacticalAlert, pickFeaturedSlot, TACTICAL_WARNING_MIN_ABS_PCT } from './asset-classes'
+// Ruling 15: 미리보기 카드 문구는 카드 렌더러와 같은 규칙으로 발행 전에 판정한다.
+import { cardTextFits } from '../preview/data-card'
 // 정합성 검사 (2026-07-22): R2 시점 / R3 출처 인용. (R1 Characters 카드-산문 정합은 스키마 개편으로 제거)
 import { checkAndFixTemporal } from '../temporal-consistency'
 import { softFixUnquotableSources, countCitationPhrases } from '../quotable-sources'
@@ -338,12 +340,13 @@ const DIGIT = /[0-9]/
  *  - todayChecks 정확히 3개
  *  - assetCards key ⊆ 자산군 슬롯(중복 없이), card.key ∈ 자산군 슬롯 (buildAssetClassSlots(data.quotes))
  *  - card.line 32자 이내·질문형 금지
+ *  - 미리보기 카드 문구(제목·card 자산군 라벨·card.line)가 카드 규칙 안에 들어감(cardTextFits, Ruling 15)
  * Ruling 10(2026-10-17): 마지막 축소판(lastAttempt = factChecksAsWarnings)에서는 코드가 고칠 수 있는 구조 문제를
  * 그 자리에서 교정하고 console.warn으로 남긴다 — 발송을 막지 않는다(전송 > 침묵). 1·2회차는 재생성 사유.
  *   todayChecks 3개 초과 → 앞 3개 / 1~2개 → 경고 / 0개 → 필수 필드 누락(막음)
  *   card.key 슬롯 밖·누락 → 주제 슬롯(pickFeaturedSlot) key
  *   assetCards 슬롯 밖 key → 버림, 중복 key → 첫 카드만
- *   card.line 길이·질문형 → 경고(카드 렌더러가 마지막 수단으로 '…' 처리)
+ *   card.line 길이·질문형, 카드 문구 넘침 → 경고(카드 렌더러가 마지막 수단으로 '…' 처리)
  * 진짜 비어 있는 필수 필드(summary·ifHolding 등)는 마지막 시도에도 막는다.
  * 기록만(soft-warn): 60자 권장 초과, 슬롯 누락 카드(렌더러가 숫자만 있는 카드로 그림), card.key ≠ 주제 슬롯,
  * card.line의 숫자(숫자 자체가 뉴스일 때는 쓸 수 있음).
@@ -447,6 +450,23 @@ function findStructuralViolations(report: MorningReport, data: CollectedData, op
   const cardKeys = objectItems(report.assetCards).map(c => c.key as unknown).filter(isFilled) as string[]
   const missingSlots = slotKeys.filter(k => !cardKeys.includes(k))
   if (missingSlots.length > 0) console.log(`  [soft-warn] assetCards에 빠진 슬롯(숫자만 렌더): ${missingSlots.join(', ')}`)
+
+  // ── 미리보기 카드 문구(Ruling 15): 카드 렌더러와 같은 규칙(cardTextFits)으로 판정 ──
+  // 1·2회차 위반(재생성), 마지막 시도 경고만 — 카드 렌더러는 넘치는 줄을 '…'로 줄여 그린다.
+  // 제목·한 줄이 비어 있으면 위 필수 필드 누락이 이미 보고하므로 여기서는 보지 않는다.
+  const headline = typeof report.cover?.headline === 'string' ? report.cover.headline : ''
+  const cardLine = typeof card?.line === 'string' ? card.line : ''
+  if (isFilled(headline) && isFilled(cardLine)) {
+    const slot = cardSlot(slots, card?.key)
+    const fit = cardTextFits('etf', { headline, line: cardLine, holdingLabel: slot?.holdingLabel ?? '' })
+    // 자산군 슬롯이 하나도 없는 날(데이터 문제)은 라벨이 빌 수밖에 없다 — 재생성으로 고칠 수 없으니 라벨은 보지 않는다.
+    const reasons = slot ? fit.reasons : fit.reasons.filter(r => !r.startsWith('holdingLabel'))
+    if (reasons.length > 0) {
+      const message = `미리보기 카드 문구가 카드에 들어가지 않음: ${reasons.join('; ')}`
+      if (lastAttempt) console.warn(`  [card-warn] ${message} — 경고만(카드 렌더러가 '…'로 줄임)`)
+      else violations.push(message)
+    }
+  }
 
   // ── card.line: 1·2회차 위반, 마지막 시도 경고 ──
   const line = typeof card?.line === 'string' ? card.line.trim() : ''

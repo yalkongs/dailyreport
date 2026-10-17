@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildAssetClassSlots, pickFeaturedSlot } from './asset-classes'
+import { buildAssetClassSlots, cardSlot, pickFeaturedSlot } from './asset-classes'
+import { buildMosaicTiles } from '../preview/data-card'
 import { KR_ETF_UNIVERSE } from './universe'
 import type { EtfQuote } from './types'
 
@@ -144,7 +145,7 @@ test('미국 주식 슬롯: KODEX 미국반도체도 포함, 미국채·미국�
   const us = s.find(x => x.key === 'us-equity')!
   assert.deepEqual(us.reps.map(r => r.ticker), ['390390.KS', 'QQQ'])
   assert.equal(us.movePct, -6)
-  assert.deepEqual(s.find(x => x.key === 'bonds')?.reps.map(r => r.ticker), ['305080.KS', '329750.KS'])
+  assert.deepEqual(s.find(x => x.key === 'bonds')?.reps.map(r => r.ticker), ['305080.KS']) // 달러단기채는 채권 예시에서 제외(Ruling 16)
   const noUs = buildAssetClassSlots([q('390390.KS', 'KODEX 미국반도체', -6), q('133690.KS', 'TIGER 미국나스닥100', 1.5)])
   assert.deepEqual(noUs[0].reps.map(r => r.ticker), ['390390.KS', '133690.KS']) // 해외 대표가 없으면 국내 2위
 })
@@ -173,4 +174,76 @@ test('주제 슬롯: 국내 슬롯이 없으면 첫 슬롯', () => {
   const s = buildAssetClassSlots([q('SPY', 'SPDR S&P 500', 0.3), q('GLD', 'SPDR Gold', -2)])
   assert.equal(s[0].key, 'commodities')
   assert.equal(pickFeaturedSlot(s)?.key, 'commodities')
+})
+
+// Ruling 16: 달러 단기채·SOFR 같은 현금성 달러 상품은 환율 날 크게 움직여도 '채권' 예시가 아니다.
+test('채권 슬롯: 현금성 달러 상품(달러단기·SOFR)은 대표 ETF에서 제외', () => {
+  const s = buildAssetClassSlots([
+    q('329750.KS', 'TIGER 미국달러단기채권액티브', 1.85),           // 환율 급등일 — 원화 환산으로 크게 움직임
+    q('456610.KS', 'TIGER 미국달러SOFR금리액티브(합성)', 1.79),
+    q('114260.KS', 'KODEX 국고채3년', 0.05),
+    q('TLT', 'iShares 20+ Year Treasury Bond ETF', -0.3),
+  ])
+  const bonds = s.find(x => x.key === 'bonds')!
+  assert.deepEqual(bonds.reps.map(r => r.ticker), ['114260.KS', 'TLT'])
+  assert.equal(bonds.movePct, 0.05)
+  const cashOnly = buildAssetClassSlots([q('329750.KS', 'TIGER 미국달러단기채권액티브', 1.85), q('456610.KS', 'TIGER 미국달러SOFR금리액티브(합성)', 1.79)])
+  assert.deepEqual(cashOnly, [])
+})
+
+// Ruling 19: 원화 현금성 단기채(단기통안채 등)도 채권 예시가 아니다.
+test('채권 슬롯: 단기통안채 같은 현금성 단기채도 대표 ETF에서 제외', () => {
+  const s = buildAssetClassSlots([
+    q('157450.KS', 'TIGER 단기통안채', 0.02),
+    q('148070.KS', 'KIWOOM 국고채10년', -0.01),
+  ])
+  const bonds = s.find(x => x.key === 'bonds')!
+  assert.deepEqual(bonds.reps.map(r => r.ticker), ['148070.KS'])
+  assert.deepEqual(bonds.memberTickers, ['148070.KS'])
+  assert.deepEqual(buildAssetClassSlots([q('157450.KS', 'TIGER 단기통안채', 0.02)]), [])
+})
+
+// ─── Ruling 21: 모자이크 강조는 테마 문자열이 아니라 슬롯 구성원을 따른다 ─────────────
+const MEMBER_QUOTES = [
+  q('069500.KS', 'KODEX 200', -8.21), q('102110.KS', 'TIGER 200', -8.0), q('292190.KS', 'KODEX KRX300', -7.5),
+  q('229200.KS', 'KODEX 코스닥150', -6.0),                                        // 대형주 아님
+  q('091160.KS', 'KODEX 반도체', -11.94), q('157490.KS', 'TIGER 소프트웨어', -5.0),  // 반도체·AI
+  q('139260.KS', 'TIGER 200 IT', -9.0),                                           // IT
+  q('390390.KS', 'KODEX 미국반도체', -2.0), q('SOXX', 'iShares Semiconductor ETF', -0.9), // 테마 반도체지만 국내 반도체 슬롯 밖
+  q('360750.KS', 'TIGER 미국S&P500', -1.04), q('133690.KS', 'TIGER 미국나스닥100', -1.2),
+  q('SPY', 'SPDR S&P 500 ETF', 0.28), q('QQQ', 'Invesco NASDAQ-100 ETF', 0.41), q('IWM', 'iShares Russell 2000 ETF', 1.0),
+  q('122630.KS', 'KODEX 레버리지', -16.42),
+]
+
+function featuredFor(key: string): string[] {
+  const slot = buildAssetClassSlots(MEMBER_QUOTES).find(s => s.key === key)!
+  return buildMosaicTiles(MEMBER_QUOTES, new Set(slot.memberTickers)).filter(t => t.featured).map(t => t.ticker).sort()
+}
+
+test('슬롯 구성원: 대표(최대 2개)가 아니라 슬롯에 든 ETF 전부', () => {
+  const semi = buildAssetClassSlots(MEMBER_QUOTES).find(s => s.key === 'kr-semi')!
+  assert.equal(semi.reps.length, 2)
+  assert.deepEqual([...semi.memberTickers].sort(), ['091160.KS', '139260.KS', '157490.KS'])
+})
+
+test('모자이크 강조: 국내 대형주는 구성원 타일만(코스닥150·해외지수 제외)', () => {
+  assert.deepEqual(featuredFor('kr-large'), ['069500.KS', '102110.KS', '292190.KS'])
+})
+
+test('모자이크 강조: 미국 주식(환노출)은 국내 상장 미국 주식형 + SPY·QQQ만(IWM 제외)', () => {
+  assert.deepEqual(featuredFor('us-equity'), ['133690.KS', '360750.KS', '390390.KS', 'QQQ', 'SPY'])
+})
+
+test('모자이크 강조: 국내 반도체·IT는 AI·IT 구성원 포함, KODEX 미국반도체·SOXX 제외', () => {
+  const featured = featuredFor('kr-semi')
+  assert.deepEqual(featured, ['091160.KS', '139260.KS', '157490.KS'])
+  assert.ok(!featured.includes('390390.KS') && !featured.includes('SOXX'))
+})
+
+test('cardSlot: card.key 슬롯, 없거나 슬롯 밖이면 주제 슬롯', () => {
+  const slots = buildAssetClassSlots(MEMBER_QUOTES)
+  assert.equal(cardSlot(slots, 'us-equity')?.key, 'us-equity')
+  assert.equal(cardSlot(slots, 'kr-sector')?.key, pickFeaturedSlot(slots)?.key)
+  assert.equal(cardSlot(slots, undefined)?.key, pickFeaturedSlot(slots)?.key)
+  assert.equal(cardSlot([], 'kr-semi'), null)
 })
