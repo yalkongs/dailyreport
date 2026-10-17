@@ -38,15 +38,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const report = getReportMeta(date);
 
   const headline = report?.headline || "iM AI Market Report";
-  const subline = report?.subline || "매일 아침 전달되는 글로벌 금융 시장 리포트";
+  // 2026-10 개편 이후 리포트는 세 줄 요약 한 문장(description)이 있고, 이전 리포트는 부제를 쓴다.
+  const description = report?.description || report?.subline || "매일 아침 전달되는 글로벌 금융 시장 리포트";
   const ogImageUrl = `https://dailyreport-eta.vercel.app/reports/${date}-preview.png`;
 
   return {
     title: `${headline} - iM AI Market Report`,
-    description: subline,
+    description,
     openGraph: {
       title: headline,
-      description: subline,
+      description,
+      siteName: "iM뱅크",
       type: "article",
       images: [
         {
@@ -60,7 +62,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     twitter: {
       card: "summary_large_image",
       title: headline,
-      description: subline,
+      description,
       images: [ogImageUrl],
     },
   };

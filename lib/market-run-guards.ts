@@ -77,6 +77,9 @@ export interface MarketReportBundle {
   subline: string;
   priceHash: string;
   generatedAt: string; // KST ISO 8601 (인덱스 generatedAt·lastUpdated)
+  // 2026-10 개편: 인덱스에 남겨 og:description(generateMetadata)과 PNG 복구에 쓴다. 없으면 인덱스에 키를 만들지 않는다.
+  description?: string; // 세 줄 요약 한 문장(summarySentence)
+  cardLine?: string; // 미리보기 카드 제목 아래 한 줄
 }
 
 export interface MarketBundlePaths {
@@ -88,7 +91,8 @@ export interface MarketBundlePaths {
 export type RenderPreview = (date: string, headline: string, subline: string) => Promise<string>;
 
 export interface SaveBundleOptions {
-  renderPreview: RenderPreview; // run.ts에선 lib/market/preview의 saveMarketPreviewImage
+  // run.ts에선 lib/market/preview의 saveMarketPreviewImage 를 클로저로 감싸 넘긴다(카드 한 줄·코스피 일봉은 클로저가 가진다).
+  renderPreview: RenderPreview;
   log?: (message: string) => void;
 }
 
@@ -135,6 +139,8 @@ export async function saveMarketReportBundle(
     subline: bundle.subline,
     generatedAt: bundle.generatedAt,
     filePath: `/reports/${fileName}`,
+    ...(bundle.description ? { description: bundle.description } : {}),
+    ...(bundle.cardLine ? { cardLine: bundle.cardLine } : {}),
   };
   const existingIdx = index.reports.findIndex((r) => r.date === bundle.date);
   const isUpdate = existingIdx >= 0;

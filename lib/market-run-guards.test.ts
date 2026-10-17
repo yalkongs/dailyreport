@@ -230,3 +230,26 @@ test("프리뷰 PNG 2회 실패 → reject(비정상 종료), 인덱스·해시 
   assert.equal(fs.existsSync(paths.indexPath), false);
   assert.equal(fs.readFileSync(paths.hashPath, "utf-8"), "OLD_HASH");
 });
+
+// --- 2026-10 개편: 인덱스 description·cardLine ---
+
+test("인덱스 항목에 description·cardLine 기록(있을 때만), 프리뷰 렌더러는 기존 시그니처로 호출", async () => {
+  const { paths } = tmpWorkspace();
+  const calls: Array<[string, string, string]> = [];
+  await saveMarketReportBundle(
+    bundle({ description: "어제 요약. 오늘 확인점.", cardLine: "카드 한 줄" }),
+    paths,
+    { log: silent, renderPreview: async (d, h, s) => { calls.push([d, h, s]); return "/tmp/p.png"; } },
+  );
+  const index = JSON.parse(fs.readFileSync(paths.indexPath, "utf-8")) as ReportsIndex;
+  assert.equal(index.reports[0].description, "어제 요약. 오늘 확인점.");
+  assert.equal(index.reports[0].cardLine, "카드 한 줄");
+  assert.deepEqual(calls, [[DATE, "헤드라인", "서브라인"]]);
+
+  // 없으면 키 자체를 만들지 않는다(옛 항목과 같은 모양)
+  const other = tmpWorkspace();
+  await saveMarketReportBundle(bundle(), other.paths, { renderPreview: okPreview, log: silent });
+  const bare = (JSON.parse(fs.readFileSync(other.paths.indexPath, "utf-8")) as ReportsIndex).reports[0];
+  assert.equal("description" in bare, false);
+  assert.equal("cardLine" in bare, false);
+});

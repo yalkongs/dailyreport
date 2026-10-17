@@ -1,9 +1,9 @@
 // scripts/check-delivery.ts
 // 독립 도착 감시(감사 F06) — 그날(KST) 리포트가 구독자에게 실제로 발송(telegram/<kind>=success)됐는지 확인한다.
 //
-//   npx tsx scripts/check-delivery.ts market|etf [YYYY-MM-DD]
+//   npx tsx scripts/check-delivery.ts all|market|etf [YYYY-MM-DD]   (all = 두 리포트 모두, 07:45 감시)
 //
-// 한국 휴장일이면 exit 0(파이프라인이 silent skip하는 날 — 경보 금지). 영업일인데 success가 아니면
+// 한국 휴장일이면 exit 0(파이프라인이 silent skip하는 날 — 경보 금지). 영업일인데 success가 아니면(all은 하나라도)
 // exit 1 → .github/workflows/delivery-monitor.yml 실패 → GitHub가 소유자에게 실패 메일을 보낸다.
 // 트리거 자체가 빠져 job 실패가 아예 생기지 않는 날(맥미니 다운 등)도 이 감시가 잡는다.
 // 리포트 커밋·발송 상태 조회는 scripts/delivery-state.ts의 함수를 그대로 쓴다(같은 커밋, 같은 context).
@@ -102,14 +102,20 @@ export function decideCheck(i: CheckInput): CheckResult {
   }
 }
 
-async function main(): Promise<void> {
-  const [kindArg, dateArg] = process.argv.slice(2);
-  if (kindArg !== "market" && kindArg !== "etf") throw new Error(`usage: check-delivery.ts market|etf [YYYY-MM-DD] (받은 값: ${kindArg})`);
-  const k: ReportKind = kindArg;
-  const date = dateArg ?? kstToday();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error(`날짜는 YYYY-MM-DD 여야 합니다: ${date}`);
+/** 감시 대상 인자. all = 두 리포트(07:45 감시 하나가 둘 다 본다 — 2026-10-19). */
+export function parseKinds(arg: string | undefined): ReportKind[] {
+  if (arg === "all") return ["market", "etf"];
+  if (arg === "market" || arg === "etf") return [arg];
+  throw new Error(`usage: check-delivery.ts all|market|etf [YYYY-MM-DD] (받은 값: ${arg})`);
+}
 
-  const cal = calendarFor(date);
+/** 여러 종류의 순수 판정을 종합한다 — 하나라도 실패면 실패. 결과는 입력 순서대로 모두 남긴다. */
+export function decideChecks(inputs: CheckInput[]): { ok: boolean; results: CheckResult[] } {
+  const results = inputs.map(decideCheck);
+  return { ok: results.every((r) => r.ok), results };
+}
+
+async function lookup(k: ReportKind, date: string, cal: ReturnType<typeof calendarFor>): Promise<CheckInput> {
   let reportSha: string | null = null;
   let telegramStatus: TelegramStatus = null;
   let lookupError: string | null = null;
@@ -122,18 +128,33 @@ async function main(): Promise<void> {
       lookupError = (e as Error).message;
     }
   }
+  return { kind: k, date, ...cal, reportSha, telegramStatus, lookupError };
+}
 
-  const r = decideCheck({ kind: k, date, ...cal, reportSha, telegramStatus, lookupError });
-  console.log(`check-delivery: kind=${k} date=${date} sha=${reportSha ?? "-"} status=${telegramStatus ?? "none"} → ${r.code}`);
-  if (r.ok) {
-    console.log(`✅ ${r.message}`);
-  } else {
-    console.log(`::error title=리포트 도착 감시 (${k})::${r.message}`);
-  }
-  if (process.env.GITHUB_STEP_SUMMARY) {
-    fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### ${r.ok ? "✅" : "⚠️"} ${r.message}\n`);
-  }
-  if (!r.ok) process.exitCode = 1;
+async function main(): Promise<void> {
+  const [kindArg, dateArg] = process.argv.slice(2);
+  const kinds = parseKinds(kindArg);
+  const date = dateArg ?? kstToday();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error(`날짜는 YYYY-MM-DD 여야 합니다: ${date}`);
+
+  const cal = calendarFor(date);
+  const inputs: CheckInput[] = [];
+  for (const k of kinds) inputs.push(await lookup(k, date, cal));
+
+  const { ok, results } = decideChecks(inputs);
+  results.forEach((r, i) => {
+    const input = inputs[i];
+    console.log(`check-delivery: kind=${input.kind} date=${date} sha=${input.reportSha ?? "-"} status=${input.telegramStatus ?? "none"} → ${r.code}`);
+    if (r.ok) {
+      console.log(`✅ ${r.message}`);
+    } else {
+      console.log(`::error title=리포트 도착 감시 (${input.kind})::${r.message}`);
+    }
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### ${r.ok ? "✅" : "⚠️"} ${r.message}\n`);
+    }
+  });
+  if (!ok) process.exitCode = 1;
 }
 
 if (require.main === module) {

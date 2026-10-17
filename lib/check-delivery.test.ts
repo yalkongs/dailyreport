@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { decideCheck, calendarFor, type CheckInput } from "../scripts/check-delivery";
+import { decideCheck, decideChecks, parseKinds, calendarFor, type CheckInput } from "../scripts/check-delivery";
 
 // 독립 도착 감시(감사 F06b)의 판정 — 영업일에 telegram/<kind>=success가 아니면 모두 경보.
 const base: CheckInput = {
@@ -70,4 +70,34 @@ test("calendarFor: lib/market-calendar 기준 — 영업일·주말·공휴일·
   assert.deepEqual(calendarFor("2026-10-17"), { calendarCovered: true, krOpen: false, holidayName: undefined });
   assert.deepEqual(calendarFor("2026-10-09"), { calendarCovered: true, krOpen: false, holidayName: "한글날" });
   assert.equal(calendarFor("2099-01-05").calendarCovered, false);
+});
+
+// 07:45 감시 하나가 두 리포트를 본다(spec §5): all → market·etf 둘 다 판정해 종합.
+test("parseKinds: all은 market·etf 둘 다, 단일 종류는 그대로, 그 밖의 값은 오류", () => {
+  assert.deepEqual(parseKinds("all"), ["market", "etf"]);
+  assert.deepEqual(parseKinds("market"), ["market"]);
+  assert.deepEqual(parseKinds("etf"), ["etf"]);
+  assert.throws(() => parseKinds("bond"), /all\|market\|etf/);
+  assert.throws(() => parseKinds(undefined));
+});
+
+test("decideChecks: 둘 다 발송 완료면 통과, 결과는 종류 순서대로 둘 다", () => {
+  const r = decideChecks([base, { ...base, kind: "etf" }]);
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.results.map((x) => x.code), ["sent", "sent"]);
+  assert.match(r.results[1].message, /^ETF 리포트/);
+});
+
+test("decideChecks: 하나라도 실패면 실패 — 실패한 쪽 판정이 그대로 남는다", () => {
+  const r = decideChecks([base, { ...base, kind: "etf", telegramStatus: null }]);
+  assert.equal(r.ok, false);
+  assert.deepEqual(r.results.map((x) => [x.ok, x.code]), [[true, "sent"], [false, "not_sent"]]);
+  assert.equal(decideChecks([{ ...base, reportSha: null, telegramStatus: null }, { ...base, kind: "etf" }]).ok, false);
+});
+
+test("decideChecks: 휴장일은 둘 다 통과", () => {
+  const holiday = { ...base, krOpen: false, holidayName: "한글날", reportSha: null, telegramStatus: null };
+  const r = decideChecks([holiday, { ...holiday, kind: "etf" }]);
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.results.map((x) => x.code), ["holiday", "holiday"]);
 });

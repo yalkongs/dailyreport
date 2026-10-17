@@ -222,9 +222,8 @@ export interface ContextData {
   policyRates: PolicyRates;
   historicalComparison: HistoricalComparison[];
   contextErrors: ContextError[];
-  // 코스피 최근 20거래일 일간 등락(미리보기 카드 스트라이프용). 수집 실패 시 [].
-  // Task 3에서 lib/preview/data-card.ts 의 StripeSession 과 합칠 때까지 market-data 의 동일 형태를 쓴다.
-  kospiSessions: import("./market-data").StripeSession[];
+  // 코스피 최근 20거래일 일간 등락(미리보기 카드·페이지 머리 스트라이프용). 수집 실패 시 [].
+  kospiSessions: import("./preview/data-card").StripeSession[];
 }
 
 // --- Claude JSON 출력 인터페이스 (콘텐츠/구조 분리) ---
