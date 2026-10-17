@@ -13,6 +13,8 @@ import { calendarFor } from "../scripts/check-delivery";
 const ROOT = path.join(__dirname, "..");
 const TSX_CLI = path.join(ROOT, "node_modules", "tsx", "dist", "cli.mjs");
 const SHA = "abc1234567890abc1234567890abc1234567890a";
+// ETF 리포트 커밋은 다른 SHA — 종류별 커밋을 찾는지(HEAD나 다른 종류의 커밋이 아닌지) 구분한다.
+const ETF_SHA = "def4567890abcdef4567890abcdef4567890abcd";
 
 function kstToday(): string {
   return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
@@ -37,11 +39,13 @@ async function fakeGitHub(
     if (url.pathname === "/repos/o/r/commits") {
       if (date === null) return send(200, [{ sha: "c0de", commit: { message: "Merge branch 'x'" } }]);
       return send(200, [
+        { sha: ETF_SHA, commit: { message: `ETF Daily Report - ${date} (KST)` } },
         { sha: SHA, commit: { message: `Daily Market Report - ${date} (KST)` } },
-        { sha: SHA, commit: { message: `ETF Daily Report - ${date} (KST)` } },
       ]);
     }
-    if (url.pathname === `/repos/o/r/commits/${SHA}/status`) return send(200, { statuses });
+    if (url.pathname === `/repos/o/r/commits/${SHA}/status` || url.pathname === `/repos/o/r/commits/${ETF_SHA}/status`) {
+      return send(200, { statuses });
+    }
     send(404, { message: "Not Found" });
   });
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
@@ -138,6 +142,56 @@ test("resolve: dry_run은 조회 없이 skip, exit 0", async () => {
   assert.match(r.output, /^action=skip$/m);
 });
 
+test("resolve: dry_run은 방금 생성(CHANGED=true)이어도 조회 없이 skip", async () => {
+  const r = await runCli("delivery-state.ts", ["resolve", "etf"], { ...resolveEnv("http://127.0.0.1:1"), CHANGED: "true", DRY_RUN: "true" });
+  assert.equal(r.code, 0, r.stdout + r.stderr);
+  assert.match(r.output, /^action=skip$/m);
+});
+
+// 2026-10-19: 발송은 deliver job이 한다. 그 job의 HEAD는 두 생성 job의 push 이후라 두 리포트 커밋을 모두
+// 포함하므로, 방금 생성(CHANGED=true)이어도 git HEAD가 아니라 main 이력에서 종류별 리포트 커밋을 찾는다.
+for (const [kind, sha] of [["market", SHA], ["etf", ETF_SHA]] as const) {
+  test(`resolve ${kind}: CHANGED=true면 main에서 그 종류의 리포트 커밋을 찾아 send(방금 생성 — cache-bust 없음)`, async () => {
+    await fakeGitHub([{ context: "Vercel", state: "success" }], async (api) => {
+      const r = await runCli("delivery-state.ts", ["resolve", kind], { ...resolveEnv(api), CHANGED: "true" });
+      assert.equal(r.code, 0, r.stdout + r.stderr);
+      assert.match(r.output, /^action=send$/m);
+      assert.match(r.output, new RegExp(`^sha=${sha}$`, "m"));
+      assert.match(r.output, /^resend=false$/m);
+    });
+  });
+}
+
+// 생성 job이 changed=true라고 했는데 커밋이 main에 없다 = push가 반영되지 않았거나 조회가 어긋났다.
+// '오늘 리포트 없음'으로 조용히 넘기지 않고 결과 불명(exit 1)으로 드러낸다.
+test("resolve: CHANGED=true인데 main에 리포트 커밋이 없으면 unknown → exit 1", async () => {
+  await fakeGitHub([], async (api) => {
+    const r = await runCli("delivery-state.ts", ["resolve", "market"], { ...resolveEnv(api), CHANGED: "true" });
+    assert.equal(r.code, 1, r.stdout + r.stderr);
+    assert.match(r.output, /^action=unknown$/m);
+    assert.match(r.output, /^reason=.*찾지 못함/m);
+    assert.match(r.summary, /발송 결과 불명/);
+  }, null);
+});
+
+// deliver job만 다시 실행(re-run)하면 생성 job의 outputs(changed=true)가 그대로 재사용된다. 첫 시도에서 이미
+// 보낸 리포트를 '방금 생성'으로 보고 다시 보내면 중복 발송 — status가 있으면 일반 판정을 따른다.
+test("resolve: CHANGED=true여도 이미 발송(success)된 리포트는 skip — deliver 재실행 중복 방지", async () => {
+  await fakeGitHub([{ context: "telegram/market", state: "success" }], async (api) => {
+    const r = await runCli("delivery-state.ts", ["resolve", "market"], { ...resolveEnv(api), CHANGED: "true" });
+    assert.equal(r.code, 0, r.stdout + r.stderr);
+    assert.match(r.output, /^action=skip$/m);
+  });
+});
+
+test("resolve: CHANGED=true여도 발송 결과 불명(pending)이면 unknown → exit 1", async () => {
+  await fakeGitHub([{ context: "telegram/etf", state: "pending" }], async (api) => {
+    const r = await runCli("delivery-state.ts", ["resolve", "etf"], { ...resolveEnv(api), CHANGED: "true" });
+    assert.equal(r.code, 1, r.stdout + r.stderr);
+    assert.match(r.output, /^action=unknown$/m);
+  });
+});
+
 // ── check-delivery: 독립 도착 감시(감사 F06b). 날짜를 인자로 고정해 오늘 요일·휴일과 무관하게 검증 ──
 
 const BUSINESS_DAY = "2026-10-14"; // 수요일, 한국 영업일
@@ -197,6 +251,33 @@ test("check-delivery: 날짜 인자가 없으면 오늘(KST)을 본다", async (
     assert.equal(r.code, calendarFor(kstToday()).calendarCovered ? 0 : 1, r.stdout + r.stderr);
     assert.match(r.stdout, new RegExp(`date=${kstToday()}`));
   });
+});
+
+// 07:45 감시 하나가 두 리포트를 본다(spec §5) — all은 둘 다 판정하고, 하나라도 실패면 exit 1, 요약에 둘 다 남긴다.
+test("check-delivery all: 두 리포트 모두 발송 완료 → exit 0, 요약에 둘 다", async () => {
+  await fakeGitHub([{ context: "telegram/market", state: "success" }, { context: "telegram/etf", state: "success" }], async (api) => {
+    const r = await runCli("check-delivery.ts", ["all", BUSINESS_DAY], { GITHUB_API_URL: api });
+    assert.equal(r.code, 0, r.stdout + r.stderr);
+    assert.match(r.summary, /마켓 리포트\(2026-10-14\): 발송 완료/);
+    assert.match(r.summary, /ETF 리포트\(2026-10-14\): 발송 완료/);
+  }, BUSINESS_DAY);
+});
+
+test("check-delivery all: 하나라도 미발송이면 exit 1 — 실패한 종류만 ::error, 요약에는 둘 다", async () => {
+  await fakeGitHub([{ context: "telegram/market", state: "success" }], async (api) => {
+    const r = await runCli("check-delivery.ts", ["all", BUSINESS_DAY], { GITHUB_API_URL: api });
+    assert.equal(r.code, 1, r.stdout + r.stderr);
+    assert.match(r.stdout, /::error title=리포트 도착 감시 \(etf\)::.*미발송/);
+    assert.doesNotMatch(r.stdout, /::error title=리포트 도착 감시 \(market\)/);
+    assert.match(r.summary, /✅ 마켓 리포트\(2026-10-14\): 발송 완료/);
+    assert.match(r.summary, /⚠️ ETF 리포트\(2026-10-14\): 미발송/);
+  }, BUSINESS_DAY);
+});
+
+test("check-delivery all: 휴장일은 조회 없이 둘 다 통과 → exit 0", async () => {
+  const r = await runCli("check-delivery.ts", ["all", "2026-10-09"], { GITHUB_API_URL: UNREACHABLE });
+  assert.equal(r.code, 0, r.stdout + r.stderr);
+  assert.equal((r.summary.match(/휴장\(한글날\)/g) ?? []).length, 2, r.summary);
 });
 
 test("check-delivery: kind·날짜 인자 오류는 exit 1", async () => {

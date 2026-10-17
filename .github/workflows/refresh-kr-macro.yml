@@ -28,7 +28,8 @@ permissions:
 
 jobs:
   refresh:
-    runs-on: ubuntu-latest
+    # 러너 이미지 고정 — 기본 이미지가 Ubuntu 26으로 바뀌는 시점(2026-10-19~)과 개편이 겹치지 않게(spec §9).
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

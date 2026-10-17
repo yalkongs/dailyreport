@@ -1,14 +1,14 @@
 // scripts/delivery-state.ts
 // 발송 상태(commit status) 읽기·쓰기 CLI. 판정 로직은 lib/delivery-state.ts (순수 함수, 테스트됨).
-// 워크플로 .github/workflows/daily-report.yml 의 "Resolve delivery"·발송 step이 호출한다.
+// 워크플로 .github/workflows/daily-report.yml 의 deliver job("resolve <kind>"·"send <kind>" step)이 호출한다.
 import * as fs from "node:fs";
-import { execSync } from "node:child_process";
 import {
   type ReportKind,
   type TelegramStatus,
   statusContext,
   kstDayStartIso,
   findReportCommit,
+  reportCommitPrefix,
   pickTelegramStatus,
   decideDelivery,
   classifyTelegramResponse,
@@ -96,18 +96,24 @@ async function resolve(k: ReportKind): Promise<void> {
   let telegramStatus: TelegramStatus = null;
   let lookupError: string | null = null;
   try {
-    if (changed && !dryRun) {
-      // 이 실행이 방금 push한 리포트 커밋. rebase 뒤의 최종 SHA.
-      reportSha = execSync("git rev-parse HEAD").toString().trim();
-    } else if (!dryRun) {
+    if (!dryRun) {
+      // 발송은 deliver job이 한다(2026-10-19). 그 job의 HEAD는 두 생성 job의 push 이후 main이라 두 리포트
+      // 커밋을 모두 포함한다 — 방금 생성(CHANGED=true)이어도 git HEAD가 아니라 종류별 리포트 커밋을 찾는다.
       reportSha = await findReportSha(k, date);
     }
     if (reportSha) telegramStatus = await readTelegramStatus(k, reportSha);
   } catch (e) {
     lookupError = (e as Error).message;
   }
+  if (changed && !dryRun && reportSha === null && lookupError === null) {
+    // 생성 job은 changed=true(커밋함)라고 했는데 main에 그 커밋이 없다 — push 미반영이거나 조회가 어긋났다.
+    // '오늘 리포트 없음'으로 조용히 넘기지 않고 결과 불명(아래 unknown → exit 1)으로 드러낸다.
+    lookupError = `생성 job이 커밋했다고 보고한 리포트(${reportCommitPrefix(k, date)})를 main에서 찾지 못함 — push 미반영 또는 조회 지연`;
+  }
 
-  const justGenerated = changed && !dryRun && reportSha !== null;
+  // 방금 생성한 정상 경로 — 아직 발송됐을 수 없으므로 status 없이 보낸다. 단 status가 이미 있으면(deliver job만
+  // 다시 실행해 생성 job의 changed=true가 재사용된 경우 등) 일반 판정을 따라 중복 발송을 막는다.
+  const justGenerated = changed && !dryRun && reportSha !== null && telegramStatus === null;
   // 조회에 실패하면 보내지 않는 쪽으로 (중복 발송 방지 우선). 단 방금 생성한 정상 경로는 status가 있을 수 없으므로 진행.
   let decision = decideDelivery({ date, reportSha, telegramStatus, justGenerated, forceResend, dryRun });
   if (lookupError && !justGenerated) {
@@ -128,8 +134,8 @@ async function resolve(k: ReportKind): Promise<void> {
     sha: reportSha ?? "",
     date,
     headline: entry.headline,
-    // 방금 생성한 정상 경로가 아니면 재발송 — Telegram 이미지 캐시를 피하려고 cache-bust 한다.
-    resend: changed ? "false" : "true",
+    // 방금 생성한 정상 경로가 아니면 재발송 — Telegram 이미지 캐시를 피하려고 cache-bust 하고, 발송 직전 status를 재확인한다.
+    resend: justGenerated ? "false" : "true",
     ...(k === "etf" ? { anomaly_count: String(entry.anomalyCount), anomaly_breakdown: entry.breakdown } : {}),
   });
 

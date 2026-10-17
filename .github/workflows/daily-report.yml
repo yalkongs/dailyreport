@@ -1,17 +1,17 @@
 name: Generate Daily Market Report
-# Market runs at 06:40 KST, ETF at 08:15 KST on weekdays (macmini launchd dispatch, inputs.only). Two jobs:
-#   1. `market` — global market report (existing pipeline)
-#   2. `etf`    — ETF morning report (absorbed from etfreport)
-# The jobs are independent: if `market` fails, `etf` still runs.
-# Only the ordering is preserved so Telegram pushes arrive in a
-# predictable order (market first, then ETF).
+# 평일 06:40·07:20 KST 맥미니 launchd가 only=both로 dispatch한다(2026-10-19 개편, spec §5). 세 job:
+#   1. `market`  — 마켓 리포트 생성·커밋(push 재시도). 발송하지 않는다.
+#   2. `etf`     — ETF 리포트 생성·커밋(push 재시도). market과 병렬(서로 needs 없음). 발송하지 않는다.
+#   3. `deliver` — 두 생성 job이 끝나면(성공·실패 무관) Vercel 배포·공개 자산을 확인하고
+#                  market → etf 순으로 텔레그램을 보낸다. 준비된 리포트는 기다리지 않고 보낸다(전송 > 침묵):
+#                  한쪽 생성·발송이 실패해도 다른 쪽은 보낸다. 실패한 쪽은 07:20 2차 트리거가 만들어 보낸다.
+# 발송 상태는 리포트 커밋의 commit status(telegram/<kind>)로 기록·확인한다(중복 발송 방지, 결과 불명 → job 실패).
+# 러너는 ubuntu-24.04 고정 — 기본 이미지가 Ubuntu 26으로 바뀌는 시점(2026-10-19~)과 개편이 겹치지 않게(spec §9).
 
 on:
   schedule:
     # 3순위 백업 트리거 — KST 07:30 (월~금) = UTC 22:30 (일~목). 실제 발화는 만성 지연.
-    # 정시 트리거는 맥미니 launchd(ops/macmini/)가 workflow_dispatch로 담당: 06:40 market(only=market),
-    # 08:15 etf(only=etf — KRX 전일 데이터 게시 ~08:00 이후).
-    # 개장 전 백업은 맥미니 2차 트리거(07:20 market, 08:40 etf)가 맡는다. 이 schedule은 3순위.
+    # 정시 트리거는 맥미니 launchd(ops/macmini/)가 workflow_dispatch로 담당: 06:40 1차·07:20 2차(only=both).
     # 맥미니가 죽은 날에만 의미 있으며 두 job을 모두 돌려 중복 가드에 맡긴다
     # (README "아침 트리거" 참조).
     # ⚠️ 자정(24:00 UTC) 넘기면 UTC 요일이 하루 밀려 0-4(=KST 월~금) 매핑이
@@ -20,23 +20,28 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: '테스트 실행 (텔레그램 발송 안 함, commit 안 함)'
+        description: '테스트 실행 (텔레그램 발송 안 함, commit 안 함, 생성 HTML·PNG는 아티팩트로 3일 보관)'
         required: false
         type: boolean
         default: false
+      test_date:
+        description: 'dry_run 전용 리포트 날짜 YYYY-MM-DD (비우면 오늘 KST). 주말 dry-run은 평일 날짜로 — dry_run이 아니면 무시'
+        required: false
+        type: string
+        default: ''
       force_regenerate:
         description: '오늘 자 리포트가 이미 있어도 강제 재생성'
         required: false
         type: boolean
         default: false
       only:
-        description: '실행 대상 (market | etf | both) — ETF는 etf에서만 실행, both는 마켓만'
+        description: '실행 대상 (market | etf | both) — both = 마켓·ETF 병렬'
         required: false
         type: choice
         options: [both, market, etf]
         default: both
       resend_telegram_only:
-        description: '오늘 자 기존 리포트로 Telegram만 재발송 (생성 스킵)'
+        description: '오늘 자 기존 리포트로 Telegram만 재발송 (생성 스킵, only로 종류 지정)'
         required: false
         type: boolean
         default: false
@@ -51,14 +56,17 @@ permissions:
 jobs:
   market:
     if: ${{ inputs.only != 'etf' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # 20분: JSON 파싱 안전망(claude-client.ts)이 최대 3회 재생성할 여유 확보.
     # 정상 실행은 ~4~5분이라 평소엔 영향 없음.
     # 15→20 (2026-08-18): 글꼴 설치가 상한 5분을 다 쓰면 15분으론 리포트 생성
     # 여유가 남지 않는다. 아래 글꼴 step 주석의 인시던트 참조.
     timeout-minutes: 20
+    # deliver job이 이 값을 resolve의 CHANGED로 받는다(방금 생성·커밋했는지).
+    outputs:
+      changed: ${{ steps.changes.outputs.changed }}
     # 같은 종류의 job은 실행(run) 간에도 직렬로 — 정시·2차·3순위·수동 실행이 겹쳐도 뒤 실행이
-    # 앞 실행의 커밋과 발송 상태를 반드시 보게 한다. 진행 중 실행은 취소하지 않는다.
+    # 앞 실행의 커밋을 반드시 보게 한다(중복 가드). 진행 중 실행은 취소하지 않는다.
     concurrency:
       group: daily-report-market
       cancel-in-progress: false
@@ -71,7 +79,9 @@ jobs:
           # 재실행(re-run)은 트리거 시점 SHA를 잡는다. 그사이 etf job이 push해
           # main이 앞서가면 push가 non-fast-forward로 거부된다(2026-08-07 인시던트).
           # etf job과 동일하게 항상 최신 main을 체크아웃한다.
-          ref: main
+          # dry_run만 실행한 ref(github.sha)를 체크아웃한다 — 브랜치 dry-run이 main의 옛 코드가 아니라
+          # 그 브랜치 코드를 돌리게(전환 전 검증). dry_run은 커밋·push가 없어 위 인시던트와 무관하다.
+          ref: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && github.sha || 'main' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -105,6 +115,15 @@ jobs:
           done
           fc-cache -f
           fc-list :lang=ko | head -3
+          # 카드 PNG 글꼴 Pretendard(저장소 assets/fonts, OFL)를 사용자 글꼴 폴더에 등록한다.
+          # 파일이 없거나 등록에 실패해도 리포트 생성을 막지 않는다(전송 > 침묵) — Noto CJK로 렌더되고 경고만 남긴다.
+          if ls assets/fonts/Pretendard-*.otf >/dev/null 2>&1 \
+             && mkdir -p ~/.local/share/fonts && cp assets/fonts/Pretendard-*.otf ~/.local/share/fonts/ \
+             && fc-cache -f && fc-list | grep -i pretendard; then
+            echo "Pretendard 설치 완료"
+          else
+            echo "::warning::Pretendard 글꼴 설치·등록 실패(assets/fonts/Pretendard-*.otf) — 카드 PNG가 Noto CJK로 렌더됩니다"
+          fi
 
       - name: Generate market report
         id: report
@@ -116,9 +135,11 @@ jobs:
           KRX_API_KEY: ${{ secrets.KRX_API_KEY }}
           DISABLE_CONTEXT: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && 'false' || 'false' }}
           FORCE_REGENERATE: ${{ inputs.force_regenerate == true && 'true' || 'false' }}
+          # dry_run 전용 날짜 지정 — 휴장 판정·리포트 날짜가 이 날짜로 돈다(주말 dry-run). 운영 실행은 항상 빈 값.
+          TEST_DATE: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && inputs.test_date || '' }}
         run: |
           npx tsx scripts/run.ts
-          REPORT_DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          REPORT_DATE=${TEST_DATE:-$(TZ=Asia/Seoul date +%Y-%m-%d)}
           echo "date=${REPORT_DATE}" >> $GITHUB_OUTPUT
           # reports-index.json에서 헤드라인 추출
           HEADLINE=$(node -e "const i=JSON.parse(require('fs').readFileSync('data/reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');console.log(r?.headline||'오늘의 시장 리포트')")
@@ -142,8 +163,8 @@ jobs:
           # 더러워 매번 "cannot pull with rebase: You have unstaged changes"(exit 128)로
           # 거부되고 `|| true`가 이를 삼킨다 — 이 스텝의 발동 조건(changed=='true')이
           # 더러운 트리를 보장하므로 구조적으로 실행 불가능해진다.
-          # 공유 main push 경합 재시도(감사 F05): market·etf·주간 매크로 갱신은 concurrency 그룹이
-          # 달라 같은 main에 동시에 push할 수 있다(needs는 별도 dispatch 사이를 막지 못한다).
+          # 공유 main push 경합 재시도(감사 F05): market·etf(같은 실행 안에서도 병렬)·주간 매크로 갱신이
+          # 같은 main에 동시에 push할 수 있다.
           # rebase 실패를 `|| true`로 삼키지 않는다 — 진행 중 rebase를 abort하고 짧게 쉰 뒤
           # pull --rebase·push를 최대 5회 다시 시도하고, 끝내 실패하면 job을 실패시킨다.
           # (같은 파일을 서로 고친 진짜 충돌이면 5회 모두 실패해 ::error::로 드러난다.)
@@ -164,17 +185,199 @@ jobs:
             exit 1
           fi
 
-      - name: Resolve delivery (보낼지 판정 — 발송 상태는 리포트 커밋의 commit status)
-        id: delivery
+      - name: Upload dry-run report (HTML·프리뷰 PNG, 3일 보관)
+        if: ${{ inputs.dry_run == true || inputs.dry_run == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-dry-run-${{ steps.report.outputs.date }}
+          path: |
+            public/reports/${{ steps.report.outputs.date }}.html
+            public/reports/${{ steps.report.outputs.date }}-preview.png
+          retention-days: 3
+          if-no-files-found: warn
+
+  etf:
+    # market과 병렬(needs 없음). schedule(3순위 백업)·only=both·only=etf에서 돈다(2026-10-19).
+    # ETF는 전일 종가 기준이라 KRX 게시(~08:00)를 기다리지 않는다 — only=both에서 ETF를 막던 2026-09-30 규칙은 폐기.
+    if: ${{ github.event_name == 'schedule' || inputs.only == 'both' || inputs.only == 'etf' }}
+    runs-on: ubuntu-24.04
+    # 10→15 (2026-08-18): 글꼴 설치 상한 5분 + ETF 파이프라인 ~3분에 여유를 둔다.
+    timeout-minutes: 15
+    # deliver job이 이 값을 resolve의 CHANGED로 받는다(방금 생성·커밋했는지).
+    outputs:
+      changed: ${{ steps.changes.outputs.changed }}
+    # 같은 종류의 job은 실행(run) 간에도 직렬로 — 정시·2차·3순위·수동 실행이 겹쳐도 뒤 실행이
+    # 앞 실행의 커밋을 반드시 보게 한다(중복 가드). 진행 중 실행은 취소하지 않는다.
+    concurrency:
+      group: daily-report-etf
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # 운영은 최신 main, dry_run만 실행한 ref — market job의 같은 step 주석 참조.
+          ref: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && github.sha || 'main' }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Korean fonts (runner has no CJK fonts by default)
+        # market job의 같은 step과 동일한 방어 — 2026-08-18 인시던트 주석 참조.
+        # 이 job은 예산이 더 빠듯해(15분) 멈춘 apt에 오히려 더 취약하다.
+        timeout-minutes: 5
+        run: |
+          for i in 1 2 3; do
+            if sudo timeout -k 10 90 apt-get update -qq \
+               && sudo timeout -k 10 120 apt-get install -y -qq fonts-noto-cjk; then
+              break
+            fi
+            if [ "$i" = 3 ]; then
+              echo "::error::fonts-noto-cjk 설치 3회 실패 — CJK 글꼴 없이는 프리뷰 PNG가 깨진다"
+              exit 1
+            fi
+            echo "::warning::apt-get 지연/실패 — 재시도 ${i}/3"
+            sleep 10
+          done
+          fc-cache -f
+          # 카드 PNG 글꼴 Pretendard — market job의 같은 블록 주석 참조(없거나 실패해도 경고만).
+          if ls assets/fonts/Pretendard-*.otf >/dev/null 2>&1 \
+             && mkdir -p ~/.local/share/fonts && cp assets/fonts/Pretendard-*.otf ~/.local/share/fonts/ \
+             && fc-cache -f && fc-list | grep -i pretendard; then
+            echo "Pretendard 설치 완료"
+          else
+            echo "::warning::Pretendard 글꼴 설치·등록 실패(assets/fonts/Pretendard-*.otf) — 카드 PNG가 Noto CJK로 렌더됩니다"
+          fi
+
+      - name: Run ETF pipeline
+        id: etf
+        if: ${{ inputs.resend_telegram_only != true && inputs.resend_telegram_only != 'true' }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          KRX_AUTH_KEY: ${{ secrets.KRX_AUTH_KEY }}
+          ETF_PUBLIC_BASE_URL: https://dailyreport-eta.vercel.app
+          FORCE_REGENERATE: ${{ inputs.force_regenerate == true && 'true' || 'false' }}
+          # dry_run 전용 날짜 지정 — 휴장 판정·리포트 날짜·파일명이 이 날짜로 돈다. 운영 실행은 항상 빈 값.
+          ETF_REPORT_DATE: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && inputs.test_date || '' }}
+        run: |
+          npx tsx scripts/run-etf.ts
+          REPORT_DATE=${ETF_REPORT_DATE:-$(TZ=Asia/Seoul date +%Y-%m-%d)}
+          echo "date=${REPORT_DATE}" >> $GITHUB_OUTPUT
+          HEADLINE=$(node -e "const i=JSON.parse(require('fs').readFileSync('data/etf-reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');console.log(r?.headline||'오늘의 ETF 리포트')")
+          ANOMALY_COUNT=$(node -e "const i=JSON.parse(require('fs').readFileSync('data/etf-reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');console.log(r?.anomalyCount||0)")
+          # Breakdown: "괴리율 2/거래량 1/매도 1" 형태. 0건은 빈 문자열.
+          ANOMALY_BREAKDOWN=$(node -e "const L={premiumDiscount:'괴리율',trackingError:'추적오차',volumeSpike:'거래량',consecutiveSell:'매도'};const i=JSON.parse(require('fs').readFileSync('data/etf-reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');const b=r?.anomalyBreakdown||{};const s=Object.entries(b).filter(([,c])=>c>0).map(([t,c])=>(L[t]||t)+' '+c).join('/');console.log(s)")
+          echo "headline=${HEADLINE}" >> $GITHUB_OUTPUT
+          echo "anomaly_count=${ANOMALY_COUNT}" >> $GITHUB_OUTPUT
+          echo "anomaly_breakdown=${ANOMALY_BREAKDOWN}" >> $GITHUB_OUTPUT
+
+      - name: Check for changes
+        id: changes
+        if: ${{ inputs.resend_telegram_only != true && inputs.resend_telegram_only != 'true' }}
+        run: |
+          git diff --quiet && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push ETF report
+        if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true && inputs.dry_run != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          REPORT_DATE=${{ steps.etf.outputs.date }}
+          git add public/etf-reports/ data/
+          git commit -m "ETF Daily Report - ${REPORT_DATE} (KST)"
+          # Pull any market-job commit that landed during this run so we
+          # don't race-fail on push.
+          # ⚠️ commit **뒤**에 와야 한다. git add 앞에 있던 2026-04-18~2026-08-09
+          # 배치에서는 더러운 트리 때문에 매번 exit 128로 거부되고 `|| true`가
+          # 삼켜, 16주간 한 번도 실행되지 않았다.
+          # 공유 main push 경합 재시도(감사 F05) — market job의 같은 step 주석 참조.
+          PUSHED=""
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push; then
+              PUSHED=1
+              break
+            fi
+            git rebase --abort 2>/dev/null || true
+            if [ "$attempt" -lt 5 ]; then
+              echo "::warning::pull --rebase/push 실패 — 재시도 ${attempt}/5"
+              sleep $((attempt * 5))
+            fi
+          done
+          if [ -z "$PUSHED" ]; then
+            echo "::error::main 반영 5회 실패(rebase 충돌 또는 push 거부) — ETF 리포트 커밋이 push되지 않았습니다"
+            exit 1
+          fi
+
+      - name: Upload dry-run report (HTML·프리뷰 PNG, 3일 보관)
+        if: ${{ inputs.dry_run == true || inputs.dry_run == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: etf-dry-run-${{ steps.etf.outputs.date }}
+          path: |
+            public/etf-reports/${{ steps.etf.outputs.date }}.html
+            public/etf-reports/${{ steps.etf.outputs.date }}-preview.png
+          retention-days: 3
+          if-no-files-found: warn
+
+  deliver:
+    # 발송 job 하나(spec §5) — 두 생성 job이 끝나면(성공·실패 무관) 돌고, 준비된 리포트를 market → etf 순으로 보낸다.
+    # 단계 조건: 상태 함수가 없는 step if에는 Actions가 success()를 암묵적으로 붙여, market 쪽 단계 하나만 실패해도
+    # etf 단계가 모두 건너뛰어진다(침묵). 그래서 종류별 묶음을 !cancelled()로 서로 독립시키고, 대신 발송 step은
+    # 같은 종류의 배포 대기 성공(outcome)을 직접 확인한다 — 배포 확인 없이는 보내지 않는다.
+    # resolve는 그 생성 job이 이번 실행 대상이었을 때만(needs.<kind>.result != 'skipped') — only=market 재발송이
+    # ETF까지 재발송하지 않게. 생성 job이 실패해도 조회는 한다(앞선 실행이 만든 미발송 리포트가 있으면 보낸다).
+    # 어느 step이 실패하든 job은 실패로 끝나 GitHub가 소유자에게 메일을 보낸다(실패를 가리는 설정을 두지 않는다).
+    needs: [market, etf]
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-24.04
+    # 배포 대기 최대 10분 ×2 + 자산 확인 최대 1분 ×2 + 설치. 06:40 시작이어도 08:00 전에 끝난다.
+    timeout-minutes: 25
+    # 발송은 실행(run) 간에도 직렬로 — 겹친 실행(2차·3순위·중복 dispatch)의 뒤 deliver가 앞 deliver의
+    # 발송 상태(commit status)를 반드시 보게 한다. 진행 중 실행은 취소하지 않는다.
+    concurrency:
+      group: daily-report-deliver
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # 두 생성 job의 push 이후 최신 main — 두 리포트(커밋·인덱스)를 모두 포함한다.
+          # dry_run만 실행한 ref(발송 없음) — market job의 같은 step 주석 참조.
+          ref: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && github.sha || 'main' }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: resolve market (보낼지 판정 — 발송 상태는 리포트 커밋의 commit status)
+        id: delivery_market
+        if: ${{ !cancelled() && needs.market.result != 'skipped' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CHANGED: ${{ steps.changes.outputs.changed }}
+          CHANGED: ${{ needs.market.outputs.changed }}
           FORCE_RESEND: ${{ (inputs.resend_telegram_only == true || inputs.resend_telegram_only == 'true') && 'true' || 'false' }}
           DRY_RUN: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && 'true' || 'false' }}
         run: npx tsx scripts/delivery-state.ts resolve market
 
-      - name: Wait for Vercel deployment (poll commit status until success)
-        if: steps.delivery.outputs.action == 'send'
+      - name: wait vercel market (poll commit status until success)
+        id: vercel_market
+        if: ${{ !cancelled() && steps.delivery_market.outputs.action == 'send' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -182,7 +385,8 @@ jobs:
           # (content-type=image/png 확인만으론 부족 — 미배포 시 og:image fallback이
           #  /api/og(과거 그린)를 같은 png로 반환해 깨진 카드가 나갔던 인시던트.)
           # Vercel은 push된 커밋의 commit status(context=Vercel)로 배포 결과를 보고한다.
-          # 이 폴링이 job을 직렬화해 다음 job의 push가 이 배포를 취소하는 race도 막는다.
+          # HEAD는 두 생성 job의 push 이후 main — 이 커밋의 배포가 끝나면 두 리포트 모두 공개된 상태다.
+          # (리포트 커밋 자체를 보지 않는다: 연달아 push되면 앞 커밋의 배포는 건너뛰어질 수 있다.)
           SHA=$(git rev-parse HEAD)
           echo "Vercel 배포 대기: ${GITHUB_REPOSITORY}@${SHA}"
           for i in $(seq 1 60); do
@@ -205,16 +409,16 @@ jobs:
           echo "::error::Vercel 배포 미확인 10분 — 깨진 카드 방지 위해 발송 중단"
           exit 1
 
-      - name: Send Telegram notification
-        if: steps.delivery.outputs.action == 'send'
+      - name: send market (Telegram)
+        if: ${{ !cancelled() && steps.delivery_market.outputs.action == 'send' && steps.vercel_market.outcome == 'success' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          REPORT_DATE: ${{ steps.delivery.outputs.date }}
-          REPORT_SHA: ${{ steps.delivery.outputs.sha }}
-          HEADLINE: ${{ steps.delivery.outputs.headline }}
-          IS_RESEND: ${{ steps.delivery.outputs.resend }}
+          REPORT_DATE: ${{ steps.delivery_market.outputs.date }}
+          REPORT_SHA: ${{ steps.delivery_market.outputs.sha }}
+          HEADLINE: ${{ steps.delivery_market.outputs.headline }}
+          IS_RESEND: ${{ steps.delivery_market.outputs.resend }}
           FORCE_RESEND: ${{ (inputs.resend_telegram_only == true || inputs.resend_telegram_only == 'true') && 'true' || 'false' }}
         run: |
           # 발송 직전 재확인 — 수동 re-run·겹친 실행 방어. 이 실행이 방금 생성한 리포트
@@ -232,7 +436,10 @@ jobs:
                 exit 1 ;;
             esac
           fi
-          REPORT_URL="https://dailyreport-eta.vercel.app/reports/${REPORT_DATE}"
+          # utm_source=telegram: Web Analytics 유입 구분(spec §6). 본문 URL에는 cache-bust가 없어 ?로 붙인다
+          # (붙일 일이 생기면 &로 결합 — 단 caption은 parse_mode=HTML이라 href 안의 &는 &amp;로 바꿔 넣어야
+          # Telegram이 거부하지 않는다). 자산 확인·텔레그램 링크가 모두 이 URL을 쓴다.
+          REPORT_URL="https://dailyreport-eta.vercel.app/reports/${REPORT_DATE}?utm_source=telegram"
           # Cache-bust only in resend mode — Telegram caches images by URL,
           # so we need a unique URL if the PNG on Vercel was updated after
           # a previous Telegram fetch.
@@ -297,133 +504,27 @@ jobs:
             exit 1
           fi
 
-  etf:
-    needs: market
-    # ETF는 schedule(3순위 백업) 또는 only=etf dispatch에서만 돈다(2026-09-30).
-    # only=both dispatch는 마켓만 — 06:40 외부 호출(폐기된 cron-job.org)이 KRX 게시(~08:00) 전에
-    # NAV 없는 ETF를 먼저 발송해 08:15 정상 실행을 중복 가드로 막은 사고 방지. 수동 ETF는 only=etf로.
-    if: ${{ always() && (github.event_name == 'schedule' || inputs.only == 'etf') }}
-    runs-on: ubuntu-latest
-    # 10→15 (2026-08-18): 글꼴 설치 상한 5분 + ETF 파이프라인 ~3분에 여유를 둔다.
-    timeout-minutes: 15
-    # 같은 종류의 job은 실행(run) 간에도 직렬로 — 정시·2차·3순위·수동 실행이 겹쳐도 뒤 실행이
-    # 앞 실행의 커밋과 발송 상태를 반드시 보게 한다. 진행 중 실행은 취소하지 않는다.
-    concurrency:
-      group: daily-report-etf
-      cancel-in-progress: false
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ref: main
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Korean fonts (runner has no CJK fonts by default)
-        # market job의 같은 step과 동일한 방어 — 2026-08-18 인시던트 주석 참조.
-        # 이 job은 예산이 더 빠듯해(15분) 멈춘 apt에 오히려 더 취약하다.
-        timeout-minutes: 5
-        run: |
-          for i in 1 2 3; do
-            if sudo timeout -k 10 90 apt-get update -qq \
-               && sudo timeout -k 10 120 apt-get install -y -qq fonts-noto-cjk; then
-              break
-            fi
-            if [ "$i" = 3 ]; then
-              echo "::error::fonts-noto-cjk 설치 3회 실패 — CJK 글꼴 없이는 프리뷰 PNG가 깨진다"
-              exit 1
-            fi
-            echo "::warning::apt-get 지연/실패 — 재시도 ${i}/3"
-            sleep 10
-          done
-          fc-cache -f
-
-      - name: Run ETF pipeline
-        id: etf
-        if: ${{ inputs.resend_telegram_only != true && inputs.resend_telegram_only != 'true' }}
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
-          KRX_AUTH_KEY: ${{ secrets.KRX_AUTH_KEY }}
-          ETF_PUBLIC_BASE_URL: https://dailyreport-eta.vercel.app
-          FORCE_REGENERATE: ${{ inputs.force_regenerate == true && 'true' || 'false' }}
-        run: |
-          npx tsx scripts/run-etf.ts
-          REPORT_DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
-          echo "date=${REPORT_DATE}" >> $GITHUB_OUTPUT
-          HEADLINE=$(node -e "const i=JSON.parse(require('fs').readFileSync('data/etf-reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');console.log(r?.headline||'오늘의 ETF 리포트')")
-          ANOMALY_COUNT=$(node -e "const i=JSON.parse(require('fs').readFileSync('data/etf-reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');console.log(r?.anomalyCount||0)")
-          # Breakdown: "괴리율 2/거래량 1/매도 1" 형태. 0건은 빈 문자열.
-          ANOMALY_BREAKDOWN=$(node -e "const L={premiumDiscount:'괴리율',trackingError:'추적오차',volumeSpike:'거래량',consecutiveSell:'매도'};const i=JSON.parse(require('fs').readFileSync('data/etf-reports-index.json','utf-8'));const r=i.reports.find(r=>r.date==='${REPORT_DATE}');const b=r?.anomalyBreakdown||{};const s=Object.entries(b).filter(([,c])=>c>0).map(([t,c])=>(L[t]||t)+' '+c).join('/');console.log(s)")
-          echo "headline=${HEADLINE}" >> $GITHUB_OUTPUT
-          echo "anomaly_count=${ANOMALY_COUNT}" >> $GITHUB_OUTPUT
-          echo "anomaly_breakdown=${ANOMALY_BREAKDOWN}" >> $GITHUB_OUTPUT
-
-      - name: Check for changes
-        id: changes
-        if: ${{ inputs.resend_telegram_only != true && inputs.resend_telegram_only != 'true' }}
-        run: |
-          git diff --quiet && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
-
-      - name: Commit and push ETF report
-        if: steps.changes.outputs.changed == 'true' && inputs.dry_run != true && inputs.dry_run != 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          REPORT_DATE=${{ steps.etf.outputs.date }}
-          git add public/etf-reports/ data/
-          git commit -m "ETF Daily Report - ${REPORT_DATE} (KST)"
-          # Pull any market-job commit that landed during this run so we
-          # don't race-fail on push.
-          # ⚠️ commit **뒤**에 와야 한다. git add 앞에 있던 2026-04-18~2026-08-09
-          # 배치에서는 더러운 트리 때문에 매번 exit 128로 거부되고 `|| true`가
-          # 삼켜, 16주간 한 번도 실행되지 않았다.
-          # 공유 main push 경합 재시도(감사 F05) — market job의 같은 step 주석 참조.
-          PUSHED=""
-          for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin main && git push; then
-              PUSHED=1
-              break
-            fi
-            git rebase --abort 2>/dev/null || true
-            if [ "$attempt" -lt 5 ]; then
-              echo "::warning::pull --rebase/push 실패 — 재시도 ${attempt}/5"
-              sleep $((attempt * 5))
-            fi
-          done
-          if [ -z "$PUSHED" ]; then
-            echo "::error::main 반영 5회 실패(rebase 충돌 또는 push 거부) — ETF 리포트 커밋이 push되지 않았습니다"
-            exit 1
-          fi
-
-      - name: Resolve delivery (보낼지 판정 — 발송 상태는 리포트 커밋의 commit status)
-        id: delivery
+      - name: resolve etf (보낼지 판정 — market 쪽 실패와 무관하게 돈다)
+        id: delivery_etf
+        if: ${{ !cancelled() && needs.etf.result != 'skipped' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CHANGED: ${{ steps.changes.outputs.changed }}
+          CHANGED: ${{ needs.etf.outputs.changed }}
           FORCE_RESEND: ${{ (inputs.resend_telegram_only == true || inputs.resend_telegram_only == 'true') && 'true' || 'false' }}
           DRY_RUN: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && 'true' || 'false' }}
         run: npx tsx scripts/delivery-state.ts resolve etf
 
-      - name: Wait for Vercel deployment (poll commit status until success)
-        if: steps.delivery.outputs.action == 'send'
+      - name: wait vercel etf (poll commit status until success)
+        id: vercel_etf
+        if: ${{ !cancelled() && steps.delivery_etf.outputs.action == 'send' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 고정 sleep 대신 실제 배포 완료를 확인한 뒤 텔레그램을 보낸다.
+          # wait vercel market과 같은 확인 — market을 보냈다면 같은 HEAD라 첫 조회에 success로 끝난다.
           # (content-type=image/png 확인만으론 부족 — 미배포 시 og:image fallback이
           #  /api/og(과거 그린)를 같은 png로 반환해 깨진 카드가 나갔던 인시던트.)
           # Vercel은 push된 커밋의 commit status(context=Vercel)로 배포 결과를 보고한다.
-          # 이 폴링이 job을 직렬화해 다음 job의 push가 이 배포를 취소하는 race도 막는다.
+          # HEAD는 두 생성 job의 push 이후 main — 이 커밋의 배포가 끝나면 두 리포트 모두 공개된 상태다.
           SHA=$(git rev-parse HEAD)
           echo "Vercel 배포 대기: ${GITHUB_REPOSITORY}@${SHA}"
           for i in $(seq 1 60); do
@@ -446,19 +547,19 @@ jobs:
           echo "::error::Vercel 배포 미확인 10분 — 깨진 카드 방지 위해 발송 중단"
           exit 1
 
-      - name: Send ETF Telegram notification
-        if: steps.delivery.outputs.action == 'send'
+      - name: send etf (Telegram)
+        if: ${{ !cancelled() && steps.delivery_etf.outputs.action == 'send' && steps.vercel_etf.outcome == 'success' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          REPORT_DATE: ${{ steps.delivery.outputs.date }}
-          REPORT_SHA: ${{ steps.delivery.outputs.sha }}
-          HEADLINE: ${{ steps.delivery.outputs.headline }}
-          IS_RESEND: ${{ steps.delivery.outputs.resend }}
+          REPORT_DATE: ${{ steps.delivery_etf.outputs.date }}
+          REPORT_SHA: ${{ steps.delivery_etf.outputs.sha }}
+          HEADLINE: ${{ steps.delivery_etf.outputs.headline }}
+          IS_RESEND: ${{ steps.delivery_etf.outputs.resend }}
           FORCE_RESEND: ${{ (inputs.resend_telegram_only == true || inputs.resend_telegram_only == 'true') && 'true' || 'false' }}
-          ANOMALY_COUNT: ${{ steps.delivery.outputs.anomaly_count }}
-          ANOMALY_BREAKDOWN: ${{ steps.delivery.outputs.anomaly_breakdown }}
+          ANOMALY_COUNT: ${{ steps.delivery_etf.outputs.anomaly_count }}
+          ANOMALY_BREAKDOWN: ${{ steps.delivery_etf.outputs.anomaly_breakdown }}
         run: |
           # 발송 직전 재확인 — 수동 re-run·겹친 실행 방어. 이 실행이 방금 생성한 리포트
           # (IS_RESEND=false)는 아직 발송됐을 수 없으므로 건너뛰고, 사람의 명시적 재발송도 우회한다.
@@ -475,7 +576,8 @@ jobs:
                 exit 1 ;;
             esac
           fi
-          REPORT_URL="https://dailyreport-eta.vercel.app/etf-reports/${REPORT_DATE}"
+          # utm_source=telegram — send market의 같은 줄 주석 참조.
+          REPORT_URL="https://dailyreport-eta.vercel.app/etf-reports/${REPORT_DATE}?utm_source=telegram"
 
           # 날짜 포맷 (예: 4월 20일 월요일)
           FORMATTED_DATE=$(TZ=Asia/Seoul date +"%m월 %d일 %A" | sed 's/Monday/월요일/;s/Tuesday/화요일/;s/Wednesday/수요일/;s/Thursday/목요일/;s/Friday/금요일/')
@@ -504,7 +606,7 @@ jobs:
             OG_IMAGE_URL="https://dailyreport-eta.vercel.app/etf-reports/${REPORT_DATE}-preview.png"
           fi
 
-          # 발송 전 공개 자산 확인(감사 F03) — market job의 같은 블록 주석 참조. 텔레그램이 가져갈
+          # 발송 전 공개 자산 확인(감사 F03) — send market의 같은 블록 주석 참조. 텔레그램이 가져갈
           # 바로 그 URL(위 OG_IMAGE_URL·REPORT_URL)을 GET해 프리뷰 200 + image/png, 본문 200을
           # 확인한다. 실패하면 pending 기록도 발송도 하지 않고 중단한다(다음 실행이 복구 후 발송).
           ASSETS_OK=""
