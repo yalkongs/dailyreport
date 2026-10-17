@@ -308,3 +308,35 @@ test('언어 정규화는 형식이 깨진 응답에서 던지지 않는다(검�
   const n = normalizeMorningReportLanguage(broken)
   assert.equal(n.cover.headline, '거래 전 점검')
 })
+
+// ─── Ruling 15: 미리보기 카드 문구가 카드 규칙(cardTextFits) 안에 들어가는지 ─────────────
+// 넘치면 1·2회차는 재생성 사유, 마지막 축소판은 console.warn만(카드 렌더러가 '…'로 줄여 그린다).
+const LONG_HEADLINE = '국내 반도체 상품이 하루 만에 크게 밀리며 미국 반도체와의 격차가 눈에 띄게 벌어졌고 오늘 개장에도 부담으로 남았다'
+
+test('카드 문구 게이트: 제목이 카드에 넘치면 1·2회차는 위반(이유 포함)', () => {
+  const r = validReport(); r.cover.headline = LONG_HEADLINE
+  const msg = validate(r)
+  assert.match(msg, /미리보기 카드 문구가 카드에 들어가지 않음/)
+  assert.match(msg, /headline이\(가\) 72px에서도 \d줄이라 최대 3줄을 넘습니다/)
+})
+
+test('카드 문구 게이트: 마지막 시도는 경고만(발송), 값은 그대로', (t) => {
+  const warn = t.mock.method(console, 'warn', () => {})
+  const r = validReport(); r.cover.headline = LONG_HEADLINE
+  assert.equal(validateLast(r), '')
+  assert.equal(r.cover.headline, LONG_HEADLINE)
+  assert.ok(warn.mock.calls.some(c => /\[card-warn\][\s\S]*headline이\(가\) 72px/.test(String(c.arguments[0]))))
+})
+
+test('카드 문구 게이트: card.key가 슬롯 밖이면 주제 슬롯 라벨로 판정(라벨 비었다는 위반은 없다)', () => {
+  const r = validReport(); r.card.key = 'kr-sector'
+  const msg = validate(r)
+  assert.match(msg, /card\.key가 자산군 슬롯에 없음/)
+  assert.doesNotMatch(msg, /holdingLabel/)
+})
+
+test('카드 문구 게이트: 자산군 슬롯이 하나도 없는 날은 라벨 검사를 하지 않는다(데이터 문제는 재생성으로 못 고침)', () => {
+  const r = validReport()
+  const msg = validate(r, makeData([]))
+  assert.doesNotMatch(msg, /holdingLabel|미리보기 카드 문구/)
+})

@@ -91,126 +91,61 @@ function krx(ticker: string, name: string, changePercent: number, indexChange: n
   };
 }
 
-// 병합 결과를 그대로 렌더: 국내 1배 2종(하나는 gap 정확히 0), 해외 기초지수 1종, 전술 1종
+// 병합 결과를 그대로 렌더(시세 이름은 티커, KRX 이름으로 채워짐): 국내 1배 2종, 해외 기초지수 1종, 전술 1종
 function mergedQuotes(): EtfQuote[] {
   const rows = [
-    krx("069500.KS", "KODEX 200", 1.1, 1.1, 9e11),            // gap 0 — 표시되어야 함
-    krx("139270.KS", "TIGER 200 금융", 1.5, 1.0, 8e11),        // gap 0.5
-    krx("390390.KS", "KODEX 미국반도체", 1.94, 0, 7e11),        // 해외 기초지수 — 지수대비 없음
-    krx("122630.KS", "KODEX 레버리지", 2.2, 1.1, 6e11),         // 전술 — 지수대비 없음
+    krx("069500.KS", "KODEX 200", 1.1, 1.1, 9e11),
+    krx("139270.KS", "TIGER 200 금융", 1.5, 1.0, 8e11),
+    krx("390390.KS", "KODEX 미국반도체", 1.94, 0, 7e11),        // 해외 기초지수
+    krx("122630.KS", "KODEX 레버리지", 2.2, 1.1, 6e11),         // 전술
   ];
   const quotes = rows.map(r => quote(r.ticker, r.ticker));
   return mergeKrxIntoQuotes(quotes, new Map(rows.map(r => [r.ticker, r])), "prev-session");
 }
 
-// 섹션 제목부터 다음 섹션 시작 전까지. 섹션 단위로 잘라야 다른 섹션(전략 지도 등)의
-// 정상 라벨 때문에 단언이 잘못 통과하지 않는다.
-function section(html: string, title: string): string {
-  const start = html.indexOf(`<div class="section-title">${title}`);
-  assert.ok(start >= 0, `${title} 섹션이 렌더되어야 함`);
-  const end = html.indexOf('<div class="section">', start);
-  return html.slice(start, end < 0 ? undefined : end);
+// 2026-10-17 개편: 액션 보드·스캐너·전술 경고 보드·매칭표·이슈 카드·히트맵·거시 코너가 사라지고
+// 펼쳐 보기 표(국내·미국 ETF 등락·추정 거래대금)로 바뀌었다. 같은 성질(구분 태그, 코드 표기, 금지 문구)을
+// 새 구조에서 다시 확인한다. 레버리지·인버스 평균·세션 혼합 금지는 모자이크(lib/preview/data-card.test.ts)가 맡는다.
+function detailsTable(html: string): string {
+  const start = html.indexOf('data-section="details"');
+  assert.ok(start >= 0, "펼쳐 보기 섹션이 렌더되어야 함");
+  return html.slice(start, html.indexOf("</details>", start));
 }
 
-// 같은 섹션 안에서 특정 종목이 들어간 카드/행 하나
-function chunkWith(sectionHtml: string, splitter: string, needle: string): string {
-  const chunk = sectionHtml.split(splitter).find(c => c.includes(needle));
-  assert.ok(chunk, `${needle} 항목이 있어야 함`);
-  return chunk;
+function rowWith(tableHtml: string, needle: string): string {
+  const row = tableHtml.split("<tr>").find(c => c.includes(needle));
+  assert.ok(row, `${needle} 행이 있어야 함`);
+  return row;
 }
 
-test("렌더 회귀: 액션 보드 지수대비 패널은 국내 1배만, gap 0은 0.00%p로 표시", () => {
-  const board = section(renderMorningHtml(REPORT, data(mergedQuotes())), "Domestic ETF Action Board");
-  const gapPanel = board.slice(board.indexOf("기초지수 대비"));
-  assert.match(gapPanel, /KODEX 200/);
-  const kodex200 = chunkWith(gapPanel, '<div class="compact-etf-row">', "(069500)");
-  assert.match(kodex200, /0\.00%p/);
-  assert.match(gapPanel, /TIGER 200 금융/);
-  assert.doesNotMatch(gapPanel, /KODEX 미국반도체/);
-});
+// 태그를 걷어낸 화면 글자(속성값 제외)
+function visibleText(html: string): string {
+  return html.replace(/<(style|script)[\s\S]*?<\/\1>/gi, "").replace(/<[^>]+>/g, " ");
+}
 
-test("렌더 회귀: 일반 카드 — 해외 기초지수는 지수대비 없음, 금융은 섹터 태그·지수대비 유지", () => {
-  const scanner = section(renderMorningHtml(REPORT, data(mergedQuotes())), "KR ETF Market Scanner");
-  const foreign = chunkWith(scanner, '<div class="etf-card">', "KODEX 미국반도체");
-  assert.doesNotMatch(foreign, /지수대비/);
-  const kodex200 = chunkWith(scanner, '<div class="etf-card">', "KODEX 200");
-  assert.match(kodex200, /\(069500\)/);
-  assert.match(kodex200, /지수대비/);
-  assert.match(kodex200, /0\.00%p/);
-  const finance = chunkWith(scanner, '<div class="etf-card">', "TIGER 200 금융");
-  assert.match(finance, /<span class="etf-tag">섹터<\/span>/);
+test("렌더 회귀: 펼쳐 보기 표 구분 — TIGER 200 금융은 섹터, 레버리지는 전술, 해외 기초지수는 해외지수가 아닌 유니버스 category", () => {
+  const table = detailsTable(renderMorningHtml(REPORT, data(mergedQuotes())));
+  const finance = rowWith(table, "TIGER 200 금융");
+  assert.match(finance, /<td class="tag">섹터<\/td>/);
   assert.doesNotMatch(finance, /원자재/);
-  assert.match(finance, /지수대비/);
+  assert.match(rowWith(table, "KODEX 레버리지"), /<td class="tag">전술<\/td>/);
+  assert.match(rowWith(table, "KODEX 미국반도체"), /<td class="tag">테마<\/td>/);
+  assert.match(rowWith(table, "KODEX 200<"), /<td class="tag">지수<\/td>/);
 });
 
-test("렌더 회귀: 전술 경고 보드 — 레버리지 행에 지수대비 없음", () => {
-  const tactical = section(renderMorningHtml(REPORT, data(mergedQuotes())), "Tactical ETF Warning Board");
-  assert.match(tactical, /KODEX 레버리지/);
-  assert.doesNotMatch(tactical, /지수대비/);
+test("렌더 회귀: 국내 ETF는 6자리 코드로 표기하고 .KS 접미사·배당·자금 쏠림 문구는 화면에 없다", () => {
+  const html = renderMorningHtml(REPORT, data(mergedQuotes()));
+  const table = detailsTable(html);
+  assert.match(rowWith(table, "TIGER 200 금융"), /<span class="rep-code">139270<\/span>/);
+  const text = visibleText(html);
+  assert.doesNotMatch(text, /[0-9][0-9A-Z]{5}\.KS/);
+  assert.doesNotMatch(text, /배당/);
+  assert.doesNotMatch(text, /자금이 몰리는/);
 });
 
-test("렌더 회귀: 액션 보드 행 태그 — TIGER 200 금융은 섹터", () => {
-  const board = section(renderMorningHtml(REPORT, data(mergedQuotes())), "Domestic ETF Action Board");
-  const row = chunkWith(board, '<div class="compact-etf-row">', "TIGER 200 금융");
-  assert.match(row, /<span class="etf-tag">섹터<\/span>/);
-  assert.doesNotMatch(row, /원자재/);
-});
-
-test("렌더 회귀: 그룹 시세가 없으면 매칭표·이슈 카드 폴백이 유니버스 이름을 쓴다", () => {
-  const html = renderMorningHtml(REPORT, data([quote("069500.KS", "KODEX 200")]));
-  const matching = section(html, "상세 글로벌-KR ETF 매칭");
-  assert.match(matching, />SOXX iShares Semiconductor ETF<\/a>/);
-  assert.match(matching, />TIGER 미국30년국채스트립액티브\(합성 H\) \(458250\)<\/a>/);
-  assert.doesNotMatch(matching, />SOXX<\/a>/);
-  const issues = section(html, "오늘 이슈별 관찰 ETF");
-  assert.match(issues, />SOXX iShares Semiconductor ETF<\/a>/);
-  assert.match(issues, />TIGER 미국30년국채스트립액티브\(합성 H\) \(458250\)<\/a>/);
-  assert.doesNotMatch(issues, />(SOXX|458250|458250\.KS)<\/a>/);
-  assert.doesNotMatch(html, /[0-9][0-9A-Z]{5}\.KS/);
-  assert.doesNotMatch(html, /배당/);
-  assert.doesNotMatch(html, /자금이 몰리는/);
-});
-
-// C08 (2026-10-16 감사): 히트맵 집계가 의미를 지우지 않는다 — 레버리지·인버스 상쇄 평균, 미국·국내
-// 세션 혼합 평균 금지. 국내 평균은 1배 ETF만.
-function heatCells(html: string): Map<string, string> {
-  const heat = section(html, "ETF Market Heatmap");
-  const cells = new Map<string, string>();
-  for (const m of heat.matchAll(/<div class="heat-name">([^<]+)<\/div>\s*<div class="heat-meta">[^<]*<\/div>\s*<div class="heat-value">([^<]+)<\/div>/g)) {
-    cells.set(m[1], m[2]);
-  }
-  return cells;
-}
-
-test("히트맵: 레버리지·인버스를 평균내지 않고, 국내 평균은 전술형을 뺀 1배 ETF만", () => {
-  const quotes = [
-    { ...quote("069500.KS", "KODEX 200"), changePercent: 1.1 },
-    { ...quote("122630.KS", "KODEX 레버리지"), changePercent: -16.42 },
-    { ...quote("252670.KS", "KODEX 200선물인버스2X"), changePercent: 15.79 },
-  ];
-  const html = renderMorningHtml(REPORT, data(quotes));
-  const cells = heatCells(html);
-  assert.ok(![...cells.keys()].some(k => /레버리지|인버스/.test(k)), `전술형 타일 없음: ${[...cells.keys()]}`);
-  const krAvg = [...cells.entries()].find(([k]) => /국내 1배/.test(k));
-  assert.ok(krAvg, "국내 1배 ETF 평균 타일");
-  assert.equal(krAvg[1], "+1.10%");
-});
-
-test("히트맵: 미국·국내 시세를 한 타일에서 평균내지 않는다", () => {
-  const quotes = [
-    { ...quote("SOXX", "iShares Semiconductor ETF"), changePercent: -0.91 },
-    { ...quote("091160.KS", "KODEX 반도체"), changePercent: -11.94 },
-    { ...quote("XLE", "Energy Select Sector SPDR"), changePercent: 1.0 },
-    { ...quote("261220.KS", "KODEX WTI원유선물(H)"), changePercent: 3.0 },
-  ];
-  const cells = heatCells(renderMorningHtml(REPORT, data(quotes)));
-  assert.equal(cells.get("미국 반도체"), "-0.91%");
-  assert.equal(cells.get("국내 반도체"), "-11.94%");
-  assert.equal(cells.get("미국 에너지"), "+1.00%");
-});
-
-test("거시 코너: alternative.me 공포탐욕은 암호화폐 지표로 표기한다", () => {
-  const html = renderMorningHtml(REPORT, data([quote("069500.KS", "KODEX 200")]));
-  assert.doesNotMatch(html, />Fear&amp;Greed</);
-  assert.match(html, /코인 공포탐욕/);
+test("렌더 회귀: 시세 이름이 티커 그대로여도 표·카드는 유니버스 이름을 쓴다", () => {
+  const html = renderMorningHtml(REPORT, data([quote("069500.KS", "069500.KS"), quote("SPY", "SPY")]));
+  const table = detailsTable(html);
+  assert.match(rowWith(table, "069500"), /<span class="rep-name">KODEX 200<\/span>/);
+  assert.match(rowWith(table, ">SPY<"), /<span class="rep-name">SPDR S&amp;P 500 ETF<\/span>/);
 });

@@ -144,7 +144,7 @@ test('미국 주식 슬롯: KODEX 미국반도체도 포함, 미국채·미국�
   const us = s.find(x => x.key === 'us-equity')!
   assert.deepEqual(us.reps.map(r => r.ticker), ['390390.KS', 'QQQ'])
   assert.equal(us.movePct, -6)
-  assert.deepEqual(s.find(x => x.key === 'bonds')?.reps.map(r => r.ticker), ['305080.KS', '329750.KS'])
+  assert.deepEqual(s.find(x => x.key === 'bonds')?.reps.map(r => r.ticker), ['305080.KS']) // 달러단기채는 채권 예시에서 제외(Ruling 16)
   const noUs = buildAssetClassSlots([q('390390.KS', 'KODEX 미국반도체', -6), q('133690.KS', 'TIGER 미국나스닥100', 1.5)])
   assert.deepEqual(noUs[0].reps.map(r => r.ticker), ['390390.KS', '133690.KS']) // 해외 대표가 없으면 국내 2위
 })
@@ -173,4 +173,19 @@ test('주제 슬롯: 국내 슬롯이 없으면 첫 슬롯', () => {
   const s = buildAssetClassSlots([q('SPY', 'SPDR S&P 500', 0.3), q('GLD', 'SPDR Gold', -2)])
   assert.equal(s[0].key, 'commodities')
   assert.equal(pickFeaturedSlot(s)?.key, 'commodities')
+})
+
+// Ruling 16: 달러 단기채·SOFR 같은 현금성 달러 상품은 환율 날 크게 움직여도 '채권' 예시가 아니다.
+test('채권 슬롯: 현금성 달러 상품(달러단기·SOFR)은 대표 ETF에서 제외', () => {
+  const s = buildAssetClassSlots([
+    q('329750.KS', 'TIGER 미국달러단기채권액티브', 1.85),           // 환율 급등일 — 원화 환산으로 크게 움직임
+    q('456610.KS', 'TIGER 미국달러SOFR금리액티브(합성)', 1.79),
+    q('114260.KS', 'KODEX 국고채3년', 0.05),
+    q('TLT', 'iShares 20+ Year Treasury Bond ETF', -0.3),
+  ])
+  const bonds = s.find(x => x.key === 'bonds')!
+  assert.deepEqual(bonds.reps.map(r => r.ticker), ['114260.KS', 'TLT'])
+  assert.equal(bonds.movePct, 0.05)
+  const cashOnly = buildAssetClassSlots([q('329750.KS', 'TIGER 미국달러단기채권액티브', 1.85), q('456610.KS', 'TIGER 미국달러SOFR금리액티브(합성)', 1.79)])
+  assert.deepEqual(cashOnly, [])
 })

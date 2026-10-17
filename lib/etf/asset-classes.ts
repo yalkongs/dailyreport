@@ -10,7 +10,7 @@
 //   kr-sector    그날 움직인 섹터 — KR, 섹터·테마(반도체·AI·IT 제외), theme별 평균 |등락| 최대
 //                (유니버스의 국내 섹터·테마는 전부 theme이 있다 — 은행·자동차·금융 등)
 //   us-equity    미국 주식(환노출) — KR 해외 기초지수 주식형 중 이름에 '미국'(해외지수·섹터·테마) + US SPY·QQQ
-//   bonds        채권             — KR·US category 채권
+//   bonds        채권             — KR·US category 채권(현금성 달러 상품 — 달러단기·SOFR 등 — 제외)
 //   commodities  금·원자재        — KR·US category 대안 중 원자재(리츠·비트코인 제외)
 // 국내 슬롯(kr-*)은 국내 세션만 담는다 — foreignUnderlying(해외 기초지수) 국내 상장 ETF는 넣지 않는다.
 
@@ -35,6 +35,9 @@ const SEMI_THEMES = new Set(['반도체', 'AI', 'IT'])
 const US_BROAD_INDEX = new Set(['SPY', 'QQQ'])
 const NON_EQUITY = new Set(['채권', '대안'])
 const COMMODITY_NAME = /골드|gold|silver|원유|oil|wti|commodity|원자재/i
+// Ruling 16: 현금성·달러 상품은 '채권' 예시가 아니다 — 환율이 크게 움직인 날 원화 환산 등락이 커져
+// 채권 대표로 뽑히는 것을 막는다(유니버스: TIGER 미국달러단기채권액티브, TIGER 미국달러SOFR금리액티브).
+const CASH_LIKE_NAME = /달러단기|SOFR|KOFR|CD금리|머니마켓/i
 
 interface Candidate {
   rep: AssetRep
@@ -139,7 +142,7 @@ export function buildAssetClassSlots(quotes: EtfQuote[]): AssetClassSlot[] {
     },
     {
       key: 'bonds', label: '채권', holdingLabel: holding('채권'), theme: null,
-      members: candidates.filter(c => c.category === '채권'),
+      members: candidates.filter(c => c.category === '채권' && !CASH_LIKE_NAME.test(c.defName) && !CASH_LIKE_NAME.test(c.rep.name)),
     },
     {
       key: 'commodities', label: '금·원자재', holdingLabel: holding('금·원자재'), theme: null,
