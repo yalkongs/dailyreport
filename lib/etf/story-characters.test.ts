@@ -1,10 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  selectStoryCharacters,
-  checkCharacterProseConsistency,
-} from "./story-characters";
-import type { EtfQuote, MorningReport } from "./types";
+import { selectStoryCharacters } from "./story-characters";
+import type { EtfQuote } from "./types";
 
 function krQuote(ticker: string, name: string, changePercent: number | null = 1): EtfQuote {
   return {
@@ -41,59 +38,10 @@ test("selectStoryCharacters: 슬롯 배정이 렌더러 규칙과 일치", () =>
   assert.equal(c.warning?.name, "KODEX 레버리지"); // 레버리지 우선
 });
 
-function reportWithCharacters(chars: MorningReport["narrativeNotes"]): MorningReport {
-  return { narrativeNotes: chars } as unknown as MorningReport;
-}
-
-test("일치 검출: 산문이 카드 ETF명을 담으면 통과(위반 없음)", () => {
-  const report = reportWithCharacters({
-    characters: {
-      primary: "KODEX 반도체(091160)가 오늘의 주인공입니다.",
-      gate: "TIGER 미국나스닥100(133690)은 환율 게이트입니다.",
-      alternative: "TIGER 국채3년(114820)은 대안입니다.",
-      warning: "KODEX 레버리지(122630)는 과열 경계 대상입니다.",
-    },
-  } as MorningReport["narrativeNotes"]);
-  const violations = checkCharacterProseConsistency(report, QUOTES);
-  assert.equal(violations.length, 0);
-});
-
-test("불일치 검출: 카드 나스닥100 ↔ 산문 S&P500 (7/21 실사례)", () => {
-  const report = reportWithCharacters({
-    characters: {
-      primary: "KODEX 반도체(091160)가 오늘의 주인공입니다.",
-      gate: "TIGER 미국S&P500(360750)은 환율 게이트입니다.", // 카드는 나스닥100인데 산문은 S&P500
-      alternative: "TIGER 미국MSCI리츠(182480)는 대안입니다.", // 카드는 국채인데 산문은 리츠
-      warning: "KODEX 레버리지(122630)는 경계 대상입니다.",
-    },
-  } as MorningReport["narrativeNotes"]);
-  const violations = checkCharacterProseConsistency(report, QUOTES);
-  assert.equal(violations.length, 2);
-});
-
-test("6자리 코드만 있어도 통과(공백 변형 흡수)", () => {
-  const report = reportWithCharacters({
-    characters: {
-      primary: "091160 종목이 강세입니다.", // 코드만
-      gate: "TIGER미국나스닥100 흐름을 봅니다.", // 공백 제거된 이름
-    },
-  } as MorningReport["narrativeNotes"]);
-  const violations = checkCharacterProseConsistency(report, QUOTES);
-  assert.equal(violations.length, 0);
-});
-
-test("narrativeNotes 없으면 검사 skip (Tier 1 fallback 경로)", () => {
-  const report = { narrativeNotes: undefined } as unknown as MorningReport;
-  const violations = checkCharacterProseConsistency(report, QUOTES);
-  assert.equal(violations.length, 0);
-});
-
-test("영문이 섞인 신형 코드(0098F0)만 있어도 통과", () => {
+// 2026-10-17 출력 스키마 개편: Characters 산문이 사라져 카드-산문 정합 검사(checkCharacterProseConsistency)와
+// 그 테스트 5건을 제거했다. 남아 있는 선택 로직(selectStoryCharacters)의 결정론은 계속 검사한다.
+test("selectStoryCharacters: 영문이 섞인 신형 코드(0098F0)도 주인공으로 고른다", () => {
   const quotes = [krQuote("0098F0.KS", "KODEX 원자력SMR", 5.0), ...QUOTES.slice(1)];
   const cards = selectStoryCharacters(quotes);
   assert.equal(cards.primary?.ticker, "0098F0.KS");
-  const report = reportWithCharacters({
-    characters: { primary: "0098F0 종목이 오늘 가장 크게 움직였습니다." },
-  } as MorningReport["narrativeNotes"]);
-  assert.equal(checkCharacterProseConsistency(report, quotes).length, 0);
 });

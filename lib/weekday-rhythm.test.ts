@@ -23,8 +23,10 @@ test("etf 월·금 리듬에는 헤드라인 지시가 없다(묶음 3) — 본�
   assert.doesNotMatch(mon, /헤드라인/);
   assert.doesNotMatch(fri, /헤드라인/);
   assert.doesNotMatch(fri, /X요일/);
-  assert.match(mon, /bigPicture/);
-  assert.match(fri, /closingLine/);
+  // 2026-10-17 ETF 출력 스키마 개편: 본문 지시는 새 필드(summary)로.
+  assert.match(mon, /summary\.overseas/);
+  assert.match(fri, /summary\.focus/);
+  assert.doesNotMatch(mon + fri, /bigPicture|closingLine/);
 });
 
 test("market 금요일 리듬은 헤드라인 톤 지시를 유지한다", () => {

@@ -5,7 +5,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { SYSTEM_PROMPT, buildMorningPrompt } from './claude-client'
 import { getMarketCalendarInfo } from '../market-calendar'
-import type { CollectedData, MacroContext } from './types'
+import type { CollectedData, EtfQuote, MacroContext } from './types'
 
 interface Opts { angle?: string; mode?: 'event' | 'quiet' | 'normal'; tier?: 'strong' | 'thin' | 'hollow' }
 function makeData(date: string, recentHeadlines: string[], o: Opts = {}): CollectedData {
@@ -90,4 +90,83 @@ test('이벤트·잠잠 모드와 명시 tier에서도 옛 지시·깨진 참조
       for (const s of REMOVED) assert.ok(!p.includes(s), `${mode}/${tier}: ${s}`)
     }
   }
+})
+
+// ─── 2026-10-17 아침 리포트 개편: 새 출력 스키마 ──────────────────────────
+const pq = (ticker: string, name: string, pct: number): EtfQuote => ({
+  ticker, name, market: ticker.endsWith('.KS') ? 'KR' : 'US', price: 100, change: 0, changePercent: pct, volume: 1,
+  aum: null, nav: null, premiumDiscount: null, trackingError: null, prev20AvgVolume: null,
+} as EtfQuote)
+
+const SLOT_QUOTES = [
+  pq('069500.KS', 'KODEX 200', -8.21), pq('091160.KS', 'KODEX 반도체', -11.94), pq('396500.KS', 'TIGER 반도체TOP10', -10.86),
+  pq('122630.KS', 'KODEX 레버리지', -16.42), pq('360750.KS', 'TIGER 미국S&P500', -1.04), pq('SPY', 'SPDR S&P 500', 0.28),
+  pq('TLT', 'iShares 20+ Year Treasury', 0.4), pq('GLD', 'SPDR Gold', 0.5), pq('305080.KS', 'TIGER 미국채10년선물', -0.2),
+]
+
+function withQuotes(date: string, quotes: EtfQuote[], o: Opts = {}): CollectedData {
+  return { ...makeData(date, [], o), quotes }
+}
+
+function slotBlock(p: string): string {
+  const start = p.indexOf('[자산군 슬롯 — 코드가 확정]')
+  assert.ok(start >= 0, '자산군 슬롯 블록')
+  return p.slice(start, p.indexOf('\n\n', start))
+}
+
+const OLD_SCHEMA = ['narrativeNotes', 'bigPicture', 'storySpine', 'characters', 'strategyProse', 'todayWatch', 'Today Watch', 'overnightBrief', 'usEtfHighlights', 'sectorNarrative', 'closingLine', 'checklist']
+
+test('새 스키마: 자산군 슬롯 블록(코드 확정)·카드 key·숫자 반복 금지·JSON 필드', () => {
+  const p = buildMorningPrompt(withQuotes('2026-10-16', SLOT_QUOTES))
+  const block = slotBlock(p)
+  assert.match(block, /kr-semi \| 국내 반도체·IT \| 대표 ETF 예시: KODEX 반도체 \(091160\) -11\.94% · TIGER 반도체TOP10 \(396500\) -10\.86%/)
+  assert.match(block, /us-equity \| 미국 주식\(환노출\) \| 대표 ETF 예시: TIGER 미국S&P500 \(360750\) -1\.04% · SPY SPDR S&P 500 \+0\.28%/)
+  assert.doesNotMatch(block, /122630/)
+  assert.match(block, /숫자는 화면에 코드가 표시하므로 문장에 반복하지 마십시오/)
+  assert.match(p, /card\.key는 "kr-semi"/)
+  assert.match(p, /"반도체를 갖고 있다면"/)
+  for (const field of ['"summary"', '"overseas"', '"domestic"', '"focus"', '"assetCards"', '"ifHolding"', '"ifConsidering"', '"todayChecks"', '"baseline"', '"invalidation"', '"card"', '"line"']) {
+    assert.ok(p.includes(field), field)
+  }
+  assert.match(p, /todayChecks는 정확히 3개/)
+  assert.match(p, /32자 이내/)
+})
+
+test('새 스키마: assetCards 예시는 오늘 슬롯 key를 슬롯 순서대로 전부 담는다', () => {
+  const p = buildMorningPrompt(withQuotes('2026-10-16', SLOT_QUOTES))
+  const keys = [...p.matchAll(/\{ "key": "([a-z-]+)", "reason"/g)].map(m => m[1])
+  assert.deepEqual(keys, ['kr-semi', 'kr-large', 'us-equity', 'commodities', 'bonds'])
+})
+
+test('tacticalWarning: 레버리지·인버스 |등락| 10% 이상이면 작성, 아니면 생략 지시', () => {
+  const hot = buildMorningPrompt(withQuotes('2026-10-16', SLOT_QUOTES))
+  assert.match(hot, /KODEX 레버리지 \(122630\) -16\.42%[^\n]*tacticalWarning을 작성/)
+  const calm = buildMorningPrompt(withQuotes('2026-10-16', SLOT_QUOTES.map(x => (x.ticker === '122630.KS' ? { ...x, changePercent: -4 } : x))))
+  assert.match(calm, /tacticalWarning 필드를 넣지 마십시오/)
+})
+
+test('새 스키마: 옛 필드 지시가 모든 모드·요일에서 사라졌다', () => {
+  for (const date of ['2026-09-28', '2026-09-30', '2026-09-18']) {
+    for (const mode of ['event', 'quiet', 'normal'] as const) {
+      const p = buildMorningPrompt(withQuotes(date, SLOT_QUOTES, { mode, tier: 'thin' }))
+      for (const s of OLD_SCHEMA) assert.ok(!p.includes(s), `${date}/${mode}: ${s}`)
+    }
+  }
+})
+
+test('새 스키마: 유지해야 할 공통 블록과 사실 규칙이 남아 있다', () => {
+  const data = withQuotes('2026-10-16', SLOT_QUOTES)
+  data.indices = [{ symbol: '^KS11', nameKo: '코스피', price: 6035.35, changePercent: -5.46, asOf: '2026-10-15' }]
+  const p = buildMorningPrompt(data)
+  assert.match(p, /\[독자·발행 맥락/)
+  assert.match(p, /\[지수 실측 — ETF와 구분\]/)
+  assert.match(p, /\[거시 지표\]/)
+  assert.match(p, /본문에 매체명을 인용할 수 있는 것은 다음뿐/)
+  assert.match(p, /\*\*기간\*\*: 입력의 ETF·지수 등락률은 모두 직전 거래일 하루/)
+  assert.match(p, /\*\*환율 효과 방향\*\*/)
+  assert.match(p, /근거와 추론의 경계/)
+  assert.match(p, /\[준법·표현 규칙\]/)
+  assert.match(p, /국내 시장 스트레스: 전일 KODEX 200 -8\.21% 급락/)
+  assert.match(p, /조건·관찰형/)
+  assert.doesNotMatch(p, /확인 우선·관찰·경계로만/) // 제거한 전략 지도 블록의 잔재
 })

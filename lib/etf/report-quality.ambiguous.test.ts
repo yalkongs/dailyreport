@@ -7,19 +7,15 @@ import type { MorningReport } from "./types";
 // 커버(헤드라인·서브라인)는 독자가 가장 먼저 보는 자리라 hard, 본문은 기록 전용.
 // 최근 25회 실행에서 기각 17건이 전부 본문 쪽이었고("해외 지수 추종 ETF", "시장 주도권",
 // "지수 상승분" 같은 자연스러운 표현), 그 결과 1회차 실패 68%·서사 없는 축소판 발송 28%였다.
+// 2026-10-17 출력 스키마 개편: 본문 문장 body[0..5]를 새 산문 필드에 1:1로 넣는다.
 function report(cover: { headline: string; subline: string }, body: string[]): MorningReport {
   return {
     cover,
-    overnightBrief: { narrative: body[0] ?? "", krImpact: body[1] ?? "" },
-    usEtfHighlights: {
-      topMover: { ticker: "SPY", reason: body[2] ?? "" },
-      bottomMover: { ticker: "QQQ", reason: "" },
-      sectorNarrative: body[3] ?? "",
-    },
-    todayWatch: { items: [{ title: "T", body: body[4] ?? "" }] },
-    closingLine: "",
-    narrativeNotes: { bigPicture: body[5] ?? "" },
-  } as unknown as MorningReport;
+    summary: { overseas: body[0] ?? "", domestic: body[1] ?? "", focus: body[2] ?? "" },
+    assetCards: [{ key: "kr-large", ifHolding: body[3] ?? "", ifConsidering: "" }],
+    todayChecks: [{ time: "", what: body[4] ?? "", baseline: "", invalidation: "" }],
+    card: { key: "kr-large", line: body[5] ?? "" },
+  };
 }
 
 const CLEAN_COVER = { headline: "미 반도체 2.7% 상승, 국내는 엇갈려", subline: "간밤 나스닥이 1.7% 올랐습니다." };

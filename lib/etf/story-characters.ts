@@ -8,8 +8,12 @@
 // 결정론적으로 고르는데, 프롬프트는 Claude에게 그 배정을 알려주지 않아 Claude가 추측 →
 // 카드(나스닥100)와 산문(S&P500)이 어긋나는 사고(7/21 발행본) 발생. 배정 주입(프롬프트)과
 // 검증(validator)을 한 소스에서 계산하도록 여기로 모은다.
+//
+// 2026-10-17 아침 리포트 개편: 출력 스키마에서 Characters 산문이 빠져 프롬프트 주입·카드-산문 정합
+// 검사(checkCharacterProseConsistency)를 제거했다. isTacticalEtf는 자산군 슬롯(asset-classes.ts)·
+// ETF 데이터 병합이 계속 쓴다.
 
-import type { EtfQuote, MorningReport } from './types'
+import type { EtfQuote } from './types'
 
 export interface StoryCharacters {
   primary: EtfQuote | undefined
@@ -43,53 +47,4 @@ export function selectStoryCharacters(quotes: EtfQuote[]): StoryCharacters {
   const warning = kr.find(q => isTacticalEtf(q) && /레버리지/.test(q.name)) ?? kr.find(isTacticalEtf)
 
   return { primary, gate, alternative, warning }
-}
-
-// ─── R1 검증: 카드 ETF와 슬롯 산문의 정합 ────────────────────────────
-// 각 슬롯 산문(존재 시)이 해당 카드 ETF의 정규화된 종목명 또는 6자리 코드를 포함해야 한다.
-// 정규화: 공백 제거 후 비교(chip 표기 "KODEX 반도체(091160)"·"KODEX 반도체 (091160)" 변형 흡수).
-
-function stripSpaces(s: string): string {
-  return s.replace(/\s+/g, '')
-}
-
-function krCode(q: EtfQuote): string | null {
-  const code = q.ticker.replace(/\.(KS|KQ)$/i, '')
-  return /^[0-9][0-9A-Z]{5}$/.test(code) ? code : null
-}
-
-const CHARACTER_SLOTS: Array<keyof StoryCharacters> = ['primary', 'gate', 'alternative', 'warning']
-const SLOT_LABEL: Record<keyof StoryCharacters, string> = {
-  primary: '주인공(primary)',
-  gate: '게이트(gate)',
-  alternative: '대안(alternative)',
-  warning: '경계(warning)',
-}
-
-export function checkCharacterProseConsistency(report: MorningReport, quotes: EtfQuote[]): string[] {
-  const prose = report.narrativeNotes?.characters
-  if (!prose) return [] // Tier 1 fallback 등 산문 없으면 자연 skip
-
-  const characters = selectStoryCharacters(quotes)
-  const violations: string[] = []
-
-  for (const slot of CHARACTER_SLOTS) {
-    const card = characters[slot]
-    const text = prose[slot]
-    if (!card || typeof text !== 'string' || text.trim().length === 0) continue
-
-    const proseNoSpace = stripSpaces(text)
-    const nameNoSpace = stripSpaces(card.name)
-    const code = krCode(card)
-    const matchesName = nameNoSpace.length > 0 && proseNoSpace.includes(nameNoSpace)
-    const matchesCode = code !== null && text.includes(code)
-    if (!matchesName && !matchesCode) {
-      const codeLabel = code ? ` (${code})` : ''
-      violations.push(
-        `Characters ${SLOT_LABEL[slot]} 카드-산문 불일치: 카드는 "${card.name}"${codeLabel}인데 산문이 이를 지칭하지 않음`
-      )
-    }
-  }
-
-  return violations
 }

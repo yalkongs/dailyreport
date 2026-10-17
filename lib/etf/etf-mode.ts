@@ -4,9 +4,10 @@
 // 패턴을 ETF 에 이식해 매일 같은 10 슬롯이 채워지는 wallpaper 효과 완화.
 //
 // 모드:
-//   - event:  큰 변동·이상 신호 다발 — bigPicture·Story Spine 깊게, Characters 강조
+//   - event:  큰 변동·이상 신호 다발 — 요약에 사건의 무게, 근거 있는 reason 빠짐없이
 //   - normal: 평이한 날 — 현재 동작
-//   - quiet:  잠잠한 날 — 짧은 본문 + 다음 영업일 미리보기
+//   - quiet:  잠잠한 날 — 무리한 의미 부여 금지 + 다음 영업일 미리보기
+//   (2026-10-17 출력 스키마 개편으로 분량 지시는 필드 길이 한도가 대신한다.)
 //
 // 우선순위: event > normal > quiet
 //
@@ -119,22 +120,19 @@ export function analyzeEtfMode(data: CollectedData, anomalies: Anomaly[] = [], f
 export function describeEtfModeForPrompt(mode: EtfMode): string {
   switch (mode) {
     case "event":
+      // 2026-10-17 출력 스키마 개편: 분량은 필드 길이 한도가 정하므로 모드는 무게·초점만 조절한다.
       return `오늘은 **이벤트 모드** 입니다. 큰 시장 변동·이상 신호 다발.
-- bigPicture 는 **8~12문장** 으로 깊게 (평소 4~6 보다 길게).
-- storySpine 3막은 각 act 4~6문장 으로 (평소 3~5).
-- characters 카드는 각 4~5문장 으로 강조.
-- 헤드라인은 [cover.headline 작성 규칙]을 따르되, 사건의 무게가 즉시 전달되도록 씁니다 (수치만 나열 지양).
-- closingLine 은 다음 영업일 관전 포인트로 닫음.`;
+- summary 세 줄은 사건의 무게와 배경이 바로 전달되게 씁니다(수치 나열 지양).
+- assetCards 의 reason 은 입력 근거가 있는 자산군마다 빠짐없이 씁니다.
+- todayChecks 는 변동성이 진정되는지 판단할 기준 위주로 고릅니다.
+- 헤드라인은 [cover.headline 작성 규칙]을 따르되, 사건의 무게가 즉시 전달되도록 씁니다 (수치만 나열 지양).`;
     case "quiet":
       return `오늘은 **잠잠한 모드** 입니다. 시장 변동이 매우 작고 이상 신호도 드뭅니다.
-- bigPicture 는 **3~4문장** 으로 짧게. 무리해서 채우지 마십시오.
-- storySpine 3막은 각 act 2~3문장 으로 축약.
-- characters 는 2~3개만 유지 (warning 카드는 생략 가능).
-- closingLine 에 **"다음 영업일 또는 이번 주 후반에 살펴볼 자리"** 미리보기 포함.
+- 무리해서 의미를 만들지 마십시오. 근거가 없는 자산군의 reason 은 생략합니다.
+- todayChecks 에 **"다음 영업일 또는 이번 주 후반에 살펴볼 자리"** 를 하나 넣어도 좋습니다.
 - 헤드라인은 [cover.headline 작성 규칙]을 따르되 차분한 톤으로. 횡보 자체를 명시하는 것도 좋음.`;
     case "normal":
     default:
-      return `오늘은 **표준 모드** 입니다. 일상적 ETF 흐름이며 평소 분량 유지.
-- bigPicture 4~6문장, storySpine 각 3~5문장, characters 3~4문장.`;
+      return `오늘은 **표준 모드** 입니다. 일상적 ETF 흐름이며 평소 분량 유지.`;
   }
 }
