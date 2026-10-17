@@ -101,14 +101,16 @@ import { validateMorningReportQuality } from './report-quality'
 import { buildMorningStrategyInput } from './morning-strategy'
 import type { CollectedData, MorningReport } from './types'
 
-function reportWith(narrative: string): MorningReport {
+// 2026-10-17 출력 스키마 개편: 문장을 세 줄 요약(summary.domestic)에 넣는다. 새 필드 전부의 대조는
+// report-quality.v2.test.ts가 필드별로 검사한다.
+function reportWith(sentence: string): MorningReport {
   return {
     cover: { headline: '제목', subline: '부제' },
-    overnightBrief: { narrative, krImpact: 'K' },
-    usEtfHighlights: { topMover: { ticker: 'SPY', reason: 'R' }, bottomMover: { ticker: 'QQQ', reason: 'R' }, sectorNarrative: 'N' },
-    todayWatch: { items: [{ title: 'T', body: 'B' }] },
-    closingLine: 'C',
-  } as unknown as MorningReport
+    summary: { overseas: '해외', domestic: sentence, focus: '핵심' },
+    assetCards: [{ key: 'kr-large', ifHolding: '보유', ifConsidering: '신규' }],
+    todayChecks: [{ time: '09:00', what: 'W', baseline: 'B', invalidation: 'X' }],
+    card: { key: 'kr-large', line: 'L' },
+  }
 }
 const DATA = {
   reportType: 'morning', date: '2026-10-14', quotes: QUOTES, flows: [], investorFlows: [], news: [], analysisLens: '',

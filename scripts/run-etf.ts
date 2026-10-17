@@ -195,8 +195,8 @@ async function main() {
 
   // Step 5: Claude 분석 (최대 2회 시도 + Tier 1 fallback)
   // P0 (2026-04-24): 기존 3회 재시도는 대증요법(패턴 좁히기)에 의존해 왔음.
-  // 새 구조: 2회 검증 실패 시 narrativeNotes 를 drop한 Tier 1 수준 리포트로
-  // fallback 검증 → 성공 시 발송, 실패 시에만 Telegram 에러. 새벽 침묵 리스크 ↓.
+  // 2026-10-17 출력 스키마 개편: 2회 검증 실패 시 마지막으로 한 번 더 생성해 사실 검증을
+  // 경고로만 남기는 검증(validateMorningReport, F02 "전송 > 침묵")을 통과하면 발송한다.
   console.log('[5/8] Claude 리포트 생성 중...')
   const MAX_CLAUDE_ATTEMPTS = 2
   let report: Awaited<ReturnType<typeof generateMorningReport>> | undefined
@@ -224,7 +224,7 @@ async function main() {
     }
   }
 
-  // P0 fallback: narrativeNotes 만 drop해서 Tier 1 하드코딩 본문으로 렌더링
+  // P0 fallback: 재생성 + 사실 검증 경고 모드 검증(구조·준법 검사는 그대로 위반)
   if (!report) {
     if (!deadline.canStartCall()) {
       console.error(`[error] 생성 예산 초과(${Math.round(deadline.elapsedMs() / 1000)}초) — fallback 호출 생략. 다음 트리거가 재시도합니다.`)
@@ -232,12 +232,11 @@ async function main() {
       process.exit(1)
     }
     try {
-      console.log('[5b/8] Tier 1 fallback — narrativeNotes drop 후 재검증')
+      console.log('[5b/8] Tier 1 fallback — 재생성 후 사실 검증은 경고로만 남기고 재검증')
       const raw = await generateMorningReportRaw(data)
-      const stripped: typeof raw = { ...raw, narrativeNotes: undefined }
-      validateMorningReport(stripped, data)
-      report = stripped
-      console.log('  ✓ Tier 1 fallback 성공 — narrativeNotes 없이 발송합니다')
+      validateMorningReport(raw, data)
+      report = raw
+      console.log('  ✓ Tier 1 fallback 성공 — 사실 검증 경고([fact-warn])가 있으면 로그를 확인하십시오')
     } catch (fallbackErr) {
       console.error('[error] Tier 1 fallback도 실패:', (fallbackErr as Error).message)
       console.error('[error] 원인:', lastError)

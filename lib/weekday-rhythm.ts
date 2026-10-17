@@ -37,13 +37,14 @@ export function describeWeekdayRhythm(role: WeekdayRole, reportType: "market" | 
     }
     // etf — overnight 브리핑 설계와 정합(주말 해외 흐름이 주된 데이터).
     // 묶음 3(2026-09-30): 헤드라인 톤 지시 제거 — 제목 형태는 ETF [cover.headline 작성 규칙]이 단일 소스.
-    return `\n[요일 리듬 — 월요일 셋업]\n- 오늘은 한 주의 첫 영업일입니다. 주말 사이 미국·유럽 시장 변동과 환율 야간 흐름을 bigPicture 첫 문장에 녹이고, 이번 주 관전 ETF군(반도체·환노출·채권 등 중 한 그룹) 을 closingLine 으로 명시.\n`
+    // 2026-10-17 ETF 출력 스키마 개편: bigPicture·closingLine → summary.overseas·summary.focus.
+    return `\n[요일 리듬 — 월요일 셋업]\n- 오늘은 한 주의 첫 영업일입니다. 주말 사이 미국·유럽 시장 변동과 환율 야간 흐름을 summary.overseas 에 녹이고, 이번 주 관전 ETF군(반도체·환노출·채권 등 중 한 그룹) 을 summary.focus 에 명시.\n`
   }
   if (role === "friday_recap") {
     const extra = reportType === "market"
       ? "한 주 동안의 winner/loser 자산군 한 줄씩, 다음 주에 살펴볼 변수(미국 지표 발표·한국 매크로 등) 를 soWhat 또는 calendar 에서 정리."
       // C05 (2026-10-16): ETF 입력에는 주간 수익률이 없다. 주간 순위를 요구하면 하루 등락을 주간으로 쓴다.
-      : "입력의 ETF 등락률은 모두 직전 거래일 하루 기준이라 주간 수익률·주간 순위를 만들 수 없습니다. '이번 주 -X%'처럼 쓰지 말고, 이번 주에 반복된 흐름은 수치 없이 짧게 회고한 뒤 다음 주에 살펴볼 ETF 군이나 지표를 closingLine 으로 닫음."
+      : "입력의 ETF 등락률은 모두 직전 거래일 하루 기준이라 주간 수익률·주간 순위를 만들 수 없습니다. '이번 주 -X%'처럼 쓰지 말고, 이번 주에 반복된 흐름은 수치 없이 짧게 회고한 뒤 다음 주에 살펴볼 ETF 군이나 지표를 summary.focus 로 닫음."
     // 묶음 3(2026-09-30): 헤드라인 톤 줄은 market에만. ETF는 "~한 금요일"·"한 주를 닫다" 틀의 원인이었다.
     const headlineLine = reportType === "market"
       ? `- 헤드라인은 "한 주를 닫는" 톤. "이번 주 X를 정리한 X요일" 같은 회고 색을 입혀도 좋음.\n`

@@ -18,7 +18,8 @@ import {
   reportRouteUrl,
 } from './report-preview'
 // R1 (2026-07-22): 선택 로직은 story-characters.ts로 이동(렌더러·프롬프트·검증 공유).
-import { isTacticalEtf, selectStoryCharacters } from './story-characters'
+import { isTacticalEtf } from './story-characters'
+import { buildAssetClassSlots } from './asset-classes'
 import { LEGAL_DISCLAIMER_ITEMS, LEGAL_DISCLAIMER_TITLE } from '../legal-disclaimer'
 
 export function escapeHtml(s: string): string {
@@ -610,21 +611,14 @@ function displayStance(stance: string): string {
   return stance === '선호' ? '확인 우선' : stance
 }
 
-function renderStrategyMap(strategy: MorningStrategyInput, quotes: EtfQuote[], report?: MorningReport): string {
-  // Tier 2: Claude strategyProse 가 있으면 group 이름으로 매칭해 prose override
-  const proseByGroup = new Map<string, { rationale?: string; actionGuide?: string; avoid?: string }>()
-  for (const p of report?.narrativeNotes?.strategyProse ?? []) {
-    proseByGroup.set(p.group, { rationale: p.rationale, actionGuide: p.actionGuide, avoid: p.avoid })
-  }
-
+function renderStrategyMap(strategy: MorningStrategyInput, quotes: EtfQuote[]): string {
   return `<div class="section">
   <div class="section-title">ETF군별 전략 지도</div>
   <div class="strategy-map">
   ${strategy.etfGroupStrategies.map(item => {
-    const prose = proseByGroup.get(item.group)
-    const rationale = prose?.rationale?.trim() || publicText(item.rationale)
-    const actionGuide = prose?.actionGuide?.trim() || publicText(item.actionGuide)
-    const avoid = prose?.avoid?.trim() || publicText(item.avoid)
+    const rationale = publicText(item.rationale)
+    const actionGuide = publicText(item.actionGuide)
+    const avoid = publicText(item.avoid)
     return `
     <div class="strategy-item">
       <div class="strategy-head">
@@ -783,250 +777,54 @@ function renderExecutiveSummary(strategy: MorningStrategyInput, quotes: EtfQuote
 </div>`
 }
 
-function renderTodayChecklist(report: MorningReport, quotes: EtfQuote[]): string {
-  const labels = [
-    { scope: '개장 30분', condition: '조건', action: '행동', avoid: '피할 점' },
-    { scope: '환율/금리', condition: '조건', action: '행동', avoid: '피할 점' },
-    { scope: '주문 리스크', condition: '조건', action: '행동', avoid: '피할 점' },
+// 2026-10-17 출력 스키마 개편 — Task 5가 페이지 구성을 전면 교체하기 전까지 새 필드를 보여 주는 임시 본문.
+// (세 줄 요약 · 자산군별 판단 재료 · 오늘 확인할 것 3가지 · 레버리지·인버스 주의)
+function renderTemporaryReportBody(report: MorningReport, data: CollectedData): string {
+  const quotes = data.quotes
+  const summaryRows: Array<[string, string | undefined]> = [
+    ['해외 신호', report.summary?.overseas],
+    ['국내 상태', report.summary?.domestic],
+    ['오늘 핵심', report.summary?.focus],
   ]
-
-  // Tier 2: Claude narrativeNotes 우선, 없으면 Tier 1 하드코딩 fallback
-  const claudeActions = report.narrativeNotes?.checklist?.actions ?? []
-  const claudeAvoids = report.narrativeNotes?.checklist?.avoids ?? []
-
+  const slots = buildAssetClassSlots(quotes)
+  const cards = Array.isArray(report.assetCards) ? report.assetCards : []
+  const checks = Array.isArray(report.todayChecks) ? report.todayChecks : []
+  const box = (label: string, text: string | undefined) => text?.trim()
+    ? `<div class="action-box"><div class="action-label">${e(label)}</div><div class="action-text">${renderReportText(text, quotes)}</div></div>`
+    : ''
   return `<div class="section">
-  <div class="section-title">오늘의 실행 체크리스트</div>
+  <div class="section-title">세 줄 요약</div>
+  ${summaryRows.filter(([, text]) => text?.trim()).map(([label, text]) => `<p class="narrative"><strong>${e(label)}</strong> ${renderReportText(text as string, quotes)}</p>`).join('')}
+</div>
+
+<div class="section">
+  <div class="section-title">자산군별 판단 재료</div>
   <div class="watch-grid">
-  ${report.todayWatch.items.slice(0, 3).map((item, index) => {
-    const label = labels[index] ?? labels[2]
-    const actionText = claudeActions[index]?.trim() || checklistActionText(index)
-    const avoidText = claudeAvoids[index]?.trim() || checklistAvoidText(index)
+  ${slots.map(slot => {
+    const card = cards.find(c => c?.key === slot.key)
+    const reps = slot.reps.map(r => `${e(r.market === 'KR' ? `${r.name} (${r.ticker.replace(/\.(KS|KQ)$/i, '')})` : `${r.ticker} ${r.name}`)} ${e(`${r.pct > 0 ? '+' : ''}${r.pct.toFixed(2)}%`)}`).join(' · ')
     return `<div class="watch-item">
-    <div class="watch-title">${e(label.scope)} · ${renderReportText(item.title, quotes)}</div>
-    <div class="action-grid">
-      <div class="action-box action-box-primary"><div class="action-label">${e(label.condition)}</div><div class="action-text">${renderReportText(item.body, quotes)}</div></div>
-      <div class="action-box"><div class="action-label">${e(label.action)}</div><div class="action-text">${renderReportText(actionText, quotes)}</div></div>
-      <div class="action-box"><div class="action-label">${e(label.avoid)}</div><div class="action-text">${renderReportText(avoidText, quotes)}</div></div>
-    </div>
+    <div class="watch-title">${e(slot.label)} · 예시 ${reps}</div>
+    <div class="action-grid">${box('이유', card?.reason)}${box('갖고 있다면', card?.ifHolding)}${box('새로 본다면', card?.ifConsidering)}</div>
   </div>`
   }).join('')}
   </div>
-</div>`
-}
+</div>
 
-// Plan B (2026-04-28): bigPicture — narrative spine 단락. 분석 렌즈·서사 앵글을
-// 결합해 Claude가 작성한 4~6문장. 누락 시 섹션 자체를 출력하지 않음
-// (Tier 1 fallback 시 narrativeNotes drop 으로 자연스럽게 사라짐).
-function renderBigPicture(report: MorningReport, data: CollectedData): string {
-  const text = report.narrativeNotes?.bigPicture?.trim()
-  if (!text) return ''
-  // C09: '서사 앵글·분석 렌즈'는 생성 내부 용어라 독자에게 노출하지 않는다.
-  return `<div class="section big-picture">
-  <div class="section-title">Big Picture</div>
-  <div class="big-picture-meta">오늘의 큰 그림</div>
-  <div class="big-picture-body">${renderReportText(text, data.quotes)}</div>
-</div>`
-}
-
-function renderStoryOpening(report: MorningReport, data: CollectedData): string {
-  const characters = selectStoryCharacters(data.quotes)
-  const primary = characters.primary
-  const gate = characters.gate
-  const primaryName = primary ? formatEtfIdentity(primary).plain : '국내 성장 ETF'
-  const gateName = gate ? formatEtfIdentity(gate).plain : '환노출 해외 ETF'
-  const usdKrw = data.macro.usdKrw !== null && data.macro.usdKrw !== undefined
-    ? `USD/KRW ${formatNumber(data.macro.usdKrw, 0)}`
-    : '환율'
-
-  // Tier 2: Claude storySpine 우선, 없으면 Tier 1 하드코딩 fallback
-  const spine = report.narrativeNotes?.storySpine
-  const act1Note = spine?.act1?.trim() || `${primaryName}의 거래대금이 함께 따라와야 이 신호가 실제로 움직이는 흐름이 됩니다.`
-  const act2Note = spine?.act2?.trim() || `${gateName}는 기초지수 등락과 원/달러 환율 변화를 나눠 봐야 원화 기준 성과가 보입니다.`
-  const act3Note = spine?.act3?.trim() || '당장의 가격 움직임보다 거래대금과 NAV 괴리가 말해주는 이야기를 먼저 읽어봅니다.'
-
-  return `<div class="story-card">
-  <div class="hero-kicker">Story of the Day</div>
-  <div class="story-title">오늘의 초점 · ${renderReportText(report.cover.headline, data.quotes)}</div>
-  <div class="story-body">${renderReportText(report.cover.subline, data.quotes)} ${e('이 리포트는 선행 신호, 환율 변수, 상품별 실행 조건 순서로 읽습니다.')}</div>
-  <div class="story-acts">
-    <div class="story-act">
-      <div class="story-act-label">1막 · 선행 신호</div>
-      <div class="story-act-value">${renderReportText(shortReportText(firstSentence(report.overnightBrief.narrative), 96), data.quotes)}</div>
-      <div class="story-act-note">${renderReportText(act1Note, data.quotes)}</div>
-    </div>
-    <div class="story-act">
-      <div class="story-act-label">2막 · 환율 변수</div>
-      <div class="story-act-value">${e(usdKrw)}</div>
-      <div class="story-act-note">${renderReportText(act2Note, data.quotes)}</div>
-    </div>
-    <div class="story-act">
-      <div class="story-act-label">3막 · 국내 검증</div>
-      <div class="story-act-value">개장 30분 거래대금</div>
-      <div class="story-act-note">${renderReportText(act3Note, data.quotes)}</div>
-    </div>
+<div class="section">
+  <div class="section-title">오늘 확인할 것</div>
+  <div class="watch-grid">
+  ${checks.map(check => `<div class="watch-item">
+    <div class="watch-title">${e(check?.time ?? '')} · ${renderReportText(check?.what ?? '', quotes)}</div>
+    <div class="action-grid">${box('비교 기준', check?.baseline)}${box('어긋나면', check?.invalidation)}</div>
+  </div>`).join('')}
   </div>
-</div>`
-}
-
-function renderStorySpine(report: MorningReport, data: CollectedData): string {
-  const steps = [
-    {
-      label: '발단',
-      act: '1막',
-      kicker: '해외 선행 신호',
-      text: report.overnightBrief.narrative,
-    },
-    {
-      label: '갈등',
-      act: '2막',
-      kicker: '환율과 국내 거래의 제약',
-      text: report.overnightBrief.krImpact,
-    },
-    {
-      label: '해결',
-      act: '3막',
-      kicker: '상품별 실행 조건',
-      text: report.usEtfHighlights.sectorNarrative,
-    },
-  ]
-
-  return `<div class="section">
-  <div class="section-title">Story Spine</div>
-  <div class="spine">
-    ${steps.map(step => renderSpineStep(step, data.quotes)).join('')}
-  </div>
-</div>`
-}
-
-function renderSpineStep(
-  step: { label: string; act: string; kicker: string; text: string },
-  quotes: EtfQuote[]
-): string {
-  const first = firstSentence(step.text)
-  const headline = shortReportText(first, 110)
-  const detail = spineDetailText(step.text, first, headline)
-  return `<div class="spine-step">
-  <div class="spine-marker"><strong>${e(step.label)}</strong><span>${e(step.act)}</span></div>
-  <div class="spine-card">
-    <div class="spine-kicker">${e(step.kicker)}</div>
-    <div class="spine-headline">${renderReportText(headline, quotes)}</div>
-    ${detail ? `<div class="spine-detail"><div class="spine-detail-label">근거 설명</div>${renderReportText(detail, quotes)}</div>` : ''}
-  </div>
-</div>`
-}
-
-function spineDetailText(text: string, first: string, headline: string): string {
-  const normalizedText = normalizeWhitespace(text)
-  const normalizedFirst = normalizeWhitespace(first)
-  const normalizedHeadline = normalizeWhitespace(headline)
-  if (normalizedText === normalizedHeadline) return ''
-  if (normalizedHeadline !== normalizedFirst) return normalizedText
-  if (!normalizedText.startsWith(normalizedFirst)) return normalizedText
-  return normalizedText.slice(normalizedFirst.length).trim()
-}
-
-function firstSentence(text: string): string {
-  const normalized = normalizeWhitespace(text)
-  const match = normalized.match(/^(.+?[.!?])(?:\s|$)/)
-  return match ? match[1] : normalized
-}
-
-function normalizeWhitespace(text: string): string {
-  return text.replace(/\s+/g, ' ').trim()
-}
-
-function shortReportText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text
-  const sentenceEnd = findSentenceEndBefore(text, maxLength)
-  if (sentenceEnd >= 40) return text.slice(0, sentenceEnd + 1)
-  return `${text.slice(0, maxLength).trim()}...`
-}
-
-function findSentenceEndBefore(text: string, maxLength: number): number {
-  const limit = Math.min(text.length, maxLength)
-  let found = -1
-  for (let i = 0; i < limit; i += 1) {
-    const char = text[i]
-    if (char !== '.' && char !== '!' && char !== '?') continue
-    const next = text[i + 1]
-    if (char === '.' && /\d/.test(text[i - 1] ?? '') && /\d/.test(next ?? '')) continue
-    if (next && !/\s/.test(next)) continue
-    found = i
-  }
-  return found
-}
-
-function renderStoryCharacters(report: MorningReport, data: CollectedData): string {
-  const characters = selectStoryCharacters(data.quotes)
-  // Tier 2: Claude characters 우선, 없으면 Tier 1 하드코딩 fallback
-  const c = report.narrativeNotes?.characters
-  const primaryNote = c?.primary?.trim() || '미국 성장주 흐름이 국내 증시의 실제 수요로 전해지는지 보는 창구입니다. 거래대금이 함께 늘어나야 이 신호는 의미를 얻습니다.'
-  const gateNote = c?.gate?.trim() || '같은 해외 지수(S&P500·나스닥) 흐름이라도 원화 환율이 달라지면 체감 수익률은 다른 모습을 보입니다. 기초지수와 환율을 구분해서 봐야 합니다.'
-  const alternativeNote = c?.alternative?.trim() || '성장주 흐름이 주춤하거나 금리가 내려가는 국면에서 함께 눈여겨볼 상품입니다. 오늘의 주인공으로 확정 짓긴 이릅니다.'
-  const warningNote = c?.warning?.trim() || '레버리지와 인버스는 가격 변동폭이 큰 상품입니다. 장기 투자 후보로 다루기보다, 장중 전술 관찰 대상으로 따로 구분해 다룹니다.'
-  const cards = [
-    characters.primary ? renderCharacterCard(characters.primary, '성장 신호 확인', primaryNote, data.quotes) : '',
-    characters.gate && characters.gate !== characters.primary ? renderCharacterCard(characters.gate, '환율 영향 점검', gateNote, data.quotes) : '',
-    characters.alternative ? renderCharacterCard(characters.alternative, '대안 관찰', alternativeNote, data.quotes) : '',
-    characters.warning ? renderCharacterCard(characters.warning, '과열 경계', warningNote, data.quotes) : '',
-  ].filter(Boolean)
-
-  if (cards.length === 0) return ''
-
-  return `<div class="section">
-  <div class="section-title">Characters In The Story</div>
-  <div class="character-grid">
-    ${cards.join('')}
-  </div>
-</div>`
-}
-
-function renderCharacterCard(q: EtfQuote, role: string, note: string, quotes: EtfQuote[]): string {
-  const identity = formatEtfIdentity(q)
-  // R4 (2026-07-22): 등락률 미확보 시 '미확보' 배지 대신 배지 자체를 생략.
-  const changeStr = q.changePercent !== null ? `${q.changePercent > 0 ? '+' : ''}${q.changePercent.toFixed(2)}%` : null
-  const moveClass = q.changePercent !== null && q.changePercent >= 0 ? 'change-up' : 'change-down'
-  const metrics = metricItemsHtml([
-    { label: '등락률', value: changeStr },
-    { label: '거래대금', value: q.tradingValue !== undefined && q.tradingValue !== null ? compactKrwAmount(q.tradingValue) : null },
-    { label: '괴리율', value: q.premiumDiscount !== null ? `${q.premiumDiscount > 0 ? '+' : ''}${q.premiumDiscount.toFixed(2)}%` : null },
-    { label: 'NAV', value: q.nav !== null ? q.nav.toLocaleString('ko-KR', { maximumFractionDigits: 2 }) : null },
-  ], 3)
-
-  return `<div class="character-card">
-  <div class="character-head">
-    <div>
-      <div class="character-role">${e(role)}</div>
-      ${renderEtfLink(q.ticker, `<div class="character-name">${e(identity.primary)}</div><div class="character-code">${e(identity.secondary)}</div>`, 'etf-link character-link')}
-    </div>
-    ${changeStr !== null ? `<div class="character-move ${moveClass}">${e(changeStr)}</div>` : ''}
-  </div>
-  ${metrics ? `<div class="metric-grid character-metrics">${metrics}</div>` : ''}
-  <div class="watch-body">${renderReportText(note, quotes)}</div>
-</div>`
-}
-
-function uniqueQuotes(quotes: Array<EtfQuote | undefined>): EtfQuote[] {
-  const seen = new Set<string>()
-  const out: EtfQuote[] = []
-  for (const quote of quotes) {
-    if (!quote || seen.has(quote.ticker)) continue
-    seen.add(quote.ticker)
-    out.push(quote)
-  }
-  return out
-}
-
-function checklistActionText(index: number): string {
-  if (index === 0) return '해외 흐름을 국내 거래대금이 받아내는지 — 거기서 오늘의 실체를 읽습니다.'
-  if (index === 1) return '환율과 금리가 모두 불리한 날엔, 결정을 서두르기보다 한 박자 늦추는 편이 낫습니다.'
-  return 'NAV와 벌어진 ETF는 시장가보다 지정가로 접근하는 게 안전합니다.'
-}
-
-function checklistAvoidText(index: number): string {
-  if (index === 0) return '미국 ETF가 강하다고 국내 ETF를 장 시작 직후 따라잡는 건 위험합니다.'
-  if (index === 1) return '환율이 높은 구간에서 환노출 해외 ETF를 단번에 늘리면, 이후 원화 강세 때 환산 손실을 크게 입을 수 있습니다.'
-  return '레버리지·인버스는 장기 보유 후보가 아닙니다. 오늘 하루 안에 끝낼 전술형으로만 다룹니다.'
+</div>
+${report.tacticalWarning?.trim() ? `
+<div class="section">
+  <div class="section-title">레버리지·인버스 주의</div>
+  <p class="narrative">${renderReportText(report.tacticalWarning, quotes)}</p>
+</div>` : ''}`
 }
 
 function findQuote(quotes: EtfQuote[], ticker: string): EtfQuote | undefined {
@@ -1473,17 +1271,7 @@ export function renderMorningHtml(report: MorningReport, data: CollectedData, op
 
 ${renderExecutiveSummary(strategy, data.quotes)}
 
-${renderBigPicture(report, data)}
-
-${renderStoryOpening(report, data)}
-
-${/* Phase E4 (2026-05-24): renderStorySpine 제거 — overnightBrief/sectorNarrative 와 순수 중복.
-     Story Spine 의 3막 narrative 는 storyCard(renderStoryOpening) 내 act 노트로 이미 표시됨. */ ''}
-${renderStoryCharacters(report, data)}
-
-${/* Phase E4: renderStoryResolution 제거 — checklist 와 시나리오 의미 중복.
-     resolutions 시나리오는 bigPicture·checklist 안에 흡수. */ ''}
-${renderTodayChecklist(report, data.quotes)}
+${renderTemporaryReportBody(report, data)}
 
 ${renderDomesticActionBoard(data.quotes)}
 
@@ -1500,20 +1288,9 @@ ${renderGlobalKoreaBridge(data)}
 
 ${renderGlobalKrMatching(data)}
 
-${renderStrategyMap(strategy, data.quotes, report)}
+${renderStrategyMap(strategy, data.quotes)}
 
 ${renderMarketHeatmap(data)}
-
-<div class="section">
-  <div class="section-title">간밤 시장 요약</div>
-  <p class="narrative">${renderReportText(report.overnightBrief.narrative, data.quotes)}</p>
-  <p class="narrative" style="margin-top:10px;color:#7b8ec8">${renderReportText(report.overnightBrief.krImpact, data.quotes)}</p>
-</div>
-
-<div class="section">
-  <div class="section-title">Sector Narrative</div>
-  <p class="narrative">${renderReportText(report.usEtfHighlights.sectorNarrative, data.quotes)}</p>
-</div>
 
 ${renderIssueEtfs(data)}
 
@@ -1534,7 +1311,7 @@ ${renderRiskAlerts(strategy, data.quotes)}
 
 ${renderNewsSources(data)}
 
-<div class="closing">${renderReportText(report.closingLine, data.quotes)}</div>
+<div class="closing">${renderReportText(report.card?.line ?? '', data.quotes)}</div>
 ${renderDataCoverage(strategy)}
 ${renderClientNotice(data, strategy)}`
 

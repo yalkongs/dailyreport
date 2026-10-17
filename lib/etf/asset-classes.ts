@@ -155,6 +155,21 @@ export function buildAssetClassSlots(quotes: EtfQuote[]): AssetClassSlot[] {
   return slots.sort((a, b) => Math.abs(b.movePct) - Math.abs(a.movePct))
 }
 
+// 레버리지·인버스 주의(tacticalWarning)는 전술형 ETF |등락|이 이 값 이상인 날에만 쓴다.
+export const TACTICAL_WARNING_MIN_ABS_PCT = 10
+
+// 전술형(레버리지·인버스) 중 |등락| 최대 종목이 기준 이상이면 그 시세, 아니면 null.
+// 프롬프트(작성/생략 지시)와 검증(조건 밖이면 자동 생략)이 같은 판단을 쓴다.
+export function findTacticalAlert(quotes: EtfQuote[], minAbsPct = TACTICAL_WARNING_MIN_ABS_PCT): EtfQuote | null {
+  let best: EtfQuote | null = null
+  for (const q of quotes) {
+    const pct = q.changePercent
+    if (pct === null || pct === undefined || !Number.isFinite(pct) || !isTacticalEtf(q)) continue
+    if (!best || Math.abs(pct) > Math.abs(best.changePercent as number)) best = q
+  }
+  return best && Math.abs(best.changePercent as number) >= minAbsPct ? best : null
+}
+
 // 링크 미리보기 카드의 "○○를 갖고 있다면" 자산군: 국내 슬롯 중 |movePct| 최대, 없으면 첫 슬롯.
 export function pickFeaturedSlot(slots: AssetClassSlot[]): AssetClassSlot | null {
   let best: AssetClassSlot | null = null

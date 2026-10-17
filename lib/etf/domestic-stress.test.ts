@@ -37,11 +37,10 @@ test('국내 급락이 아니면 기존 판단 유지', () => {
 })
 
 test('렌더: 확신도 대신 규칙 점수로 표기', () => {
-  const report = {
-    cover: { headline: 'h', subline: 's' }, overnightBrief: { narrative: 'n', krImpact: 'k' },
-    usEtfHighlights: { topMover: { ticker: 'SPY', reason: 'r' }, bottomMover: { ticker: 'SPY', reason: 'r' }, sectorNarrative: 's' },
-    todayWatch: { items: [] }, closingLine: 'c',
-  } as MorningReport
+  const report: MorningReport = {
+    cover: { headline: 'h', subline: 's' }, summary: { overseas: 'o', domestic: 'd', focus: 'f' },
+    assetCards: [], todayChecks: [], card: { key: 'kr-large', line: 'c' },
+  }
   const html = renderMorningHtml(report, data(-8.21))
   assert.doesNotMatch(html, /확신도/)
   assert.match(html, /규칙 점수/)

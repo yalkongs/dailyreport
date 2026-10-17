@@ -66,13 +66,13 @@ test("소스 스캔: 자금 흐름·배당 문구와 라벨 오버라이드가 �
   assert.doesNotMatch(RENDERER_SRC, /ETF_LABEL_OVERRIDES/);
 });
 
-const REPORT = {
+const REPORT: MorningReport = {
   cover: { headline: "테스트 제목", subline: "테스트 서브라인" },
-  overnightBrief: { narrative: "간밤 요약", krImpact: "국내 영향" },
-  usEtfHighlights: { topMover: { ticker: "SPY", reason: "r" }, bottomMover: { ticker: "SPY", reason: "r" }, sectorNarrative: "섹터" },
-  todayWatch: { items: [] },
-  closingLine: "마무리",
-} as MorningReport;
+  summary: { overseas: "해외 신호", domestic: "국내 상태", focus: "오늘 핵심" },
+  assetCards: [],
+  todayChecks: [],
+  card: { key: "kr-large", line: "마무리" },
+};
 
 function data(quotes: EtfQuote[]): CollectedData {
   return {

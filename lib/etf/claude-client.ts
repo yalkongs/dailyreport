@@ -1,8 +1,16 @@
 // lib/claude-client.ts
 import Anthropic from '@anthropic-ai/sdk'
 import type { CollectedData, EtfQuote, MorningReport } from './types'
-// R1 (2026-07-22): Characters 카드 배정을 프롬프트에 주입(렌더러·검증과 동일 소스).
-import { selectStoryCharacters } from './story-characters'
+// 2026-10-17 아침 리포트 개편: 자산군 슬롯·카드 자산군·레버리지 주의 조건을 프롬프트에 주입
+// (렌더러·검증·미리보기 카드와 같은 계산).
+import {
+  buildAssetClassSlots,
+  findTacticalAlert,
+  pickFeaturedSlot,
+  TACTICAL_WARNING_MIN_ABS_PCT,
+  type AssetClassSlot,
+  type AssetRep,
+} from './asset-classes'
 // R3 (2026-07-22): 본문에 이름 인용 가능한 매체 화이트리스트.
 import { QUOTABLE_SOURCES } from '../quotable-sources'
 import { buildMorningStrategyInput } from './morning-strategy'
@@ -10,7 +18,6 @@ import { validateMorningReportQuality } from './report-quality'
 import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS } from '../claude-budget'
 import { EVIDENCE_RULES } from '../evidence-rules'
 import { normalizeMorningReportLanguage } from './report-language'
-import { buildMorningNarrativePlan } from './morning-report-plan'
 import { describeAngle, ETF_NARRATIVE_ANGLES, type EtfNarrativeAngle } from './narrative-angle'
 import { renderVoiceExemplars } from '../voice-exemplars'
 import { buildTemporalFramingBlock } from '../temporal-framing'
@@ -29,10 +36,10 @@ export const SYSTEM_PROMPT = `당신은 ETF 시장 분석 전문가입니다. �
 [톤 & 스타일 — Plan B (2026-04-28) 완화 적용]
 - 격식체 사용 ("~입니다", "~습니다") (cover.headline 제외 — [cover.headline 작성 규칙] 참조)
 - 차분한 보고서 문체를 유지하되, **한 호흡의 글이 되도록** 문장을 자연스럽게 연결하십시오.
-- 수치를 먼저 제시한 뒤 해석을 붙이는 순서를 기본으로 하되, 글의 흐름이 자연스러우면 도치를 허용합니다. (cover.headline 제외 — [cover.headline 작성 규칙] 참조)
+- 수치가 필요한 문장은 수치를 먼저 제시한 뒤 해석을 붙이는 순서를 기본으로 하되, 글의 흐름이 자연스러우면 도치를 허용합니다. (cover.headline 제외 — [cover.headline 작성 규칙] 참조)
 - 짧은 문장과 자연스러운 복문을 섞어 씁니다. 단문만 나열하면 보고서가 단편 나열로 읽힙니다.
 - 본문은 완결문이 기본이되, 리듬·강조를 위한 가끔의 명사 종결 조각(예: "배럴당 104달러.")은 허용합니다. 단 "SOXX -1.44%, 거래량 급증."처럼 수치를 나열만 하는 데이터피드식 조각은 금지합니다. (cover.headline은 별도 [cover.headline 작성 규칙])
-- 중급 ETF 투자자 기준 (괴리율·추적오차·AUM 등 전문 용어 별도 설명 불필요)
+- 독자는 주식·금융상품 경험이 조금 있는 개인 금융 고객입니다. 괴리율·추적오차 같은 전문 용어는 꼭 필요할 때만 짧게 풀어 씁니다.
 - **사실을 정확히 만든다는 전제 하에 비유·은유 사용을 허용합니다.** 데이터를 기억하기 좋게 하는 좋은 비유는 보고서 가치를 높입니다.
 - 독자를 압박하지 말고 확인 순서와 보류 조건을 친절하게 설명하십시오.
 
@@ -86,8 +93,8 @@ export async function generateMorningReport(data: CollectedData): Promise<Mornin
 
 // P0 (2026-04-24): validator 재시도 소진 시 fallback 경로에서 사용.
 // 생성·파싱·언어 정규화까지 수행하되 품질 검증은 하지 않는다.
-// run-etf.ts가 narrativeNotes를 drop한 뒤 재검증해서 Tier 1 수준의 안전한
-// 리포트를 발송할 수 있게 한다.
+// 2026-10-17: run-etf.ts의 마지막 시도는 이 결과를 validateMorningReport(사실 검증은 경고만)로
+// 검증해 발송한다(전송 > 침묵, F02).
 export async function generateMorningReportRaw(data: CollectedData): Promise<MorningReport> {
   const prompt = buildMorningPrompt(data)
   const response = await getClient().messages.create({
@@ -96,7 +103,7 @@ export async function generateMorningReportRaw(data: CollectedData): Promise<Mor
     // 잘리는 현상 관측(4/22 저녁 로컬 테스트). 8192로 상향.
     // Plan B (2026-04-28) — bigPicture 4~6문장 + storySpine 각 act 3~5문장
     // + characters/resolutions 길이 확장으로 8192도 잘림(2026-04-28 테스트).
-    // 16384로 상향해 충분한 여유 확보.
+    // 16384로 상향해 충분한 여유 확보. (2026-10-17 새 스키마는 훨씬 짧다 — 상한은 여유로 유지.)
     max_tokens: 16384,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: prompt }],
@@ -191,37 +198,45 @@ function formatPromptEtf(q: Pick<CollectedData['quotes'][number], 'ticker' | 'na
   return `${q.ticker} ${q.name}`
 }
 
-function formatPromptTicker(ticker: string, quotes: CollectedData['quotes']): string {
-  const quote = quotes.find(q => q.ticker === ticker)
-  if (quote) return formatPromptEtf(quote)
-  if (/\.(KS|KQ)$/i.test(ticker)) return ticker.replace(/\.(KS|KQ)$/i, '')
-  return ticker
+function formatSignedPct(pct: number): string {
+  return `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`
 }
 
-// R1 (2026-07-22): Characters 카드 배정 주입. 렌더러가 렌더 시점에 selectStoryCharacters
-// 로 고르는 4장의 ETF를 프롬프트에 명시해 산문이 카드와 어긋나지 않게 한다. 슬롯이
-// undefined면 기존 일반 지시를 유지. 데이터성 지시(배정 ETF명·코드)만 추가하고 톤 지시는
-// 넣지 않는다. 앵무새 반복 방지를 위해 "1회 명시 후 자연스럽게" 한 줄만 덧붙인다.
-function buildCharactersInstruction(quotes: EtfQuote[]): string {
-  const c = selectStoryCharacters(quotes)
-  const line = (slot: string, assigned: EtfQuote | undefined, roleHint: string): string => {
-    if (!assigned) return `  ${slot}: ${roleHint}`
-    const code = assigned.ticker.replace(/\.(KS|KQ)$/i, '')
-    return `  ${slot}: **${assigned.name} (${code})** — 이 ETF를 다룰 것. ${roleHint} (종목명·코드는 1회 명시 후 자연스럽게)`
-  }
-  return [
-    'narrativeNotes.characters (각 3~4문장 — 아래 배정된 ETF를 슬롯별로 그대로 다룰 것)',
-    line('primary', c.primary, '오늘의 주인공 ETF가 왜 오늘 주목되는지. 오늘 수치 기반으로.'),
-    line('gate', c.gate, '환율 영향을 받는 ETF가 왜 게이트 역할을 하는지. USD/KRW 수준 반영.'),
-    line('alternative', c.alternative, '대안 ETF가 오늘 주도주가 아닌 이유. 장기채·배당·채권 중 하나.'),
-    line('warning', c.warning, '레버리지·인버스를 오늘 경계해야 하는 이유. 변동성 수치 근거.'),
-  ].join('\n')
+function formatRep(r: AssetRep): string {
+  return `${formatPromptEtf(r)} ${formatSignedPct(r.pct)}`
+}
+
+// 2026-10-17 아침 리포트 개편: 자산군 슬롯은 코드가 확정한다(asset-classes.ts — 렌더·검증·카드와 같은 계산).
+// 모델에게는 key·라벨·대표 ETF 예시만 주고, 숫자는 화면에 코드가 그리므로 문장에 반복하지 않게 한다.
+function buildAssetSlotBlock(slots: AssetClassSlot[], featured: AssetClassSlot | null): string {
+  const lines = slots.length > 0
+    ? slots.map(s => `- ${s.key} | ${s.label} | 대표 ETF 예시: ${s.reps.map(formatRep).join(' · ')}`).join('\n')
+    : '- (오늘 자산군으로 분류할 시세가 없습니다)'
+  const cardLine = featured
+    ? `- card.key는 "${featured.key}"입니다. 미리보기 카드에는 "${featured.holdingLabel}"이 코드로 붙고, 그 아래에 card.line이 들어갑니다.`
+    : '- 카드 자산군을 정할 슬롯이 없습니다.'
+  return `[자산군 슬롯 — 코드가 확정]
+${lines}
+- 위 대표 ETF의 이름·등락률은 화면에 "예시"로 코드가 표시합니다. 숫자는 화면에 코드가 표시하므로 문장에 반복하지 마십시오. 문장은 움직임의 의미와 판단 재료만 씁니다.
+- assetCards는 위 key를 위 순서대로 하나씩 모두 씁니다. 목록에 없는 key는 쓰지 마십시오.
+${cardLine}`
+}
+
+// 레버리지·인버스 주의는 코드가 조건(|등락| 10% 이상)을 판단해 작성/생략을 지시한다. 검증도 같은 조건.
+function buildTacticalBlock(alert: EtfQuote | null): string {
+  const rule = alert
+    ? `- ${formatPromptEtf(alert)} ${formatSignedPct(alert.changePercent as number)} — |등락| ${TACTICAL_WARNING_MIN_ABS_PCT}% 이상이므로 tacticalWarning을 작성하십시오(1~2문장: 하루 수익률을 추종하는 구조라 오래 들고 있을 때의 결과가 기초지수와 달라진다는 점, 변동성이 큰 날의 주의점).`
+    : `- 레버리지·인버스 중 |등락| ${TACTICAL_WARNING_MIN_ABS_PCT}% 이상인 종목이 없습니다 — tacticalWarning 필드를 넣지 마십시오.`
+  return `[레버리지·인버스 주의 — 코드가 판단]
+${rule}`
 }
 
 // export: 프롬프트 조립 테스트용(claude-client.prompt.test.ts). 동작 불변.
 export function buildMorningPrompt(data: CollectedData): string {
   const strategy = buildMorningStrategyInput(data)
-  const narrativePlan = buildMorningNarrativePlan(data, strategy)
+  const slots = buildAssetClassSlots(data.quotes)
+  const featured = pickFeaturedSlot(slots)
+  const tacticalAlert = findTacticalAlert(data.quotes)
   const topUs = [...data.quotes]
     .filter(q => q.market === 'US' && q.changePercent !== null)
     .sort((a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0))
@@ -231,10 +246,6 @@ export function buildMorningPrompt(data: CollectedData): string {
 
   const scoreLines = strategy.scores
     .map(s => `${s.displayLabel}: ${s.displayLevel} (${s.stance}) / 근거: ${s.evidence.map(item => `${item.label} ${item.value}`).join(', ')}`)
-    .join('\n')
-
-  const strategyLines = strategy.etfGroupStrategies
-    .map(s => `${s.stance === '선호' ? '확인 우선' : s.stance} | ${s.group} | ${s.tickers.map(ticker => formatPromptTicker(ticker, data.quotes)).join(', ')} | ${s.rationale} | 점검 기준: ${s.actionGuide} | 확인: ${s.confirmSignal} | 피할 점: ${s.avoid}`)
     .join('\n')
 
   const riskAlertLines = strategy.riskAlerts
@@ -281,6 +292,11 @@ export function buildMorningPrompt(data: CollectedData): string {
 이 근거 상태가 아래 [cover.headline 작성 규칙]의 tier 동작을 결정합니다.\n`
     : ''
 
+  // JSON 예시의 assetCards는 오늘 슬롯 key를 슬롯 순서대로 전부 담는다(모델이 key를 추측하지 않게).
+  const assetCardsSchema = slots
+    .map(s => `    { "key": "${s.key}", "reason": "입력 근거가 있을 때만 1문장 — 없으면 이 키를 빼십시오", "ifHolding": "갖고 있다면 — 조건·관찰형 60자 이내", "ifConsidering": "새로 본다면 — 조건·관찰형 60자 이내" }`)
+    .join(',\n')
+
   return `오늘 날짜: ${data.date}
 분석 렌즈: ${data.analysisLens}${angleBlock}${etfModeBlock}${calendarBlock}${weekdayBlock}${evidenceBlock}
 
@@ -301,7 +317,7 @@ ${strategy.regime.displayName}
 요약: ${strategy.regime.summary}
 ${strategy.regime.domestic?.stress ? `국내 시장 스트레스: 전일 KODEX 200 ${strategy.regime.domestic.move?.toFixed(2)}% 급락 — 미국 위험선호와 국내 급락을 구분해 쓰고, 제목·결론에서 '공격'·'위험선호'를 국내 투자자에게 단정하지 마십시오.` : ''}
 
-[오늘의 전략 결론]
+[오늘의 전략 결론 — 규칙 기반 참고, 문장 복사 금지]
 ${strategy.executiveSummary.title}
 전술 태도: ${strategy.executiveSummary.tacticalStance}
 확인 우선 ETF군: ${strategy.executiveSummary.preferredGroups.join(', ') || '없음'}
@@ -312,21 +328,12 @@ ${strategy.executiveSummary.title}
 [시장 국면 점수]
 ${scoreLines}
 
-[ETF군별 전략 지도]
-${strategyLines}
-
 [리스크 알림]
 ${riskAlertLines}
 
-[코드가 확정한 리포트 작성 슬롯]
-중심 주제: ${narrativePlan.centerTopic}
-커버에 반영할 사실: ${narrativePlan.coverFacts.join(' / ')}
-간밤 요약에 쓸 사실: ${narrativePlan.overnightFacts.join(' / ')}
-국내 영향에 쓸 사실: ${narrativePlan.krImpactFacts.join(' / ')}
-섹터 내러티브에 쓸 사실: ${narrativePlan.sectorFacts.join(' / ')}
-Today Watch 1: ${narrativePlan.todayWatch[0].title} | ${narrativePlan.todayWatch[0].facts.join(' / ')} | ${narrativePlan.todayWatch[0].instruction}
-Today Watch 2: ${narrativePlan.todayWatch[1].title} | ${narrativePlan.todayWatch[1].facts.join(' / ')} | ${narrativePlan.todayWatch[1].instruction}
-Today Watch 3: ${narrativePlan.todayWatch[2].title} | ${narrativePlan.todayWatch[2].facts.join(' / ')} | ${narrativePlan.todayWatch[2].instruction}
+${buildAssetSlotBlock(slots, featured)}
+
+${buildTacticalBlock(tacticalAlert)}
 
 [미국 ETF 상위 5]
 ${topUs.slice(0, 5).map(q => `${formatPromptEtf(q)}: ${q.changePercent?.toFixed(2)}%`).join('\n')}
@@ -334,7 +341,7 @@ ${topUs.slice(0, 5).map(q => `${formatPromptEtf(q)}: ${q.changePercent?.toFixed(
 [미국 ETF 하위 5]
 ${topUs.slice(-5).reverse().map(q => `${formatPromptEtf(q)}: ${q.changePercent?.toFixed(2)}%`).join('\n')}
 
-[국내 ETF 핵심 움직임 - KRX OpenAPI 기준]
+[국내 ETF 핵심 움직임 — 전일 종가 기준]
 상위: ${topKr.slice(0, 5).map(q => `${formatPromptEtf(q)} ${q.changePercent?.toFixed(2)}%`).join(' / ') || 'N/A'}
 하위: ${topKr.slice(-5).reverse().map(q => `${formatPromptEtf(q)} ${q.changePercent?.toFixed(2)}%`).join(' / ') || 'N/A'}
 거래대금 상위: ${topKr.filter(q => q.tradingValue !== undefined && q.tradingValue !== null).sort((a, b) => (b.tradingValue ?? 0) - (a.tradingValue ?? 0)).slice(0, 5).map(q => `${formatPromptEtf(q)} ${formatPromptNumber(q.tradingValue, 0)}원`).join(' / ') || 'N/A'}
@@ -356,7 +363,7 @@ ${(() => {
   return `\n[🔥 오늘의 forward catalyst — 자동 추출 ${catalysts.length}건]\n` +
     catalysts.map((c: { score: number; publishedHoursAgo?: number; title: string; source?: string }) => `- ${formatCatalystForPrompt(c)}`).join('\n') +
     `\n위는 신선도·시총 상위 기업명·시장 이벤트 키워드로 자동 점수화된 한국 시장 forward catalyst 입니다. ` +
-    `bigPicture·overnightBrief.krImpact 등 본문에 우선 반영. 헤드라인 반영 여부·방식은 아래 [cover.headline 작성 규칙]을 따르십시오.\n`
+    `summary·assetCards의 reason 등 본문에 우선 반영. 헤드라인 반영 여부·방식은 아래 [cover.headline 작성 규칙]을 따르십시오.\n`
 })()}
 [주요 뉴스 — 발행 N시간 경과 라벨 포함]
 ${data.news.slice(0, 6).map(n => {
@@ -377,30 +384,50 @@ ${data.recentHeadlines && data.recentHeadlines.length > 0 ? `
 ${data.recentHeadlines.map(h => `- ${h}`).join('\n')}
 위 문장들과 3어절 이상 겹치거나 같은 구문 틀("~가 ~로 이어지는지", "~신호를 ~로 확인" 등)을 재사용하지 마십시오. 최근 헤드라인에서 눈에 띄는 핵심 단어·동사도 반복하지 마십시오.
 ` : ''}
-[P3 — 섹션별 독자 목적 (이 목적을 충족하지 못하면 해당 섹션은 실패)]
-- cover: 한국 독자가 30초 안에 "어느 시장이, 어떻게, 왜" 를 파악하게 합니다.
-- overnightBrief.narrative: 한국 독자가 잠든 사이 미국·유럽·환율에 무슨 일이 있었는지 사실 위주로 정리합니다.
-- overnightBrief.krImpact: 간밤 해외 흐름이 오늘 국내 개장에 어떻게 연결되는지 — 어느 국내 ETF·환율·금리에서 확인할지를 알려 줍니다.
-- usEtfHighlights.sectorNarrative: 미국 ETF 상승/하락 1위가 속한 섹터 흐름의 의미를 한국 독자에게 풀어 줍니다.
-- todayWatch: 한국 독자가 오늘 09:00 개장 후 무엇을 어떤 순서로 볼지 알려 줍니다.
-- closingLine: 오늘 리포트의 톤·결론을 한 줄로 봉합합니다.
-- narrativeNotes: 위 모든 섹션을 가로지르는 단일 내러티브를 깊이 있게 풀어내며, 한국 독자가 "왜 오늘 이 ETF군을 봐야 하는가" 에 답합니다.
+[필드별 독자 목적 — 이 목적을 충족하지 못하면 해당 필드는 실패]
+- 독자는 주식·금융상품 경험이 조금 있는 개인 금융 고객입니다. 페이지 위쪽만 읽고도 "어제 분위기 / 오늘 볼 것 / 내 자산군에 주는 의미"를 1~2분 안에 얻어야 합니다.
+- cover: 30초 안에 "어느 시장이, 어떻게, 왜"를 파악하게 합니다. 페이지 제목이자 링크 미리보기 카드의 큰 제목입니다.
+- summary: 세 줄 요약 — overseas는 간밤 해외 신호, domestic은 전일 국내 증시 상태, focus는 오늘 가장 중요한 관전점입니다.
+- assetCards: 그 자산군을 가진 독자(ifHolding)와 새로 보려는 독자(ifConsidering)에게 판단 재료와 확인 조건을 줍니다. 사라·팔라가 아닙니다.
+- todayChecks: 오늘 무엇을, 언제, 무엇과 비교해 볼지, 어긋나면 어떤 가설을 버릴지 알려 줍니다.
+- card.line: 링크 미리보기 카드에서 자산군 문구 바로 아래 붙는 한 줄입니다.
 
 [작성 규칙]
-- 위 시장 국면 점수와 ETF군별 전략 지도를 바꾸지 마십시오.
-- 리포트는 하나의 중심 주제(오늘의 시장 인사이트)를 따라 작성하십시오.
-- 모든 문단은 같은 논리 축을 이어받아야 합니다: "선행 신호 → 제약 조건 → 상품별 역할 → 확인 조건" 순서.
-- ETF 상품은 단순 목록이 아니라 분석상 역할을 가져야 합니다. 예: 성장 신호 확인, 환율 영향 점검, 대안 관찰, 과열 경계.
-- 리포트의 논리 순서: "오늘의 중심 주제 → 결론 → 결론의 근거 → 상품별 역할 → 국내 ETF 실행 확인점 → 리스크".
-- overnightBrief.narrative는 간밤 해외시장 사실과 거시지표만 씁니다.
-- overnightBrief.krImpact는 해외 ETF·환율·KRX 국내 ETF가 국내 개장에 미치는 연결만 씁니다.
-- usEtfHighlights.sectorNarrative는 섹터 흐름만 씁니다. 환율·괴리율·자금흐름 설명을 반복하지 마십시오.
+- 리포트는 하나의 중심 주제(오늘의 시장 인사이트)를 따라 작성하십시오. 세 줄 요약·자산군 카드·확인 3가지가 같은 논리 축을 이어받아야 합니다.
 - **기간**: 입력의 ETF·지수 등락률은 모두 직전 거래일 하루(1D) 기준입니다. '이번 주·한 주간·주간' 수익률이나 주간 순위로 쓰지 마십시오.
 - **환율 효과 방향**: 원/달러가 오르면(원화 약세) 환노출 해외 ETF의 원화 환산 성과에 플러스, 내리면(원화 강세) 마이너스입니다. "원화 약세가 수익을 깎는다·상쇄한다"는 틀린 서술입니다. 오늘의 환산 효과는 [거시 지표]의 USD/KRW 전일 대비 방향으로 쓰고, 높은 환율에서 새로 담을 때의 반전 위험은 별도 문장으로 씁니다. 이름에 (H)가 붙은 환헤지 상품은 환율 영향이 작습니다.
+- 같은 숫자·같은 근거를 여러 필드에서 반복하지 마십시오. 같은 문장을 두 번 쓰면 자동 검증에서 걸립니다(필드가 달라도 문장 구조·주어·어휘를 바꾸십시오).
+- "확실", "분명", "틀림없이", "반드시" 같은 단정 어휘는 쓰지 마십시오.
+- **'혼조' 사용 규칙**: "혼조"는 **국내 증시는·미 증시는·아시아 증시는** 같이 **여러 지수를 묶는 주어** 뒤에만 씁니다. 단일 지수 이름(코스피·나스닥·S&P500 등)을 주어로 두고 "혼조 마감"이라고 쓰지 마십시오.
+- 문장은 독자에게 상황을 설명하고 맥락을 건네주는 기자·애널리스트 어조로 씁니다. 단, 투자 권유나 단정적 매수 지시는 피하십시오.
+
+[summary 작성 규칙 — 세 줄 요약]
+- overseas(해외 신호)·domestic(국내 상태)·focus(오늘 핵심)를 각각 60자 이내 한 문장으로 씁니다.
+- 숫자 나열이 아니라 분위기·배경을 말로 씁니다. 핵심 지표 수치는 화면에 코드가 따로 표시합니다.
+- 원인은 입력(뉴스·catalyst·지표)에 근거가 있을 때만 단정하고, 근거가 약하면 오늘 확인할 점으로 씁니다.
+
+[assetCards 작성 규칙 — 자산군별 판단 재료]
+- [자산군 슬롯]의 key를 순서대로 모두, 하나씩 씁니다.
+- reason: 어제 움직임의 이유 1문장. 입력(뉴스·catalyst·거시 지표)에 근거가 있을 때만 쓰고, 근거가 없으면 "reason" 키를 빼십시오. 추측으로 채우지 마십시오.
+- ifHolding(갖고 있다면)·ifConsidering(새로 본다면): 각각 60자 이내의 조건·관찰형 문장입니다. "~라면 ~를 지켜볼 때입니다", "~가 확인되기 전까지는 ~를 따로 볼 자리입니다"처럼 무엇을 확인할지와 그 조건을 씁니다.
+- 매수·매도·비중 조절을 지시하지 마십시오("사세요·파세요·담으세요·비중을 줄이세요·늘리세요" 같은 지시형 금지). 판단은 독자의 몫입니다.
+- 대표 ETF는 화면에 "예시"로 표시됩니다. 특정 ETF를 추천 대상처럼 쓰지 마십시오.
+- us-equity는 위 **환율 효과 방향** 규칙을 따릅니다.
+
+[todayChecks 작성 규칙 — 오늘 확인할 것 3가지]
+- todayChecks는 정확히 3개, 한국시간 순서로 씁니다.
+- time: 한국시간 "HH:MM" 또는 "HH:MM~HH:MM"(예: "09:00~09:30"). 미국 지표는 [미국 주요 지표 일정] 블록이 있으면 그 한국시간을 그대로 쓰고, 한국 장 마감 후 발표는 "오늘 밤 발표 → 국내 반영은 다음 거래일"로 씁니다.
+- what: 무엇을 볼지(대상 ETF·지표).
+- baseline: 무엇과 비교할지(전일 종가·전일 등락 방향·환율 수준 등 입력에 있는 기준).
+- invalidation: 어긋나면 버릴 가설 한 문장.
+
+[card 작성 규칙 — 링크 미리보기 카드 한 줄]
+- card.key는 [자산군 슬롯]에서 정한 값을 그대로 씁니다.
+- card.line: 32자 이내 평서문 한 줄. 자산군 문구("○○를 갖고 있다면")를 반복하지 말고, 그 자산군에서 오늘 지켜볼 점을 관찰형으로 씁니다. 질문형(?, ~까요, ~나요, ~인가) 금지, 숫자는 넣지 않습니다.
 
 [cover.headline 작성 규칙]
 
-이 헤드라인은 개장 전 한국 개인투자자가 가장 먼저 만나는 한 줄이며, 렌더 시 "오늘의 초점 · " 뒤에 붙는 표제어입니다. 한국 신문 편집자가 쓰듯 씁니다.
+이 헤드라인은 개장 전 한국 개인투자자가 가장 먼저 만나는 한 줄이며, 페이지 제목이자 링크 미리보기 카드의 큰 제목입니다. 한국 신문 편집자가 쓰듯 씁니다.
 
 1. 형태 (모든 tier 공통)
 - 주어·핵심 사실을 앞세워 한 호흡으로 씁니다. 정확한 등락률·티커는 cover.subline 이 받칩니다.
@@ -421,26 +448,9 @@ ${data.recentHeadlines.map(h => `- ${h}`).join('\n')}
 - catalyst 반영 (기본 + 예외): strong·thin 에서 [🔥 오늘의 forward catalyst] 항목이 있으면 사건을 근거로 반영합니다. [반복 회피 — 기본보다 우선] 같은 catalyst·anchor 가 [최근 ETF 리포트 헤드라인]에 이미 등장했으면 (a) 사건의 국면·단계를 다르게(진전→타결→후속/확산/정착) 쓰거나 (b) anchor 를 subline 으로 내리고 새 각도(환율·금·은·원유·국내 ETF 등 오늘 의미 있게 움직인 지표)로 씁니다.
 - 시장 특정: "지수/시장/증시" 단독 표기 금지. 어느 시장인지 명시합니다(S&P500·나스닥·코스피 등 구체 명칭, 또는 "미·국내·채권" 수식어).
 - 길이: 14~26자 권장, 최대 28자. 프리뷰는 3줄까지만 깔끔히 렌더되므로 보조 수치·맥락은 subline 으로 넘깁니다.
-- 본문 payoff: narrativeNotes.bigPicture 첫 부분이 헤드라인의 이미지를 받아 전개하되, 헤드라인 문장을 그대로 되풀이하지 않습니다.
+- 본문 payoff: summary 세 줄이 헤드라인의 이미지를 받아 전개하되, 헤드라인 문장을 그대로 되풀이하지 않습니다.
 
 - cover.subline은 결론과 제약 조건을 함께 담습니다. 반드시 서술어가 있는 완결문으로 씁니다.
-- 같은 숫자와 같은 근거를 여러 섹션에서 반복하지 마십시오. 한 섹션에 쓴 핵심 근거는 다른 섹션에서 결론만 짧게 연결하십시오.
-- **P1+ 보강 — 섹션 간 근사 중복 금지**:
-  · overnightBrief.narrative / narrativeNotes.storySpine.act1 / usEtfHighlights.sectorNarrative 세 섹션은 **같은 사실을 다른 각도**로만 써야 합니다. "S&P500 -0.39%, 나스닥 -0.56% 하락 마감" 같은 동일 문장을 세 섹션에 각각 등장시키지 마십시오.
-  · overnightBrief.narrative: 간밤 미국·유럽·환율에서 **일어난 사건** 을 시간 순 사실 정리.
-  · narrativeNotes.storySpine.act1: 그 사실들이 **오늘의 중심 질문에 어떤 선행 신호를 주는지** 해석.
-  · usEtfHighlights.sectorNarrative: 섹터 간 **어떤 그림이 만들어졌는지** 테마 해석.
-  · 같은 수치(-0.39% 등)를 이 세 섹션에 인용할 때는 **한 번만 직접 인용**하고, 다른 섹션은 "앞서 본 대표지수 약세에도 불구하고…" 처럼 지시적으로 연결하십시오.
-- **P1+ 보강 — '혼조' 사용 규칙**:
-  · "혼조" 는 **국내 증시는·미 증시는·아시아 증시는** 같이 **여러 지수를 묶는 주어** 뒤에만 씁니다.
-  · 단일 지수 이름(코스피·나스닥·S&P500 등)을 주어로 두고 "혼조 마감" 이라고 쓰지 마십시오. 하나의 지수는 혼조일 수 없습니다.
-  · 예 OK: "전일 국내 증시는 코스피 상승·코스닥 하락의 혼조 마감이었습니다"
-  · 예 NG: "전일 코스피는 혼조 마감(코스피 상승·코스닥 하락)"
-- 국내 ETF 연결 문장은 "해외 선행 ETF/거시지표 → 국내 ETF 이름 (코드) → 장 초반 확인 지표" 순서로 씁니다.
-- todayWatch.items는 정확히 3개를 작성합니다. 1번은 국내 개장 확인점, 2번은 환율/금리 확인점, 3번은 ETF 거래 실행 리스크입니다.
-- todayWatch.items의 title은 코드가 확정한 Today Watch 1~3의 제목을 그대로 씁니다.
-- todayWatch 각 항목의 body에는 ETF명 또는 수치가 최소 1개 들어가야 합니다.
-- 문장은 독자에게 상황을 설명하고 맥락을 건네주는 기자·애널리스트 어조로 씁니다. 단, 투자 권유나 단정적 매수 지시는 피하십시오.
 
 ${EVIDENCE_RULES}
 
@@ -464,101 +474,19 @@ ${EVIDENCE_RULES}
 - 자금 유입, 자금 유출, 순유입, 순유출, 영문 flow 표현을 쓰지 마십시오.
 - 매수/매도 지시를 하지 말고 ETF군별 확인 우선·관찰·경계로만 표현하십시오.
 
-[narrativeNotes 작성 규칙 — 리포트 본문의 주요 내러티브 (Plan B 확장)]
-
-리포트의 본문 여러 섹션 (bigPicture, Story Spine, Characters, Resolutions, 체크리스트,
-ETF군별 전략 지도) 은 지금까지 코드가 매일 같은 문구로 박아 넣던 영역입니다. 이제 당신이
-오늘 데이터를 반영해 직접 작성합니다. 입력의 [ETF군별 전략 지도] 의 rationale/actionGuide/avoid
-문장은 **참고 데이터일 뿐, 그 문장을 그대로 복사하지 마십시오.** 오늘의 수치·흐름을 반영해
-새로운 문장으로 씁니다.
-
-narrativeNotes.bigPicture (Phase E4 — 6~10문장 자유 단락, 이 리포트의 narrative spine)
-  - 위 [오늘의 서사 앵글] 을 본문 흐름의 중심으로 잡습니다. 앵글이 비어 있으면 분석 렌즈를 활용.
-  - 한 호흡의 글로 풀어냅니다. 단편 나열이 아니라 **이야기**로 읽혀야 합니다.
-  - 구조: 오늘의 큰 그림 → 데이터로 어떻게 나타나는지 → **시나리오 분기**(이대로 가면·어긋나면·과열 시) → 한국 독자가 09:00부터 무엇을 살필지.
-  - **Phase E4 변경**: 이전엔 별도 resolutions 슬롯(connect/delay/overheat)이 있었으나 제거됨. 그 시나리오 사고를 bigPicture 중반에 1~2문장으로 흡수.
-  - 구체 수치 3~5개를 자연스럽게 녹이되, 수치의 나열이 아니라 흐름 안에서 인용.
-  - 비유·은유는 사실을 명확히 만드는 한 사용해도 좋습니다. AI 클리셰("폭풍전야" 등)는 금지.
-
-narrativeNotes.storySpine (3개 act, 각 2~3문장 — Phase E4 에서 축약)
-  act1: 오늘의 주인공 ETF군 — bigPicture 첫 부분의 짧은 응축.
-  act2: 환율·금리 등 제약 변수 — bigPicture 중반의 짧은 응축.
-  act3: 장 초반 확인 지표 — bigPicture 끝부분의 짧은 응축.
-  · 이 3막은 story-card 시각 요소(짧은 노트 1~2문장)로만 표시됩니다. 별도 deep section
-    은 제거되었습니다. bigPicture 가 longform, storySpine 은 카드 라벨로만 활용.
-
-${buildCharactersInstruction(data.quotes)}
-
-(Phase E4: narrativeNotes.resolutions 슬롯 제거됨. 시나리오 사고는 위 bigPicture
-중반과 아래 checklist 의 actions/avoids 에 흡수.)
-
-narrativeNotes.checklist (Phase E4 — actions/avoids 각 3~4개, 시나리오 흡수)
-  actions: 오늘 특별히 챙겨봐야 할 것 3~4개 (일반론 금지, 오늘 상황 반영). 이 중 1~2개는
-    "해외 신호가 국내로 연결되는지" 같은 시나리오 확인 행동도 포함.
-  avoids: 오늘 특별히 피해야 할 행동 3~4개. 이 중 1~2개는 "괴리 확대·과열" 같은 경계
-    시나리오 행동도 포함.
-
-narrativeNotes.strategyProse (6개 그룹 — 입력 [ETF군별 전략 지도] 의 group 이름과 1:1 매칭)
-  group: 그룹 이름 (예: "미국 대표지수 ETF", "반도체·AI ETF" 등 — 입력과 정확히 동일하게)
-  rationale: 오늘 이 그룹이 왜 관심/관찰/경계 대상인지 1~2문장. 오늘 수치 근거.
-  actionGuide: 오늘 이 그룹에 대한 행동 가이드 1~2문장.
-  avoid: 오늘 이 그룹과 관련해 피할 행동 1~2문장.
-
-[narrativeNotes 작성 규칙 — 엄격한 제약]
-- 모든 narrativeNotes 필드는 **입력에 명시된 수치와 사실**만 인용. 입력에 없는 수치(외국인
-  순매수 금액, 자산운용사 보도, 세대별 매매 비중 등)를 추측해 쓰지 마십시오.
-- 입력 [ETF군별 전략 지도] 의 rationale/actionGuide/avoid 문장을 그대로 복사하지 마십시오.
-  오늘 데이터를 근거로 다시 씁니다.
-- 매일 다른 서술을 위해 **어제 리포트와 비슷한 프레임·어휘 조합을 의도적으로 피하십시오.**
-- 길이 범위 엄수: 위에 지정된 문장 수 범위를 지키십시오. (Plan B 로 길이가 늘어났으므로 이전보다 더 풍성하게 쓸 수 있습니다.)
-- **"확인합니다·점검합니다·봅니다" 어미는 narrativeNotes 전체 합쳐 최대 8회까지만** 사용.
-  이를 넘길 것 같으면 "~가 오늘의 변수입니다", "~가 의미 있습니다", "~가 보여주는 이야기가
-  있습니다", "~에서 힌트를 얻을 수 있습니다" 같은 서술로 다양화.
-- **"확실", "확실한", "확실히", "분명", "틀림없이", "반드시" 같은 단정 어휘는 금지합니다.**
-  예측·가능성을 다룰 때는 "~할 수 있습니다", "~가 기대됩니다", "~가 관전 포인트입니다"
-  같은 조건부 표현을 쓰십시오.
-- **중복 문장 엄격 금지**: narrativeNotes 의 모든 필드(bigPicture·storySpine·characters·
-  checklist.actions·checklist.avoids·strategyProse) 간, 그리고 이 위 섹션(overnightBrief,
-  sectorNarrative, todayWatch 등)과도 **동일하거나 90% 유사한 문장을 두 번 이상 쓰지 마십시오.**
-  같은 사실을 다른 각도에서 써야 한다면 문장 구조·주어·어휘를 모두 바꾸십시오.
-- **같은 ETF·수치 재등장 규칙**: 특정 ETF (예: KODEX 레버리지)나 수치 (예: "거래대금 1.86조 원")
-  가 여러 필드에서 언급될 수 있으나, 그 문장 자체는 **매번 완전히 다르게** 써야 합니다.
-  · 안 됨: characters.warning 에서 "KODEX 레버리지 (122630)는 오늘 약 1.86조 원..." →
-         strategyProse[레버리지].rationale 에서도 유사한 구조로 시작
-  · 됨: 한 곳에서는 수치 중심, 다른 곳에서는 그 수치의 의미 중심, 또 다른 곳에서는
-        대비·비교 중심으로 완전히 다른 서술 구조 사용
-- **문체 검증 통과 필수 패턴**: 아래 표현들이 자동 검증에 걸리니 사용 금지입니다.
-  · "확실", "분명", "틀림없이", "반드시" — 단정 금지
-  · "가능성이 있습니다", "가능성이 존재합니다" — 전체 금지
-  · "구조입니다", "시사합니다", "나타냅니다", "판단됩니다", "보입니다" — 전체 금지
-  대신: "~의 신호입니다", "~가 관전 포인트입니다", "~를 시사하는 흐름입니다", "~의 배경으로
-  볼 수 있습니다", "~라고 읽을 수 있습니다" 같은 **대체 표현**을 쓰십시오.
-
 아래 JSON 형식으로만 응답하십시오:
 {
   "cover": { "headline": "...", "subline": "..." },
-  "overnightBrief": { "narrative": "...", "krImpact": "..." },
-  "usEtfHighlights": {
-    "topMover": { "ticker": "...", "reason": "..." },
-    "bottomMover": { "ticker": "...", "reason": "..." },
-    "sectorNarrative": "..."
-  },
-  "todayWatch": { "items": [{ "title": "...", "body": "..." }, { "title": "...", "body": "..." }, { "title": "...", "body": "..." }] },
-  "closingLine": "...",
-  "narrativeNotes": {
-    "bigPicture": "Phase E4: 6~10문장 자유 서술 단락. 시나리오 사고(이대로 가면·어긋나면·과열 시) 흡수. 이 리포트의 narrative spine.",
-    "storySpine": { "act1": "2~3문장 응축", "act2": "...", "act3": "..." },
-    "characters": { "primary": "...", "gate": "...", "alternative": "...", "warning": "..." },
-    "checklist": { "actions": ["...", "...", "..."], "avoids": ["...", "...", "..."] },
-    "strategyProse": [
-      { "group": "미국 대표지수 ETF", "rationale": "...", "actionGuide": "...", "avoid": "..." },
-      { "group": "반도체·AI ETF", "rationale": "...", "actionGuide": "...", "avoid": "..." },
-      { "group": "채권 ETF", "rationale": "...", "actionGuide": "...", "avoid": "..." },
-      { "group": "금·원자재 ETF", "rationale": "...", "actionGuide": "...", "avoid": "..." },
-      { "group": "환노출 해외 ETF", "rationale": "...", "actionGuide": "...", "avoid": "..." },
-      { "group": "레버리지·인버스 ETF", "rationale": "...", "actionGuide": "...", "avoid": "..." }
-    ]
-  }
+  "summary": { "overseas": "해외 신호 — 60자 이내", "domestic": "국내 상태 — 60자 이내", "focus": "오늘 핵심 — 60자 이내" },
+  "assetCards": [
+${assetCardsSchema}
+  ],
+  "todayChecks": [
+    { "time": "HH:MM", "what": "...", "baseline": "...", "invalidation": "..." },
+    { "time": "HH:MM", "what": "...", "baseline": "...", "invalidation": "..." },
+    { "time": "HH:MM", "what": "...", "baseline": "...", "invalidation": "..." }
+  ],
+  "card": { "key": "${featured?.key ?? ''}", "line": "32자 이내 평서문" }${tacticalAlert ? `,
+  "tacticalWarning": "1~2문장"` : ''}
 }`
 }
-

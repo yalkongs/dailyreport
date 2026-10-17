@@ -21,70 +21,53 @@ export function polishKoreanReportText(text: string): string {
     .replace(/(^|[.!?]\s+)(방어 우위 국면)\./g, '$1$2입니다.')
 }
 
-function neutralizeOptional(value: string | undefined): string | undefined {
-  return typeof value === 'string' ? neutralizeInvestmentLanguage(value) : value
+function isObject(value: unknown): boolean {
+  return typeof value === 'object' && value !== null
 }
 
-export function normalizeMorningReportLanguage(report: MorningReport): MorningReport {
-  const normalized: MorningReport = {
-    ...report,
-    cover: {
-      headline: neutralizeInvestmentLanguage(report.cover.headline),
-      subline: neutralizeInvestmentLanguage(report.cover.subline),
-    },
-    overnightBrief: {
-      narrative: neutralizeInvestmentLanguage(report.overnightBrief.narrative),
-      krImpact: neutralizeInvestmentLanguage(report.overnightBrief.krImpact),
-    },
-    usEtfHighlights: {
-      topMover: {
-        ...report.usEtfHighlights.topMover,
-        reason: neutralizeInvestmentLanguage(report.usEtfHighlights.topMover.reason),
-      },
-      bottomMover: {
-        ...report.usEtfHighlights.bottomMover,
-        reason: neutralizeInvestmentLanguage(report.usEtfHighlights.bottomMover.reason),
-      },
-      sectorNarrative: neutralizeInvestmentLanguage(report.usEtfHighlights.sectorNarrative),
-    },
-    todayWatch: {
-      items: report.todayWatch.items.map(item => ({
-        title: neutralizeInvestmentLanguage(item.title),
-        body: neutralizeInvestmentLanguage(item.body),
-      })),
-    },
-    closingLine: neutralizeInvestmentLanguage(report.closingLine),
-  }
+function neutralizeOptional<T>(value: T): T {
+  return (typeof value === 'string' ? neutralizeInvestmentLanguage(value) : value) as T
+}
 
-  // Tier 2: narrativeNotes 의 모든 문자열 필드도 동일 규칙 적용
-  // (새 필드로 "매수 후보" 같은 금지 어휘가 우회되지 않도록)
-  if (report.narrativeNotes) {
-    const n = report.narrativeNotes
-    normalized.narrativeNotes = {
-      bigPicture: neutralizeOptional(n.bigPicture),
-      storySpine: n.storySpine && {
-        act1: neutralizeOptional(n.storySpine.act1),
-        act2: neutralizeOptional(n.storySpine.act2),
-        act3: neutralizeOptional(n.storySpine.act3),
-      },
-      characters: n.characters && {
-        primary: neutralizeOptional(n.characters.primary),
-        gate: neutralizeOptional(n.characters.gate),
-        alternative: neutralizeOptional(n.characters.alternative),
-        warning: neutralizeOptional(n.characters.warning),
-      },
-      checklist: n.checklist && {
-        actions: n.checklist.actions?.map(s => neutralizeInvestmentLanguage(s)),
-        avoids: n.checklist.avoids?.map(s => neutralizeInvestmentLanguage(s)),
-      },
-      strategyProse: n.strategyProse?.map(s => ({
-        group: s.group,
-        rationale: neutralizeOptional(s.rationale),
-        actionGuide: neutralizeOptional(s.actionGuide),
-        avoid: neutralizeOptional(s.avoid),
-      })),
+// 2026-10-17 출력 스키마 개편: 산문 필드 전부(cover·summary·assetCards·todayChecks·card.line·tacticalWarning)에
+// 같은 규칙을 적용한다(새 필드로 "매수 검토" 같은 금지 어휘가 우회되지 않도록). key 같은 열거값은 그대로 둔다.
+// 형식이 깨진 응답(필드 누락·배열 아님)에서도 던지지 않는다 — 누락은 품질 검증이 위반으로 보고한다.
+export function normalizeMorningReportLanguage(report: MorningReport): MorningReport {
+  const normalized: MorningReport = { ...report }
+  if (isObject(report.cover)) {
+    normalized.cover = {
+      headline: neutralizeOptional(report.cover.headline),
+      subline: neutralizeOptional(report.cover.subline),
     }
   }
-
+  if (isObject(report.summary)) {
+    normalized.summary = {
+      overseas: neutralizeOptional(report.summary.overseas),
+      domestic: neutralizeOptional(report.summary.domestic),
+      focus: neutralizeOptional(report.summary.focus),
+    }
+  }
+  if (Array.isArray(report.assetCards)) {
+    normalized.assetCards = report.assetCards.map(card => (isObject(card) ? {
+      ...card,
+      ...(card.reason !== undefined ? { reason: neutralizeOptional(card.reason) } : {}),
+      ifHolding: neutralizeOptional(card.ifHolding),
+      ifConsidering: neutralizeOptional(card.ifConsidering),
+    } : card))
+  }
+  if (Array.isArray(report.todayChecks)) {
+    normalized.todayChecks = report.todayChecks.map(check => (isObject(check) ? {
+      time: neutralizeOptional(check.time),
+      what: neutralizeOptional(check.what),
+      baseline: neutralizeOptional(check.baseline),
+      invalidation: neutralizeOptional(check.invalidation),
+    } : check))
+  }
+  if (isObject(report.card)) {
+    normalized.card = { ...report.card, line: neutralizeOptional(report.card.line) }
+  }
+  if (report.tacticalWarning !== undefined) {
+    normalized.tacticalWarning = neutralizeOptional(report.tacticalWarning)
+  }
   return normalized
 }
