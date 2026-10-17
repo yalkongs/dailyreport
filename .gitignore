@@ -45,3 +45,6 @@ public/reports/*-test*.html
 public/reports/*-test*.png
 public/etf-reports/*-test*.html
 public/etf-reports/*-test*.png
+
+# brainstorming 시안·세션(커밋 안 함)
+.superpowers/
