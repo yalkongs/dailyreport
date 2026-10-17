@@ -11,17 +11,16 @@ import { koreanWeekday } from '../market-calendar'
 import { getEtfByTicker } from '../etf/universe'
 import { isTacticalEtf } from '../etf/story-characters'
 import type { EtfQuote } from '../etf/types'
+import { CARD_WIDTH, CARD_HEIGHT } from './card-size'
 
 export interface StripeSession { date: string; pct: number }          // date YYYY-MM-DD(KST 거래일)
 export interface MosaicTile { ticker: string; market: 'KR' | 'US'; category: string; pct: number; featured: boolean }
 export interface MarketCardInput { date: string; headline: string; line: string; sessions: StripeSession[] }
 export interface EtfCardInput { date: string; headline: string; holdingLabel: string; line: string; tiles: MosaicTile[] }
 
-const CARD_W = 1080
-const CARD_H = 1350
-// 미리보기 카드 PNG 크기 — og:image:width/height가 이 값을 쓴다(Market·ETF 공통).
-export const CARD_WIDTH = CARD_W
-export const CARD_HEIGHT = CARD_H
+// 카드 크기는 import 없는 card-size.ts에 둔다(Next 페이지가 sharp 없이 og:image 크기를 쓰도록).
+const CARD_W = CARD_WIDTH
+const CARD_H = CARD_HEIGHT
 const FONT_FAMILY = "Pretendard, 'Noto Sans CJK KR', 'Noto Sans KR', sans-serif"
 const FONT_ATTR = `font-family="${FONT_FAMILY}"`
 const MIN_FONT_PX = 40   // spec §4: 카드 글자 최소 크기

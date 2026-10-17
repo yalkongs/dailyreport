@@ -17,7 +17,8 @@ import type {
 import { buildSparklineMap } from "./chart-generator";
 import { stripEmphasisTags } from "./html-entities";
 import { LEGAL_DISCLAIMER_ITEMS, LEGAL_DISCLAIMER_TITLE } from "./legal-disclaimer";
-import { renderStripesSvg, CARD_WIDTH, CARD_HEIGHT } from "./preview/data-card";
+import { renderStripesSvg } from "./preview/data-card";
+import { CARD_WIDTH, CARD_HEIGHT } from "./preview/card-size";
 import type { StripeSession } from "./preview/data-card";
 import { summarySentence } from "./market-summary";
 

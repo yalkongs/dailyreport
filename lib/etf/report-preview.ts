@@ -2,7 +2,7 @@
 // 2026-10-17 개편: 미리보기 이미지는 lib/preview/data-card.ts의 데이터 카드(모자이크)로 그린다
 // (lib/etf/renderer.ts saveReportPreviewImage). 이 모듈은 ETF 메타·URL의 단일 출처로 남는다.
 
-import { CARD_WIDTH, CARD_HEIGHT } from '../preview/data-card'
+import { CARD_WIDTH, CARD_HEIGHT } from '../preview/card-size'
 
 export const REPORT_PREVIEW_IMAGE_WIDTH = CARD_WIDTH
 export const REPORT_PREVIEW_IMAGE_HEIGHT = CARD_HEIGHT
