@@ -23,7 +23,7 @@ test('Market 새 구성: 섹션 순서, 세 줄 요약, compass 없음, 상세�
   idx.forEach((v, i) => assert.ok(v >= 0, order[i]))
   assert.deepEqual([...idx].sort((a, b) => a - b), idx)
   assert.match(html, /<details[^>]*data-section="details"/)
-  assert.doesNotMatch(html, /자산군별 온도계/)
+  assert.doesNotMatch(html, /compass-box|iM 투자 나침반/) // 옛 compass 가 실제로 내보내던 클래스·제목
   assert.match(html, /data-session="2026-10-15"/) // 머리 스트라이프
   assert.match(html, /최근 20거래일 코스피/)       // 한 줄 설명
   assert.match(html, /property="og:site_name" content="iM뱅크"/)
@@ -68,7 +68,8 @@ test('핵심 지표: 기본 5개 + 그날 가장 크게 움직인 변수 1개, 1
   const bond = k[4]
   assert.equal(bond.value, '4.25%')
   assert.equal(bond.changeText, '+0.05%p')
-  assert.ok(bond.changePercent > 0)
+  // 색 눈금: 10bp = 지수 1% → 5bp 는 0.5 (표시 문구는 %p 그대로)
+  assert.ok(Math.abs(bond.changePercent - 0.5) < 1e-9)
 })
 
 test('핵심 지표: 데이터가 없는 항목은 자리를 채우지 않고 건너뛴다', () => {
@@ -126,20 +127,60 @@ test('og·twitter 설명은 세 줄 요약(어제+오늘) 한 문장, 요약이 
   assert.doesNotMatch(legacy, /data-section="summary"/)
 })
 
-test('상세는 기본 접힘, 그 안에 전체 지표·일정·추세선 설명, 모드와 무관하게 오늘 볼 것·의미가 나온다', () => {
-  const html = render({ calendar: [{ date: '10/19', country: '한국', event: '금통위', importance: 4 }] })
+const calendar = [{ date: '10/19', country: '한국', event: '금통위', importance: 4 }]
+const kospiHistory = [{ symbol: '^KS11', nameKo: '코스피', current: 5554, oneYearAgo: 2600, threeMonthsAgo: 3200, oneMonthAgo: 3500, oneWeekAgo: 6625.5 }]
+const detailsOf = (html: string) => html.slice(html.indexOf('data-section="details"'), html.indexOf('</details>'))
+const summaryOf = (html: string) => detailsOf(html).match(/<summary class="more-summary">([^<]*)</)?.[1]
+
+test('상세는 기본 접힘, 그 안에 전체 지표·일정·과거 비교(추세선), 모드와 무관하게 오늘 볼 것·의미가 나온다', () => {
+  const html = renderReport({ ...(content as object), calendar } as never, data, kospiHistory as never, 'normal', [], [])
   assert.match(html, /<details class="more" data-section="details">/)
   assert.doesNotMatch(html, /<details[^>]*\sopen/)
-  const details = html.slice(html.indexOf('data-section="details"'), html.indexOf('</details>'))
-  assert.match(details, /전체 지표·이번 주 일정·과거 비교/)
+  const details = detailsOf(html)
+  assert.equal(summaryOf(html), '전체 지표·이번 주 일정·과거 비교')
   assert.match(details, /시장 체온/)
   assert.match(details, /이번 주 주요 일정/)
   assert.match(details, /금통위/)
+  assert.match(details, /class="pulse-note">추세선/)
   for (const mode of ['event', 'normal', 'quiet'] as const) {
     const h = render({}, [], mode)
     assert.match(h, /data-section="today"/, mode)
     assert.match(h, /data-section="meaning"/, mode)
   }
+})
+
+test('상세 제목은 실제로 들어 있는 것만 나열한다(일정표·추세선이 없으면 약속하지 않는다)', () => {
+  assert.equal(summaryOf(render()), '전체 지표')
+  assert.equal(summaryOf(render({ calendar })), '전체 지표·이번 주 일정')
+  assert.equal(summaryOf(renderReport(content, data, kospiHistory as never, 'normal', [], [])), '전체 지표·과거 비교')
+  // 추세선이 붙을 카드가 없으면(과거 데이터가 다른 지표 것뿐) 과거 비교도, 추세선 설명도 없다
+  const other = [{ ...kospiHistory[0], symbol: '^X', nameKo: '없는 지표' }]
+  const html = renderReport(content, data, other as never, 'normal', [], [])
+  assert.equal(summaryOf(html), '전체 지표')
+  assert.doesNotMatch(html, /class="pulse-note"/)
+})
+
+test('옛 compass 콘텐츠가 들어와도 compass 는 그리지 않는다', () => {
+  const legacy = render({
+    compass: [{ label: 'ASSET', title: '자산군별 온도계', items: [{ asset: '주식', body: 'b', gaugeType: 'neutral', gaugePercent: 50 }], paragraphs: ['p'] }],
+  })
+  const body = legacy.slice(legacy.indexOf('<body>'))
+  assert.doesNotMatch(body, /compass-box|gauge-fill|iM 투자 나침반|자산군별 온도계/)
+})
+
+test('데이터 기준: 참고한 뉴스 다음·법적 고지 앞에 수집 시각(KST)과 값의 성격을, 건수 같은 메타 없이', () => {
+  const html = renderReport(content, data, [], 'normal', [{ title: '기사', source: '연합뉴스' }], [])
+  const basis = html.slice(html.indexOf('data-section="data-basis"'), html.indexOf('data-section="footer"'))
+  assert.match(basis, /데이터 기준/)
+  assert.match(basis, /2026년 10월 16일 07:00\(한국시간\)에 수집했습니다/)
+  assert.match(basis, /주가지수는 수집 시점의 가장 최근 시세\(개장 전이면 직전 종가\)/)
+  assert.match(basis, /등락은 전일 대비/)
+  assert.doesNotMatch(basis, /\d+\s*(개|건)|AI가 작성|생성 시각/)
+  const idx = ['data-section="story"', 'data-section="details"', 'data-section="sources"', 'data-section="data-basis"', '투자 유의사항 및 법적 고지'].map(k => html.indexOf(k))
+  idx.forEach((v, i) => assert.ok(v >= 0, String(i)))
+  assert.deepEqual([...idx].sort((a, b) => a - b), idx)
+  // 뉴스가 없어도 데이터 기준은 남는다
+  assert.match(render(), /data-section="data-basis"/)
 })
 
 test('오늘 볼 것·의미는 각각 최대 3개, 법적 고지가 맨 끝(그 뒤에 섹션 없음)', () => {

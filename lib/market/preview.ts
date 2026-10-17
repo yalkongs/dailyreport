@@ -11,10 +11,6 @@ import {
 } from '../preview/data-card'
 import type { StripeSession } from '../preview/data-card'
 
-// 카드 규격(1080×1350) — og:image 메타(report-renderer)와 같은 값.
-export const MARKET_PREVIEW_IMAGE_WIDTH = 1080
-export const MARKET_PREVIEW_IMAGE_HEIGHT = 1350
-
 export const MARKET_REPORTS_PUBLIC_DIR = 'reports'
 
 export function marketPreviewFilename(date: string): string {

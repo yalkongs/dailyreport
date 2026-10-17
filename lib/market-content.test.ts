@@ -1,7 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { dailyReturnsFromCloses } from './market-data'
-import { validateMarketSummary, summarySentence, fillMarketSummaryDefaults, buildReportPrompt } from './claude-client'
+import { validateMarketSummary, fillMarketSummaryDefaults, buildReportPrompt } from './claude-client'
+import { summarySentence } from './market-summary'
 
 test('코스피 일봉 → 일간 등락(휴장일 없음, 최근 n개)', () => {
   const q = [

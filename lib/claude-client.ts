@@ -15,6 +15,7 @@ import { formatEconomicEventLine } from "./economic-calendar";
 import { renderReport } from "./report-renderer";
 import { cardTextFits } from "./preview/data-card";
 import { stripEmphasisTags } from "./html-entities";
+import { plainText, cutAtSentence } from "./market-summary";
 import { BANNED_METAPHORS } from "./banned-metaphors";
 import { renderVoiceExemplars } from "./voice-exemplars";
 import { buildTemporalFramingBlock } from "./temporal-framing";
@@ -473,11 +474,6 @@ const SUMMARY_FIELDS: ReadonlyArray<readonly [keyof ReportSummary, string]> = [
   ["myAssets", "내 자산"],
 ];
 
-/** 인라인 태그를 벗기고 공백을 정리한 순수 텍스트(길이 검사·og:description·카드용). */
-function plainText(v: unknown): string {
-  return typeof v === "string" ? v.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim() : "";
-}
-
 /**
  * 세 줄 요약·카드 한 줄 검증 — 위반 목록(빈 배열이면 통과).
  * 모델이 필드를 빼먹을 수 있으므로 누락도 던지지 않고 위반으로 돌려준다(재생성 사유).
@@ -521,24 +517,6 @@ export function validateMarketCardText(content: Pick<ReportContent, "cardLine" |
   const headline = stripEmphasisTags(typeof content?.cover?.headline === "string" ? content.cover.headline : "").trim();
   const line = plainText(content?.cardLine?.text);
   return cardTextFits("market", { headline, line }).reasons.map((r) => `카드 ${r}`);
-}
-
-/** 마지막 문장 경계(마침표류, 또는 공백·끝 앞의 '다')가 max 이내인 지점에서 자른다. 경계가 없으면 말줄임표로 자른다. */
-function cutAtSentence(text: string, max: number): string {
-  if (text.length <= max) return text;
-  let end = -1;
-  for (const m of text.matchAll(/[.!?](?=\s|$)|다(?=[\s.]|$)/g)) {
-    const e = (m.index ?? 0) + m[0].length;
-    if (e > max) break;
-    end = e;
-  }
-  return end > 0 ? text.slice(0, end).trim() : `${text.slice(0, max - 1).trimEnd()}…`;
-}
-
-/** og:description·인덱스 description — 세 줄 요약 중 어제+오늘을 한 문장으로, 90자 이내(문장 경계에서 자름). */
-export function summarySentence(summary: ReportSummary): string {
-  const joined = [plainText(summary?.yesterday), plainText(summary?.today)].filter(Boolean).join(" ");
-  return cutAtSentence(joined, 90);
 }
 
 const SUMMARY_DEFAULT_YESTERDAY = "어제 시장 흐름은 아래에서 정리했습니다.";
@@ -592,8 +570,9 @@ export async function generateReport(
   const maxRetries = 3;
   let content: ReportContent | null = null;
   let lastParseErr: unknown = null;
-  // 카드 글자 맞춤만 어긋난 결과 — 재생성을 이어가지 못해도(예산 소진·후속 호출 실패) 이 결과로 발송한다(카드 관문은 발송을 막지 않는다).
-  let cardOnlyFallback: ReportContent | null = null;
+  // 카드 글자 맞춤만 어긋난 가장 최근 결과(reasons = 남은 카드 위반). 재생성을 이어가지 못하거나(예산 소진·후속 호출 실패·파싱 실패)
+  // 마지막 시도에 다른 위반이 남으면 이 결과로 발송한다 — 카드 관문은 발송을 막지 않고, 다른 위반이 없는 쪽이 더 깨끗한 리포트다.
+  let cardOnlyFallback: { content: ReportContent; reasons: string[] } | null = null;
 
   const deadline = makeDeadline(MARKET_GENERATION_BUDGET_MS);
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -630,7 +609,7 @@ export async function generateReport(
         continue;
       }
       if (cardOnlyFallback) {
-        console.log(`⚠️ 재생성 호출 실패 — 카드 글자 경고만 있던 앞선 결과로 진행: ${err instanceof Error ? err.message : String(err)}`);
+        console.log(`⚠️ 재생성 호출 실패(${err instanceof Error ? err.message : String(err)}) — 카드 글자 경고(${cardOnlyFallback.reasons.join(", ")})만 있던 앞선 결과로 진행`);
         break;
       }
       throw err;
@@ -685,18 +664,25 @@ export async function generateReport(
         console.log(`⚠️ "에 따르면" 인용 ${citationCount}회 (허용 한도 이하)`);
       }
       // 카드 글자 맞춤: 1~2번째 시도에선 다시 쓰게 하는 사유, 마지막 시도에선 아래 "위반 잔존" 경고로만 남는다.
-      const hardViolations = [...baseViolations, ...validateMarketCardText(parsed)];
+      const cardViolations = validateMarketCardText(parsed);
+      const hardViolations = [...baseViolations, ...cardViolations];
 
       if (hardViolations.length > 0 && attempt < maxRetries) {
         // ETF 와 달리 market 엔 Tier 1 fallback 이 없으므로, 남은 재시도가 있으면 re-roll.
         console.log(`♻️ 정합성 위반 ${hardViolations.length}건 — 재생성 (${attempt + 1}/${maxRetries}): ${hardViolations.join(", ")}`);
         lastParseErr = new Error(`정합성 위반: ${hardViolations.join(", ")}`);
-        if (baseViolations.length === 0) cardOnlyFallback = parsed;
+        if (baseViolations.length === 0) cardOnlyFallback = { content: parsed, reasons: cardViolations };
         continue;
       }
       if (hardViolations.length > 0) {
         // maxRetries 소진 — "품질 낮아도 전송 > 침묵" 원칙으로 마지막 콘텐츠 발송 진행.
-        console.log(`⚠️ 정합성 위반 잔존(발송 진행): ${hardViolations.join(", ")}`);
+        if (baseViolations.length > 0 && cardOnlyFallback) {
+          // 마지막 시도에 카드 외 위반이 남았고, 앞선 결과는 카드 글자만 어긋났다 → 위반이 적은 앞선 결과가 더 깨끗하다.
+          console.log(`⚠️ 마지막 시도에 정합성 위반 잔존(${baseViolations.join(", ")}) — 카드 글자 경고(${cardOnlyFallback.reasons.join(", ")})만 있던 앞선 결과로 발송 진행`);
+          parsed = cardOnlyFallback.content;
+        } else {
+          console.log(`⚠️ 정합성 위반 잔존(발송 진행): ${hardViolations.join(", ")}`);
+        }
       }
     }
 
@@ -705,8 +691,8 @@ export async function generateReport(
   }
 
   if (!content && cardOnlyFallback) {
-    console.log("⚠️ 재생성을 이어가지 못해 카드 글자 경고만 있던 앞선 결과로 발송 진행");
-    content = cardOnlyFallback;
+    console.log(`⚠️ 재생성을 이어가지 못해 카드 글자 경고(${cardOnlyFallback.reasons.join(", ")})만 있던 앞선 결과로 발송 진행`);
+    content = cardOnlyFallback.content;
   }
   if (!content) {
     throw new Error(`Claude JSON 파싱 실패 (${maxRetries}회 시도): ${lastParseErr}`);

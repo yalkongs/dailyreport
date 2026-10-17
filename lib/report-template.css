@@ -393,6 +393,9 @@
   color: var(--slate);
   margin: 0 0 8px;
 }
+.data-basis { margin: 0 0 8px; }
+.data-basis .source-note { margin: 0; line-height: 1.6; word-break: keep-all; overflow-wrap: break-word; }
+.data-basis strong { font-weight: 700; color: var(--text-sub); }
 .source-list {
   margin: 0;
   padding-left: 18px;

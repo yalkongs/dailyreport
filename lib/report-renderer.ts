@@ -19,8 +19,7 @@ import { stripEmphasisTags } from "./html-entities";
 import { LEGAL_DISCLAIMER_ITEMS, LEGAL_DISCLAIMER_TITLE } from "./legal-disclaimer";
 import { renderStripesSvg } from "./preview/data-card";
 import type { StripeSession } from "./preview/data-card";
-// claude-client 가 이 모듈의 renderReport 를 쓰므로 순환 import 다. summarySentence 는 렌더 시점에만 호출돼 안전하다.
-import { summarySentence } from "./claude-client";
+import { summarySentence } from "./market-summary";
 
 // --- 유틸리티 ---
 
@@ -167,9 +166,11 @@ function signedPercent(pct: number): string {
   return `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
 }
 
-interface PulseItem {
+/** 지표 카드 한 장의 내용 — 핵심 지표(pickKeyIndicators)와 펼쳐 보기의 시장 체온이 같은 모양을 쓴다. */
+export interface PulseItem {
   label: string;
   value: string;
+  /** 카드 색(방향·진하기)과 기본 등락 문구(±N.NN%)의 기준. 금리처럼 %가 아닌 지표는 같은 색 눈금에 맞춘 값을 넣는다. */
   changePercent: number;
   /** 등락 문구를 기본(±N.NN%) 대신 직접 지정 — 금리는 %p 로 보인다. */
   changeText?: string;
@@ -197,15 +198,7 @@ function renderPulseCard(item: PulseItem, sparkSvg?: string): string {
     `                </div>\n`;
 }
 
-export interface KeyIndicator {
-  label: string;
-  value: string;
-  changePercent: number;
-  /** 등락 문구를 직접 지정할 때만(미 10년물은 %p). 없으면 changePercent 를 ±N.NN% 로 보인다. */
-  changeText?: string;
-}
-
-function indexIndicator(list: MarketIndex[], symbol: string, label: string): KeyIndicator | null {
+function indexIndicator(list: MarketIndex[], symbol: string, label: string): PulseItem | null {
   const q = list.find((x) => x.symbol === symbol);
   if (!q || q.price == null) return null;
   return { label, value: formatNumber(q.price), changePercent: q.changePercent ?? 0 };
@@ -215,8 +208,8 @@ function indexIndicator(list: MarketIndex[], symbol: string, label: string): Key
  * 핵심 지표(최대 6개) — 코스피·S&P 500·나스닥·원/달러·미 10년물 + 그날 가장 크게 움직인 유가·금·비트코인 1개.
  * 종목은 심볼로 고르고, 데이터가 없는 항목은 건너뛴다(자리를 다른 지표로 채우지 않는다).
  */
-export function pickKeyIndicators(data: MarketDataCollection): KeyIndicator[] {
-  const fixed: Array<KeyIndicator | null> = [
+export function pickKeyIndicators(data: MarketDataCollection): PulseItem[] {
+  const fixed: Array<PulseItem | null> = [
     indexIndicator(data.koreaStocks, "^KS11", "코스피"),
     indexIndicator(data.usStocks, "^GSPC", "S&P 500"),
     indexIndicator(data.usStocks, "^IXIC", "나스닥"),
@@ -229,18 +222,18 @@ export function pickKeyIndicators(data: MarketDataCollection): KeyIndicator[] {
     changePercent: usdkrw.changePercent ?? 0,
   });
 
-  // 미 10년물: BondData 는 수익률(%)과 전일 대비 변화(%p)만 있고 등락률이 없다.
-  // 읽는 사람에게는 %p 변화가 직관적이라 그대로 보이고, 색은 부호로 정한다(진하기는 수익률 대비 상대 변화).
+  // 미 10년물: BondData 는 수익률(%)과 전일 대비 변화(%p)만 있고 등락률이 없다. 문구는 %p 그대로 보이고,
+  // 색은 변화폭(bp) ÷ 10 을 지수 등락률 눈금에 맞춘 값으로 정한다 — 10bp 가 지수 1% 와 같은 진하기가 되도록.
   const tnx = data.bonds.find((b) => b.symbol === "^TNX");
   if (tnx?.yield == null) {
     fixed.push(null);
   } else {
-    const change = tnx.change ?? 0;
-    const prev = tnx.yield - change;
+    const change = tnx.change ?? 0; // %p
+    const bp = change * 100;
     fixed.push({
       label: "미 10년물",
       value: `${tnx.yield.toFixed(2)}%`,
-      changePercent: prev > 0 ? (change / prev) * 100 : 0,
+      changePercent: bp / 10,
       changeText: `${change >= 0 ? "+" : ""}${change.toFixed(2)}%p`,
     });
   }
@@ -249,16 +242,16 @@ export function pickKeyIndicators(data: MarketDataCollection): KeyIndicator[] {
   const wti = data.commodities.find((c) => c.symbol === "CL=F");
   const gold = data.commodities.find((c) => c.symbol === "GC=F");
   const btc = data.crypto.find((c) => c.symbol === "BTC-USD");
-  const candidates: KeyIndicator[] = [];
+  const candidates: PulseItem[] = [];
   if (wti?.price != null) candidates.push({ label: wti.nameKo, value: `$${formatNumber(wti.price)}`, changePercent: wti.changePercent ?? 0 });
   if (gold?.price != null) candidates.push({ label: gold.nameKo, value: `$${formatNumber(gold.price)}`, changePercent: gold.changePercent ?? 0 });
   if (btc?.price != null) candidates.push({ label: btc.nameKo, value: `$${formatNumber(btc.price, 0)}`, changePercent: btc.changePercent ?? 0 });
-  const variable = candidates.reduce<KeyIndicator | null>(
+  const variable = candidates.reduce<PulseItem | null>(
     (best, c) => (best === null || Math.abs(c.changePercent) > Math.abs(best.changePercent) ? c : best),
     null,
   );
 
-  return [...fixed, variable].filter((x): x is KeyIndicator => x !== null).slice(0, 6);
+  return [...fixed, variable].filter((x): x is PulseItem => x !== null).slice(0, 6);
 }
 
 function renderKeyIndicators(data: MarketDataCollection): string {
@@ -272,13 +265,14 @@ ${items.map((item) => renderPulseCard(item)).join("")}        </div>
     </section>`;
 }
 
-/** 펼쳐 보기 안의 전체 지표(시장 체온) — 주요 지수·원/달러·원자재·암호화폐, 과거 비교 추세선 포함. */
+/**
+ * 펼쳐 보기 안의 전체 지표(시장 체온) — 주요 지수·원/달러·원자재·암호화폐, 과거 비교 추세선 포함.
+ * hasSparklines = 실제로 추세선이 붙은 카드가 있는지(펼쳐 보기 제목의 "과거 비교"와 추세선 설명이 이 값을 따른다).
+ */
 function renderMarketPulse(
   data: MarketDataCollection,
-  historicalData: HistoricalComparison[]
-): string {
-  const sparkMap = buildSparklineMap(historicalData);
-
+  sparkMap: Map<string, string>,
+): { html: string; hasSparklines: boolean } {
   const items: PulseItem[] = [];
 
   // 주식 지수
@@ -310,18 +304,22 @@ function renderMarketPulse(
     items.push({ label: cr.nameKo, value: `$${formatNumber(cr.price, 0)}`, changePercent: cr.changePercent ?? 0 });
   }
 
-  if (items.length === 0) return "";
+  if (items.length === 0) return { html: "", hasSparklines: false };
   const cardsHtml = items.map((item) => renderPulseCard(item, sparkMap.get(item.label))).join("");
+  const hasSparklines = items.some((item) => sparkMap.has(item.label));
 
   // C08 (2026-10-16): 추세선은 다섯 시점을 같은 간격으로 그린다 — 실제 시간 간격이 아니라는 점과
   // 색 기준(1년 전 대비)을 밝혀 일간 등락 색과 혼동하지 않게 한다.
-  const sparkNote = sparkMap.size > 0
+  const sparkNote = hasSparklines
     ? `\n        <p class="pulse-note">추세선: 1년 전·3개월 전·1개월 전·1주 전·현재 5개 시점 비교(시간 간격 비례 아님). 추세선 색은 1년 전 대비, 숫자는 전일 대비입니다.</p>`
     : "";
-  return `
+  return {
+    html: `
         <h3 class="more-title">시장 체온</h3>
         <div class="market-grid">
-${cardsHtml}        </div>${sparkNote}`;
+${cardsHtml}        </div>${sparkNote}`,
+    hasSparklines,
+  };
 }
 
 function renderBigStory(content: ReportContent): string {
@@ -427,17 +425,27 @@ function renderCalendar(content: ReportContent): string {
         </table>`;
 }
 
-/** 펼쳐 보기(기본 접힘) — 전체 지표·이번 주 일정·과거 비교 추세선. 안에 넣을 것이 없으면 생략. */
+/**
+ * 펼쳐 보기(기본 접힘) — 전체 지표·이번 주 일정·과거 비교 추세선. 안에 넣을 것이 없으면 생략한다.
+ * 제목은 실제로 들어 있는 것만 나열한다(일정표나 추세선이 없는데 있다고 하지 않는다).
+ */
 function renderDetails(
   content: ReportContent,
   data: MarketDataCollection,
   historicalData: HistoricalComparison[],
 ): string {
-  const body = renderMarketPulse(data, historicalData) + renderCalendar(content);
+  const pulse = renderMarketPulse(data, buildSparklineMap(historicalData));
+  const calendar = renderCalendar(content);
+  const body = pulse.html + calendar;
   if (!body) return "";
+  const title = [
+    pulse.html && "전체 지표",
+    calendar && "이번 주 일정",
+    pulse.hasSparklines && "과거 비교",
+  ].filter(Boolean).join("·");
   return `
     <details class="more" data-section="details">
-        <summary class="more-summary">전체 지표·이번 주 일정·과거 비교</summary>
+        <summary class="more-summary">${title}</summary>
         <div class="more-body">${body}
         </div>
     </details>`;
@@ -470,6 +478,20 @@ function renderSources(sources: ReportSourceLink[] | undefined): string {
     </section>`;
 }
 
+/**
+ * 데이터 기준 — 참고한 뉴스 다음, 법적 고지 앞(spec §3.1 9행). 수집 시각(KST)과 값의 성격만 밝히고 건수 같은 메타는 두지 않는다.
+ * 값은 모두 Yahoo 시세(lib/market-data.ts fetchQuote)의 수집 시점 값이고, 등락은 전일 종가 대비다.
+ * 정기 실행(06:40 KST)은 국내·미국·일본·중국 증시가 모두 닫힌 때라 지수는 직전 종가가 된다.
+ */
+function renderDataBasis(collectedAt: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):\d{2}\+09:00$/.exec(collectedAt);
+  const when = m ? `${m[1]}년 ${parseInt(m[2])}월 ${parseInt(m[3])}일 ${m[4]}:${m[5]}(한국시간)에 수집했습니다. ` : "";
+  return `
+    <section class="data-basis" data-section="data-basis">
+        <p class="source-note"><strong>데이터 기준</strong> ${when}주가지수는 수집 시점의 가장 최근 시세(개장 전이면 직전 종가), 환율·원자재·가상자산은 수집 시점 가격이며, 등락은 전일 대비입니다.</p>
+    </section>`;
+}
+
 function renderFooter(content: ReportContent): string {
   const legalItems = LEGAL_DISCLAIMER_ITEMS
     .map((item) => `<li>${escapeHtml(item)}</li>`)
@@ -497,7 +519,7 @@ function renderFooter(content: ReportContent): string {
 /**
  * Market 리포트 HTML. 섹션 순서(spec 2026-10-17 §3.1):
  * 머리글+스트라이프 → 제목·부제 → 세 줄 요약 → 핵심 지표 → 어제 무슨 일 → 오늘 볼 것 → 한국 시장 의미
- * → 펼쳐 보기 → 참고한 뉴스 → 푸터(법적 고지 맨 끝).
+ * → 펼쳐 보기 → 참고한 뉴스 → 데이터 기준 → 푸터(법적 고지 맨 끝).
  *
  * mode(event/normal/quiet)는 프롬프트의 "어제 무슨 일" 분량 조절에만 쓰고 섹션 구성은 바꾸지 않는다 —
  * 모드와 무관하게 오늘 볼 것·의미 섹션이 항상 나온다.
@@ -523,6 +545,7 @@ export function renderReport(
     renderSoWhat(content),
     renderDetails(content, data, historicalData),
     renderSources(sources),
+    renderDataBasis(data.collectedAt),
     renderFooter(content),
   ];
 

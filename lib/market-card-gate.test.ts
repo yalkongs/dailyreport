@@ -97,23 +97,48 @@ test('generateReport: 마지막 시도까지 안 맞아도 경고만 남기고 �
 
 test('generateReport: 재생성이 JSON 파싱 실패로 이어져도 카드 글자만 어긋난 앞선 결과로 발송한다', async (t) => {
   t.after(() => mock.restoreAll())
-  const { stream } = fakeStream([reportJson(LONG_HEADLINE), '깨진 응답', '깨진 응답'])
+  const { stream, logs } = fakeStream([reportJson(LONG_HEADLINE), '깨진 응답', '깨진 응답'])
   const { content } = await generateReport(DATA)
   assert.equal(stream.mock.callCount(), 3)
   assert.equal(content.cover.headline, LONG_HEADLINE)
+  assert.ok(logs.some((l) => /앞선 결과로 발송 진행/.test(l) && /카드 headline/.test(l)), '남은 카드 위반을 로그에 밝힌다')
 })
 
 test('generateReport: 생성 예산이 모자라 재생성을 못 해도 카드 글자만 어긋난 결과로 발송한다', async (t) => {
   t.after(() => mock.restoreAll())
-  const { stream } = fakeStream([reportJson(LONG_HEADLINE)], 12 * 60_000) // 한 번에 12분 → 두 번째 호출은 14분 예산을 넘는다
+  const { stream, logs } = fakeStream([reportJson(LONG_HEADLINE)], 12 * 60_000) // 한 번에 12분 → 두 번째 호출은 14분 예산을 넘는다
   const { content } = await generateReport(DATA)
   assert.equal(stream.mock.callCount(), 1)
   assert.equal(content.cover.headline, LONG_HEADLINE)
+  assert.ok(logs.some((l) => /앞선 결과로 발송 진행/.test(l) && /카드 headline/.test(l)), '남은 카드 위반을 로그에 밝힌다')
+})
+
+const OTHER_HEADLINE = '코스피 낙폭 만회, 외국인 매도는 이어져'
+const missingSummary = (headline: string) =>
+  JSON.stringify({ ...JSON.parse(reportJson(headline)), summary: { yesterday: '', today: '', myAssets: '' } })
+
+test('generateReport: 마지막 시도에 다른 위반이 남으면 카드 글자만 어긋난 앞선 결과가 더 깨끗하므로 그쪽으로 발송한다', async (t) => {
+  t.after(() => mock.restoreAll())
+  // 1회: 카드 글자만 위반 → 2·3회: 요약 누락(카드 외 위반)
+  const { stream, logs } = fakeStream([reportJson(LONG_HEADLINE), missingSummary(OTHER_HEADLINE), missingSummary(OTHER_HEADLINE)])
+  const { content } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 3)
+  assert.equal(content.cover.headline, LONG_HEADLINE)
+  assert.equal(content.summary.yesterday, '국내 증시는 수급 부담에 크게 밀렸습니다.') // 기본 문장이 아니라 앞선 결과의 요약
+  const line = logs.find((l) => /마지막 시도에 정합성 위반 잔존/.test(l))
+  assert.ok(line && /summary\.yesterday/.test(line) && /카드 headline/.test(line), '남은 두 종류의 위반을 모두 밝힌다')
+})
+
+test('generateReport: 앞선 결과가 없으면(카드 외 위반만 반복) 기존대로 마지막 시도 결과로 발송한다', async (t) => {
+  t.after(() => mock.restoreAll())
+  const { stream } = fakeStream([missingSummary(LONG_HEADLINE), missingSummary(LONG_HEADLINE), missingSummary(OTHER_HEADLINE)])
+  const { content } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 3)
+  assert.equal(content.cover.headline, OTHER_HEADLINE)
 })
 
 test('generateReport: 카드 글자 외의 위반만 남은 채 예산이 끝나면 기존대로 실패한다(관문이 다른 정책을 바꾸지 않는다)', async (t) => {
   t.after(() => mock.restoreAll())
-  const missingSummary = JSON.stringify({ ...JSON.parse(reportJson(FITTING_HEADLINE)), summary: { yesterday: '', today: '', myAssets: '' } })
-  fakeStream([missingSummary], 12 * 60_000)
+  fakeStream([missingSummary(FITTING_HEADLINE)], 12 * 60_000)
   await assert.rejects(generateReport(DATA), /정합성 위반/)
 })
