@@ -74,6 +74,9 @@ export interface ReportMeta {
   subline: string; // 서브라인 (OG description용)
   generatedAt: string; // KST ISO 8601
   filePath: string;
+  // 2026-10 개편: og:description·인덱스용 세 줄 요약 한 문장(summarySentence), 미리보기 카드의 제목 아래 한 줄.
+  description?: string;
+  cardLine?: string;
 }
 
 export interface ReportsIndex {
@@ -219,6 +222,9 @@ export interface ContextData {
   policyRates: PolicyRates;
   historicalComparison: HistoricalComparison[];
   contextErrors: ContextError[];
+  // 코스피 최근 20거래일 일간 등락(미리보기 카드 스트라이프용). 수집 실패 시 [].
+  // Task 3에서 lib/preview/data-card.ts 의 StripeSession 과 합칠 때까지 market-data 의 동일 형태를 쓴다.
+  kospiSessions: import("./market-data").StripeSession[];
 }
 
 // --- Claude JSON 출력 인터페이스 (콘텐츠/구조 분리) ---
@@ -260,17 +266,33 @@ export interface ReportCalendarItem {
   importance: number; // 1~5
 }
 
+// 2026-10 개편: 페이지 상단 세 줄 요약(어제 / 오늘 볼 것 / 내 자산은).
+export interface ReportSummary {
+  yesterday: string; // 어제 한국·미국 시장 분위기와 배경을 말로 쓴 한 문장
+  today: string; // 오늘 확인할 한 가지
+  myAssets: string; // 자산군 관점은 ETF Today 안내 + 오늘 가장 영향이 큰 자산군 하나
+}
+
+// 미리보기 카드의 제목 아래 한 줄. cause = 근거 있는 배경 한 문장, watch = 근거가 약할 때 오늘 확인점.
+export interface ReportCardLine {
+  kind: "cause" | "watch";
+  text: string;
+}
+
 export interface ReportContent {
   cover: {
     headline: string;
     subline: string;
     imageKeywords?: string[]; // 제목/본문 핵심 이미지·은유 단어 (반복 회피 로그용). 사실 모드면 빈 배열.
   };
+  summary: ReportSummary;
+  cardLine: ReportCardLine;
   bigStory: {
     content: ReportContentBlock[];
   };
   watchPoints: ReportWatchPoint[];
-  compass: ReportCompassSection[];
+  // 개편으로 새 프롬프트는 생성하지 않는다(자산군 관점은 ETF Today). 과거 콘텐츠·렌더 호환용으로만 남긴다.
+  compass?: ReportCompassSection[];
   soWhat: ReportSoWhat[];
   calendar: ReportCalendarItem[];
   closingMessage: string;

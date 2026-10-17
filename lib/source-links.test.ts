@@ -20,7 +20,8 @@ test("Market RSS: 기사 링크를 보존하고 http(s)가 아니면 버린다",
 });
 
 const CONTENT: ReportContent = {
-  cover: { headline: "t", subline: "s" }, bigStory: { content: [] }, watchPoints: [], compass: [], soWhat: [], calendar: [], closingMessage: "c",
+  cover: { headline: "t", subline: "s" }, summary: { yesterday: "y", today: "t", myAssets: "m" }, cardLine: { kind: "watch", text: "c" },
+  bigStory: { content: [] }, watchPoints: [], compass: [], soWhat: [], calendar: [], closingMessage: "c",
 };
 const MDATA: MarketDataCollection = {
   collectedAt: "2026-10-16T07:00:00+09:00", date: "2026-10-16", dayOfWeek: "금",

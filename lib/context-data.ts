@@ -9,7 +9,7 @@ import { collectEconomicCalendar } from "./economic-calendar";
 import { collectFredData } from "./fred-data";
 import { collectEcosData } from "./ecos-data";
 import { collectInvestorFlow } from "./krx-investor-flow";
-import { collectHistoricalData, collectVix } from "./market-data";
+import { collectHistoricalData, collectKospiSessions, collectVix } from "./market-data";
 import { collectPolicyRates, formatPolicyRateLog } from "./policy-rate";
 import { fetchWithTimeout } from "./fetch-utils";
 import type { ContextData, ContextError, MarketSentiment } from "./types";
@@ -50,7 +50,7 @@ export async function collectContextData(): Promise<ContextData> {
   const errors: ContextError[] = [];
 
   // 모든 소스 병렬 수집 — 개별 실패는 전체를 중단하지 않음
-  const [news, calendar, fred, ecos, investorFlow, vix, fearGreed, historical, policyRateResult] =
+  const [news, calendar, fred, ecos, investorFlow, vix, fearGreed, historical, policyRateResult, kospiSessions] =
     await Promise.all([
       collectNews().catch((err) => {
         errors.push({ source: "news", status: "error", message: (err as Error).message });
@@ -88,6 +88,8 @@ export async function collectContextData(): Promise<ContextData> {
         rates: { fed: null, bok: null },
         errors: [{ source: "policy-rate", status: "error", message: (err as Error).message }],
       })),
+      // 카드 스트라이프 전용 — 실패해도 [] 를 돌려주며, 리포트 근거(contextErrors·tier)에는 넣지 않는다.
+      collectKospiSessions(20),
     ]);
 
   const sentiment: MarketSentiment = {};
@@ -106,6 +108,7 @@ export async function collectContextData(): Promise<ContextData> {
     policyRates: policyRateResult.rates,
     historicalComparison: historical,
     contextErrors: errors,
+    kospiSessions,
   };
 
   // 수집 결과 로그
@@ -118,6 +121,7 @@ export async function collectContextData(): Promise<ContextData> {
   console.log(`  😨 VIX: ${vix ? vix.value.toFixed(2) : "없음"}`);
   console.log(`  🎭 Fear & Greed: ${fearGreed ? fearGreed.value : "없음"}`);
   console.log(`  📈 과거 비교: ${historical.length}건`);
+  console.log(`  🟥 코스피 일봉(카드): ${kospiSessions.length}거래일`);
   if (errors.length > 0) {
     console.log(`  ⚠️ 수집 에러: ${errors.map((e) => `${e.source}(${e.message})`).join(", ")}`);
   }
