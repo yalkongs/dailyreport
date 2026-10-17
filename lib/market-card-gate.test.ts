@@ -60,7 +60,7 @@ function reportJson(headline: string): string {
  * 호출 순서대로 응답 본문을 돌려주는 가짜 Messages.stream. advanceMs 만큼 가짜 시계를 앞으로 돌린다.
  * generateReport 의 진행 로그는 logs 로 모아 출력을 깨끗하게 둔다(오류 로그도 같이).
  */
-function fakeStream(replies: string[], advanceMs = 0) {
+function fakeStream(replies: Array<string | Error>, advanceMs = 0) {
   let clock = 1_000_000
   let calls = 0
   const logs: string[] = []
@@ -69,9 +69,10 @@ function fakeStream(replies: string[], advanceMs = 0) {
   mock.method(console, 'error', collect)
   mock.method(Date, 'now', () => clock)
   const stream = mock.method(Anthropic.Messages.prototype, 'stream', () => {
-    const text = replies[Math.min(calls++, replies.length - 1)]
+    const reply = replies[Math.min(calls++, replies.length - 1)]
     clock += advanceMs
-    return { finalMessage: async () => ({ content: [{ type: 'text', text }] }) } as never
+    if (reply instanceof Error) throw reply // API 오류(529가 아닌 — 529는 실제 대기가 걸린다)
+    return { finalMessage: async () => ({ content: [{ type: 'text', text: reply }] }) } as never
   })
   return { stream, logs }
 }
@@ -137,8 +138,60 @@ test('generateReport: 앞선 결과가 없으면(카드 외 위반만 반복) �
   assert.equal(content.cover.headline, OTHER_HEADLINE)
 })
 
-test('generateReport: 카드 글자 외의 위반만 남은 채 예산이 끝나면 기존대로 실패한다(관문이 다른 정책을 바꾸지 않는다)', async (t) => {
+// ── I2 (Ruling 23, F02 전송 > 침묵): 마지막 호출을 못 하거나 실패·파싱 실패해도 파싱된 앞선 결과가 있으면 보낸다 ──
+// 앞선 결과 선택: 카드 글자만 어긋난 결과 > 카드 외 위반이 가장 적은 결과 > 가장 최근 결과.
+const yesterdayOnlyMissing = (headline: string) =>
+  JSON.stringify({ ...JSON.parse(reportJson(headline)), summary: { yesterday: '', today: '개장 30분 거래대금이 첫 확인점입니다.', myAssets: '자산군별 판단 재료는 ETF Today에서.' } })
+
+test('generateReport: 카드 외 위반만 있던 결과도 예산이 끝나 재생성을 못 하면 경고와 함께 발송한다', async (t) => {
   t.after(() => mock.restoreAll())
-  fakeStream([missingSummary(FITTING_HEADLINE)], 12 * 60_000)
-  await assert.rejects(generateReport(DATA), /정합성 위반/)
+  const { stream, logs } = fakeStream([missingSummary(FITTING_HEADLINE)], 12 * 60_000)
+  const { content, html } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 1)
+  assert.equal(content.cover.headline, FITTING_HEADLINE)
+  assert.match(html, /class="cover-headline"/)
+  assert.equal(content.summary.yesterday, '부제') // 빈 칸은 기존 기본값 보정(부제)으로 채운다
+  const line = logs.find((l) => /앞선 결과로 발송 진행/.test(l))
+  assert.ok(line && /생성 예산/.test(line) && /summary\.yesterday/.test(line), '멈춘 이유와 남은 위반을 로그에 밝힌다')
+})
+
+test('generateReport: 마지막 시도가 JSON 파싱에 실패하면 카드 외 위반이 가장 적은 앞선 결과로 발송한다', async (t) => {
+  t.after(() => mock.restoreAll())
+  // 1회: 요약 3칸 누락 → 2회: 어제 줄만 누락(위반 1건) → 3회: 깨진 응답
+  const { stream, logs } = fakeStream([missingSummary(LONG_HEADLINE), yesterdayOnlyMissing(OTHER_HEADLINE), '깨진 응답'])
+  const { content } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 3)
+  assert.equal(content.cover.headline, OTHER_HEADLINE)
+  assert.equal(content.summary.today, '개장 30분 거래대금이 첫 확인점입니다.')
+  const line = logs.find((l) => /앞선 결과로 발송 진행/.test(l))
+  assert.ok(line && /2회차/.test(line) && /summary\.yesterday/.test(line), line)
+})
+
+test('generateReport: 위반 수가 같으면 더 최근 결과를 고른다', async (t) => {
+  t.after(() => mock.restoreAll())
+  fakeStream([missingSummary(LONG_HEADLINE), missingSummary(OTHER_HEADLINE), '깨진 응답'])
+  const { content } = await generateReport(DATA)
+  assert.equal(content.cover.headline, OTHER_HEADLINE)
+})
+
+test('generateReport: 마지막 시도가 API 오류여도 파싱된 앞선 결과로 발송한다', async (t) => {
+  t.after(() => mock.restoreAll())
+  const { stream, logs } = fakeStream([missingSummary(LONG_HEADLINE), yesterdayOnlyMissing(OTHER_HEADLINE), new Error('Internal server error')])
+  const { content } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 3)
+  assert.equal(content.cover.headline, OTHER_HEADLINE)
+  const line = logs.find((l) => /앞선 결과로 발송 진행/.test(l))
+  assert.ok(line && /Internal server error/.test(line) && /summary\.yesterday/.test(line), line)
+})
+
+test('generateReport: 파싱된 결과가 한 번도 없으면 기존대로 실패한다', async (t) => {
+  t.after(() => mock.restoreAll())
+  fakeStream(['깨진 응답'])
+  await assert.rejects(generateReport(DATA), /JSON 파싱 실패/)
+})
+
+test('generateReport: 첫 호출부터 API 오류면(파싱된 결과 없음) 기존대로 실패한다', async (t) => {
+  t.after(() => mock.restoreAll())
+  fakeStream([new Error('Internal server error')])
+  await assert.rejects(generateReport(DATA), /Internal server error/)
 })

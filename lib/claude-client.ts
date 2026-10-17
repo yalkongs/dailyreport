@@ -570,14 +570,19 @@ export async function generateReport(
   const maxRetries = 3;
   let content: ReportContent | null = null;
   let lastParseErr: unknown = null;
-  // 카드 글자 맞춤만 어긋난 가장 최근 결과(reasons = 남은 카드 위반). 재생성을 이어가지 못하거나(예산 소진·후속 호출 실패·파싱 실패)
-  // 마지막 시도에 다른 위반이 남으면 이 결과로 발송한다 — 카드 관문은 발송을 막지 않고, 다른 위반이 없는 쪽이 더 깨끗한 리포트다.
-  let cardOnlyFallback: { content: ReportContent; reasons: string[] } | null = null;
+  // 파싱은 됐지만 위반이 남은 앞선 결과 중 가장 나은 것(I2·Ruling 23, F02 "전송 > 침묵").
+  // 선택: 카드 글자만 어긋난 결과(카드 외 위반 0) > 카드 외 위반이 가장 적은 결과 > 가장 최근 결과.
+  // 재생성을 이어가지 못하거나(예산 소진·후속 호출 실패·마지막 시도 파싱 실패) 마지막 시도에 위반이 더 많이 남으면
+  // 이 결과를 마지막 시도처럼(위반은 경고로만) 발송한다. 파싱된 결과가 한 번도 없을 때만 실패한다.
+  let best: { content: ReportContent; base: string[]; card: string[]; attempt: number } | null = null;
+  let stopReason = "";
+  const remaining = (k: { base: string[]; card: string[] }) => [...k.base, ...k.card].join(", ");
 
   const deadline = makeDeadline(MARKET_GENERATION_BUDGET_MS);
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     // F07: 생성 예산을 넘기면 새 호출을 시작하지 않는다(다음 트리거가 새 runner에서 재시도).
     if (attempt > 1 && !deadline.canStartCall()) {
+      stopReason = `생성 예산 초과 ${Math.round(deadline.elapsedMs() / 1000)}초`;
       console.log(`⏱️ 생성 예산 초과(${Math.round(deadline.elapsedMs() / 1000)}초 경과) — 추가 재생성 중단`);
       break;
     }
@@ -608,8 +613,10 @@ export async function generateReport(
         await new Promise((r) => setTimeout(r, attempt * 10000));
         continue;
       }
-      if (cardOnlyFallback) {
-        console.log(`⚠️ 재생성 호출 실패(${err instanceof Error ? err.message : String(err)}) — 카드 글자 경고(${cardOnlyFallback.reasons.join(", ")})만 있던 앞선 결과로 진행`);
+      if (best) {
+        // 마지막 시도의 529도 여기로 온다 — 파싱된 앞선 결과가 있으면 침묵 대신 그 결과로(아래 루프 뒤에서 발송).
+        stopReason = `재생성 호출 실패: ${err instanceof Error ? err.message : String(err)}`;
+        console.log(`⚠️ ${stopReason}`);
         break;
       }
       throw err;
@@ -671,15 +678,18 @@ export async function generateReport(
         // ETF 와 달리 market 엔 Tier 1 fallback 이 없으므로, 남은 재시도가 있으면 re-roll.
         console.log(`♻️ 정합성 위반 ${hardViolations.length}건 — 재생성 (${attempt + 1}/${maxRetries}): ${hardViolations.join(", ")}`);
         lastParseErr = new Error(`정합성 위반: ${hardViolations.join(", ")}`);
-        if (baseViolations.length === 0) cardOnlyFallback = { content: parsed, reasons: cardViolations };
+        // 같은 수면 더 최근 결과(<=). 카드 글자만 어긋난 결과는 카드 외 위반이 0이라 자연히 맨 앞이다.
+        if (!best || baseViolations.length <= best.base.length) {
+          best = { content: parsed, base: baseViolations, card: cardViolations, attempt };
+        }
         continue;
       }
       if (hardViolations.length > 0) {
-        // maxRetries 소진 — "품질 낮아도 전송 > 침묵" 원칙으로 마지막 콘텐츠 발송 진행.
-        if (baseViolations.length > 0 && cardOnlyFallback) {
-          // 마지막 시도에 카드 외 위반이 남았고, 앞선 결과는 카드 글자만 어긋났다 → 위반이 적은 앞선 결과가 더 깨끗하다.
-          console.log(`⚠️ 마지막 시도에 정합성 위반 잔존(${baseViolations.join(", ")}) — 카드 글자 경고(${cardOnlyFallback.reasons.join(", ")})만 있던 앞선 결과로 발송 진행`);
-          parsed = cardOnlyFallback.content;
+        // maxRetries 소진 — "품질 낮아도 전송 > 침묵" 원칙으로 발송 진행(위반은 경고로만).
+        if (best && best.base.length < baseViolations.length) {
+          // 마지막 시도에 카드 외 위반이 더 많이 남았다 → 위반이 적은 앞선 결과가 더 깨끗하다.
+          console.log(`⚠️ 마지막 시도에 정합성 위반 잔존(${hardViolations.join(", ")}) — 위반이 더 적은 앞선 결과로 발송 진행(${best.attempt}회차, 남은 위반: ${remaining(best)})`);
+          parsed = best.content;
         } else {
           console.log(`⚠️ 정합성 위반 잔존(발송 진행): ${hardViolations.join(", ")}`);
         }
@@ -690,9 +700,11 @@ export async function generateReport(
     break; // 파싱·정합성 통과(또는 재시도 소진)
   }
 
-  if (!content && cardOnlyFallback) {
-    console.log(`⚠️ 재생성을 이어가지 못해 카드 글자 경고(${cardOnlyFallback.reasons.join(", ")})만 있던 앞선 결과로 발송 진행`);
-    content = cardOnlyFallback.content;
+  if (!content && best) {
+    // 마지막 호출을 못 했거나(예산) 실패했거나 파싱되지 않았다 — 앞선 결과를 마지막 시도처럼(위반은 경고로만) 발송한다.
+    const why = stopReason || `마지막 시도 JSON 파싱 실패: ${lastParseErr}`;
+    console.log(`⚠️ 재생성을 이어가지 못해(${why}) 앞선 결과로 발송 진행(${best.attempt}회차, 남은 위반: ${remaining(best)})`);
+    content = best.content;
   }
   if (!content) {
     throw new Error(`Claude JSON 파싱 실패 (${maxRetries}회 시도): ${lastParseErr}`);
