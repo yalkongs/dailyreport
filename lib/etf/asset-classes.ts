@@ -10,7 +10,7 @@
 //   kr-sector    그날 움직인 섹터 — KR, 섹터·테마(반도체·AI·IT 제외), theme별 평균 |등락| 최대
 //                (유니버스의 국내 섹터·테마는 전부 theme이 있다 — 은행·자동차·금융 등)
 //   us-equity    미국 주식(환노출) — KR 해외 기초지수 주식형 중 이름에 '미국'(해외지수·섹터·테마) + US SPY·QQQ
-//   bonds        채권             — KR·US category 채권(현금성 달러 상품 — 달러단기·SOFR 등 — 제외)
+//   bonds        채권             — KR·US category 채권(현금성 상품 — 달러단기·SOFR·단기통안채 등 — 제외)
 //   commodities  금·원자재        — KR·US category 대안 중 원자재(리츠·비트코인 제외)
 // 국내 슬롯(kr-*)은 국내 세션만 담는다 — foreignUnderlying(해외 기초지수) 국내 상장 ETF는 넣지 않는다.
 
@@ -29,15 +29,18 @@ export interface AssetClassSlot {
   theme: string | null
   reps: AssetRep[]
   movePct: number
+  // 슬롯에 든 ETF 전부(대표 reps를 고르는 집합). 미리보기 카드·페이지 모자이크의 강조 타일(Ruling 21).
+  memberTickers: string[]
 }
 
 const SEMI_THEMES = new Set(['반도체', 'AI', 'IT'])
 const US_BROAD_INDEX = new Set(['SPY', 'QQQ'])
 const NON_EQUITY = new Set(['채권', '대안'])
 const COMMODITY_NAME = /골드|gold|silver|원유|oil|wti|commodity|원자재/i
-// Ruling 16: 현금성·달러 상품은 '채권' 예시가 아니다 — 환율이 크게 움직인 날 원화 환산 등락이 커져
-// 채권 대표로 뽑히는 것을 막는다(유니버스: TIGER 미국달러단기채권액티브, TIGER 미국달러SOFR금리액티브).
-const CASH_LIKE_NAME = /달러단기|SOFR|KOFR|CD금리|머니마켓/i
+// Ruling 16·19: 현금성 상품은 '채권' 예시가 아니다 — 달러 상품은 환율이 크게 움직인 날 원화 환산 등락이 커져
+// 채권 대표로 뽑히고, 원화 단기채는 거의 움직이지 않아 채권 흐름을 보여 주지 못한다
+// (유니버스: TIGER 미국달러단기채권액티브, TIGER 미국달러SOFR금리액티브, TIGER 단기통안채).
+const CASH_LIKE_NAME = /달러단기|SOFR|KOFR|CD금리|머니마켓|MMF|단기통안|통안채|단기채/i
 
 interface Candidate {
   rep: AssetRep
@@ -154,7 +157,10 @@ export function buildAssetClassSlots(quotes: EtfQuote[]): AssetClassSlot[] {
   for (const g of groups) {
     const reps = pickReps(g.members)
     if (reps.length === 0) continue
-    slots.push({ key: g.key, label: g.label, holdingLabel: g.holdingLabel, theme: g.theme, reps, movePct: movePctOf(reps) })
+    slots.push({
+      key: g.key, label: g.label, holdingLabel: g.holdingLabel, theme: g.theme, reps, movePct: movePctOf(reps),
+      memberTickers: g.members.map(m => m.rep.ticker),
+    })
   }
   // 중요도(|movePct|) 내림차순. 같은 값이면 위 정의 순서 유지(Array.prototype.sort는 안정 정렬).
   return slots.sort((a, b) => Math.abs(b.movePct) - Math.abs(a.movePct))
@@ -183,4 +189,10 @@ export function pickFeaturedSlot(slots: AssetClassSlot[]): AssetClassSlot | null
     if (!best || Math.abs(s.movePct) > Math.abs(best.movePct)) best = s
   }
   return best ?? slots[0] ?? null
+}
+
+// 미리보기 카드 자산군: card.key 슬롯, 없거나 슬롯 밖이면 주제 슬롯(pickFeaturedSlot).
+// 카드 PNG(run-etf)·페이지 모자이크(renderer)·카드 문구 게이트(report-quality)가 같은 슬롯을 쓰도록 한곳에 둔다.
+export function cardSlot(slots: AssetClassSlot[], cardKey: string | null | undefined): AssetClassSlot | null {
+  return slots.find(s => s.key === cardKey) ?? pickFeaturedSlot(slots)
 }

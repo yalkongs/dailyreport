@@ -23,9 +23,10 @@ import {
 } from './report-preview'
 // R1 (2026-07-22): 선택 로직은 story-characters.ts로 이동(렌더러·프롬프트·검증 공유).
 import { isTacticalEtf } from './story-characters'
-import { buildAssetClassSlots, pickFeaturedSlot, type AssetClassSlot, type AssetRep } from './asset-classes'
+import { buildAssetClassSlots, cardSlot, type AssetClassSlot, type AssetRep } from './asset-classes'
 import { buildMosaicTiles, renderEtfCardSvg, renderMosaicSvg, saveCardPng, type MosaicTile } from '../preview/data-card'
 import { LEGAL_DISCLAIMER_ITEMS, LEGAL_DISCLAIMER_TITLE } from '../legal-disclaimer'
+import { koreanWeekday } from '../market-calendar'
 
 export function escapeHtml(s: string): string {
   return s
@@ -112,16 +113,16 @@ function baseHtml(title: string, date: string, type: string, body: string, metad
            background: var(--paper); color: var(--ink); max-width: 760px; margin: 0 auto; padding: 26px 18px; word-break: keep-all; }
     .cover { background: var(--panel); border: 1px solid var(--line); border-top: 8px solid var(--im-teal);
              border-radius: 8px; padding: 22px; margin-bottom: 26px; box-shadow: 0 14px 34px rgba(31, 54, 48, 0.08); }
-    .masthead { display: flex; justify-content: space-between; gap: 14px; align-items: center; margin-bottom: 16px; }
+    .masthead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 14px; align-items: center; margin-bottom: 16px; }
     .brand-lockup { display: flex; gap: 12px; align-items: center; min-width: 0; }
     .brand-logo { display: block; width: 72px; height: 72px; object-fit: contain; flex: 0 0 auto; }
-    .brand-name { font-size: 13px; color: var(--im-graphite); font-weight: 800; line-height: 1.2; }
-    .report-name { font-size: 28px; line-height: 1; font-weight: 900; letter-spacing: 0; color: var(--ink); margin-top: 3px; }
+    .brand-name { font-size: 13px; color: var(--im-graphite); font-weight: 800; line-height: 1.2; white-space: nowrap; }
+    .report-name { font-size: 28px; line-height: 1; font-weight: 900; letter-spacing: 0; color: var(--ink); margin-top: 3px; white-space: nowrap; }
     .issue-date { color: var(--muted); font-size: 13px; font-weight: 800; white-space: nowrap; }
     .mosaic { margin: 0 0 18px; }
     .mosaic svg { display: block; width: 100%; height: auto; border-radius: 6px; }
     .mosaic figcaption { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 6px; }
-    .cover h1 { font-size: 30px; font-weight: 900; line-height: 1.25; margin-bottom: 10px; color: var(--ink); letter-spacing: 0; }
+    .cover h1 { font-size: 30px; font-weight: 900; line-height: 1.25; margin-bottom: 10px; color: var(--ink); letter-spacing: 0; text-wrap: balance; }
     .cover .subline { font-size: 16px; color: var(--muted); line-height: 1.65; }
     .section { margin-bottom: 30px; }
     .section-title { position: relative; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink); letter-spacing: 1.4px;
@@ -129,12 +130,13 @@ function baseHtml(title: string, date: string, type: string, body: string, metad
     .section-title::before { content: ""; width: 32px; height: 7px; background: var(--im-teal); border-radius: 6px; }
     .section-note { font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 12px; }
     .narrative { font-size: 15px; line-height: 1.8; color: #27302d; }
-    .summary-box { background: var(--panel); border: 1px solid var(--line); border-left: 6px solid var(--im-teal); border-radius: 8px; padding: 14px 18px 8px; }
-    .summary-box .section-title { border-top: 0; padding-top: 0; }
-    .summary-row { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 10px; padding: 9px 0; border-top: 1px solid #e8ece8; }
-    .summary-box .section-title + .summary-row { border-top: 0; }
-    .summary-label { font-size: 12px; font-weight: 900; color: var(--im-teal-deep); padding-top: 2px; }
-    .summary-text { font-size: 15px; line-height: 1.6; color: #1f2724; }
+    /* 세 줄 요약 상자 — Market(lib/report-template.css .summary-box)과 같은 모양 */
+    .summary-box { background: #EEFAF7; border: 1px solid #BFE9DF; border-radius: 10px; padding: 8px 16px; margin-bottom: 30px; }
+    .summary-list { list-style: none; }
+    .summary-row { display: flex; align-items: baseline; gap: 12px; padding: 10px 0; }
+    .summary-row + .summary-row { border-top: 1px solid #D3EEE7; }
+    .summary-label { flex: none; width: 66px; font-size: 13px; font-weight: 700; color: var(--im-teal-deep); }
+    .summary-text { font-size: 15px; line-height: 1.65; color: #1A2421; min-width: 0; word-break: keep-all; overflow-wrap: break-word; }
     .asset-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .asset-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; min-width: 0; }
     .asset-label { font-size: 16px; font-weight: 900; color: var(--ink); margin-bottom: 10px; }
@@ -205,7 +207,7 @@ function baseHtml(title: string, date: string, type: string, body: string, metad
       .cover h1 { font-size: 25px; }
       .cover .subline, .narrative { font-size: 15px; }
       .asset-grid { grid-template-columns: 1fr; }
-      .summary-row { grid-template-columns: 1fr; gap: 3px; }
+      .summary-label { width: 62px; }
       .check-item { grid-template-columns: 1fr; gap: 4px; }
       .etf-chip { max-width: 100%; white-space: normal; vertical-align: baseline; overflow-wrap: anywhere; }
     }
@@ -224,9 +226,13 @@ const TAG_BY_CATEGORY: Record<string, string> = {
 
 // 유니버스 category가 1순위. 이름 정규식은 유니버스 밖 종목에만 쓴다
 // (단독 '금'은 '금융'·'금리'에 걸려서 제외). 펼쳐 보기 표의 '구분' 칸.
+// 레버리지·인버스는 '전술'로 뭉뚱그리지 않고 그대로 쓴다(시세 이름이 티커 그대로면 유니버스 이름으로 판정).
 export function inferEtfTag(q: EtfQuote): string {
-  if (isTacticalEtf(q)) return '전술'
   const def = getEtfByTicker(q.ticker)
+  const names = [q.name, def?.name ?? ''].filter(Boolean)
+  if (names.some(name => isTacticalEtf({ ...q, name }))) {
+    return names.some(name => /인버스|inverse/i.test(name)) ? '인버스' : '레버리지'
+  }
   if (def) {
     if (def.category === '대안') return COMMODITY_NAME.test(q.name) || COMMODITY_NAME.test(def.name) ? '원자재' : '대안'
     return TAG_BY_CATEGORY[def.category] ?? '지수'
@@ -416,8 +422,16 @@ const MOSAIC_VIEW_W = 1080
 const MOSAIC_VIEW_H = 600
 const MOSAIC_CAPTION = '어제 분석한 ETF 등락(Korea·USA, 레버리지·인버스 제외)'
 
+// Market 머리글과 같은 날짜 표기: "2026년 10월 16일 금요일"
+function mastheadDate(date: string): string {
+  const [y, m, d] = date.split('-')
+  return `${y}년 ${parseInt(m, 10)}월 ${parseInt(d, 10)}일 ${koreanWeekday(date)}요일`
+}
+
 function renderMasthead(report: MorningReport, data: CollectedData, slots: AssetClassSlot[]): string {
-  const tiles = buildMosaicTiles(data.quotes, pickFeaturedSlot(slots)?.theme ?? null)
+  // 미리보기 카드와 같은 슬롯(card.key, 없으면 주제 슬롯)의 구성원 타일을 강조한다(Ruling 19·21).
+  const slot = cardSlot(slots, report.card?.key)
+  const tiles = buildMosaicTiles(data.quotes, slot ? new Set(slot.memberTickers) : null)
   const subline = report.cover?.subline
   return `<header class="cover" data-section="masthead">
   <div class="masthead">
@@ -428,7 +442,7 @@ function renderMasthead(report: MorningReport, data: CollectedData, slots: Asset
         <div class="report-name">ETF Today</div>
       </div>
     </div>
-    <div class="issue-date">${e(data.date)}</div>
+    <div class="issue-date">${e(mastheadDate(data.date))}</div>
   </div>
   <figure class="mosaic">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${MOSAIC_VIEW_W} ${MOSAIC_VIEW_H}" role="img" aria-label="${e(MOSAIC_CAPTION)}">${renderMosaicSvg(tiles, MOSAIC_VIEW_W, MOSAIC_VIEW_H)}</svg>
@@ -448,9 +462,10 @@ function renderSummary(report: MorningReport, quotes: EtfQuote[]): string {
   ]
   const visible = rows.filter((row): row is [string, string] => filled(row[1]))
   if (visible.length === 0) return ''
-  return `<section class="section summary-box" data-section="summary">
-  <div class="section-title">세 줄 요약</div>
-  ${visible.map(([label, text]) => `<div class="summary-row"><div class="summary-label">${e(label)}</div><div class="summary-text">${renderReportText(text, quotes)}</div></div>`).join('\n  ')}
+  return `<section class="summary-box" data-section="summary" aria-label="세 줄 요약">
+  <ul class="summary-list">
+    ${visible.map(([label, text]) => `<li class="summary-row"><span class="summary-label">${e(label)}</span><span class="summary-text">${renderReportText(text, quotes)}</span></li>`).join('\n    ')}
+  </ul>
 </section>`
 }
 
@@ -545,11 +560,12 @@ function renderEtfTable(title: string, quotes: EtfQuote[]): string {
 function renderDetails(data: CollectedData): string {
   const kr = data.quotes.filter(q => q.market === 'KR')
   const us = data.quotes.filter(q => q.market === 'US')
+  if (kr.length === 0 && us.length === 0) return ''
   return `<details class="section details" data-section="details">
   <summary>국내·미국 ETF 전체 등락 펼쳐 보기</summary>
   ${renderEtfTable('국내 ETF · 직전 한국 장', kr)}
   ${renderEtfTable('미국 ETF · 간밤 미국 장', us)}
-  <p class="table-note">등락률 높은 순입니다. 추정 거래대금은 종가 × 거래량(국내 원, 미국 달러)으로 계산한 참고값이고, 레버리지·인버스는 구분을 '전술'로 표시합니다.</p>
+  <p class="table-note">등락률 높은 순입니다. 추정 거래대금은 종가 × 거래량(국내 원, 미국 달러)으로 계산한 참고값입니다.</p>
 </details>`
 }
 
@@ -625,7 +641,6 @@ function renderClientNotice(data: CollectedData): string {
   <div class="notice-text">이 자료는 iM뱅크 고객의 ETF 시장 이해를 돕는 시장정보입니다. ETF는 상품마다 기초지수, 총보수, 세금, 환헤지 여부, NAV/iNAV 대비 괴리율, 유동성이 다르므로 주문 전 개별 상품의 (간이)투자설명서와 거래 조건을 반드시 확인해야 합니다.</div>
   <div class="pill-row">
     <span class="pill">기준일 ${e(data.date)}</span>
-    <span class="pill">생성 ${e(formatKstDateTime(new Date().toISOString()))}</span>
   </div>
   <div class="legal-title">${e(LEGAL_DISCLAIMER_TITLE)}</div>
   <ul class="legal-list">

@@ -106,3 +106,97 @@ test('og:description = 해외 신호 · 오늘 핵심(90자 이내)', () => {
   assert.ok(Array.from(long).length <= 90, long)
   assert.match(reportPreviewDescription('2026-10-16'), /2026-10-16/) // 요약이 없으면 날짜 기반 기본 문구(page.tsx 폴백)
 })
+
+// ─── Fix round 1 (Ruling 20·21, 리뷰 보강) ─────────────────────────────────────
+
+test('머리글 날짜는 Market과 같은 "2026년 10월 16일 금요일" 형식', () => {
+  const html = renderMorningHtml(report, data)
+  const top = html.slice(html.indexOf('data-section="masthead"'), html.indexOf('</header>'))
+  assert.match(top, /2026년 10월 16일 금요일/)
+  assert.doesNotMatch(top, /2026-10-16/)
+})
+
+test('세 줄 요약 상자는 Market과 같은 구조(summary-box · summary-list · 라벨 칸), 별도 제목 줄 없음', () => {
+  const html = renderMorningHtml(report, data)
+  const start = html.indexOf('data-section="summary"')
+  const box = html.slice(start, html.indexOf('</section>', start))
+  assert.match(html, /<section class="summary-box" data-section="summary" aria-label="세 줄 요약">/)
+  assert.match(box, /<ul class="summary-list">/)
+  for (const label of ['해외 신호', '국내 상태', '오늘 핵심']) assert.match(box, new RegExp(`<span class="summary-label">${label}</span><span class="summary-text">`))
+  assert.doesNotMatch(box, /section-title/)
+})
+
+test('제목 h1은 text-wrap: balance', () => {
+  assert.match(renderMorningHtml(report, data), /\.cover h1 \{[^}]*text-wrap: balance/)
+})
+
+test('렌더 결과는 같은 입력에 같은 출력(생성 시각 pill 없음)', () => {
+  const a = renderMorningHtml(report, data)
+  assert.equal(renderMorningHtml(report, data), a)
+  assert.doesNotMatch(a, /생성 \d{4}-/)
+  assert.match(a, /기준일 2026-10-16/)
+})
+
+test('페이지 모자이크 강조는 카드와 같은 슬롯(card.key)의 구성원 타일', () => {
+  const featured = (r: MorningReport) => [...renderMorningHtml(r, data).matchAll(/data-featured="1" data-ticker="([^"]+)"/g)].map(m => m[1])
+  assert.deepEqual(featured(report), ['091160.KS'])                                    // kr-semi
+  assert.deepEqual(featured({ ...report, card: { ...report.card, key: 'kr-large' } }), ['069500.KS'])
+  assert.deepEqual(featured({ ...report, card: { ...report.card, key: 'us-equity' } }), ['SPY'])
+  assert.deepEqual(featured({ ...report, card: { ...report.card, key: 'bonds' } }), ['091160.KS']) // 슬롯 밖 → 주제 슬롯(kr-semi)
+})
+
+test('이스케이프: 요약·카드 문장·확인 항목·주의 문구의 <script>와 따옴표가 그대로 나가지 않는다(og:description 포함)', () => {
+  const evil = '<script>alert("x")</script> "따옴표"'
+  const r: MorningReport = {
+    ...report,
+    summary: { overseas: evil, domestic: evil, focus: evil },
+    assetCards: [{ key: 'kr-semi', reason: evil, ifHolding: evil, ifConsidering: evil }],
+    todayChecks: [{ time: evil, what: evil, baseline: evil, invalidation: evil }],
+    tacticalWarning: evil,
+  }
+  const html = renderMorningHtml(r, data)
+  assert.ok(!html.includes('<script'), '<script 태그 없음')
+  assert.ok(!html.includes('"따옴표"'), '본문 따옴표는 &quot;')
+  assert.match(html, /&lt;script&gt;alert\(&quot;x&quot;\)&lt;\/script&gt;/)
+  const og = html.match(/<meta property="og:description" content="([^"]*)">/)
+  assert.ok(og, 'og:description 속성이 따옴표로 깨지지 않는다')
+  assert.doesNotMatch(og[1], /<|>/)
+  assert.match(og[1], /&quot;따옴표&quot;/)
+})
+
+function dataWith(quotes: EtfQuote[]): CollectedData {
+  return { ...data, quotes }
+}
+
+test('경계: 시세가 하나도 없으면(슬롯 0개) 자산군 카드·표 없이 렌더, 고지는 맨 끝', () => {
+  const html = renderMorningHtml(report, dataWith([]))
+  assert.doesNotMatch(html, /data-asset="/)
+  assert.doesNotMatch(html, /data-section="asset-cards"/)
+  assert.doesNotMatch(html, /data-section="details"/)
+  assert.match(html, /data-section="masthead"/)
+  assert.ok(html.lastIndexOf('투자 유의사항 및 법적 고지') > html.indexOf('data-section="today-checks"'))
+})
+
+test('경계: 미국 시세가 없으면 국내 표만, 국내 시세가 없으면 미국 표만', () => {
+  const krOnly = renderMorningHtml(report, dataWith(data.quotes.filter(x => x.market === 'KR')))
+  assert.match(krOnly, /국내 ETF · 직전 한국 장/)
+  assert.doesNotMatch(krOnly, /미국 ETF · 간밤 미국 장/)
+  assert.doesNotMatch(krOnly, /data-asset="us-equity"/)
+  const usOnly = renderMorningHtml(report, dataWith(data.quotes.filter(x => x.market === 'US')))
+  assert.match(usOnly, /미국 ETF · 간밤 미국 장/)
+  assert.doesNotMatch(usOnly, /국내 ETF · 직전 한국 장/)
+  assert.match(usOnly, /data-asset="us-equity"/)
+  assert.doesNotMatch(usOnly, /data-asset="kr-/)
+})
+
+test('og:description: 길면 오늘 핵심은 그대로 두고 해외 신호를 구절 경계에서 줄인다(90자 이내)', () => {
+  const overseas = '간밤 미국 대형주는 금리 안정 속에 보합권에서 마감했고, 반도체만 약세를 보이며 장 후반 낙폭을 키웠습니다. 달러는 강세였습니다.'
+  const focus = '반도체 ETF 개장 30분 거래대금이 전일 같은 시간보다 늘어나는지가 오늘의 핵심입니다.'
+  const d = reportPreviewDescription('2026-10-16', { overseas, focus })
+  assert.ok(Array.from(d).length <= 90, `${Array.from(d).length}: ${d}`)
+  assert.ok(d.endsWith(` · ${focus}`), d)
+  const head = d.slice(0, d.length - ` · ${focus}`.length)
+  assert.ok(head.endsWith('…'), head)
+  assert.ok(overseas.startsWith(head.slice(0, -1)), head)
+  assert.match(head, /(마감했고|보합권에서|금리 안정 속에|대형주는)…$/) // 쉼표·공백 경계에서 자름(어절 중간이 아님)
+})

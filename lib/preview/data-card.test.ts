@@ -24,18 +24,21 @@ test('스트라이프: 거래일 수만큼 줄, 마지막 아래 ▼, 빈 입력
   assert.match(empty, /fill="#E7EAEE"/)
 })
 
-test('모자이크 타일: 레버리지·인버스 제외, 자산군 순서 후 등락순, 주제 테마 강조', () => {
+test('모자이크 타일: 레버리지·인버스 제외, 자산군 순서 후 등락순, 강조는 주어진 티커(슬롯 구성원)만', () => {
   const q = (ticker: string, name: string, market: 'KR' | 'US', p: number) => ({ ticker, name, market, changePercent: p })
   const tiles = buildMosaicTiles([
     q('122630.KS', 'KODEX 레버리지', 'KR', -16), q('252670.KS', 'KODEX 200선물인버스2X', 'KR', 15),
     q('069500.KS', 'KODEX 200', 'KR', -8.2), q('091160.KS', 'KODEX 반도체', 'KR', -11.9),
     q('SPY', 'SPDR S&P 500', 'US', 0.3), q('SOXX', 'iShares Semiconductor', 'US', -0.9), q('XXX', '결측', 'US', null as unknown as number),
-  ], '반도체')
+  ], new Set(['091160.KS', 'SPY', '122630.KS']))
   assert.deepEqual(tiles.map(t => t.ticker), ['069500.KS', '091160.KS', 'SPY', 'SOXX'])
-  assert.deepEqual(tiles.filter(t => t.featured).map(t => t.ticker), ['091160.KS', 'SOXX'])
+  // 같은 테마(SOXX 반도체)라도 집합에 없으면 강조하지 않고, 제외된 레버리지는 집합에 있어도 타일이 없다.
+  assert.deepEqual(tiles.filter(t => t.featured).map(t => t.ticker), ['091160.KS', 'SPY'])
   const svg = renderMosaicSvg(tiles, 1080, 600)
   assert.match(svg, />Korea</); assert.match(svg, />USA</)
   assert.equal((svg.match(/data-featured="1"/g) ?? []).length, 2)
+  const none = buildMosaicTiles([q('069500.KS', 'KODEX 200', 'KR', -8.2)], null)
+  assert.equal(none.filter(t => t.featured).length, 0)
 })
 
 test('fitText: 넘치면 글자를 줄이고, 최소 크기에서도 넘치면 overflow', () => {

@@ -22,7 +22,8 @@ test("inferEtfTag: 유니버스 category 우선 — '금융'·'금리'는 원자
     ["456610.KS", "TIGER 미국달러SOFR금리액티브(합성)", "채권"],
     ["132030.KS", "KODEX 골드선물(H)", "원자재"],
     ["261220.KS", "KODEX WTI원유선물(H)", "원자재"],
-    ["122630.KS", "KODEX 레버리지", "전술"],
+    ["122630.KS", "KODEX 레버리지", "레버리지"],
+    ["252670.KS", "KODEX 200선물인버스2X", "인버스"],
     ["390390.KS", "KODEX 미국반도체", "테마"],
     ["394670.KS", "TIGER 글로벌리튬&2차전지SOLACTIVE(합성)", "테마"],
     ["360750.KS", "TIGER 미국S&P500", "해외지수"],
@@ -123,12 +124,13 @@ function visibleText(html: string): string {
   return html.replace(/<(style|script)[\s\S]*?<\/\1>/gi, "").replace(/<[^>]+>/g, " ");
 }
 
-test("렌더 회귀: 펼쳐 보기 표 구분 — TIGER 200 금융은 섹터, 레버리지는 전술, 해외 기초지수는 해외지수가 아닌 유니버스 category", () => {
+test("렌더 회귀: 펼쳐 보기 표 구분 — TIGER 200 금융은 섹터, 레버리지·인버스는 그대로 표시, 해외 기초지수는 유니버스 category", () => {
   const table = detailsTable(renderMorningHtml(REPORT, data(mergedQuotes())));
   const finance = rowWith(table, "TIGER 200 금융");
   assert.match(finance, /<td class="tag">섹터<\/td>/);
   assert.doesNotMatch(finance, /원자재/);
-  assert.match(rowWith(table, "KODEX 레버리지"), /<td class="tag">전술<\/td>/);
+  assert.match(rowWith(table, "KODEX 레버리지"), /<td class="tag">레버리지<\/td>/);
+  assert.doesNotMatch(table, />전술</);
   assert.match(rowWith(table, "KODEX 미국반도체"), /<td class="tag">테마<\/td>/);
   assert.match(rowWith(table, "KODEX 200<"), /<td class="tag">지수<\/td>/);
 });
@@ -148,4 +150,10 @@ test("렌더 회귀: 시세 이름이 티커 그대로여도 표·카드는 유�
   const table = detailsTable(html);
   assert.match(rowWith(table, "069500"), /<span class="rep-name">KODEX 200<\/span>/);
   assert.match(rowWith(table, ">SPY<"), /<span class="rep-name">SPDR S&amp;P 500 ETF<\/span>/);
+});
+
+test("렌더 회귀: 시세 이름이 티커 그대로여도 레버리지·인버스 구분은 유니버스 이름으로 판정", () => {
+  const table = detailsTable(renderMorningHtml(REPORT, data([quote("252670.KS", "252670.KS"), quote("122630.KS", "122630.KS")])));
+  assert.match(rowWith(table, "252670"), /<td class="tag">인버스<\/td>/);
+  assert.match(rowWith(table, "122630"), /<td class="tag">레버리지<\/td>/);
 });

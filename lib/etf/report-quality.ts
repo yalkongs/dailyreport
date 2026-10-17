@@ -17,7 +17,7 @@
 import { findNumericClaimMismatches } from './numeric-claims'
 import type { CollectedData, MorningReport, MorningStrategyInput } from './types'
 // 2026-10-17 출력 스키마 개편: 자산군 카드 key·카드 key는 코드가 확정한 슬롯 안에서만.
-import { buildAssetClassSlots, findTacticalAlert, pickFeaturedSlot, TACTICAL_WARNING_MIN_ABS_PCT } from './asset-classes'
+import { buildAssetClassSlots, cardSlot, findTacticalAlert, pickFeaturedSlot, TACTICAL_WARNING_MIN_ABS_PCT } from './asset-classes'
 // Ruling 15: 미리보기 카드 문구는 카드 렌더러와 같은 규칙으로 발행 전에 판정한다.
 import { cardTextFits } from '../preview/data-card'
 // 정합성 검사 (2026-07-22): R2 시점 / R3 출처 인용. (R1 Characters 카드-산문 정합은 스키마 개편으로 제거)
@@ -457,10 +457,10 @@ function findStructuralViolations(report: MorningReport, data: CollectedData, op
   const headline = typeof report.cover?.headline === 'string' ? report.cover.headline : ''
   const cardLine = typeof card?.line === 'string' ? card.line : ''
   if (isFilled(headline) && isFilled(cardLine)) {
-    const cardSlot = slots.find(s => s.key === card?.key) ?? pickFeaturedSlot(slots)
-    const fit = cardTextFits('etf', { headline, line: cardLine, holdingLabel: cardSlot?.holdingLabel ?? '' })
+    const slot = cardSlot(slots, card?.key)
+    const fit = cardTextFits('etf', { headline, line: cardLine, holdingLabel: slot?.holdingLabel ?? '' })
     // 자산군 슬롯이 하나도 없는 날(데이터 문제)은 라벨이 빌 수밖에 없다 — 재생성으로 고칠 수 없으니 라벨은 보지 않는다.
-    const reasons = cardSlot ? fit.reasons : fit.reasons.filter(r => !r.startsWith('holdingLabel'))
+    const reasons = slot ? fit.reasons : fit.reasons.filter(r => !r.startsWith('holdingLabel'))
     if (reasons.length > 0) {
       const message = `미리보기 카드 문구가 카드에 들어가지 않음: ${reasons.join('; ')}`
       if (lastAttempt) console.warn(`  [card-warn] ${message} — 경고만(카드 렌더러가 '…'로 줄임)`)
