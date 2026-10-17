@@ -201,6 +201,19 @@ test('og:description: 길면 오늘 핵심은 그대로 두고 해외 신호를 
   assert.match(head, /(마감했고|보합권에서|금리 안정 속에|대형주는)…$/) // 쉼표·공백 경계에서 자름(어절 중간이 아님)
 })
 
+// M6 (Ruling 26): 모자이크 설명·자산군 카드의 고정 라벨 "어제"는 직전 한국 거래일에 맞춘다.
+test('고정 라벨: 금요일 발행은 어제, 월요일은 지난 금요일, 휴장 다음 날은 직전 거래일', () => {
+  const at = (date: string) => renderMorningHtml(report, { ...data, date })
+  for (const [date, label] of [['2026-10-16', '어제'], ['2026-10-19', '지난 금요일'], ['2026-10-12', '직전 거래일']] as const) {
+    const html = at(date)
+    assert.match(html, new RegExp(`<figcaption>${label} 분석한 ETF 등락\\(Korea·USA, 레버리지·인버스 제외\\)</figcaption>`), date)
+    assert.match(html, new RegExp(`aria-label="${label} 분석한 ETF 등락`), date)
+    assert.match(html, new RegExp(`<div class="field-label">${label} 움직임</div>`), date)
+    assert.match(html, new RegExp(`${label} 많이 움직인 자산군부터 놓았습니다`), date)
+    if (label !== '어제') assert.doesNotMatch(html.slice(html.indexOf('<body')), /어제 (분석한|움직임|많이 움직인)/, date)
+  }
+})
+
 // M2 (spec §4): og:title = 제목(Market과 같이 접두어 없이). 제목이 비면 날짜 기반 기본값.
 test('og:title·twitter:title은 제목 그대로(접두어 없음), 비면 날짜 기본값', () => {
   const html = renderMorningHtml(report, data)

@@ -116,6 +116,20 @@ test('세 줄 요약: 어제 / 오늘 볼 것 / 내 자산은(ETF Today 링크)'
   assert.match(html, /<span class="summary-label">내 자산은<\/span><a class="summary-text summary-link" href="\/etf-reports\/2026-10-16">자산군별 판단 재료는 ETF Today에서\./)
 })
 
+// M6 (Ruling 26): 고정 라벨 "어제"는 직전 한국 거래일에 맞춘다(모델 문장은 그대로).
+test('요약 라벨·본문 섹션 제목: 금요일 발행은 어제, 월요일은 지난 금요일, 휴장 다음 날은 직전 거래일', () => {
+  const at = (date: string) => renderReport(content, { ...(data as object), date } as never, [], 'normal', [], [])
+  const label = (html: string) => html.match(/<span class="summary-label">([^<]+)<\/span><span class="summary-text">국내 증시는/)?.[1]
+  const title = (html: string) => html.match(/data-section="story">\s*<h2 class="section-title">([^<]+)<\/h2>/)?.[1]
+  assert.equal(label(at('2026-10-16')), '어제')
+  assert.equal(title(at('2026-10-16')), '어제 무슨 일이 있었나')
+  assert.equal(label(at('2026-10-19')), '지난 금요일')
+  assert.equal(title(at('2026-10-19')), '지난 금요일 무슨 일이 있었나')
+  assert.equal(label(at('2026-10-12')), '직전 거래일') // 10-09(금) 한글날 휴장
+  assert.equal(title(at('2026-10-12')), '직전 거래일 무슨 일이 있었나')
+  assert.ok(at('2026-10-19').includes('국내 증시는 수급 부담에 크게 밀렸습니다.')) // 모델 문장은 그대로
+})
+
 test('og·twitter 설명은 세 줄 요약(어제+오늘) 한 문장, 요약이 없는 옛 콘텐츠는 부제와 요약 상자 생략', () => {
   const html = render()
   const sentence = '국내 증시는 수급 부담에 크게 밀렸습니다. 개장 30분 거래대금이 첫 확인점입니다.'

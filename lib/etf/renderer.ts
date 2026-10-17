@@ -27,6 +27,7 @@ import { buildAssetClassSlots, cardSlot, type AssetClassSlot, type AssetRep } fr
 import { buildMosaicTiles, renderEtfCardSvg, renderMosaicSvg, saveCardPng, type MosaicTile } from '../preview/data-card'
 import { LEGAL_DISCLAIMER_ITEMS, LEGAL_DISCLAIMER_TITLE } from '../legal-disclaimer'
 import { koreanWeekday } from '../market-calendar'
+import { previousSessionLabel } from '../session-label'
 
 export function escapeHtml(s: string): string {
   return s
@@ -420,7 +421,10 @@ function filled(text: unknown): text is string {
 // 같은 좌표계를 viewBox로 두고 화면 폭에 맞춰 줄인다.
 const MOSAIC_VIEW_W = 1080
 const MOSAIC_VIEW_H = 600
-const MOSAIC_CAPTION = '어제 분석한 ETF 등락(Korea·USA, 레버리지·인버스 제외)'
+// M6: "어제"는 직전 한국 거래일 라벨로(월요일 '지난 금요일', 휴장 다음 날 '직전 거래일').
+function mosaicCaption(date: string): string {
+  return `${previousSessionLabel(date)} 분석한 ETF 등락(Korea·USA, 레버리지·인버스 제외)`
+}
 
 // Market 머리글과 같은 날짜 표기: "2026년 10월 16일 금요일"
 function mastheadDate(date: string): string {
@@ -445,8 +449,8 @@ function renderMasthead(report: MorningReport, data: CollectedData, slots: Asset
     <div class="issue-date">${e(mastheadDate(data.date))}</div>
   </div>
   <figure class="mosaic">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${MOSAIC_VIEW_W} ${MOSAIC_VIEW_H}" role="img" aria-label="${e(MOSAIC_CAPTION)}">${renderMosaicSvg(tiles, MOSAIC_VIEW_W, MOSAIC_VIEW_H)}</svg>
-    <figcaption>${e(MOSAIC_CAPTION)}</figcaption>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${MOSAIC_VIEW_W} ${MOSAIC_VIEW_H}" role="img" aria-label="${e(mosaicCaption(data.date))}">${renderMosaicSvg(tiles, MOSAIC_VIEW_W, MOSAIC_VIEW_H)}</svg>
+    <figcaption>${e(mosaicCaption(data.date))}</figcaption>
   </figure>
   <h1>${renderReportText(report.cover?.headline ?? '', data.quotes)}</h1>
   ${filled(subline) ? `<p class="subline">${renderReportText(subline, data.quotes)}</p>` : ''}
@@ -481,18 +485,19 @@ function renderAssetField(label: string, text: unknown, quotes: EtfQuote[]): str
   return `<div class="asset-field"><div class="field-label">${e(label)}</div><p>${renderReportText(text, quotes)}</p></div>`
 }
 
-function renderAssetCards(report: MorningReport, quotes: EtfQuote[], slots: AssetClassSlot[]): string {
+function renderAssetCards(report: MorningReport, quotes: EtfQuote[], slots: AssetClassSlot[], date: string): string {
   if (slots.length === 0) return ''
   const cards = Array.isArray(report.assetCards) ? report.assetCards : []
+  const session = previousSessionLabel(date) // M6: 어제·지난 금요일·직전 거래일
   return `<section class="section" data-section="asset-cards">
   <div class="section-title">자산군별 판단 재료</div>
-  <p class="section-note">어제 많이 움직인 자산군부터 놓았습니다. 대표 ETF는 흐름을 보여 주는 예시이며 추천 종목이 아닙니다.</p>
+  <p class="section-note">${e(session)} 많이 움직인 자산군부터 놓았습니다. 대표 ETF는 흐름을 보여 주는 예시이며 추천 종목이 아닙니다.</p>
   <div class="asset-grid">
   ${slots.map(slot => {
     const card = cards.find(c => typeof c === 'object' && c !== null && c.key === slot.key)
     return `<article class="asset-card" data-asset="${e(slot.key)}">
     <div class="asset-label">${e(slot.label)}</div>
-    <div class="field-label">어제 움직임</div>
+    <div class="field-label">${e(session)} 움직임</div>
     <ul class="rep-list">${slot.reps.map(renderRepRow).join('')}</ul>
     ${renderAssetField('이유', card?.reason, quotes)}${renderAssetField('갖고 있다면', card?.ifHolding, quotes)}${renderAssetField('새로 본다면', card?.ifConsidering, quotes)}
   </article>`
@@ -657,7 +662,7 @@ ${renderMasthead(report, data, slots)}
 
 ${renderSummary(report, data.quotes)}
 
-${renderAssetCards(report, data.quotes, slots)}
+${renderAssetCards(report, data.quotes, slots, data.date)}
 
 ${renderTodayChecks(report, data.quotes)}
 
