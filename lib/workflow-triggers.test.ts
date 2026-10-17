@@ -77,6 +77,17 @@ test("dry_run일 때만 test_date를 TEST_DATE·ETF_REPORT_DATE로 전달", () =
   assert.match(stepBlock(jobBlock(wf, "etf"), "Run ETF pipeline"), /REPORT_DATE=\$\{ETF_REPORT_DATE:-\$\(TZ=Asia\/Seoul date \+%Y-%m-%d\)\}/);
 });
 
+// test_date는 사람이 dispatch 화면에 입력하는 자유 문자열 — 형식을 확인하기 전에는 node -e 소스·$GITHUB_OUTPUT에
+// 보간하지 않는다(ETF는 run-etf.ts가 ETF_REPORT_DATE 형식을 먼저 검사한다). 실제 거부 동작은 workflow-shell 테스트.
+test("market test_date는 YYYY-MM-DD만 받는다 — 생성·node -e·GITHUB_OUTPUT보다 먼저 검사", () => {
+  const s = stepBlock(jobBlock(readWorkflow(), "market"), "Generate market report");
+  const guard = s.indexOf('[[ "$TEST_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]');
+  assert.ok(guard >= 0, "test_date 형식 검사 없음");
+  for (const later of ["npx tsx scripts/run.ts", 'node -e "', ">> $GITHUB_OUTPUT"]) {
+    assert.ok(s.indexOf(later) >= 0 && guard < s.indexOf(later), later);
+  }
+});
+
 test("dry_run일 때만 생성 HTML·PNG를 아티팩트로 업로드", () => {
   const wf = readWorkflow();
   for (const job of ["market", "etf"]) {

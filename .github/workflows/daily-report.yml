@@ -138,6 +138,8 @@ jobs:
           # dry_run 전용 날짜 지정 — 휴장 판정·리포트 날짜가 이 날짜로 돈다(주말 dry-run). 운영 실행은 항상 빈 값.
           TEST_DATE: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && inputs.test_date || '' }}
         run: |
+          # test_date는 자유 입력 — 형식 확인 전에는 아래 node -e 소스·$GITHUB_OUTPUT에 보간하지 않는다(ETF는 run-etf.ts가 검사).
+          if [ -n "$TEST_DATE" ] && ! [[ "$TEST_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then echo "::error::test_date는 YYYY-MM-DD 형식이어야 합니다 — 리포트를 생성하지 않았습니다"; exit 1; fi
           npx tsx scripts/run.ts
           REPORT_DATE=${TEST_DATE:-$(TZ=Asia/Seoul date +%Y-%m-%d)}
           echo "date=${REPORT_DATE}" >> $GITHUB_OUTPUT
@@ -354,6 +356,7 @@ jobs:
           # 두 생성 job의 push 이후 최신 main — 두 리포트(커밋·인덱스)를 모두 포함한다.
           # dry_run만 실행한 ref(발송 없음) — market job의 같은 step 주석 참조.
           ref: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && github.sha || 'main' }}
+          # 전체 이력 — resolve가 이 HEAD(배포 대기가 기다리는 커밋)의 조상에서 그날 리포트 커밋을 git log로 찾는다.
           fetch-depth: 0
 
       - name: Setup Node.js

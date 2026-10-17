@@ -690,3 +690,51 @@ for (const job of ["market", "etf"] as const) {
     });
   }
 }
+
+// ── market test_date 형식 검사: node -e 소스·$GITHUB_OUTPUT에 보간되기 전에 거부한다 ─────────────────
+// test_date는 dispatch 화면의 자유 문자열이다. 따옴표·줄바꿈이 섞이면 헤드라인 추출 node -e 소스가 바뀌거나
+// GITHUB_OUTPUT에 임의의 출력 줄이 생긴다. 형식이 틀리면 생성 전에 step을 실패시킨다.
+{
+  const script = stepRun(jobBlock(dailyYml, "market"), "Generate market report");
+  const genStubs = { npx: "exit 0", node: 'echo "헤드라인"' };
+  const outputFile = () => {
+    const f = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "gen-out-")), "output");
+    fs.writeFileSync(f, "");
+    return f;
+  };
+
+  for (const flags of SHELL_MODES) {
+    const mode = flags.join(" ");
+
+    for (const [why, bad] of [
+      ["따옴표로 node -e 소스 탈출", "2026-10-16');require('child_process').execSync('id');('"],
+      ["줄바꿈으로 GITHUB_OUTPUT 줄 추가", "2026-10-16\nheadline=x"],
+      ["구분자 없음", "20261016"],
+      ["뒤 공백", "2026-10-16 "],
+    ] as const) {
+      test(`market 생성 [bash ${mode}]: test_date 형식 오류(${why})면 생성 전에 exit 1`, () => {
+        const out = outputFile();
+        const r = runStep(script, genStubs, { TEST_DATE: bad, GITHUB_OUTPUT: out }, flags);
+        assert.equal(r.status, 1, r.out);
+        assert.match(r.out, /::error::test_date/);
+        assert.deepEqual(r.calls("npx"), []);
+        assert.deepEqual(r.calls("node"), []);
+        assert.equal(fs.readFileSync(out, "utf8"), "");
+      });
+    }
+
+    test(`market 생성 [bash ${mode}]: 올바른 test_date는 그 날짜로, 비어 있으면 오늘(KST)로 진행`, () => {
+      const out = outputFile();
+      const r = runStep(script, genStubs, { TEST_DATE: "2026-10-16", GITHUB_OUTPUT: out }, flags);
+      assert.equal(r.status, 0, r.out);
+      assert.deepEqual(r.calls("npx"), ["tsx scripts/run.ts"]);
+      assert.match(fs.readFileSync(out, "utf8"), /^date=2026-10-16$/m);
+
+      const out2 = outputFile();
+      const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+      const r2 = runStep(script, genStubs, { TEST_DATE: "", GITHUB_OUTPUT: out2 }, flags);
+      assert.equal(r2.status, 0, r2.out);
+      assert.match(fs.readFileSync(out2, "utf8"), new RegExp(`^date=${today}$`, "m"));
+    });
+  }
+}
