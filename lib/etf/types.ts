@@ -1,3 +1,5 @@
+import type { AssetClassKey } from './asset-classes'
+
 export type Market = 'KR' | 'US'
 // Evening edition was retired during the dailyreport merge. The alias is
 // preserved to avoid rippling through every call site; `morning` is the
@@ -201,51 +203,22 @@ export interface MorningStrategyInput {
   }
 }
 
-// Claude 출력 — Morning
+// Claude 출력 — Morning (2026-10-17 아침 리포트 개편)
+// 숫자(대표 ETF 예시·등락률)는 렌더러가 자산군 슬롯(asset-classes.ts)에서 직접 그리고, 모델은 문장만 쓴다.
+// 산문 필드 전부가 수치 대조·주간·환율 방향 검증(report-quality.ts)을 거친다.
 export interface MorningReport {
   cover: { headline: string; subline: string }
-  overnightBrief: { narrative: string; krImpact: string }
-  usEtfHighlights: {
-    topMover: { ticker: string; reason: string }
-    bottomMover: { ticker: string; reason: string }
-    sectorNarrative: string
-  }
-  todayWatch: { items: { title: string; body: string }[] }
-  closingLine: string
-  // Tier 2 — 본문 내러티브를 Claude가 생성하는 선택적 필드.
-  // 모든 필드 optional: Claude가 누락/형식 오류일 경우 renderer 가 기존
-  // Tier 1 하드코딩 문구로 자동 fallback. 최악 시나리오도 Tier 1 수준 유지.
-  narrativeNotes?: {
-    // Plan B (2026-04-28): bigPicture — 4~6문장의 자유 서술 단락.
-    // 분석 렌즈·서사 앵글을 결합해 오늘의 큰 그림을 한 호흡으로 풀어낸다.
-    // 슬롯 단편들의 병치를 보완하는, 이 리포트의 narrative spine.
-    bigPicture?: string
-    // Story Spine — 오늘의 서사 3막 (Plan B 에서 각 act 길이 확장)
-    storySpine?: {
-      act1?: string  // 오늘의 주인공 ETF와 왜 주목받는가 (3~5문장)
-      act2?: string  // 주인공이 마주한 제약·변수 (3~5문장)
-      act3?: string  // 독자가 장 초반 무엇을 볼지 (3~5문장)
-    }
-    // Characters — 4개 ETF 페르소나, 왜 오늘 등장하는가
-    characters?: {
-      primary?: string
-      gate?: string
-      alternative?: string
-      warning?: string
-    }
-    // Checklist — 오늘 특별히 지킬/피할 것
-    checklist?: {
-      actions?: string[]
-      avoids?: string[]
-    }
-    // ETF군별 전략 지도 — 7개 그룹 prose (morning-strategy.ts는 데이터만 제공)
-    strategyProse?: Array<{
-      group: string
-      rationale?: string
-      actionGuide?: string
-      avoid?: string
-    }>
-  }
+  // 세 줄 요약: 해외 신호 / 국내 상태 / 오늘 핵심 (각 60자 이내)
+  summary: { overseas: string; domestic: string; focus: string }
+  // 자산군별 판단 재료. key는 buildAssetClassSlots가 정한 슬롯만. reason은 입력 근거가 있을 때만.
+  // ifHolding·ifConsidering은 조건·관찰형(매수·매도 권유 금지).
+  assetCards: Array<{ key: AssetClassKey; reason?: string; ifHolding: string; ifConsidering: string }>
+  // 오늘 확인할 것 — 정확히 3개. time은 한국시간, baseline은 비교 기준, invalidation은 어긋나면 버릴 가설.
+  todayChecks: Array<{ time: string; what: string; baseline: string; invalidation: string }>
+  // 링크 미리보기 카드: key 자산군의 holdingLabel("○○를 갖고 있다면") 아래 한 줄(32자 이내 평서문).
+  card: { key: AssetClassKey; line: string }
+  // 레버리지·인버스 |등락| 10% 이상인 날에만.
+  tacticalWarning?: string
 }
 
 export type ReportContent = MorningReport

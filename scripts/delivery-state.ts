@@ -1,18 +1,18 @@
 // scripts/delivery-state.ts
 // 발송 상태(commit status) 읽기·쓰기 CLI. 판정 로직은 lib/delivery-state.ts (순수 함수, 테스트됨).
-// 워크플로 .github/workflows/daily-report.yml 의 "Resolve delivery"·발송 step이 호출한다.
+// 워크플로 .github/workflows/daily-report.yml 의 deliver job("resolve <kind>"·"send <kind>" step)이 호출한다.
 import * as fs from "node:fs";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import {
   type ReportKind,
   type TelegramStatus,
   statusContext,
   kstDayStartIso,
   findReportCommit,
+  reportCommitPrefix,
   pickTelegramStatus,
   decideDelivery,
   classifyTelegramResponse,
-  formatAnomalyBreakdown,
 } from "../lib/delivery-state";
 
 const API = process.env.GITHUB_API_URL ?? "https://api.github.com";
@@ -60,7 +60,7 @@ export async function readTelegramStatus(k: ReportKind, sha: string): Promise<Te
   return pickTelegramStatus(combined.statuses ?? [], k);
 }
 
-/** main에서 그 날짜(KST)의 리포트 커밋을 찾는다. 없으면 null, 조회 실패는 throw. */
+/** main에서 그 날짜(KST)의 리포트 커밋을 찾는다(GitHub API). 없으면 null, 조회 실패는 throw. check-delivery가 쓴다. */
 export async function findReportSha(k: ReportKind, date: string): Promise<string | null> {
   const commits = await gh<{ sha: string; commit: { message: string } }[]>(
     `/commits?sha=main&since=${encodeURIComponent(kstDayStartIso(date))}&per_page=100`,
@@ -68,21 +68,42 @@ export async function findReportSha(k: ReportKind, date: string): Promise<string
   return findReportCommit(commits.map((c) => ({ sha: c.sha, message: c.commit.message })), k, date);
 }
 
-function readIndexEntry(k: ReportKind, date: string): { headline: string; anomalyCount: number; breakdown: string } {
+/** git 실행기. 저장소 위치는 DELIVERY_GIT_DIR(테스트가 임시 저장소를 넘긴다 — GITHUB_API_URL과 같은 방식), 기본은 현재 디렉터리. */
+export type GitRunner = (args: string[]) => string;
+const runGit: GitRunner = (args) =>
+  execFileSync("git", args, {
+    cwd: process.env.DELIVERY_GIT_DIR || process.cwd(),
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    maxBuffer: 16 * 1024 * 1024,
+  });
+
+/**
+ * 체크아웃의 git 이력에서 그 날짜(KST)의 리포트 커밋을 찾는다 — HEAD의 조상 중 가장 최신(HEAD에 가까운) 것.
+ * deliver job은 fetch-depth 0으로 체크아웃하고, 배포 대기도 이 HEAD를 기다린다 — 그래서 찾은 커밋은 기다린 배포에
+ * 반드시 들어 있다. API 호출이 없어 결정적이다. 없으면 null, git 실패는 throw(호출부가 결과 불명으로 처리).
+ * --since(그날 00:00 KST, 커밋 시각 기준)는 이력 탐색 범위만 줄인다 — 날짜는 커밋 메시지 접두어로 정확히 맞춘다.
+ */
+export function findReportShaInHistory(k: ReportKind, date: string, git: GitRunner = runGit): string | null {
+  const out = git(["log", "HEAD", `--since=${kstDayStartIso(date)}`, "--format=%H%x09%s"]);
+  const commits = out
+    .split("\n")
+    .filter((l) => l.includes("\t"))
+    .map((l) => ({ sha: l.slice(0, l.indexOf("\t")), message: l.slice(l.indexOf("\t") + 1) }));
+  return findReportCommit(commits, k, date);
+}
+
+function readIndexEntry(k: ReportKind, date: string): { headline: string } {
   const file = k === "market" ? "data/reports-index.json" : "data/etf-reports-index.json";
   const fallback = k === "market" ? "오늘의 시장 리포트" : "오늘의 ETF 리포트";
   try {
     const idx = JSON.parse(fs.readFileSync(file, "utf-8")) as {
-      reports: { date: string; headline?: string; anomalyCount?: number; anomalyBreakdown?: Record<string, number> }[];
+      reports: { date: string; headline?: string }[];
     };
     const r = idx.reports.find((x) => x.date === date);
-    return {
-      headline: r?.headline || fallback,
-      anomalyCount: r?.anomalyCount || 0,
-      breakdown: formatAnomalyBreakdown(r?.anomalyBreakdown),
-    };
+    return { headline: r?.headline || fallback };
   } catch {
-    return { headline: fallback, anomalyCount: 0, breakdown: "" };
+    return { headline: fallback };
   }
 }
 
@@ -91,30 +112,42 @@ async function resolve(k: ReportKind): Promise<void> {
   const changed = isTrue(process.env.CHANGED);
   const forceResend = isTrue(process.env.FORCE_RESEND);
   const dryRun = isTrue(process.env.DRY_RUN);
+  // 재실행(re-run) 여부. GITHUB_RUN_ATTEMPT는 러너가 모든 step에 넣는 기본 환경변수(첫 시도 1)라 workflow에서 따로
+  // 넘기지 않는다(GITHUB_* 기본값은 env로 덮어쓸 수도 없다). 읽을 수 없는 값은 재실행으로 본다(보수적).
+  const attempt = Number.parseInt(process.env.GITHUB_RUN_ATTEMPT ?? "1", 10);
+  const rerun = !(attempt <= 1);
 
   let reportSha: string | null = null;
   let telegramStatus: TelegramStatus = null;
   let lookupError: string | null = null;
   try {
-    if (changed && !dryRun) {
-      // 이 실행이 방금 push한 리포트 커밋. rebase 뒤의 최종 SHA.
-      reportSha = execSync("git rev-parse HEAD").toString().trim();
-    } else if (!dryRun) {
-      reportSha = await findReportSha(k, date);
+    if (!dryRun) {
+      // 발송은 deliver job이 한다(2026-10-19). 리포트 커밋은 이 job 체크아웃(fetch-depth 0)의 git 이력에서 찾는다 —
+      // 배포 대기가 기다리는 HEAD의 조상 중 그날 그 종류의 최신 커밋. 방금 생성(CHANGED=true)이어도 같다.
+      reportSha = findReportShaInHistory(k, date);
     }
     if (reportSha) telegramStatus = await readTelegramStatus(k, reportSha);
   } catch (e) {
     lookupError = (e as Error).message;
   }
+  if (changed && !dryRun && reportSha === null && lookupError === null) {
+    // 생성 job은 changed=true(커밋함)라고 했는데 HEAD 이력에 그 커밋이 없다 — push 미반영이거나 체크아웃이 어긋났다.
+    // '오늘 리포트 없음'으로 조용히 넘기지 않고 결과 불명(아래 unknown → exit 1)으로 드러낸다.
+    lookupError = `생성 job이 커밋했다고 보고한 리포트(${reportCommitPrefix(k, date)})를 HEAD 이력에서 찾지 못함 — push 미반영 또는 체크아웃 불일치`;
+  }
 
-  const justGenerated = changed && !dryRun && reportSha !== null;
+  // 방금 생성한 정상 경로 — 아직 발송됐을 수 없으므로 status 없이 보낸다. 단 status가 이미 있으면(deliver job만
+  // 다시 실행해 생성 job의 changed=true가 재사용된 경우 등) 일반 판정을 따라 중복 발송을 막는다.
+  // 재실행(attempt > 1)에서는 이 지름길을 아예 쓰지 않는다 — 첫 시도가 이미 보냈을 수 있으므로, status를 못 읽으면
+  // (lookupError) 아래에서 결과 불명으로 막고, status가 없으면 일반 경로(재확인·cache-bust)로 보낸다.
+  const justGenerated = changed && !dryRun && !rerun && reportSha !== null && telegramStatus === null;
   // 조회에 실패하면 보내지 않는 쪽으로 (중복 발송 방지 우선). 단 방금 생성한 정상 경로는 status가 있을 수 없으므로 진행.
   let decision = decideDelivery({ date, reportSha, telegramStatus, justGenerated, forceResend, dryRun });
   if (lookupError && !justGenerated) {
     decision = { action: "unknown", reason: `상태 조회 실패 — 보내지 않음: ${lookupError}` };
   }
 
-  console.log(`Resolve delivery: kind=${k} date=${date} sha=${reportSha ?? "-"} status=${telegramStatus ?? "none"} action=${decision.action} — ${decision.reason}`);
+  console.log(`Resolve delivery: kind=${k} date=${date} attempt=${process.env.GITHUB_RUN_ATTEMPT ?? "-"} sha=${reportSha ?? "-"} status=${telegramStatus ?? "none"} action=${decision.action} — ${decision.reason}`);
   if (decision.action === "unknown") {
     const msg = `${k} 리포트(${date}) 발송 결과 불명 — 자동 재발송하지 않았습니다. ${decision.reason}. 구독자 채널을 확인한 뒤 필요하면 workflow_dispatch(resend_telegram_only=true, only=${k})로 수동 재발송하십시오.`;
     console.log(`::error title=Telegram 발송 결과 불명::${msg}`);
@@ -128,9 +161,8 @@ async function resolve(k: ReportKind): Promise<void> {
     sha: reportSha ?? "",
     date,
     headline: entry.headline,
-    // 방금 생성한 정상 경로가 아니면 재발송 — Telegram 이미지 캐시를 피하려고 cache-bust 한다.
-    resend: changed ? "false" : "true",
-    ...(k === "etf" ? { anomaly_count: String(entry.anomalyCount), anomaly_breakdown: entry.breakdown } : {}),
+    // 방금 생성한 정상 경로가 아니면 재발송 — Telegram 이미지 캐시를 피하려고 cache-bust 하고, 발송 직전 status를 재확인한다.
+    resend: justGenerated ? "false" : "true",
   });
 
   // 결과 불명은 자동 재발송하지 않지만(중복 방지), 녹색으로 끝나면 아무도 모른다(감사 F06).

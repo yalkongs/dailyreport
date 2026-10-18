@@ -130,26 +130,24 @@ export function analyzeMarketMode(data: MarketDataCollection): MarketModeAnalysi
  * Claude 가 모드에 맞게 분량·섹션 비중을 조정하도록.
  */
 export function describeModeForPrompt(mode: MarketMode): string {
+  // 2026-10 개편: 모드는 bigStory("어제 무슨 일이 있었나") 분량 조절에만 쓴다.
+  // 세 줄 요약·카드 한 줄·watchPoints(최대 3)·soWhat(2~3)의 개수와 형식은 모드와 무관하게 고정.
   switch (mode) {
     case "event":
       return `오늘은 **이벤트 모드** 입니다. 시장에 의미 있는 변동이 발생했습니다.
-- bigStory.content 는 평소(12블록)보다 더 깊게 **15~20블록** 으로 한 주제를 충실히 풀어내십시오.
-- pullQuote 는 3~4개로 늘리고, 핵심 인사이트를 강조하세요.
-- soWhat 은 5~6개를 유지하되, 이벤트의 파급 효과 중심으로 씁니다.
-- watchPoints 는 2~3개로 압축하고 (양 줄이기), compass 도 핵심 1~2개만 남기십시오.
+- bigStory.content 는 paragraph 블록 4~6개 범위의 **상한(6개)** 까지 써서 한 주제를 충실히 풀어내십시오. 분량을 넘기지 말고 사건·근거 있는 원인·시장 반응의 밀도를 높이십시오.
+- pullQuote 는 쓴다면 1개까지입니다.
 - 헤드라인은 사건의 무게가 즉시 전달되도록 씁니다. 구체 수치를 살리되, [제목 작성 규칙]에 따라 신선한 은유·관점과 병행할 수 있습니다 (수치만 나열한 제목은 지양).`;
     case "quiet":
       return `오늘은 **잠잠한 모드** 입니다. 시장 변동이 매우 작아 일상적 해설 거리가 적습니다.
-- bigStory.content 는 **6~8 블록**으로 짧게 씁니다. 무리해서 채우지 마십시오.
-- pullQuote 는 1개, dataCard 는 1~2개로 압축.
-- watchPoints 는 정확히 3개, compass 는 1~2개로 줄여 핵심만.
-- soWhat 은 3~4개로 줄이되, **"다음 이벤트 미리보기"** 성격을 추가하십시오.
+- bigStory.content 는 paragraph 블록 **3~4개**로 짧게 씁니다. 무리해서 채우지 마십시오.
+- pullQuote 는 쓰지 않아도 됩니다.
+- watchPoints·soWhat 은 **"다음 이벤트 미리보기"** 성격을 살리십시오.
   (예: "이번 주 남은 일정에서 무엇이 변수가 될지", "다가오는 발표·지표가 의미하는 것")
 - 헤드라인은 차분한 톤. "조용한 N일, 다음 변수는 X" 같은 형태를 시도해 보십시오.`;
     case "normal":
     default:
-      return `오늘은 **표준 모드** 입니다. 일상적 시장 흐름이며 평소 분량과 구성을 유지합니다.
-- bigStory.content 는 평소대로 **12블록 이상**, pullQuote 2~3, dataCard 2~3.
-- watchPoints 3~4개, compass 3개, soWhat 5~6개 — 기존 비율 유지.`;
+      return `오늘은 **표준 모드** 입니다. 일상적 시장 흐름이며 기본 분량을 유지합니다.
+- bigStory.content 는 paragraph 블록 **4~6개**, pullQuote 는 쓴다면 1개까지.`;
   }
 }

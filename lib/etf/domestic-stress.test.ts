@@ -36,13 +36,15 @@ test('국내 급락이 아니면 기존 판단 유지', () => {
   assert.equal(s.executiveSummary.tacticalStance, '공격')
 })
 
-test('렌더: 확신도 대신 규칙 점수로 표기', () => {
-  const report = {
-    cover: { headline: 'h', subline: 's' }, overnightBrief: { narrative: 'n', krImpact: 'k' },
-    usEtfHighlights: { topMover: { ticker: 'SPY', reason: 'r' }, bottomMover: { ticker: 'SPY', reason: 'r' }, sectorNarrative: 's' },
-    todayWatch: { items: [] }, closingLine: 'c',
-  } as MorningReport
+// 2026-10-17 개편(spec 3.2): 국내 급락일 판단(C06)은 화면에서 빼고 문장 생성 기준으로만 쓴다 —
+// 규칙 점수·확신도·Decision Frame(공격/방어 결론 패널)은 페이지에 나오지 않는다.
+test('렌더: 규칙 점수·확신도·시장 태도 결론은 화면에 표시하지 않는다', () => {
+  const report: MorningReport = {
+    cover: { headline: 'h', subline: 's' }, summary: { overseas: 'o', domestic: 'd', focus: 'f' },
+    assetCards: [], todayChecks: [], card: { key: 'kr-large', line: 'c' },
+  }
   const html = renderMorningHtml(report, data(-8.21))
   assert.doesNotMatch(html, /확신도/)
-  assert.match(html, /규칙 점수/)
+  assert.doesNotMatch(html, /규칙 점수/)
+  assert.doesNotMatch(html, /Decision Frame|시장 태도/)
 })

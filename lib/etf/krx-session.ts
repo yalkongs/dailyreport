@@ -3,6 +3,7 @@
 // KRX는 전일 데이터를 익영업일 아침에 게시하므로, 그 전에 조회하면 이틀 전 세션이 온다.
 // 그 값을 "전일"로 병합하면 리포트가 하루 어긋난다(2026-09-19 운영 점검).
 import { getPrevTradingDay } from "../market-calendar";
+import type { EtfQuote } from "./types";
 
 export type KrxSession = "prev-session" | "stale" | "none";
 
@@ -18,6 +19,17 @@ export function expectedKrxBasDd(reportDate: string): string {
 export function resolveKrxSession(rowBasDd: string | null, reportDate: string): KrxSession {
   if (!rowBasDd) return "none";
   return rowBasDd === expectedKrxBasDd(reportDate) ? "prev-session" : "stale";
+}
+
+/**
+ * 'krx-nav' 수집 실패 판정(Ruling 22). KRX OpenAPI는 08:00 KST에 전일 데이터를 게시하므로 06:40 실행은
+ * 세션이 none·stale이고 KRX 값(NAV·괴리율·순자산·거래대금)을 병합하지 않는 것이 정상이다 — 실패가 아니다.
+ * 직전 거래일 세션(prev-session)을 받아 병합했는데도 국내 NAV가 전부 비어 있을 때만 실패로 본다.
+ */
+export function krxNavFailed(session: KrxSession, quotes: ReadonlyArray<Pick<EtfQuote, "market" | "nav">>): boolean {
+  if (session !== "prev-session") return false;
+  const kr = quotes.filter((q) => q.market === "KR");
+  return kr.length > 0 && kr.every((q) => q.nav === null || q.nav === undefined);
 }
 
 

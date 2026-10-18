@@ -5,26 +5,24 @@ name: Delivery Monitor
 # 한국 휴장일은 통과(파이프라인 silent skip과 같은 기준). 판정은 scripts/check-delivery.ts.
 # 읽기 전용 — 발송·재발송·status 기록을 하지 않는다(중복 발송 방지 정책은 daily-report.yml 쪽 그대로).
 #
-# 트리거:
-#   - 정시 감시: 맥미니 launchd(ops/macmini/monitor.sh)가 07:45(market)·09:00(etf) KST에 dispatch.
+# 트리거(2026-10-19 개편 — 두 리포트가 08:00 전에 함께 발송되므로 감시도 하나로 합쳤다):
+#   - 정시 감시: 맥미니 launchd(ops/macmini/monitor.sh)가 07:45 KST에 kind=all로 dispatch.
 #   - schedule: 늦은 백업. GitHub schedule은 만성 지연(관측상 수 시간)이라 정시 보장이 아니다 —
-#     맥미니가 죽은 날에도 그날 안에는 경보가 나게 하는 용도.
+#     맥미니가 죽은 날에도 그날 안에는 경보가 나게 하는 용도. 두 리포트(all)를 본다.
 
 on:
   schedule:
-    # KST 07:45 월~금 = UTC 22:45 일~목 → market
-    # KST 09:00 월~금 = UTC 00:00 월~금 → etf
-    # ⚠️ 아래 KIND 식이 cron 문자열로 종류를 고른다 — 바꾸면 두 곳을 함께 바꿀 것.
+    # KST 07:45 월~금 = UTC 22:45 일~목 → all(market·etf)
+    # ⚠️ 자정(24:00 UTC)을 넘기면 UTC 요일이 하루 밀려 0-4(=KST 월~금) 매핑이 깨진다.
     - cron: '45 22 * * 0-4'
-    - cron: '0 0 * * 1-5'
   workflow_dispatch:
     inputs:
       kind:
-        description: '감시 대상 (market | etf)'
+        description: '감시 대상 (all = 마켓·ETF 둘 다 | market | etf)'
         required: true
         type: choice
-        options: [market, etf]
-        default: market
+        options: [all, market, etf]
+        default: all
 
 env:
   TZ: Asia/Seoul
@@ -35,7 +33,8 @@ permissions:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    # 러너 이미지 고정 — 기본 이미지가 Ubuntu 26으로 바뀌는 시점(2026-10-19~)과 개편이 겹치지 않게(spec §9).
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout repository
@@ -53,5 +52,5 @@ jobs:
       - name: Check delivery (영업일인데 발송 success가 아니면 실패)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          KIND: ${{ github.event_name == 'schedule' && (github.event.schedule == '45 22 * * 0-4' && 'market' || 'etf') || inputs.kind }}
+          KIND: ${{ github.event_name == 'schedule' && 'all' || inputs.kind }}
         run: npx tsx scripts/check-delivery.ts "$KIND"

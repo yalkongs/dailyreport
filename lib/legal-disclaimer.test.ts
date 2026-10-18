@@ -8,6 +8,8 @@ import type { CollectedData, EtfQuote, MorningReport } from "./etf/types";
 
 const MARKET_CONTENT: ReportContent = {
   cover: { headline: "테스트 제목", subline: "테스트 서브라인" },
+  summary: { yesterday: "어제 요약", today: "오늘 요약", myAssets: "내 자산 요약" },
+  cardLine: { kind: "watch", text: "카드 한 줄" },
   bigStory: { content: [{ type: "paragraph", text: "본문" }] },
   watchPoints: [],
   compass: [],
@@ -22,13 +24,13 @@ const MARKET_DATA: MarketDataCollection = {
   forex: [], commodities: [], bonds: [], crypto: [], collectionErrors: [],
 };
 
-const ETF_REPORT = {
+const ETF_REPORT: MorningReport = {
   cover: { headline: "테스트 제목", subline: "테스트 서브라인" },
-  overnightBrief: { narrative: "간밤 요약", krImpact: "국내 영향" },
-  usEtfHighlights: { topMover: { ticker: "SPY", reason: "r" }, bottomMover: { ticker: "SPY", reason: "r" }, sectorNarrative: "섹터" },
-  todayWatch: { items: [] },
-  closingLine: "마무리",
-} as MorningReport;
+  summary: { overseas: "해외 신호", domestic: "국내 상태", focus: "오늘 핵심" },
+  assetCards: [],
+  todayChecks: [],
+  card: { key: "kr-large", line: "마무리" },
+};
 
 const ETF_DATA: CollectedData = {
   reportType: "morning", date: "2026-10-15",

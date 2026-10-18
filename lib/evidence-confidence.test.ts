@@ -14,6 +14,7 @@ function ctx(news: NewsHeadline[], failedSources: string[] = []): ContextData {
     policyRates: { fed: null, bok: null },
     historicalComparison: [],
     contextErrors: failedSources.map((source) => ({ source, status: "error", message: "x" })),
+    kospiSessions: [],
   };
 }
 

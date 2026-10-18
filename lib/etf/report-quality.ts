@@ -16,8 +16,11 @@
 
 import { findNumericClaimMismatches } from './numeric-claims'
 import type { CollectedData, MorningReport, MorningStrategyInput } from './types'
-// 정합성 검사 (2026-07-22): R1 카드-산문 / R2 시점 / R3 출처 인용.
-import { checkCharacterProseConsistency } from './story-characters'
+// 2026-10-17 출력 스키마 개편: 자산군 카드 key·카드 key는 코드가 확정한 슬롯 안에서만.
+import { buildAssetClassSlots, cardSlot, findTacticalAlert, pickFeaturedSlot, TACTICAL_WARNING_MIN_ABS_PCT } from './asset-classes'
+// Ruling 15: 미리보기 카드 문구는 카드 렌더러와 같은 규칙으로 발행 전에 판정한다.
+import { cardTextFits } from '../preview/data-card'
+// 정합성 검사 (2026-07-22): R2 시점 / R3 출처 인용. (R1 Characters 카드-산문 정합은 스키마 개편으로 제거)
 import { checkAndFixTemporal } from '../temporal-consistency'
 import { softFixUnquotableSources, countCitationPhrases } from '../quotable-sources'
 
@@ -39,6 +42,10 @@ const INVESTMENT_ADVICE_PATTERNS = [
   /폭등\s*예상/,
   /필수\s*(매수|매도|종목|전략|포지션|편입|진입)/,
   /(매수|매도|편입|진입|투자)\s*(가|는)?\s*필수/,
+  // 2026-10-17: "갖고 있다면 / 새로 본다면"은 조건·관찰형만 — 지시형 매매 표현을 잡는다.
+  /(?:매수|매도|처분|편입|교체)\s*하(?:세요|십시오|시기\s*바랍니다)/,
+  /(?<![가-힣])(?:사|파|팔|담으)(?:세요|십시오)/,
+  /(?:비중|노출)[^.!?\n]{0,8}(?:줄이|늘리|낮추|높이)(?:세요|십시오|시기\s*바랍니다|는\s*것이\s*좋(?:습니다|겠습니다))/,
 ]
 
 const FLOW_WORD_PATTERNS = [
@@ -89,7 +96,11 @@ const SOFT_FIXES: SoftFix[] = [
 
 const UNFORMATTED_USD_KRW_PATTERN = /USD\/KRW\s+(?:1[0-9]{3}|[2-9][0-9]{3})(?![,\d])/g
 const RAW_KRW_AMOUNT_PATTERN = /\d{10,}원/g
-const ETF_OR_NUMBER_PATTERN = /([A-Z]{2,5}|[가-힣A-Za-z]+ ETF|ETF|USD\/KRW|US 10Y|VIX|NAV|거래대금|\d+(?:,\d{3})*(?:\.\d+)?%?)/
+
+// 미리보기 카드 한 줄(card.line): 32자 이내 평서문. 질문형 = 물음표가 있거나 의문형 어미로 끝나는 문장
+// ("~까/~까요"(을까·할까·습니까 포함), "~나요", "~는가", "~인가").
+export const CARD_LINE_MAX_CHARS = 32
+const QUESTION_FORM = /[?？]|(?:까요?|나요|는가|인가)[.!…]?\s*$/
 
 // ─── Soft fix: 리포트 전체 문자열 필드에 치환 적용 ──────────────────
 function applySoftFix(value: string | undefined): string | undefined {
@@ -101,9 +112,13 @@ function applySoftFix(value: string | undefined): string | undefined {
   return next
 }
 
-function applyToStringArray(arr: (string | undefined)[] | undefined): string[] | undefined {
-  if (!arr) return arr
-  return arr.map(s => applySoftFix(s) ?? '').filter(s => s.length > 0)
+function isObjectValue<T>(value: T): value is T & object {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+// 형식이 깨진 응답(배열 아님·원소가 객체 아님)에서도 던지지 않도록 객체 원소만 고른다.
+function objectItems<T>(value: T[] | undefined): T[] {
+  return Array.isArray(value) ? value.filter(item => typeof item === 'object' && item !== null) : []
 }
 
 /**
@@ -114,53 +129,34 @@ export function applySoftFixesInPlace(report: MorningReport): string[] {
   const before = flattenMorningReport(report)
   const fixed: string[] = []
 
-  report.cover.headline = applySoftFix(report.cover.headline) ?? report.cover.headline
-  report.cover.subline = applySoftFix(report.cover.subline) ?? report.cover.subline
-  report.overnightBrief.narrative =
-    applySoftFix(report.overnightBrief.narrative) ?? report.overnightBrief.narrative
-  report.overnightBrief.krImpact =
-    applySoftFix(report.overnightBrief.krImpact) ?? report.overnightBrief.krImpact
-  report.usEtfHighlights.topMover.reason =
-    applySoftFix(report.usEtfHighlights.topMover.reason) ?? report.usEtfHighlights.topMover.reason
-  report.usEtfHighlights.bottomMover.reason =
-    applySoftFix(report.usEtfHighlights.bottomMover.reason) ??
-    report.usEtfHighlights.bottomMover.reason
-  report.usEtfHighlights.sectorNarrative =
-    applySoftFix(report.usEtfHighlights.sectorNarrative) ?? report.usEtfHighlights.sectorNarrative
-  report.todayWatch.items = report.todayWatch.items.map(item => ({
-    title: applySoftFix(item.title) ?? item.title,
-    body: applySoftFix(item.body) ?? item.body,
-  }))
-  report.closingLine = applySoftFix(report.closingLine) ?? report.closingLine
-
-  const notes = report.narrativeNotes
-  if (notes) {
-    if (notes.bigPicture) {
-      notes.bigPicture = applySoftFix(notes.bigPicture)
-    }
-    if (notes.storySpine) {
-      notes.storySpine.act1 = applySoftFix(notes.storySpine.act1)
-      notes.storySpine.act2 = applySoftFix(notes.storySpine.act2)
-      notes.storySpine.act3 = applySoftFix(notes.storySpine.act3)
-    }
-    if (notes.characters) {
-      notes.characters.primary = applySoftFix(notes.characters.primary)
-      notes.characters.gate = applySoftFix(notes.characters.gate)
-      notes.characters.alternative = applySoftFix(notes.characters.alternative)
-      notes.characters.warning = applySoftFix(notes.characters.warning)
-    }
-    if (notes.checklist) {
-      notes.checklist.actions = applyToStringArray(notes.checklist.actions)
-      notes.checklist.avoids = applyToStringArray(notes.checklist.avoids)
-    }
-    if (notes.strategyProse) {
-      notes.strategyProse = notes.strategyProse.map(s => ({
-        group: s.group,
-        rationale: applySoftFix(s.rationale),
-        actionGuide: applySoftFix(s.actionGuide),
-        avoid: applySoftFix(s.avoid),
-      }))
-    }
+  // Ruling 28: 형식이 깨진 응답(문자열 cover·summary 등)에 속성을 쓰면 TypeError — 객체일 때만 고친다.
+  // 객체가 아니면 손대지 않고, 구조 검사가 필수 필드 누락으로 보고한다(card와 같은 처리, M5).
+  if (isObjectValue(report.cover)) {
+    report.cover.headline = applySoftFix(report.cover.headline) ?? report.cover.headline
+    report.cover.subline = applySoftFix(report.cover.subline) ?? report.cover.subline
+  }
+  if (isObjectValue(report.summary)) {
+    report.summary.overseas = applySoftFix(report.summary.overseas) ?? report.summary.overseas
+    report.summary.domestic = applySoftFix(report.summary.domestic) ?? report.summary.domestic
+    report.summary.focus = applySoftFix(report.summary.focus) ?? report.summary.focus
+  }
+  for (const card of objectItems(report.assetCards)) {
+    if (card.reason !== undefined) card.reason = applySoftFix(card.reason)
+    card.ifHolding = applySoftFix(card.ifHolding) ?? card.ifHolding
+    card.ifConsidering = applySoftFix(card.ifConsidering) ?? card.ifConsidering
+  }
+  for (const check of objectItems(report.todayChecks)) {
+    check.time = applySoftFix(check.time) ?? check.time
+    check.what = applySoftFix(check.what) ?? check.what
+    check.baseline = applySoftFix(check.baseline) ?? check.baseline
+    check.invalidation = applySoftFix(check.invalidation) ?? check.invalidation
+  }
+  // M5: 형식이 깨진 응답의 문자열 card에 속성을 쓰면 TypeError — 객체일 때만(아니면 구조 검사가 없는 것으로 본다).
+  if (isObjectValue(report.card)) {
+    report.card.line = applySoftFix(report.card.line) ?? report.card.line
+  }
+  if (report.tacticalWarning !== undefined) {
+    report.tacticalWarning = applySoftFix(report.tacticalWarning)
   }
 
   const after = flattenMorningReport(report)
@@ -174,36 +170,24 @@ export function applySoftFixesInPlace(report: MorningReport): string[] {
   return fixed
 }
 
-function flattenMorningReport(report: MorningReport, options: { includeCover?: boolean } = {}): string {
+// 산문 필드 전부 — 수치 대조·주간·환율 방향·준법 패턴·중복 문장 검사가 이 텍스트에 적용된다.
+// key 같은 열거값은 산문이 아니라 뺀다. skipShortFields: 중복 문장 검사용 — todayChecks의 time·baseline은
+// "전일 종가" 같은 짧은 기준 문구라 항목끼리 같아도 정상이다.
+function flattenMorningReport(report: MorningReport, options: { includeCover?: boolean; skipShortFields?: boolean } = {}): string {
   const includeCover = options.includeCover ?? true
-  const core: (string | undefined)[] = [
-    ...(includeCover ? [report.cover.headline, report.cover.subline] : []),
-    report.overnightBrief.narrative,
-    report.overnightBrief.krImpact,
-    report.usEtfHighlights.topMover.reason,
-    report.usEtfHighlights.bottomMover.reason,
-    report.usEtfHighlights.sectorNarrative,
-    ...report.todayWatch.items.flatMap(item => [item.title, item.body]),
-    report.closingLine,
+  const skipShort = options.skipShortFields ?? false
+  const core: unknown[] = [
+    ...(includeCover ? [report.cover?.headline, report.cover?.subline] : []),
+    report.summary?.overseas,
+    report.summary?.domestic,
+    report.summary?.focus,
+    ...objectItems(report.assetCards).flatMap(card => [card.reason, card.ifHolding, card.ifConsidering]),
+    ...objectItems(report.todayChecks).flatMap(check => (skipShort
+      ? [check.what, check.invalidation]
+      : [check.time, check.what, check.baseline, check.invalidation])),
+    report.card?.line,
+    report.tacticalWarning,
   ]
-
-  const notes = report.narrativeNotes
-  if (notes) {
-    core.push(
-      notes.bigPicture,
-      notes.storySpine?.act1,
-      notes.storySpine?.act2,
-      notes.storySpine?.act3,
-      notes.characters?.primary,
-      notes.characters?.gate,
-      notes.characters?.alternative,
-      notes.characters?.warning,
-      ...(notes.checklist?.actions ?? []),
-      ...(notes.checklist?.avoids ?? []),
-      ...(notes.strategyProse ?? []).flatMap(s => [s.rationale, s.actionGuide, s.avoid]),
-    )
-  }
-
   return core.filter((s): s is string => typeof s === 'string' && s.length > 0).join('\n')
 }
 
@@ -303,8 +287,8 @@ export function assessAmbiguousMarketWords(report: MorningReport): {
   // 헤드라인과 서브라인은 따로 본다 — 이어 붙이면 헤드라인의 '지수'가 서브라인 첫머리의
   // '나스닥' 같은 수식어에 기대 통과한다(20자 창이 줄 경계를 넘음).
   const coverHits = [
-    ...findUnqualifiedAmbiguousWords(report.cover.headline ?? ''),
-    ...findUnqualifiedAmbiguousWords(report.cover.subline ?? ''),
+    ...findUnqualifiedAmbiguousWords(report.cover?.headline ?? ''),
+    ...findUnqualifiedAmbiguousWords(report.cover?.subline ?? ''),
   ].slice(0, AMBIGUOUS_SAMPLE_LIMIT)
   const bodyHits = findUnqualifiedAmbiguousWords(flattenMorningReport(report, { includeCover: false }))
   return {
@@ -350,18 +334,234 @@ export function applyConsistencySoftFixesInPlace(
   }
 }
 
+function isFilled(value: unknown): boolean {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+const SUMMARY_SOFT_MAX_CHARS = 60
+const DIGIT = /[0-9]/
+
+/**
+ * 2026-10-17 출력 스키마 구조 검사.
+ *  - 필수 필드(cover·summary 세 줄·assetCards·todayChecks와 각 필드·card.key·card.line)
+ *  - todayChecks 정확히 3개
+ *  - assetCards key ⊆ 자산군 슬롯(중복 없이), card.key ∈ 자산군 슬롯 (buildAssetClassSlots(data.quotes))
+ *  - card.line 32자 이내·질문형 금지
+ *  - 미리보기 카드 문구(제목·card 자산군 라벨·card.line)가 카드 규칙 안에 들어감(cardTextFits, Ruling 15)
+ * Ruling 10(2026-10-17): 마지막 축소판(lastAttempt = factChecksAsWarnings)에서는 코드가 고칠 수 있는 구조 문제를
+ * 그 자리에서 교정하고 console.warn으로 남긴다 — 발송을 막지 않는다(전송 > 침묵). 1·2회차는 재생성 사유.
+ *   todayChecks 3개 초과 → 앞 3개 / 1~2개 → 경고 / 0개 → 필수 필드 누락(막음)
+ *   card.key 슬롯 밖·누락 → 주제 슬롯(pickFeaturedSlot) key
+ *   assetCards 슬롯 밖 key → 버림, 중복 key → 첫 카드만
+ *   card.line 길이·질문형, 카드 문구 넘침 → 경고(카드 렌더러가 마지막 수단으로 '…' 처리)
+ *   card 없음(문자열 등 형식 오류 포함)·card.line 비어 있음 → 주제 슬롯 key + 첫 확인 항목(없으면 오늘 핵심) 문장(M5)
+ * 진짜 비어 있는 필수 필드(summary·ifHolding 등)는 마지막 시도에도 막는다.
+ * 기록만(soft-warn): 60자 권장 초과, 슬롯 누락 카드(렌더러가 숫자만 있는 카드로 그림), card.key ≠ 주제 슬롯,
+ * card.line의 숫자(숫자 자체가 뉴스일 때는 쓸 수 있음).
+ * 반환: violations(카드 문구 외) · cardViolations(미리보기 카드 문구 — 1·2회차만, 앞선 결과 선택에서 가장 가벼운 위반).
+ */
+function findStructuralViolations(
+  report: MorningReport,
+  data: CollectedData,
+  options: MorningQualityOptions = {},
+): { violations: string[]; cardViolations: string[] } {
+  const lastAttempt = options.factChecksAsWarnings === true
+  const violations: string[] = []
+  const cardViolations: string[] = []
+  const repaired = (message: string) => console.warn(`  [struct-fix] ${message}`)
+
+  const slots = buildAssetClassSlots(data.quotes)
+  const slotKeys = slots.map(s => s.key)
+  const allowed = new Set<string>(slotKeys)
+  const allowedLabel = slotKeys.join(', ') || '없음'
+  const featuredKey = pickFeaturedSlot(slots)?.key
+
+  // ── 교정·위반: assetCards key (슬롯 밖·중복) ──
+  if (Array.isArray(report.assetCards)) {
+    const objectCards = objectItems(report.assetCards)
+    const keys = objectCards.map(c => c.key as unknown).filter(isFilled) as string[]
+    const unknownKeys = [...new Set(keys.filter(k => !allowed.has(k)))]
+    const duplicateKeys = [...new Set(keys.filter((k, i) => allowed.has(k) && keys.indexOf(k) !== i))]
+    const keyless = objectCards.some(c => !isFilled(c.key))
+    if (lastAttempt && (unknownKeys.length > 0 || duplicateKeys.length > 0 || keyless)) {
+      const seen = new Set<string>()
+      const before = report.assetCards.length
+      report.assetCards = report.assetCards.filter(item => {
+        if (typeof item !== 'object' || item === null) return true // 형식 오류는 아래 필수 필드 검사가 보고
+        const key = item.key as unknown
+        if (!isFilled(key) || !allowed.has(key as string) || seen.has(key as string)) return false
+        seen.add(key as string)
+        return true
+      })
+      const reasons = [...unknownKeys.map(k => `슬롯 밖 ${k}`), ...duplicateKeys.map(k => `중복 ${k}`), ...(keyless ? ['key 없음'] : [])]
+      repaired(`assetCards ${before - report.assetCards.length}장 제거(${reasons.join(', ')})`)
+    } else {
+      if (unknownKeys.length > 0) violations.push(`assetCards key가 자산군 슬롯에 없음: ${unknownKeys.join(', ')} (허용: ${allowedLabel})`)
+      if (duplicateKeys.length > 0) violations.push(`assetCards key 중복: ${duplicateKeys.join(', ')}`)
+    }
+  }
+
+  // ── 교정·위반: todayChecks 개수 (0개는 아래 필수 필드 누락) ──
+  const checkCount = Array.isArray(report.todayChecks) ? report.todayChecks.length : 0
+  if (checkCount !== 3) {
+    if (!lastAttempt) {
+      violations.push(`오늘 확인할 것은 정확히 3개여야 합니다(현재 ${checkCount}개)`)
+    } else if (checkCount > 3) {
+      report.todayChecks = report.todayChecks.slice(0, 3)
+      repaired(`todayChecks ${checkCount}개 → 앞 3개만 남김`)
+    } else if (checkCount > 0) {
+      repaired(`todayChecks ${checkCount}개(3개 미만) — 그대로 발송`)
+    }
+  }
+
+  // ── M5: 형식이 깨진 card(문자열·숫자 등)는 없는 것으로 본다(1·2회차는 아래 필수 필드 누락으로 재생성 사유) ──
+  const mutableReport = report as unknown as Record<string, unknown>
+  if (mutableReport.card !== undefined && (typeof mutableReport.card !== 'object' || mutableReport.card === null)) {
+    console.log(`  [soft-warn] card 형식 오류(${mutableReport.card === null ? 'null' : typeof mutableReport.card}) — 없는 것으로 봅니다`)
+    delete mutableReport.card
+  }
+  // 마지막 시도: card.line은 미리보기 문구일 뿐이라 리포트에서 만들 수 있다 — 주제 슬롯 key + 첫 확인 항목(없으면 오늘 핵심).
+  if (lastAttempt) {
+    const featured = cardSlot(slots, undefined)
+    const fallbackLine = derivedCardLine(report)
+    if (mutableReport.card === undefined) {
+      if (featured && fallbackLine) {
+        report.card = { key: featured.key, line: fallbackLine }
+        repaired(`card 없음 → key ${featured.key}(주제 슬롯), line "${fallbackLine}"(첫 확인 항목·오늘 핵심)`)
+      }
+    } else if (!isFilled(report.card.line) && fallbackLine) {
+      report.card.line = fallbackLine
+      repaired(`card.line 비어 있음 → "${fallbackLine}"(첫 확인 항목·오늘 핵심)`)
+    }
+  }
+
+  // ── 교정·위반: card.key ──
+  const card = typeof report.card === 'object' && report.card !== null ? report.card : undefined
+  const cardKey = card?.key as unknown
+  if (card && !(isFilled(cardKey) && allowed.has(cardKey as string))) {
+    if (lastAttempt && featuredKey) {
+      repaired(`card.key ${isFilled(cardKey) ? cardKey : '(없음)'} → ${featuredKey}(주제 슬롯)`)
+      card.key = featuredKey
+    } else if (isFilled(cardKey)) {
+      violations.push(`card.key가 자산군 슬롯에 없음: ${cardKey} (허용: ${allowedLabel})`)
+    }
+  } else if (card && featuredKey && cardKey !== featuredKey) {
+    console.log(`  [soft-warn] card.key ${cardKey}가 주제 슬롯(${featuredKey})과 다름`)
+  }
+
+  // ── 필수 필드(교정 뒤 상태 기준) ──
+  const missing: string[] = []
+  const need = (value: unknown, path: string) => { if (!isFilled(value)) missing.push(path) }
+  need(report.cover?.headline, 'cover.headline')
+  need(report.cover?.subline, 'cover.subline')
+  need(report.summary?.overseas, 'summary.overseas')
+  need(report.summary?.domestic, 'summary.domestic')
+  need(report.summary?.focus, 'summary.focus')
+  if (!Array.isArray(report.assetCards) || report.assetCards.length === 0) {
+    missing.push('assetCards')
+  } else {
+    report.assetCards.forEach((c, i) => {
+      if (typeof c !== 'object' || c === null) { missing.push(`assetCards[${i}]`); return }
+      need(c.key, `assetCards[${i}].key`)
+      need(c.ifHolding, `assetCards[${i}].ifHolding`)
+      need(c.ifConsidering, `assetCards[${i}].ifConsidering`)
+    })
+  }
+  if (!Array.isArray(report.todayChecks) || report.todayChecks.length === 0) {
+    missing.push('todayChecks')
+  } else {
+    report.todayChecks.forEach((check, i) => {
+      if (typeof check !== 'object' || check === null) { missing.push(`todayChecks[${i}]`); return }
+      need(check.time, `todayChecks[${i}].time`)
+      need(check.what, `todayChecks[${i}].what`)
+      need(check.baseline, `todayChecks[${i}].baseline`)
+      need(check.invalidation, `todayChecks[${i}].invalidation`)
+    })
+  }
+  need(card?.key, 'card.key')
+  need(card?.line, 'card.line')
+  if (missing.length > 0) violations.push(`필수 필드 누락: ${missing.join(', ')}`)
+
+  const cardKeys = objectItems(report.assetCards).map(c => c.key as unknown).filter(isFilled) as string[]
+  const missingSlots = slotKeys.filter(k => !cardKeys.includes(k))
+  if (missingSlots.length > 0) console.log(`  [soft-warn] assetCards에 빠진 슬롯(숫자만 렌더): ${missingSlots.join(', ')}`)
+
+  // ── 미리보기 카드 문구(Ruling 15): 카드 렌더러와 같은 규칙(cardTextFits)으로 판정 ──
+  // 1·2회차 위반(재생성), 마지막 시도 경고만 — 카드 렌더러는 넘치는 줄을 '…'로 줄여 그린다.
+  // 제목·한 줄이 비어 있으면 위 필수 필드 누락이 이미 보고하므로 여기서는 보지 않는다.
+  const headline = typeof report.cover?.headline === 'string' ? report.cover.headline : ''
+  const cardLine = typeof card?.line === 'string' ? card.line : ''
+  if (isFilled(headline) && isFilled(cardLine)) {
+    const slot = cardSlot(slots, card?.key)
+    const fit = cardTextFits('etf', { headline, line: cardLine, holdingLabel: slot?.holdingLabel ?? '' })
+    // 자산군 슬롯이 하나도 없는 날(데이터 문제)은 라벨이 빌 수밖에 없다 — 재생성으로 고칠 수 없으니 라벨은 보지 않는다.
+    const reasons = slot ? fit.reasons : fit.reasons.filter(r => !r.startsWith('holdingLabel'))
+    if (reasons.length > 0) {
+      const message = `미리보기 카드 문구가 카드에 들어가지 않음: ${reasons.join('; ')}`
+      if (lastAttempt) console.warn(`  [card-warn] ${message} — 경고만(카드 렌더러가 '…'로 줄임)`)
+      else cardViolations.push(message)
+    }
+  }
+
+  // ── card.line: 1·2회차 위반, 마지막 시도 경고 ──
+  const line = typeof card?.line === 'string' ? card.line.trim() : ''
+  if (line.length > 0) {
+    const lineProblems: string[] = []
+    const length = Array.from(line).length
+    if (length > CARD_LINE_MAX_CHARS) lineProblems.push(`card.line은 ${CARD_LINE_MAX_CHARS}자 이내여야 합니다(현재 ${length}자): ${line}`)
+    if (QUESTION_FORM.test(line)) lineProblems.push(`card.line은 평서문이어야 합니다(질문형 금지): ${line}`)
+    if (lastAttempt) lineProblems.forEach(problem => repaired(`${problem} — 경고만(카드 렌더러가 줄임)`))
+    else cardViolations.push(...lineProblems)
+    if (DIGIT.test(line)) console.log(`  [soft-warn] card.line에 숫자 — 숫자 자체가 뉴스일 때만 씁니다: ${line}`)
+  }
+
+  const long = [
+    ['summary.overseas', report.summary?.overseas],
+    ['summary.domestic', report.summary?.domestic],
+    ['summary.focus', report.summary?.focus],
+    ...objectItems(report.assetCards).flatMap(c => [[`${c.key}.ifHolding`, c.ifHolding], [`${c.key}.ifConsidering`, c.ifConsidering]]),
+  ].filter(([, v]) => typeof v === 'string' && Array.from(v).length > SUMMARY_SOFT_MAX_CHARS).map(([k]) => k)
+  if (long.length > 0) console.log(`  [soft-warn] ${SUMMARY_SOFT_MAX_CHARS}자 초과(기록 전용): ${long.join(', ')}`)
+
+  return { violations, cardViolations }
+}
+
+// M5: 마지막 시도에 card를 만들 때 쓰는 한 줄 — 첫 확인 항목의 what, 없으면 오늘 핵심(summary.focus).
+function derivedCardLine(report: MorningReport): string {
+  const firstCheck = objectItems(report.todayChecks).find(check => isFilled(check.what))
+  if (firstCheck) return (firstCheck.what as string).trim()
+  return isFilled(report.summary?.focus) ? report.summary.focus.trim() : ''
+}
+
 export interface MorningQualityOptions {
-  // 사실 검증(수치 대조·주간 둔갑·환율 방향)을 위반 대신 경고로 남긴다. 마지막 축소판(Tier 1)
-  // 검증에서 쓴다 — 운영 원칙 "품질 낮아도 전송 > 침묵"(F02 유지 결정, 2026-10-16).
+  // 마지막 축소판(Tier 1) 검증 표시 — 운영 원칙 "품질 낮아도 전송 > 침묵"(F02 유지 결정, 2026-10-16).
+  // 사실 검증(수치 대조·주간 둔갑·환율 방향)과 중복 문장은 경고로 남기고, 코드가 고칠 수 있는 구조 문제는
+  // 교정한다(Ruling 10, 2026-10-17). 시점·인용 빈도·자금 흐름 표현·뉴스 단정·표기 형식 검사도 경고로만(Ruling 25).
+  // 준법(매수·매도 권유)과 진짜 필수 필드 누락만 그대로 위반.
   factChecksAsWarnings?: boolean
 }
 
-export function validateMorningReportQuality(
+export interface MorningQualityResult {
+  // 발송을 막는(재생성 사유) 위반 전체 — 메시지 순서는 예전 단일 목록과 같다.
+  violations: string[]
+  // 그중 미리보기 카드 문구(카드 맞춤·card.line 길이·질문형) 위반. 앞선 결과 선택에서 가장 가벼운 위반으로 본다(I2).
+  cardViolations: string[]
+}
+
+/** 위반을 던지지 않고 돌려준다(리포트는 soft fix·교정이 반영된 상태로 바뀐다). 던지는 API는 validateMorningReportQuality. */
+export function assessMorningReportQuality(
   report: MorningReport,
   data: CollectedData,
   strategy: MorningStrategyInput,
   options: MorningQualityOptions = {}
-): void {
+): MorningQualityResult {
+  const lastAttempt = options.factChecksAsWarnings === true
+  // 레버리지·인버스 주의는 코드가 정한 조건(|등락| 10% 이상)인 날에만 — 아니면 재생성 대신 자동 생략.
+  if (report.tacticalWarning !== undefined && !findTacticalAlert(data.quotes)) {
+    delete report.tacticalWarning
+    console.log(`  [soft-fix] tacticalWarning 생략 — 레버리지·인버스 |등락| ${TACTICAL_WARNING_MIN_ABS_PCT}% 이상 없음`)
+  }
+
   // P1: 검증 전에 소프트 픽스를 먼저 적용. 가벼운 문체 이슈로 재생성하지 않도록.
   const fixesApplied = applySoftFixesInPlace(report)
   if (fixesApplied.length > 0) {
@@ -381,21 +581,29 @@ export function validateMorningReportQuality(
     console.log(`  [soft-warn] 비승인 출처 잔존: ${consistency.warnings.join(', ')}`)
   }
 
-  const text = flattenMorningReport(report)
   const violations: string[] = []
+  // M4 (Ruling 25): 준법·필수 필드가 아닌 검사는 1·2회차엔 재생성 사유, 마지막 축소판에선 경고로만(전송 > 침묵).
+  const violateOrWarn = (tag: string, message: string) => {
+    if (lastAttempt) console.warn(`  [${tag}-warn] ${message} — 마지막 시도라 경고만`)
+    else violations.push(message)
+  }
 
-  // R2: 시점-요일-상대시제 창 밖·불능은 hard violation.
-  violations.push(...consistency.temporalViolations)
+  // 2026-10-17 출력 스키마 구조 검사 — 1·2회차는 재생성 사유, 마지막 축소판은 고칠 수 있는 것을 교정(Ruling 10).
+  // 교정(카드·확인 항목 제거)이 아래 텍스트 검사에 반영되도록 먼저 돈다. 카드 문구 위반은 목록 순서를 지켜 뒤에 붙는다.
+  const structural = findStructuralViolations(report, data, options)
+  violations.push(...structural.violations, ...structural.cardViolations)
 
-  // R3: "에 따르면" 인용 빈도 — 8회 이상 hard, 5회 이상 soft-warn.
+  const text = flattenMorningReport(report)
+
+  // R2: 시점-요일-상대시제 창 밖·불능 — 1·2회차 재생성 사유, 마지막 시도 경고.
+  for (const v of consistency.temporalViolations) violateOrWarn('temporal', v)
+
+  // R3: "에 따르면" 인용 빈도 — 8회 이상 위반(마지막 시도 경고), 5회 이상 soft-warn.
   if (consistency.citationCount >= 8) {
-    violations.push(`"에 따르면" 인용이 ${consistency.citationCount}회로 과다합니다 (출처 의존 서술 축소 필요)`)
+    violateOrWarn('citation', `"에 따르면" 인용이 ${consistency.citationCount}회로 과다합니다 (출처 의존 서술 축소 필요)`)
   } else if (consistency.citationCount >= 5) {
     console.log(`  [soft-warn] "에 따르면" 인용 ${consistency.citationCount}회 (허용 한도 이하)`)
   }
-
-  // R1: Characters 카드-산문 정합 (data.quotes 로 배정 재계산).
-  violations.push(...checkCharacterProseConsistency(report, data.quotes))
 
   // 사실 검증(2026-10-16 감사 C01·C02·C04·C05) — 정상 시도에서는 재생성 사유, 축소판에서는 경고.
   const factViolations: string[] = []
@@ -417,6 +625,7 @@ export function validateMorningReportQuality(
     violations.push(...factViolations)
   }
 
+  // 준법(매수·매도 권유) — 마지막 시도에도 막는다.
   const adviceMatches = findMatches(text, INVESTMENT_ADVICE_PATTERNS)
   if (adviceMatches.length > 0) {
     violations.push(`투자 권유성 표현 감지: ${adviceMatches.join(', ')}`)
@@ -425,7 +634,7 @@ export function validateMorningReportQuality(
   if (!strategy.dataCoverage.hasRealFlowData) {
     const flowMatches = findMatches(text, FLOW_WORD_PATTERNS)
     if (flowMatches.length > 0) {
-      violations.push('실제 fund flow 데이터가 없는데 자금 유입/유출 표현을 사용했습니다')
+      violateOrWarn('flow', '실제 fund flow 데이터가 없는데 자금 유입/유출 표현을 사용했습니다')
     }
   }
 
@@ -433,33 +642,37 @@ export function validateMorningReportQuality(
   if (hasNewsBody) {
     const newsMatches = findMatches(text, NEWS_OVERREACH_PATTERNS)
     if (newsMatches.length > 0) {
-      violations.push(`뉴스 제목 이상의 단정 표현 감지: ${newsMatches.join(', ')}`)
+      violateOrWarn('news', `뉴스 제목 이상의 단정 표현 감지: ${newsMatches.join(', ')}`)
     }
   }
 
-  const repeated = duplicateSentences(text)
+  // 중복 문장 — todayChecks의 time·baseline(짧은 기준 문구)은 보지 않는다. 마지막 축소판에서는 경고(Ruling 10).
+  const repeated = duplicateSentences(flattenMorningReport(report, { skipShortFields: true }))
   if (repeated.length > 0) {
-    violations.push(`중복 문장 감지: ${repeated.slice(0, 2).join(' / ')}`)
+    const message = `중복 문장 감지: ${repeated.slice(0, 2).join(' / ')}`
+    if (options.factChecksAsWarnings) console.warn(`  [dup-warn] ${message}`)
+    else violations.push(message)
   }
 
+  // 표기 형식 검사 — 1·2회차 재생성 사유, 마지막 시도 경고(Ruling 25).
   const unformattedUsdKrw = text.match(UNFORMATTED_USD_KRW_PATTERN)
   if (unformattedUsdKrw) {
-    violations.push(`USD/KRW 천 단위 쉼표 누락: ${unformattedUsdKrw.join(', ')}`)
+    violateOrWarn('format', `USD/KRW 천 단위 쉼표 누락: ${unformattedUsdKrw.join(', ')}`)
   }
 
   const rawKrwAmount = text.match(RAW_KRW_AMOUNT_PATTERN)
   if (rawKrwAmount) {
-    violations.push(`원화 금액은 억 원/조 원 단위로 축약해야 합니다: ${rawKrwAmount.slice(0, 2).join(', ')}`)
+    violateOrWarn('format', `원화 금액은 억 원/조 원 단위로 축약해야 합니다: ${rawKrwAmount.slice(0, 2).join(', ')}`)
   }
 
-  // P1: 약한 어미 (확인/점검/봅니다) 과다 사용은 validator 레벨에서 소프트 경고로만
+  // P1: 약한 어미 (확인/점검/봅니다) 과다 사용 — 문체 문제라 마지막 시도엔 경고만.
   const weakActionCount = (text.match(/확인합니다|점검합니다|봅니다/g) ?? []).length
   if (weakActionCount >= 18) {
-    violations.push('확인/점검/봅니다 문장이 과도합니다. 확인 결과에 따른 행동 기준까지 써야 합니다')
+    violateOrWarn('style', '확인/점검/봅니다 문장이 과도합니다. 확인 결과에 따른 행동 기준까지 써야 합니다')
   }
 
   if (/\b\d{6}\.(KS|KQ)\b/i.test(text)) {
-    violations.push('국내 ETF는 "종목명 (6자리 코드)" 형식으로 표기해야 합니다')
+    violateOrWarn('format', '국내 ETF는 "종목명 (6자리 코드)" 형식으로 표기해야 합니다')
   }
 
   // P1+보강 [H2] (2026-04-24): "종목명 공백 6자리" (괄호 누락) 도 차단.
@@ -467,38 +680,33 @@ export function validateMorningReportQuality(
   // 한국어·영문·숫자 뒤에 공백 + 6자리 숫자 + 닫는 괄호 없음 패턴.
   const missingParens = text.match(/(?:[가-힣A-Za-z])\s+\d{6}(?!\)|\d|\.(KS|KQ))/g)
   if (missingParens && missingParens.length > 0) {
-    violations.push(
-      `국내 ETF 코드는 반드시 괄호로 감싸야 합니다 "(6자리)": ${missingParens.slice(0, 3).join(', ')}`
-    )
-  }
-
-  if (report.todayWatch.items.length < 3) {
-    violations.push('Today Watch 항목은 국내 개장, 환율/금리, ETF 실행 리스크를 포함해 최소 3개가 필요합니다')
-  }
-
-  const vagueWatchItems = report.todayWatch.items.filter(item => !ETF_OR_NUMBER_PATTERN.test(item.body))
-  if (vagueWatchItems.length > 0) {
-    violations.push('Today Watch 각 항목은 ETF명, 수치, NAV, 거래대금 등 구체적 확인 대상을 포함해야 합니다')
-  }
-
-  const krImpactHasBridge = /(SOXX|QQQ|TLT|USD\/KRW|VIX|US 10Y).*(\(\d{6}\)|국내|KODEX|TIGER)|(\(\d{6}\)|국내|KODEX|TIGER).*(SOXX|QQQ|TLT|USD\/KRW|VIX|US 10Y)/.test(report.overnightBrief.krImpact)
-  if (!krImpactHasBridge) {
-    violations.push('krImpact는 해외 ETF 또는 거시지표와 국내 ETF 실행 확인점을 직접 연결해야 합니다')
+    violateOrWarn('format', `국내 ETF 코드는 반드시 괄호로 감싸야 합니다 "(6자리)": ${missingParens.slice(0, 3).join(', ')}`)
   }
 
   // P3: 애매어 (지수/증시/시장 단독) — 한국 독자 오해 방지.
-  // 커버는 hard, 본문은 기록 전용 (assessAmbiguousMarketWords 주석 참조).
+  // 커버는 1·2회차 위반(마지막 시도 경고), 본문은 기록 전용 (assessAmbiguousMarketWords 주석 참조).
   const ambiguous = assessAmbiguousMarketWords(report)
   if (ambiguous.coverHits.length > 0) {
-    violations.push(
-      `커버(헤드라인/서브라인)에 시장이 특정되지 않은 '지수/증시/시장' 표현: ${ambiguous.coverHits.join(' | ')}`
-    )
+    violateOrWarn('ambiguous', `커버(헤드라인/서브라인)에 시장이 특정되지 않은 '지수/증시/시장' 표현: ${ambiguous.coverHits.join(' | ')}`)
   }
   if (ambiguous.bodyCount > 0) {
     console.log(`  [soft-warn] 본문 애매어 ${ambiguous.bodyCount}건 (기록 전용): ${ambiguous.bodySamples.join(' | ')}`)
   }
 
-  if (violations.length > 0) {
-    throw new Error(`[report-quality] Morning 리포트 품질 검증 실패\n- ${violations.join('\n- ')}`)
-  }
+  return { violations, cardViolations: structural.cardViolations }
+}
+
+export function formatMorningQualityError(violations: string[]): string {
+  return `[report-quality] Morning 리포트 품질 검증 실패\n- ${violations.join('\n- ')}`
+}
+
+/** 위반이 하나라도 있으면 던진다(메시지 형식은 예전과 같다). */
+export function validateMorningReportQuality(
+  report: MorningReport,
+  data: CollectedData,
+  strategy: MorningStrategyInput,
+  options: MorningQualityOptions = {}
+): void {
+  const { violations } = assessMorningReportQuality(report, data, strategy, options)
+  if (violations.length > 0) throw new Error(formatMorningQualityError(violations))
 }

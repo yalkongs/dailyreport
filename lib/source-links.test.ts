@@ -20,7 +20,8 @@ test("Market RSS: 기사 링크를 보존하고 http(s)가 아니면 버린다",
 });
 
 const CONTENT: ReportContent = {
-  cover: { headline: "t", subline: "s" }, bigStory: { content: [] }, watchPoints: [], compass: [], soWhat: [], calendar: [], closingMessage: "c",
+  cover: { headline: "t", subline: "s" }, summary: { yesterday: "y", today: "t", myAssets: "m" }, cardLine: { kind: "watch", text: "c" },
+  bigStory: { content: [] }, watchPoints: [], compass: [], soWhat: [], calendar: [], closingMessage: "c",
 };
 const MDATA: MarketDataCollection = {
   collectedAt: "2026-10-16T07:00:00+09:00", date: "2026-10-16", dayOfWeek: "금",
@@ -40,11 +41,10 @@ test("Market 리포트: 참고한 뉴스 목록에 원문 링크(이스케이프
 });
 
 test("ETF 리포트: 출처 제목에 원문 링크, '전략에 사용한' 대신 참고 뉴스, 생성 내부 용어 미노출", () => {
-  const report = {
-    cover: { headline: "h", subline: "s" }, overnightBrief: { narrative: "n", krImpact: "k" },
-    usEtfHighlights: { topMover: { ticker: "SPY", reason: "r" }, bottomMover: { ticker: "SPY", reason: "r" }, sectorNarrative: "s" },
-    todayWatch: { items: [] }, closingLine: "c", narrativeNotes: { bigPicture: "큰 그림 본문입니다." },
-  } as MorningReport;
+  const report: MorningReport = {
+    cover: { headline: "h", subline: "s" }, summary: { overseas: "해외 신호입니다.", domestic: "국내 상태입니다.", focus: "오늘 핵심입니다." },
+    assetCards: [], todayChecks: [], card: { key: "kr-large", line: "c" },
+  };
   const data = {
     reportType: "morning", date: "2026-10-16", quotes: [], flows: [], investorFlows: [], analysisLens: "변동성국면", narrativeAngle: "환율_양면성",
     macro: { usdKrw: null, dxy: null, vix: null, moveIndex: null, us10y: null, fearGreed: null, wti: null, gold: null },

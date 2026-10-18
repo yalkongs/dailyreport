@@ -1,25 +1,33 @@
-// lib/renderer.ts
+// lib/etf/renderer.ts
+//
+// ETF Today 페이지(2026-10-17 아침 리포트 개편, spec 3.2). 위에서부터:
+//   머리글 + 모자이크(미리보기 카드와 같은 그림) → 제목·부제 → 세 줄 요약 → 자산군별 판단 재료
+//   → 오늘 확인할 것 → 레버리지·인버스 주의(있을 때만) → 펼쳐 보기(국내·미국 ETF 표)
+//   → 참고한 뉴스 → 데이터 기준 → 투자자 보호 기준·법적 고지(맨 끝)
+// 숫자(대표 ETF 예시·등락·추정 거래대금)는 코드가 데이터에서 렌더하고, 모델은 문장만 쓴다.
 import * as fs from 'fs'
 import * as path from 'path'
-import sharp from 'sharp'
-import type { MorningReport, CollectedData, EtfQuote, MacroContext, MorningStrategyInput } from './types'
-import { buildMorningStrategyInput } from './morning-strategy'
+import type { MorningReport, CollectedData, EtfQuote } from './types'
 import { getEtfByTicker } from './universe'
 import { polishKoreanReportText } from './report-language'
 import { googleFinanceQuoteUrl } from './etf-links'
 import {
   REPORT_PREVIEW_IMAGE_HEIGHT,
   REPORT_PREVIEW_IMAGE_WIDTH,
-  renderReportPreviewSvg,
+  REPORT_SITE_NAME,
   reportPreviewDescription,
   reportPreviewImageFilename,
   reportPreviewImageUrl,
   reportPreviewTitle,
   reportRouteUrl,
 } from './report-preview'
-// R1 (2026-07-22): 선택 로직은 story-characters.ts로 이동(렌더러·프롬프트·검증 공유).
-import { isTacticalEtf, selectStoryCharacters } from './story-characters'
+// 레버리지·인버스 판정(자산군 슬롯·미리보기 카드와 같은 규칙).
+import { isTacticalEtf } from './story-characters'
+import { buildAssetClassSlots, cardSlot, type AssetClassSlot, type AssetRep } from './asset-classes'
+import { buildMosaicTiles, renderEtfCardSvg, renderMosaicSvg, saveCardPng, type MosaicTile } from '../preview/data-card'
 import { LEGAL_DISCLAIMER_ITEMS, LEGAL_DISCLAIMER_TITLE } from '../legal-disclaimer'
+import { koreanWeekday } from '../market-calendar'
+import { previousSessionLabel } from '../session-label'
 
 export function escapeHtml(s: string): string {
   return s
@@ -71,6 +79,7 @@ function baseHtml(title: string, date: string, type: string, body: string, metad
   <title>${e(title)}</title>
   <meta name="description" content="${e(description)}">
   ${canonicalUrl ? `<link rel="canonical" href="${e(canonicalUrl)}">` : ''}
+  <meta property="og:site_name" content="${e(REPORT_SITE_NAME)}">
   <meta property="og:title" content="${e(previewTitle)}">
   <meta property="og:description" content="${e(description)}">
   <meta property="og:type" content="article">
@@ -97,283 +106,111 @@ function baseHtml(title: string, date: string, type: string, body: string, metad
       --paper: #f5f7f3;
       --panel: #ffffff;
       --soft-teal: #eefbf6;
-      --soft-mint: #f3faed;
       --warning: #b26b00;
+      --up: #D32F2F;
+      --down: #1565C0;
     }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif;
-           background: var(--paper); color: var(--ink); max-width: 1080px; margin: 0 auto; padding: 26px 18px; }
+           background: var(--paper); color: var(--ink); max-width: 760px; margin: 0 auto; padding: 26px 18px; word-break: keep-all; }
     .cover { background: var(--panel); border: 1px solid var(--line); border-top: 8px solid var(--im-teal);
-             border-radius: 8px; padding: 24px; margin-bottom: 26px; box-shadow: 0 14px 34px rgba(31, 54, 48, 0.08); }
-    .masthead { display: flex; justify-content: space-between; gap: 18px; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 18px; margin-bottom: 24px; }
-    .brand-lockup { display: flex; gap: 14px; align-items: center; min-width: 0; }
-    .brand-logo { display: block; width: 84px; height: 84px; object-fit: contain; flex: 0 0 auto; }
-    .brand-name { font-size: 13px; color: var(--im-graphite); font-weight: 800; line-height: 1.2; }
-    .report-name { font-size: 30px; line-height: 1; font-weight: 900; letter-spacing: 0; color: var(--ink); margin-top: 3px; }
-    .issue-meta { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 800; }
-    .issue-meta span { border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; background: #fbfcfa; }
-    .cover-grid { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 24px; align-items: end; }
-    .cover .badge { font-size: 12px; color: var(--im-teal-deep); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; font-weight: 900; }
-    .cover h1 { font-size: 42px; font-weight: 900; line-height: 1.15; margin-bottom: 12px; color: var(--ink); letter-spacing: 0; }
-    .cover .subline { font-size: 17px; color: var(--muted); line-height: 1.65; max-width: 720px; }
-    .cover-note { border-left: 4px solid var(--im-mint); padding: 14px 0 14px 14px; color: var(--im-graphite); font-size: 13px; line-height: 1.6; }
-    .cover-note strong { display: block; color: var(--ink); font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 6px; }
-    .section { margin-bottom: 42px; }
-    .section-title { position: relative; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink); letter-spacing: 1.4px; text-transform: uppercase;
-                     border-top: 3px solid var(--ink); border-bottom: 1px solid var(--line); padding: 11px 0 10px; margin-bottom: 16px; font-weight: 900; }
+             border-radius: 8px; padding: 22px; margin-bottom: 26px; box-shadow: 0 14px 34px rgba(31, 54, 48, 0.08); }
+    .masthead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 14px; align-items: center; margin-bottom: 16px; }
+    .brand-lockup { display: flex; gap: 12px; align-items: center; min-width: 0; }
+    .brand-logo { display: block; width: 72px; height: 72px; object-fit: contain; flex: 0 0 auto; }
+    .brand-name { font-size: 13px; color: var(--im-graphite); font-weight: 800; line-height: 1.2; white-space: nowrap; }
+    .report-name { font-size: 28px; line-height: 1; font-weight: 900; letter-spacing: 0; color: var(--ink); margin-top: 3px; white-space: nowrap; }
+    .issue-date { color: var(--muted); font-size: 13px; font-weight: 800; white-space: nowrap; }
+    .mosaic { margin: 0 0 18px; }
+    .mosaic svg { display: block; width: 100%; height: auto; border-radius: 6px; }
+    .mosaic figcaption { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 6px; }
+    .cover h1 { font-size: 30px; font-weight: 900; line-height: 1.25; margin-bottom: 10px; color: var(--ink); letter-spacing: 0; text-wrap: balance; }
+    .cover .subline { font-size: 16px; color: var(--muted); line-height: 1.65; }
+    .section { margin-bottom: 30px; }
+    .section-title { position: relative; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink); letter-spacing: 1.4px;
+                     border-top: 3px solid var(--ink); border-bottom: 1px solid var(--line); padding: 11px 0 10px; margin-bottom: 14px; font-weight: 900; }
     .section-title::before { content: ""; width: 32px; height: 7px; background: var(--im-teal); border-radius: 6px; }
-    .narrative { font-size: 16px; line-height: 1.85; color: #27302d; }
-    .big-picture { background: linear-gradient(180deg, #f5fbf9 0%, #ffffff 100%); border: 1px solid var(--line);
-                   border-left: 6px solid var(--im-teal); border-radius: 10px; padding: 22px 24px; }
-    .big-picture .section-title { border-top: 0; border-bottom: 1px dashed var(--line); padding: 0 0 8px; margin-bottom: 12px; }
-    .big-picture-meta { font-size: 12px; color: #6b746e; letter-spacing: 0.4px; margin-bottom: 12px; }
-    .big-picture-body { font-size: 16px; line-height: 1.95; color: #1a2421; letter-spacing: -0.1px; }
-    .strategy-hero { background: var(--ink); border: 0; border-left: 8px solid var(--im-teal);
-                     border-radius: 8px; padding: 24px; margin-bottom: 30px; color: #ffffff; box-shadow: 0 16px 32px rgba(0, 0, 0, 0.12); }
-    .client-notice { background: var(--panel); border: 1px solid var(--line); border-top: 5px solid var(--im-graphite);
-                     border-radius: 8px; padding: 18px; margin-bottom: 28px; }
-    .notice-title { font-size: 18px; font-weight: 900; color: var(--ink); margin-bottom: 8px; }
-    .notice-text { font-size: 13px; color: var(--muted); line-height: 1.65; }
-    .legal-title { font-size: 13px; font-weight: 900; color: var(--ink); margin-top: 16px; padding-top: 14px;
-                   border-top: 1px solid var(--line); }
-    .legal-list { margin: 8px 0 0; padding-left: 18px; list-style: disc; }
-    .legal-list li { font-size: 12px; color: var(--muted); line-height: 1.65; margin-bottom: 5px; word-break: keep-all; }
-    .legal-list li:last-child { margin-bottom: 0; }
-    .pill-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-    .pill { border: 1px solid var(--line); border-radius: 6px; background: var(--soft-teal); color: var(--im-teal-deep);
-            font-size: 11px; font-weight: 900; padding: 5px 8px; }
-    .customer-grid, .preflight-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-    .customer-card, .preflight-item { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
-    .customer-type, .preflight-label { font-size: 12px; color: var(--im-teal-deep); font-weight: 900; margin-bottom: 6px; }
-    .customer-text, .preflight-text { font-size: 12px; color: var(--muted); line-height: 1.55; }
-    .hero-kicker { font-size: 12px; letter-spacing: 1.6px; color: var(--im-mint); text-transform: uppercase; margin-bottom: 8px; font-weight: 900; }
-    .hero-title { font-size: 28px; line-height: 1.32; font-weight: 900; margin-bottom: 16px; color: #ffffff; }
-    .hero-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0; }
-    .hero-item { border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 8px; padding: 13px; background: rgba(255, 255, 255, 0.08); }
-    .hero-label { font-size: 11px; color: #cbd6d2; margin-bottom: 6px; font-weight: 800; }
-    .hero-value { font-size: 15px; font-weight: 900; color: #ffffff; line-height: 1.45; }
-    .avoid { margin-top: 12px; padding: 12px; background: #fff7e7; border-left: 4px solid var(--warning); border-radius: 6px; color: #493315; }
-    .logic-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .logic-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
-    .logic-label { font-size: 11px; color: var(--muted); margin-bottom: 7px; font-weight: 900; }
-    .logic-text { font-size: 13px; color: #2d3531; line-height: 1.6; }
-    .snapshot-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px; }
-    .snapshot-panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
-    .snapshot-list { display: grid; gap: 9px; }
-    .snapshot-row { display: grid; grid-template-columns: 86px 1fr; gap: 10px; align-items: start; }
-    .snapshot-key { font-size: 11px; color: var(--im-teal-deep); font-weight: 900; }
-    .snapshot-value { font-size: 13px; color: #2d3531; line-height: 1.55; overflow-wrap: anywhere; }
-    .bridge-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .bridge-card { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--im-teal); border-radius: 8px; padding: 14px; }
-    .bridge-step { font-size: 11px; color: var(--muted); font-weight: 900; margin-bottom: 6px; }
-    .bridge-signal { font-size: 14px; font-weight: 900; color: var(--im-teal-deep); line-height: 1.5; margin-bottom: 7px; }
-    .bridge-target { font-size: 13px; color: #2d3531; line-height: 1.6; }
-    .match-table { display: grid; gap: 8px; }
-    .match-row { display: grid; grid-template-columns: 0.9fr 1.1fr 1fr; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
-    .match-head { font-size: 11px; color: var(--im-teal-deep); font-weight: 900; margin-bottom: 4px; }
-    .match-body { font-size: 13px; color: #2d3531; line-height: 1.5; overflow-wrap: anywhere; }
-    .heatmap-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-    .heat-cell { border: 1px solid var(--line); border-radius: 8px; padding: 10px; min-height: 82px; box-shadow: inset 0 3px 0 rgba(0, 191, 165, 0.12); }
-    .heat-name { font-size: 12px; font-weight: 900; color: #1c2421; line-height: 1.35; margin-bottom: 6px; }
-    .heat-meta { font-size: 10px; color: #59655f; margin-bottom: 5px; }
-    .heat-value { font-size: 18px; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
-    .heat-sub { font-size: 10px; color: #59655f; margin-top: 4px; line-height: 1.4; }
-    .heat-pos-3 { background: #d6efe2; }
-    .heat-pos-2 { background: #e7f5ec; }
-    .heat-pos-1 { background: #f4faf5; }
-    .heat-flat { background: var(--panel); }
-    .heat-neg-1 { background: #fff4ee; }
-    .heat-neg-2 { background: #f8ded6; }
-    .heat-neg-3 { background: #efc6bd; }
-    .legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; font-size: 10px; color: #5b6660; }
-    .legend span { border: 1px solid var(--line); border-radius: 5px; padding: 3px 6px; background: var(--panel); }
-    .scan-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .scan-label { font-size: 12px; color: var(--im-teal-deep); font-weight: 900; margin: 4px 0 10px; }
-    .issue-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .issue-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
-    .issue-title { font-size: 13px; font-weight: 900; color: var(--im-teal-deep); margin-bottom: 6px; }
-    .issue-reason { font-size: 12px; color: #4e5a55; line-height: 1.5; margin-bottom: 8px; }
-    .issue-links { display: flex; flex-wrap: wrap; gap: 5px; }
-    .action-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-    .action-panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; box-shadow: 0 8px 22px rgba(31, 54, 48, 0.06); }
-    .action-panel-title { font-size: 12px; color: var(--ink); font-weight: 900; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid var(--im-teal); }
-    .compact-etf-row { border-top: 1px solid #e2e7df; padding: 11px 0; min-height: 132px; display: grid; grid-template-rows: auto auto 1fr; }
-    .compact-etf-row:first-of-type { border-top: 0; padding-top: 0; }
-    .compact-head { display: grid; grid-template-columns: minmax(0, 1fr) 54px; gap: 10px; align-items: start; margin-bottom: 7px; }
-    .compact-title { min-width: 0; }
-    .compact-name { font-size: 13px; font-weight: 900; color: var(--im-teal-deep); line-height: 1.35; min-height: 36px;
-                    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-                    word-break: keep-all; overflow-wrap: anywhere; }
-    .compact-code { font-size: 11px; color: #6b746e; margin-left: 4px; white-space: nowrap; }
-    .compact-change { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
-    .compact-note { font-size: 12px; color: #4e5a55; line-height: 1.45; margin-top: 7px; align-self: end; }
+    .section-note { font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 12px; }
+    .narrative { font-size: 15px; line-height: 1.8; color: #27302d; }
+    /* 세 줄 요약 상자 — Market(lib/report-template.css .summary-box)과 같은 모양 */
+    .summary-box { background: #EEFAF7; border: 1px solid #BFE9DF; border-radius: 10px; padding: 8px 16px; margin-bottom: 30px; }
+    .summary-list { list-style: none; }
+    .summary-row { display: flex; align-items: baseline; gap: 12px; padding: 10px 0; }
+    .summary-row + .summary-row { border-top: 1px solid #D3EEE7; }
+    .summary-label { flex: none; width: 66px; font-size: 13px; font-weight: 700; color: var(--im-teal-deep); }
+    .summary-text { font-size: 15px; line-height: 1.65; color: #1A2421; min-width: 0; word-break: keep-all; overflow-wrap: break-word; }
+    .asset-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .asset-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; min-width: 0; }
+    .asset-label { font-size: 16px; font-weight: 900; color: var(--ink); margin-bottom: 10px; }
+    .field-label { font-size: 11px; font-weight: 900; color: var(--im-teal-deep); margin-bottom: 5px; }
+    .rep-list { list-style: none; display: grid; gap: 6px; }
+    .rep-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px; align-items: baseline; font-size: 13px; }
+    .rep-badge { font-size: 10px; font-weight: 900; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; background: #fbfcfa; }
+    .rep-name { font-weight: 800; overflow-wrap: anywhere; }
+    .rep-code { color: #6b746e; font-size: 11px; margin-left: 4px; white-space: nowrap; }
+    .rep-change { white-space: nowrap; }
+    .asset-field { border-top: 1px solid #e8ece8; padding-top: 9px; margin-top: 10px; }
+    .asset-field p { font-size: 13px; line-height: 1.6; color: #2d3531; overflow-wrap: anywhere; }
+    .check-list { list-style: none; display: grid; gap: 10px; }
+    .check-item { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; background: var(--panel); border: 1px solid var(--line);
+                  border-left: 4px solid var(--im-mint); border-radius: 8px; padding: 12px 14px; }
+    .check-time { font-size: 13px; font-weight: 900; color: var(--im-teal-deep); font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+    .check-what { font-size: 15px; font-weight: 900; line-height: 1.45; margin-bottom: 6px; color: #1c2421; }
+    .check-field { font-size: 13px; color: #3c4642; line-height: 1.55; overflow-wrap: anywhere; }
+    .check-label { font-weight: 900; color: var(--muted); margin-right: 4px; }
+    .tactical { background: #fff7e7; border: 1px solid #ecd3a6; border-left: 4px solid var(--warning); border-radius: 8px; padding: 14px 16px; }
+    .tactical .section-title { border-top: 0; padding-top: 0; border-bottom-color: #ecd3a6; }
+    .tactical-note { font-size: 12px; color: #6b5532; line-height: 1.6; margin-top: 8px; }
+    .details { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+    .details > summary { cursor: pointer; font-weight: 900; color: var(--im-teal-deep); }
+    .table-title { font-size: 12px; font-weight: 900; color: var(--ink); margin: 16px 0 6px; }
+    .table-wrap { overflow-x: auto; }
+    .etf-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .etf-table th { text-align: left; font-size: 11px; color: var(--muted); font-weight: 800; border-bottom: 2px solid var(--line); padding: 6px 4px; white-space: nowrap; }
+    .etf-table td { border-bottom: 1px solid #e8ece8; padding: 7px 4px; vertical-align: top; line-height: 1.4; }
+    .etf-table .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+    .etf-table .tag { color: var(--muted); white-space: nowrap; }
+    .table-note { font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
+    .change-up { color: var(--up); font-weight: 900; font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+    .change-down { color: var(--down); font-weight: 900; font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+    .change-flat { color: var(--muted); font-weight: 800; font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
     .etf-chip { display: inline-flex; align-items: baseline; gap: 4px; border: 1px solid #bce5dc; background: var(--soft-teal);
                 color: var(--im-teal-deep); border-radius: 6px; padding: 1px 6px; font-size: 0.92em; line-height: 1.45; white-space: nowrap; }
     .etf-chip-us { border-color: #c7d2e4; background: #f6f8fc; color: #2d4f77; }
     .etf-chip-alert { border-color: #e3c59b; background: #fff7e8; color: #7a4b10; }
     .etf-chip-name { font-weight: 800; }
     .etf-chip-code { color: #6b746e; font-size: 0.86em; }
-    .watch-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-    .watch-item { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--im-mint); border-radius: 8px; padding: 16px; margin-bottom: 0; }
-    .etf-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
-                padding: 14px; margin-bottom: 10px; box-shadow: 0 8px 20px rgba(31, 54, 48, 0.05); }
-    .etf-card-head { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; margin-bottom: 10px; }
-    .etf-card-left .etf-primary { display: inline-block; font-size: 14px; font-weight: 900; color: var(--im-teal-deep); margin-right: 8px; }
-    .etf-card-left .etf-secondary { display: inline-block; font-size: 13px; color: #626d67; }
-    .etf-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
-    .etf-tag { font-size: 10px; color: #52615b; background: var(--soft-mint); border: 1px solid #dfe6dc; border-radius: 5px; padding: 2px 6px; }
-    .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; }
-    .metric-item { background: #fbfcfa; border: 1px solid #e0e5dc; border-radius: 6px; padding: 8px; min-width: 0; }
-    .metric-label { font-size: 10px; color: #6b746e; margin-bottom: 3px; }
-    .metric-value { font-size: 12px; font-weight: 800; color: #202824; overflow-wrap: anywhere; text-align: right; font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
-    .visual-stack { display: grid; gap: 7px; margin-top: 8px; }
-    .bar-row { display: grid; grid-template-columns: 72px 1fr 48px; gap: 8px; align-items: center; font-size: 11px; color: #5b6660; }
-    .metric-bar { position: relative; height: 8px; background: #edf1eb; border-radius: 999px; overflow: hidden; }
-    .metric-zero { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: #c3cbc3; }
-    .metric-fill { position: absolute; top: 0; bottom: 0; border-radius: 999px; }
-    .metric-pos { background: var(--im-teal); }
-    .metric-neg { background: #c45145; }
-    .micro-spark { display: inline-grid; grid-template-columns: repeat(8, 3px); gap: 2px; align-items: end; height: 18px; margin-right: 6px; vertical-align: middle; }
-    .micro-spark i { display: block; width: 3px; background: var(--im-teal); border-radius: 2px 2px 0 0; }
-    .change-up { color: var(--im-teal-deep); font-weight: 900; font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
-    .change-down { color: #b94135; font-weight: 800; font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
-    .anomaly-card { background: #fff7f4; border: 1px solid #e0b8ac; border-radius: 8px; padding: 14px; margin-bottom: 10px; }
-    .anomaly-badge { display: inline-block; background: #f2d4ca; color: #9d3329;
-                     font-size: 11px; padding: 2px 8px; border-radius: 4px; margin-right: 6px; }
-    .watch-title { font-weight: 900; margin-bottom: 10px; color: #1c2421; line-height: 1.45; }
-    .watch-body { font-size: 14px; color: #4e5a55; line-height: 1.6; }
-    .macro-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-    .macro-item { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; min-width: 0; }
-    .macro-label { font-size: 10px; color: #6b746e; margin-bottom: 6px; white-space: nowrap; }
-    .macro-value { font-size: 18px; font-weight: 900; text-align: left; white-space: nowrap; font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
-    .score-row { display: grid; grid-template-columns: 150px 74px 1fr; gap: 10px; align-items: start;
-                 padding: 11px 0; border-bottom: 1px solid #d6ddd3; }
-    .score-label { font-weight: 900; color: #1c2421; }
-    .score-value { color: var(--im-teal-deep); font-weight: 900; }
-    .score-detail { font-size: 13px; color: #53605a; line-height: 1.5; }
-    .strategy-map { display: grid; gap: 12px; }
-    .strategy-item { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; box-shadow: 0 8px 20px rgba(31, 54, 48, 0.05); }
-    .strategy-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
-    .story-card { background: var(--panel); border: 1px solid var(--line); border-left: 8px solid var(--im-mint);
-                  border-radius: 8px; padding: 22px; margin-bottom: 30px; box-shadow: 0 12px 26px rgba(31, 54, 48, 0.07); }
-    .story-title { font-size: 27px; line-height: 1.3; font-weight: 900; margin-bottom: 12px; color: #111514; }
-    .story-body { font-size: 15px; line-height: 1.75; color: #2d3531; }
-    .story-acts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
-    .story-act { border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: #fbfcfa; }
-    .story-act-label { font-size: 11px; color: var(--im-teal-deep); font-weight: 900; margin-bottom: 6px; }
-    .story-act-value { font-size: 15px; font-weight: 900; color: #151a18; line-height: 1.45; margin-bottom: 6px; }
-    .story-act-note { font-size: 12px; color: #4e5a55; line-height: 1.5; }
-    .spine { display: grid; gap: 10px; }
-    .spine-step { display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: 12px; align-items: stretch; }
-    .spine-marker { background: var(--im-teal-deep); color: #ffffff; border-radius: 8px; padding: 10px 8px;
-                    display: grid; align-content: center; text-align: center; min-height: 92px; }
-    .spine-marker strong { font-size: 13px; line-height: 1.25; }
-    .spine-marker span { display: block; font-size: 10px; color: #dbe8e1; margin-top: 4px; }
-    .spine-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; min-width: 0; }
-    .spine-kicker { font-size: 11px; color: var(--muted); font-weight: 900; margin-bottom: 6px; }
-    .spine-headline { font-size: 15px; color: #1c2421; font-weight: 900; line-height: 1.5; margin-bottom: 8px; }
-    .spine-detail { font-size: 13px; color: #4e5a55; line-height: 1.6; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e0e5dc; }
-    .spine-detail-label { font-size: 11px; color: #6b746e; font-weight: 800; margin-bottom: 4px; }
-    .character-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-    .character-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; box-shadow: 0 8px 20px rgba(31, 54, 48, 0.05); }
-    .character-head { display: flex; justify-content: space-between; gap: 10px; align-items: start; margin-bottom: 8px; }
-    .character-role { font-size: 11px; color: var(--im-teal-deep); font-weight: 900; margin-bottom: 4px; }
-    .character-name { font-size: 14px; color: #1c2421; font-weight: 900; line-height: 1.35; }
-    .character-code { font-size: 11px; color: #6b746e; margin-top: 2px; }
-    .character-move { font-size: 14px; font-weight: 800; white-space: nowrap; }
-    .character-metrics { grid-template-columns: 0.72fr 1fr 0.72fr; gap: 6px; }
-    .character-metrics .metric-item { padding: 7px 6px; }
-    .character-metrics .metric-label { white-space: nowrap; }
-    .character-metrics .metric-value { font-size: 11px; white-space: nowrap; overflow-wrap: normal; }
-    .resolution-grid { display: grid; gap: 10px; }
-    .resolution-row { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px;
-                      display: grid; grid-template-columns: 110px 1fr 1fr; gap: 10px; }
-    .resolution-label { font-size: 12px; color: #ffffff; border-radius: 4px; padding: 3px 8px; font-weight: 800; width: fit-content; }
-    .stance { color: #ffffff; border-radius: 4px; padding: 3px 8px; font-size: 12px; font-weight: 800; }
-    .stance-prefer { background: var(--im-teal-deep); }
-    .stance-watch { background: #b97918; }
-    .stance-neutral { background: #647067; }
-    .stance-caution { background: #b34739; }
-    .tickers { font-size: 12px; color: var(--im-teal-deep); margin-bottom: 8px; font-weight: 800; }
-    .action-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
-    .action-box { background: #fbfcfa; border: 1px solid #e0e5dc; border-radius: 6px; padding: 10px; min-width: 0; }
-    .action-box-primary { grid-column: 1 / -1; background: var(--soft-teal); border-color: #bce5dc; }
-    .action-label { font-size: 11px; color: var(--im-teal-deep); margin-bottom: 5px; font-weight: 900; }
-    .action-text { font-size: 12px; color: #2d3531; line-height: 1.55; overflow-wrap: anywhere; }
-    .bar-row strong { text-align: right; font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
-    .risk-alert { border-left: 4px solid #d18a22; padding: 12px; background: #fff4df; margin-bottom: 8px; border-radius: 6px; }
-    .source-list { display: grid; gap: 8px; }
-    .source-item { font-size: 13px; line-height: 1.5; border-bottom: 1px solid #d6ddd3; padding-bottom: 8px; color: #38413d; }
-    .source-item a { color: var(--im-teal-deep); overflow-wrap: anywhere; }
     .etf-link { color: inherit; text-decoration: none; border-bottom: 1px solid rgba(0, 143, 127, 0.35); }
     .etf-link:hover { color: var(--im-teal-deep); border-bottom-color: currentColor; }
     .etf-link:focus-visible { outline: 2px solid var(--im-teal); outline-offset: 2px; border-radius: 4px; }
-    .etf-title-link, .compact-link, .character-link { border-bottom-color: transparent; }
-    .etf-chip.etf-link, .etf-tag.etf-link { border-bottom: 1px solid #bce5dc; }
-    .methodology details { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
-    .methodology summary { cursor: pointer; font-weight: 900; color: var(--im-teal-deep); }
-    .term-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
-    .term-item { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
-    .term-name { font-size: 12px; font-weight: 900; color: var(--im-teal-deep); margin-bottom: 5px; }
-    .term-body { font-size: 12px; color: #4e5a55; line-height: 1.55; }
-    .data-note { font-size: 13px; color: var(--muted); line-height: 1.7; margin-top: 16px; background: var(--panel);
+    .etf-chip.etf-link { border-bottom: 1px solid #bce5dc; }
+    .source-list { display: grid; gap: 8px; }
+    .source-item { font-size: 13px; line-height: 1.5; border-bottom: 1px solid #d6ddd3; padding-bottom: 8px; color: #38413d; }
+    .source-item a { color: var(--im-teal-deep); overflow-wrap: anywhere; }
+    .data-note { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 28px; background: var(--panel);
                  border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
-    .closing { font-size: 15px; color: var(--im-teal-deep); font-style: italic;
-               border-top: 1px solid var(--line); padding-top: 24px; margin-top: 40px; }
-    @media (max-width: 720px) {
-      body { padding: 18px 12px; }
-      .cover { padding: 26px 0 22px; margin-bottom: 22px; }
-      .masthead, .cover-grid { grid-template-columns: 1fr; display: grid; }
-      .masthead { align-items: start; }
-      .issue-meta { justify-content: flex-start; }
-      .cover { padding: 18px; }
-      .cover-note { border-left: 0; border-top: 4px solid var(--im-mint); padding: 12px 0 0; }
-      .section { margin-bottom: 30px; }
-      .strategy-hero, .client-notice, .logic-card, .bridge-card, .snapshot-panel, .match-row, .issue-card, .action-panel, .watch-item, .etf-card, .strategy-item, .term-item, .data-note { padding: 12px; }
-      .hero-grid, .logic-grid, .snapshot-grid, .bridge-grid, .match-row, .scan-columns, .issue-grid, .action-board, .watch-grid, .action-grid, .term-grid, .customer-grid, .preflight-grid { grid-template-columns: 1fr; }
-      .macro-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-      .macro-item { padding: 10px; }
-      .story-acts, .spine-step, .character-grid, .resolution-row { grid-template-columns: 1fr; }
-      .spine-marker { min-height: 0; text-align: left; }
-      .heatmap-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .character-metrics { grid-template-columns: 0.72fr 1fr 0.72fr; }
-      .etf-card-head { grid-template-columns: 1fr; gap: 6px; }
-      .etf-card-head > .change-up, .etf-card-head > .change-down { justify-self: start; }
-      .etf-card-left .etf-primary, .compact-name, .bridge-target, .watch-body, .action-text { max-width: 100%; overflow-wrap: anywhere; }
-      .compact-head { grid-template-columns: minmax(0, 1fr) 54px; align-items: start; }
-      .etf-chip { max-width: 100%; white-space: normal; vertical-align: baseline; overflow-wrap: anywhere; }
-      .etf-chip-name { overflow-wrap: anywhere; }
-      .bar-row { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; }
-      .bar-row .metric-bar { grid-column: 1 / -1; }
-      .score-row { grid-template-columns: 1fr; gap: 4px; }
-      .cover h1 { font-size: 30px; }
-    }
-    @media (max-width: 430px) {
+    .client-notice { background: var(--panel); border: 1px solid var(--line); border-top: 5px solid var(--im-graphite);
+                     border-radius: 8px; padding: 18px; margin-bottom: 28px; }
+    .notice-title { font-size: 18px; font-weight: 900; color: var(--ink); margin-bottom: 8px; }
+    .notice-text { font-size: 13px; color: var(--muted); line-height: 1.65; }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    .pill { border: 1px solid var(--line); border-radius: 6px; background: var(--soft-teal); color: var(--im-teal-deep);
+            font-size: 11px; font-weight: 900; padding: 5px 8px; }
+    .legal-title { font-size: 13px; font-weight: 900; color: var(--ink); margin-top: 16px; padding-top: 14px;
+                   border-top: 1px solid var(--line); }
+    .legal-list { margin: 8px 0 0; padding-left: 18px; list-style: disc; }
+    .legal-list li { font-size: 12px; color: var(--muted); line-height: 1.65; margin-bottom: 5px; word-break: keep-all; }
+    .legal-list li:last-child { margin-bottom: 0; }
+    @media (max-width: 600px) {
       body { padding: 14px 10px; }
-      .brand-logo { width: 68px; height: 68px; }
-      .report-name { font-size: 25px; }
+      .cover { padding: 16px; margin-bottom: 22px; }
+      .brand-logo { width: 60px; height: 60px; }
+      .report-name { font-size: 24px; }
       .cover h1 { font-size: 25px; }
       .cover .subline, .narrative { font-size: 15px; }
-      .hero-title { font-size: 20px; }
-      .metric-grid { gap: 6px; }
-      .metric-item { padding: 7px; }
-      .metric-value { font-size: 11px; }
-      .macro-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
-      .macro-item { padding: 9px; }
-      .macro-label { font-size: 9px; margin-bottom: 5px; }
-      .macro-value { font-size: 16px; }
-      .character-metrics { gap: 4px; }
-      .character-metrics .metric-item { padding: 6px 4px; }
-      .character-metrics .metric-label { font-size: 9px; }
-      .character-metrics .metric-value { font-size: 10px; }
-      .compact-head { grid-template-columns: minmax(0, 1fr) 54px; gap: 6px; }
-      .micro-spark { grid-template-columns: repeat(6, 3px); }
-      .micro-spark i:nth-child(n+7) { display: none; }
-      .strategy-head { display: grid; grid-template-columns: 1fr; gap: 6px; }
-      .stance { justify-self: start; }
-      .snapshot-row { grid-template-columns: 1fr; gap: 3px; }
-      .heatmap-grid { grid-template-columns: 1fr; }
-      .heat-cell { min-height: 0; }
+      .asset-grid { grid-template-columns: 1fr; }
+      .summary-label { width: 62px; }
+      .check-item { grid-template-columns: 1fr; gap: 4px; }
+      .etf-chip { max-width: 100%; white-space: normal; vertical-align: baseline; overflow-wrap: anywhere; }
     }
   </style>
 </head>
@@ -383,96 +220,20 @@ ${body}
 </html>`
 }
 
-function renderEtfCard(q: EtfQuote): string {
-  const pct = q.changePercent
-  const pctStr = pct !== null ? `${pct > 0 ? '+' : ''}${pct.toFixed(2)}%` : '미확보'
-  const cls = pct !== null && pct >= 0 ? 'change-up' : 'change-down'
-  const estimatedTradingValue = q.tradingValue !== undefined
-    ? q.tradingValue
-    : q.price !== null && q.volume !== null
-      ? q.price * q.volume
-      : null
-  const hasUsVolume = q.market === 'US' && q.volume !== null && q.volume > 0
-  const metrics = metricItemsHtml([
-    { label: '가격', value: q.price !== null ? q.price.toLocaleString('ko-KR', { maximumFractionDigits: 2 }) : null },
-    { label: '거래량', value: q.volume !== null ? q.volume.toLocaleString('ko-KR') : null },
-    { label: q.market === 'US' ? '추정거래대금(USD)' : '거래대금(원)', value: estimatedTradingValue !== null ? formatAmountForQuote(q, estimatedTradingValue) : null },
-    { label: q.market === 'KR' ? '순자산(원)' : 'AUM(USD)', value: q.aum !== null ? formatAmountForQuote(q, q.aum) : null },
-    { label: '유동성', value: hasUsVolume ? inferLiquidity(q) : null },
-    { label: '평균거래량', value: q.market === 'US' && q.prev20AvgVolume !== null ? q.prev20AvgVolume.toLocaleString('ko-KR') : null },
-    { label: 'NAV', value: q.nav !== null ? q.nav.toLocaleString('ko-KR', { maximumFractionDigits: 2 }) : null },
-    { label: '괴리율', value: q.premiumDiscount !== null ? `${q.premiumDiscount > 0 ? '+' : ''}${q.premiumDiscount.toFixed(2)}%` : null },
-  ], 6)
-  const bars = [
-    renderMetricBar('등락률', q.changePercent, 8, '%'),
-    q.premiumDiscount !== null ? renderMetricBar('괴리율', q.premiumDiscount, 1.5, '%') : '',
-    q.dailyIndexGap !== undefined && q.dailyIndexGap !== null ? renderMetricBar('지수대비', q.dailyIndexGap, 5, '%p') : '',
-  ].filter(Boolean).join('')
-  const tags = [
-    q.market === 'KR' ? '국내' : '미국',
-    inferEtfTag(q),
-    q.underlyingIndexName ? q.underlyingIndexName : '',
-  ].filter(Boolean).slice(0, 3)
-
-  return `<div class="etf-card">
-  <div class="etf-card-head">
-    <div class="etf-card-left">
-      ${renderQuoteIdentityLink(q)}
-      <div class="etf-tags">${tags.map(tag => `<span class="etf-tag">${e(tag)}</span>`).join('')}</div>
-    </div>
-    <span class="${cls}">${e(pctStr)}</span>
-  </div>
-  ${metrics ? `<div class="metric-grid">${metrics}</div>` : ''}
-  ${bars ? `<div class="visual-stack">${bars}</div>` : ''}
-</div>`
-}
-
-function renderMetricItem(label: string, value: string): string {
-  return `<div class="metric-item"><div class="metric-label">${e(label)}</div><div class="metric-value">${e(value)}</div></div>`
-}
-
-// R4 (2026-07-22): 미확보(null) 메트릭은 '미확보' 표기 대신 항목 자체를 생략한다.
-// value가 null인 항목은 렌더하지 않고, 남은 항목만 max 개까지 이어붙인다(0개면 '').
-export function metricItemsHtml(
-  entries: Array<{ label: string; value: string | null }>,
-  max?: number
-): string {
-  const items = entries.filter((entry): entry is { label: string; value: string } => entry.value !== null)
-  const limited = typeof max === 'number' ? items.slice(0, max) : items
-  return limited.map(entry => renderMetricItem(entry.label, entry.value)).join('')
-}
-
-function inferLiquidity(q: EtfQuote): string {
-  const volume = q.volume ?? 0
-  if (volume >= 10_000_000) return '높음'
-  if (volume >= 1_000_000) return '보통'
-  if (volume > 0) return '낮음'
-  return '미확보'
-}
-
-function renderMetricBar(label: string, value: number | null | undefined, maxAbs: number, suffix: string): string {
-  if (value === null || value === undefined) return ''
-  const width = Math.min(50, Math.abs(value) / maxAbs * 50)
-  const left = value >= 0 ? 50 : 50 - width
-  const cls = value >= 0 ? 'metric-pos' : 'metric-neg'
-  const display = `${value > 0 ? '+' : ''}${value.toFixed(2)}${suffix}`
-  return `<div class="bar-row">
-    <span>${e(label)}</span>
-    <div class="metric-bar"><span class="metric-zero"></span><span class="metric-fill ${cls}" style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%"></span></div>
-    <strong>${e(display)}</strong>
-  </div>`
-}
-
 const COMMODITY_NAME = /골드|gold|silver|원유|oil|wti|commodity|원자재/i
 const TAG_BY_CATEGORY: Record<string, string> = {
   '채권': '채권', '테마': '테마', '섹터': '섹터', '해외지수': '해외지수', '팩터': '팩터', '지수': '지수',
 }
 
 // 유니버스 category가 1순위. 이름 정규식은 유니버스 밖 종목에만 쓴다
-// (단독 '금'은 '금융'·'금리'에 걸려서 제외).
+// (단독 '금'은 '금융'·'금리'에 걸려서 제외). 펼쳐 보기 표의 '구분' 칸.
+// 레버리지·인버스는 '전술'로 뭉뚱그리지 않고 그대로 쓴다(시세 이름이 티커 그대로면 유니버스 이름으로 판정).
 export function inferEtfTag(q: EtfQuote): string {
-  if (isTacticalEtf(q)) return '전술'
   const def = getEtfByTicker(q.ticker)
+  const names = [q.name, def?.name ?? ''].filter(Boolean)
+  if (names.some(name => isTacticalEtf({ ...q, name }))) {
+    return names.some(name => /인버스|inverse/i.test(name)) ? '인버스' : '레버리지'
+  }
   if (def) {
     if (def.category === '대안') return COMMODITY_NAME.test(q.name) || COMMODITY_NAME.test(def.name) ? '원자재' : '대안'
     return TAG_BY_CATEGORY[def.category] ?? '지수'
@@ -515,17 +276,18 @@ function renderEtfLink(ticker: string, html: string, className = 'etf-link'): st
   return `<a class="${e(className)}"${attrs}>${html}</a>`
 }
 
-function renderQuoteIdentityLink(q: EtfQuote, className = 'etf-link etf-title-link'): string {
-  const identity = formatEtfIdentity(q)
-  return renderEtfLink(
-    q.ticker,
-    `<span class="etf-primary">${e(identity.primary)}</span><span class="etf-secondary">${e(identity.secondary)}</span>`,
-    className
-  )
+// 카드·표용 이름과 코드: 국내는 이름 + 6자리 코드, 미국은 이름 + 티커.
+// 시세 이름이 비었거나 티커 그대로면 유니버스 이름을 쓴다.
+function etfNameAndCode(ticker: string, name: string, market: 'KR' | 'US'): { name: string; code: string } {
+  const code = market === 'KR' ? ticker.replace(/\.(KS|KQ)$/i, '') : ticker
+  const raw = (name ?? '').trim()
+  const tickerLike = !raw || raw === ticker || /\.(KS|KQ)$/i.test(raw)
+  return { name: tickerLike ? (getEtfByTicker(ticker)?.name ?? code) : raw, code }
 }
 
-function renderPlainTickerLink(ticker: string, label: string, className = 'etf-link'): string {
-  return renderEtfLink(ticker, e(label), className)
+function renderNameAndCode(ticker: string, name: string, market: 'KR' | 'US'): string {
+  const id = etfNameAndCode(ticker, name, market)
+  return renderEtfLink(ticker, `<span class="rep-name">${e(id.name)}</span><span class="rep-code">${e(id.code)}</span>`)
 }
 
 function compactKrwAmount(value: number): string {
@@ -546,116 +308,19 @@ function formatAmountForQuote(q: EtfQuote, value: number): string {
   return q.market === 'KR' ? compactKrwAmount(value) : compactUsdAmount(value)
 }
 
-function renderMacroItem(label: string, value: string): string {
-  return `<div class="macro-item">
-  <div class="macro-label">${e(label)}</div>
-  <div class="macro-value">${e(value)}</div>
-</div>`
+// 등락률 표기는 기존 렌더러 그대로(+ 부호, 하락은 ASCII '-', 소수 둘째 자리).
+function formatPct(pct: number | null | undefined): string {
+  if (pct === null || pct === undefined || !Number.isFinite(pct)) return '-'
+  return `${pct > 0 ? '+' : ''}${pct.toFixed(2)}%`
 }
 
-function formatNumber(value: number | null | undefined, digits = 0): string {
-  if (value === null || value === undefined) return '-'
-  return value.toLocaleString('ko-KR', {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  })
+function changeClass(pct: number | null | undefined): string {
+  if (pct === null || pct === undefined || !Number.isFinite(pct) || pct === 0) return 'change-flat'
+  return pct > 0 ? 'change-up' : 'change-down'
 }
 
-function formatMacro(macro: MacroContext): string {
-  return `<div class="macro-grid">
-  ${renderMacroItem('USD/KRW', formatNumber(macro.usdKrw, 0))}
-  ${renderMacroItem('VIX', formatNumber(macro.vix, 2))}
-  ${renderMacroItem('US 10Y', macro.us10y ? `${macro.us10y.toFixed(2)}%` : '-')}
-  ${renderMacroItem('WTI', formatNumber(macro.wti, 1))}
-  ${renderMacroItem('Gold', formatNumber(macro.gold, 0))}
-  ${renderMacroItem('코인 공포탐욕', formatNumber(macro.fearGreed, 0))}
-</div>`
-}
-
-function renderStrategyDashboard(strategy: MorningStrategyInput, quotes: EtfQuote[]): string {
-  const headwinds = strategy.scores
-    .filter(score => ['ratesPressure', 'dollarPressure', 'inflationPressure', 'volatilityPressure'].includes(score.key) && score.score > 0)
-    .slice(0, 3)
-    .map(scoreSummaryText)
-  const tailwinds = strategy.scores
-    .filter(score => ['riskAppetite', 'koreaTransmission'].includes(score.key) && score.score > 0)
-    .slice(0, 2)
-    .map(scoreSummaryText)
-  // C06: 이 숫자는 미국 ETF·변동성 규칙을 합산한 점수다. 검증된 확률처럼 읽히는 '확신도'라 부르지 않는다.
-  return `<div class="section">
-  <div class="section-title">오늘 시장 국면 판단</div>
-  <p class="narrative" style="margin-bottom:16px">${e(strategy.regime.summary)} 규칙 점수는 ${e(String(strategy.regime.confidence))}/100입니다(미국 ETF·변동성 규칙 합산, 검증된 확률 아님). ${e(headwinds.length ? `제한 요인: ${headwinds.join(' · ')}` : `우호 요인: ${tailwinds.join(' · ') || '뚜렷한 방향성 제한'}`)}</p>
-  ${strategy.scores.map(score => `
-    <div class="score-row">
-      <div class="score-label">${e(score.displayLabel)}</div>
-      <div class="score-value">${e(score.displayLevel)}</div>
-      <div class="score-detail">${renderReportText(`${score.stance} · ${score.evidence.map(item => `${item.label} ${item.value}`).join(' / ')}`, quotes)}</div>
-  </div>`).join('')}
-</div>`
-}
-
-function scoreSummaryText(score: MorningStrategyInput['scores'][number]): string {
-  if (score.displayLabel.endsWith(score.displayLevel)) return score.displayLabel
-  return `${score.displayLabel} ${score.displayLevel}`
-}
-
-function stanceClass(stance: string): string {
-  if (stance === '선호') return 'stance-prefer'
-  if (stance === '관찰') return 'stance-watch'
-  if (stance === '경계') return 'stance-caution'
-  return 'stance-neutral'
-}
-
-function displayStance(stance: string): string {
-  return stance === '선호' ? '확인 우선' : stance
-}
-
-function renderStrategyMap(strategy: MorningStrategyInput, quotes: EtfQuote[], report?: MorningReport): string {
-  // Tier 2: Claude strategyProse 가 있으면 group 이름으로 매칭해 prose override
-  const proseByGroup = new Map<string, { rationale?: string; actionGuide?: string; avoid?: string }>()
-  for (const p of report?.narrativeNotes?.strategyProse ?? []) {
-    proseByGroup.set(p.group, { rationale: p.rationale, actionGuide: p.actionGuide, avoid: p.avoid })
-  }
-
-  return `<div class="section">
-  <div class="section-title">ETF군별 전략 지도</div>
-  <div class="strategy-map">
-  ${strategy.etfGroupStrategies.map(item => {
-    const prose = proseByGroup.get(item.group)
-    const rationale = prose?.rationale?.trim() || publicText(item.rationale)
-    const actionGuide = prose?.actionGuide?.trim() || publicText(item.actionGuide)
-    const avoid = prose?.avoid?.trim() || publicText(item.avoid)
-    return `
-    <div class="strategy-item">
-      <div class="strategy-head">
-        <strong>${e(item.group)}</strong>
-        <span class="stance ${stanceClass(item.stance)}">${e(displayStance(item.stance))}</span>
-      </div>
-      <div class="tickers">${item.tickers.map(ticker => renderStrategyTicker(ticker, quotes)).join(' · ')}</div>
-      <div class="watch-body">${renderReportText(rationale, quotes)}</div>
-      <div class="action-grid">
-        <div class="action-box"><div class="action-label">점검 기준</div><div class="action-text">${renderReportText(actionGuide, quotes)}</div></div>
-        <div class="action-box"><div class="action-label">확인</div><div class="action-text">${renderReportText(publicText(item.confirmSignal), quotes)}</div></div>
-        <div class="action-box"><div class="action-label">피할 점</div><div class="action-text">${renderReportText(avoid, quotes)}</div></div>
-      </div>
-    </div>`
-  }).join('')}
-  </div>
-</div>`
-}
-
-function renderStrategyTicker(ticker: string, quotes: EtfQuote[]): string {
-  const quote = quotes.find(q => q.ticker === ticker)
-  if (quote) return renderPlainTickerLink(quote.ticker, formatEtfIdentity(quote).plain)
-  return renderPlainTickerLink(ticker, formatKnownTicker(ticker))
-}
-
-function formatKnownTicker(ticker: string): string {
-  const def = getEtfByTicker(ticker)
-  if (def?.market === 'KR') return `${def.name} (${ticker.replace(/\.(KS|KQ)$/i, '')})`
-  if (def) return `${def.ticker} ${def.name}`
-  if (/\.(KS|KQ)$/i.test(ticker)) return ticker.replace(/\.(KS|KQ)$/i, '')
-  return ticker
+function renderPct(pct: number | null | undefined, extraClass = ''): string {
+  return `<span class="${changeClass(pct)}${extraClass ? ` ${extraClass}` : ''}">${e(formatPct(pct))}</span>`
 }
 
 function renderReportText(text: string, quotes: EtfQuote[]): string {
@@ -747,643 +412,169 @@ function renderEtfChip(q: EtfQuote, matchedLabel?: string): string {
   return `<a class="${cls} etf-link"${attrs}>${content}</a>`
 }
 
-function publicText(text: string): string {
-  return polishKoreanText(text)
+function filled(text: unknown): text is string {
+  return typeof text === 'string' && text.trim().length > 0
 }
 
-function renderClientNotice(data: CollectedData, strategy: MorningStrategyInput): string {
-  // ETF 고유 확인사항(총보수·환헤지·괴리율 등)은 여기에, 법률 근거 고지는
-  // 마켓 리포트와 공유하는 lib/legal-disclaimer.ts 문구를 그대로 붙인다.
-  const legalItems = LEGAL_DISCLAIMER_ITEMS.map(item => `<li>${e(item)}</li>`).join('\n    ')
-
-  return `<div class="client-notice">
-  <div class="notice-title">투자자 보호 기준</div>
-  <div class="notice-text">이 자료는 iM뱅크 고객의 ETF 시장 이해를 돕는 시장정보입니다. ETF는 상품마다 기초지수, 총보수, 세금, 환헤지 여부, NAV/iNAV 대비 괴리율, 유동성이 다르므로 주문 전 개별 상품의 (간이)투자설명서와 거래 조건을 반드시 확인해야 합니다.</div>
-  <div class="pill-row">
-    <span class="pill">기준일 ${e(data.date)}</span>
-    <span class="pill">생성 ${e(formatKstDateTime(strategy.generatedAt))}</span>
-  </div>
-  <div class="legal-title">${e(LEGAL_DISCLAIMER_TITLE)}</div>
-  <ul class="legal-list">
-    ${legalItems}
-  </ul>
-</div>`
+// ── 1·2 머리글 + 모자이크, 제목·부제 ────────────────────────────────────
+// 모자이크는 미리보기 카드와 같은 그림(lib/preview/data-card.ts). 배치 상수가 1080×600 좌표라
+// 같은 좌표계를 viewBox로 두고 화면 폭에 맞춰 줄인다.
+const MOSAIC_VIEW_W = 1080
+const MOSAIC_VIEW_H = 600
+// M6: "어제"는 직전 한국 거래일 라벨로(월요일 '지난 금요일', 휴장 다음 날 '직전 거래일').
+function mosaicCaption(date: string): string {
+  return `${previousSessionLabel(date)} 분석한 ETF 등락(Korea·USA, 레버리지·인버스 제외)`
 }
 
-function renderExecutiveSummary(strategy: MorningStrategyInput, quotes: EtfQuote[]): string {
-  return `<div class="strategy-hero">
-  <div class="hero-kicker">ETF Today Decision Frame</div>
-  <div class="hero-title">${renderReportText(strategy.executiveSummary.title, quotes)}</div>
-  <div class="hero-grid">
-    <div class="hero-item"><div class="hero-label">시장 태도</div><div class="hero-value">${e(strategy.executiveSummary.tacticalStance)}</div></div>
-    <div class="hero-item"><div class="hero-label">확인 우선 ETF군</div><div class="hero-value">${e(publicText(strategy.executiveSummary.preferredGroups.join(' · ') || '없음'))}</div></div>
-    <div class="hero-item"><div class="hero-label">보류/경계</div><div class="hero-value">${e(publicText([...strategy.executiveSummary.watchGroups, ...strategy.executiveSummary.cautionGroups].slice(0, 4).join(' · ') || '없음'))}</div></div>
-  </div>
-  <div class="avoid"><strong>오늘 피해야 할 실수</strong><br>${renderReportText(strategy.executiveSummary.avoidToday, quotes)}</div>
-</div>`
+// Market 머리글과 같은 날짜 표기: "2026년 10월 16일 금요일"
+function mastheadDate(date: string): string {
+  const [y, m, d] = date.split('-')
+  return `${y}년 ${parseInt(m, 10)}월 ${parseInt(d, 10)}일 ${koreanWeekday(date)}요일`
 }
 
-function renderTodayChecklist(report: MorningReport, quotes: EtfQuote[]): string {
-  const labels = [
-    { scope: '개장 30분', condition: '조건', action: '행동', avoid: '피할 점' },
-    { scope: '환율/금리', condition: '조건', action: '행동', avoid: '피할 점' },
-    { scope: '주문 리스크', condition: '조건', action: '행동', avoid: '피할 점' },
-  ]
-
-  // Tier 2: Claude narrativeNotes 우선, 없으면 Tier 1 하드코딩 fallback
-  const claudeActions = report.narrativeNotes?.checklist?.actions ?? []
-  const claudeAvoids = report.narrativeNotes?.checklist?.avoids ?? []
-
-  return `<div class="section">
-  <div class="section-title">오늘의 실행 체크리스트</div>
-  <div class="watch-grid">
-  ${report.todayWatch.items.slice(0, 3).map((item, index) => {
-    const label = labels[index] ?? labels[2]
-    const actionText = claudeActions[index]?.trim() || checklistActionText(index)
-    const avoidText = claudeAvoids[index]?.trim() || checklistAvoidText(index)
-    return `<div class="watch-item">
-    <div class="watch-title">${e(label.scope)} · ${renderReportText(item.title, quotes)}</div>
-    <div class="action-grid">
-      <div class="action-box action-box-primary"><div class="action-label">${e(label.condition)}</div><div class="action-text">${renderReportText(item.body, quotes)}</div></div>
-      <div class="action-box"><div class="action-label">${e(label.action)}</div><div class="action-text">${renderReportText(actionText, quotes)}</div></div>
-      <div class="action-box"><div class="action-label">${e(label.avoid)}</div><div class="action-text">${renderReportText(avoidText, quotes)}</div></div>
-    </div>
-  </div>`
-  }).join('')}
-  </div>
-</div>`
-}
-
-// Plan B (2026-04-28): bigPicture — narrative spine 단락. 분석 렌즈·서사 앵글을
-// 결합해 Claude가 작성한 4~6문장. 누락 시 섹션 자체를 출력하지 않음
-// (Tier 1 fallback 시 narrativeNotes drop 으로 자연스럽게 사라짐).
-function renderBigPicture(report: MorningReport, data: CollectedData): string {
-  const text = report.narrativeNotes?.bigPicture?.trim()
-  if (!text) return ''
-  // C09: '서사 앵글·분석 렌즈'는 생성 내부 용어라 독자에게 노출하지 않는다.
-  return `<div class="section big-picture">
-  <div class="section-title">Big Picture</div>
-  <div class="big-picture-meta">오늘의 큰 그림</div>
-  <div class="big-picture-body">${renderReportText(text, data.quotes)}</div>
-</div>`
-}
-
-function renderStoryOpening(report: MorningReport, data: CollectedData): string {
-  const characters = selectStoryCharacters(data.quotes)
-  const primary = characters.primary
-  const gate = characters.gate
-  const primaryName = primary ? formatEtfIdentity(primary).plain : '국내 성장 ETF'
-  const gateName = gate ? formatEtfIdentity(gate).plain : '환노출 해외 ETF'
-  const usdKrw = data.macro.usdKrw !== null && data.macro.usdKrw !== undefined
-    ? `USD/KRW ${formatNumber(data.macro.usdKrw, 0)}`
-    : '환율'
-
-  // Tier 2: Claude storySpine 우선, 없으면 Tier 1 하드코딩 fallback
-  const spine = report.narrativeNotes?.storySpine
-  const act1Note = spine?.act1?.trim() || `${primaryName}의 거래대금이 함께 따라와야 이 신호가 실제로 움직이는 흐름이 됩니다.`
-  const act2Note = spine?.act2?.trim() || `${gateName}는 기초지수 등락과 원/달러 환율 변화를 나눠 봐야 원화 기준 성과가 보입니다.`
-  const act3Note = spine?.act3?.trim() || '당장의 가격 움직임보다 거래대금과 NAV 괴리가 말해주는 이야기를 먼저 읽어봅니다.'
-
-  return `<div class="story-card">
-  <div class="hero-kicker">Story of the Day</div>
-  <div class="story-title">오늘의 초점 · ${renderReportText(report.cover.headline, data.quotes)}</div>
-  <div class="story-body">${renderReportText(report.cover.subline, data.quotes)} ${e('이 리포트는 선행 신호, 환율 변수, 상품별 실행 조건 순서로 읽습니다.')}</div>
-  <div class="story-acts">
-    <div class="story-act">
-      <div class="story-act-label">1막 · 선행 신호</div>
-      <div class="story-act-value">${renderReportText(shortReportText(firstSentence(report.overnightBrief.narrative), 96), data.quotes)}</div>
-      <div class="story-act-note">${renderReportText(act1Note, data.quotes)}</div>
-    </div>
-    <div class="story-act">
-      <div class="story-act-label">2막 · 환율 변수</div>
-      <div class="story-act-value">${e(usdKrw)}</div>
-      <div class="story-act-note">${renderReportText(act2Note, data.quotes)}</div>
-    </div>
-    <div class="story-act">
-      <div class="story-act-label">3막 · 국내 검증</div>
-      <div class="story-act-value">개장 30분 거래대금</div>
-      <div class="story-act-note">${renderReportText(act3Note, data.quotes)}</div>
-    </div>
-  </div>
-</div>`
-}
-
-function renderStorySpine(report: MorningReport, data: CollectedData): string {
-  const steps = [
-    {
-      label: '발단',
-      act: '1막',
-      kicker: '해외 선행 신호',
-      text: report.overnightBrief.narrative,
-    },
-    {
-      label: '갈등',
-      act: '2막',
-      kicker: '환율과 국내 거래의 제약',
-      text: report.overnightBrief.krImpact,
-    },
-    {
-      label: '해결',
-      act: '3막',
-      kicker: '상품별 실행 조건',
-      text: report.usEtfHighlights.sectorNarrative,
-    },
-  ]
-
-  return `<div class="section">
-  <div class="section-title">Story Spine</div>
-  <div class="spine">
-    ${steps.map(step => renderSpineStep(step, data.quotes)).join('')}
-  </div>
-</div>`
-}
-
-function renderSpineStep(
-  step: { label: string; act: string; kicker: string; text: string },
-  quotes: EtfQuote[]
-): string {
-  const first = firstSentence(step.text)
-  const headline = shortReportText(first, 110)
-  const detail = spineDetailText(step.text, first, headline)
-  return `<div class="spine-step">
-  <div class="spine-marker"><strong>${e(step.label)}</strong><span>${e(step.act)}</span></div>
-  <div class="spine-card">
-    <div class="spine-kicker">${e(step.kicker)}</div>
-    <div class="spine-headline">${renderReportText(headline, quotes)}</div>
-    ${detail ? `<div class="spine-detail"><div class="spine-detail-label">근거 설명</div>${renderReportText(detail, quotes)}</div>` : ''}
-  </div>
-</div>`
-}
-
-function spineDetailText(text: string, first: string, headline: string): string {
-  const normalizedText = normalizeWhitespace(text)
-  const normalizedFirst = normalizeWhitespace(first)
-  const normalizedHeadline = normalizeWhitespace(headline)
-  if (normalizedText === normalizedHeadline) return ''
-  if (normalizedHeadline !== normalizedFirst) return normalizedText
-  if (!normalizedText.startsWith(normalizedFirst)) return normalizedText
-  return normalizedText.slice(normalizedFirst.length).trim()
-}
-
-function firstSentence(text: string): string {
-  const normalized = normalizeWhitespace(text)
-  const match = normalized.match(/^(.+?[.!?])(?:\s|$)/)
-  return match ? match[1] : normalized
-}
-
-function normalizeWhitespace(text: string): string {
-  return text.replace(/\s+/g, ' ').trim()
-}
-
-function shortReportText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text
-  const sentenceEnd = findSentenceEndBefore(text, maxLength)
-  if (sentenceEnd >= 40) return text.slice(0, sentenceEnd + 1)
-  return `${text.slice(0, maxLength).trim()}...`
-}
-
-function findSentenceEndBefore(text: string, maxLength: number): number {
-  const limit = Math.min(text.length, maxLength)
-  let found = -1
-  for (let i = 0; i < limit; i += 1) {
-    const char = text[i]
-    if (char !== '.' && char !== '!' && char !== '?') continue
-    const next = text[i + 1]
-    if (char === '.' && /\d/.test(text[i - 1] ?? '') && /\d/.test(next ?? '')) continue
-    if (next && !/\s/.test(next)) continue
-    found = i
-  }
-  return found
-}
-
-function renderStoryCharacters(report: MorningReport, data: CollectedData): string {
-  const characters = selectStoryCharacters(data.quotes)
-  // Tier 2: Claude characters 우선, 없으면 Tier 1 하드코딩 fallback
-  const c = report.narrativeNotes?.characters
-  const primaryNote = c?.primary?.trim() || '미국 성장주 흐름이 국내 증시의 실제 수요로 전해지는지 보는 창구입니다. 거래대금이 함께 늘어나야 이 신호는 의미를 얻습니다.'
-  const gateNote = c?.gate?.trim() || '같은 해외 지수(S&P500·나스닥) 흐름이라도 원화 환율이 달라지면 체감 수익률은 다른 모습을 보입니다. 기초지수와 환율을 구분해서 봐야 합니다.'
-  const alternativeNote = c?.alternative?.trim() || '성장주 흐름이 주춤하거나 금리가 내려가는 국면에서 함께 눈여겨볼 상품입니다. 오늘의 주인공으로 확정 짓긴 이릅니다.'
-  const warningNote = c?.warning?.trim() || '레버리지와 인버스는 가격 변동폭이 큰 상품입니다. 장기 투자 후보로 다루기보다, 장중 전술 관찰 대상으로 따로 구분해 다룹니다.'
-  const cards = [
-    characters.primary ? renderCharacterCard(characters.primary, '성장 신호 확인', primaryNote, data.quotes) : '',
-    characters.gate && characters.gate !== characters.primary ? renderCharacterCard(characters.gate, '환율 영향 점검', gateNote, data.quotes) : '',
-    characters.alternative ? renderCharacterCard(characters.alternative, '대안 관찰', alternativeNote, data.quotes) : '',
-    characters.warning ? renderCharacterCard(characters.warning, '과열 경계', warningNote, data.quotes) : '',
-  ].filter(Boolean)
-
-  if (cards.length === 0) return ''
-
-  return `<div class="section">
-  <div class="section-title">Characters In The Story</div>
-  <div class="character-grid">
-    ${cards.join('')}
-  </div>
-</div>`
-}
-
-function renderCharacterCard(q: EtfQuote, role: string, note: string, quotes: EtfQuote[]): string {
-  const identity = formatEtfIdentity(q)
-  // R4 (2026-07-22): 등락률 미확보 시 '미확보' 배지 대신 배지 자체를 생략.
-  const changeStr = q.changePercent !== null ? `${q.changePercent > 0 ? '+' : ''}${q.changePercent.toFixed(2)}%` : null
-  const moveClass = q.changePercent !== null && q.changePercent >= 0 ? 'change-up' : 'change-down'
-  const metrics = metricItemsHtml([
-    { label: '등락률', value: changeStr },
-    { label: '거래대금', value: q.tradingValue !== undefined && q.tradingValue !== null ? compactKrwAmount(q.tradingValue) : null },
-    { label: '괴리율', value: q.premiumDiscount !== null ? `${q.premiumDiscount > 0 ? '+' : ''}${q.premiumDiscount.toFixed(2)}%` : null },
-    { label: 'NAV', value: q.nav !== null ? q.nav.toLocaleString('ko-KR', { maximumFractionDigits: 2 }) : null },
-  ], 3)
-
-  return `<div class="character-card">
-  <div class="character-head">
-    <div>
-      <div class="character-role">${e(role)}</div>
-      ${renderEtfLink(q.ticker, `<div class="character-name">${e(identity.primary)}</div><div class="character-code">${e(identity.secondary)}</div>`, 'etf-link character-link')}
-    </div>
-    ${changeStr !== null ? `<div class="character-move ${moveClass}">${e(changeStr)}</div>` : ''}
-  </div>
-  ${metrics ? `<div class="metric-grid character-metrics">${metrics}</div>` : ''}
-  <div class="watch-body">${renderReportText(note, quotes)}</div>
-</div>`
-}
-
-function uniqueQuotes(quotes: Array<EtfQuote | undefined>): EtfQuote[] {
-  const seen = new Set<string>()
-  const out: EtfQuote[] = []
-  for (const quote of quotes) {
-    if (!quote || seen.has(quote.ticker)) continue
-    seen.add(quote.ticker)
-    out.push(quote)
-  }
-  return out
-}
-
-function checklistActionText(index: number): string {
-  if (index === 0) return '해외 흐름을 국내 거래대금이 받아내는지 — 거기서 오늘의 실체를 읽습니다.'
-  if (index === 1) return '환율과 금리가 모두 불리한 날엔, 결정을 서두르기보다 한 박자 늦추는 편이 낫습니다.'
-  return 'NAV와 벌어진 ETF는 시장가보다 지정가로 접근하는 게 안전합니다.'
-}
-
-function checklistAvoidText(index: number): string {
-  if (index === 0) return '미국 ETF가 강하다고 국내 ETF를 장 시작 직후 따라잡는 건 위험합니다.'
-  if (index === 1) return '환율이 높은 구간에서 환노출 해외 ETF를 단번에 늘리면, 이후 원화 강세 때 환산 손실을 크게 입을 수 있습니다.'
-  return '레버리지·인버스는 장기 보유 후보가 아닙니다. 오늘 하루 안에 끝낼 전술형으로만 다룹니다.'
-}
-
-function findQuote(quotes: EtfQuote[], ticker: string): EtfQuote | undefined {
-  return quotes.find(q => q.ticker === ticker)
-}
-
-function fmtQuoteMove(q: EtfQuote | undefined): string {
-  if (!q || q.changePercent === null) return '미확보'
-  return `${q.changePercent > 0 ? '+' : ''}${q.changePercent.toFixed(2)}%`
-}
-
-function quoteLabel(q: EtfQuote | undefined, fallback: string): string {
-  return q ? formatEtfIdentity(q).plain : fallback
-}
-
-function renderGlobalKrMatching(data: CollectedData): string {
-  const pairs = [
-    { theme: '미국 S&P 500', global: ['SPY', 'VOO'], kr: ['360750.KS'], check: '환율 방향과 S&P 500 선물이 같은 편을 들어주는지가 오늘의 관전 포인트입니다.' },
-    { theme: '미국 나스닥 100', global: ['QQQ'], kr: ['133690.KS'], check: '나스닥 등락과 원/달러 환율 변화가 원화 기준 성과에 각각 얼마나 기여했는지 나눠 봅니다.' },
-    { theme: '반도체', global: ['SOXX'], kr: ['091160.KS', '396500.KS', '471760.KS'], check: '미국 반도체 흐름이 국내 거래대금 증가로 실제 이어지는지가 열쇠입니다.' },
-    { theme: '장기 미국채', global: ['TLT', 'IEF'], kr: ['458250.KS', '305080.KS'], check: '미국 10년 금리와 TLT가 같은 방향을 가리키는지 봐야 판단이 깔끔합니다.' },
-  ]
-
-  const rows = pairs.map(pair => {
-    const globalQuotes = pair.global.map(ticker => findQuote(data.quotes, ticker)).filter(Boolean) as EtfQuote[]
-    const krQuotes = pair.kr.map(ticker => findQuote(data.quotes, ticker)).filter(Boolean) as EtfQuote[]
-    const globalText = globalQuotes.length ? globalQuotes.map(formatMatchQuote).join(' · ') : pair.global.map(ticker => renderPlainTickerLink(ticker, formatKnownTicker(ticker))).join(' · ')
-    const krText = krQuotes.length ? krQuotes.map(formatMatchQuote).join(' · ') : pair.kr.map(ticker => renderPlainTickerLink(ticker, formatKnownTicker(ticker))).join(' · ')
-    return `<div class="match-row">
-      <div><div class="match-head">테마</div><div class="match-body">${e(pair.theme)}</div></div>
-      <div><div class="match-head">글로벌 신호</div><div class="match-body">${globalText}</div></div>
-      <div><div class="match-head">국내 실행 확인</div><div class="match-body">${krText}<br>${renderReportText(pair.check, data.quotes)}</div></div>
-    </div>`
-  }).join('')
-
-  return `<div class="section">
-  <div class="section-title">상세 글로벌-KR ETF 매칭</div>
-  <div class="methodology">
-    <details>
-      <summary>상세 글로벌-KR ETF 매칭 보기</summary>
-      <div class="match-table">${rows}</div>
-    </details>
-  </div>
-</div>`
-}
-
-function formatMatchQuote(q: EtfQuote): string {
-  const identity = formatEtfIdentity(q)
-  return `${renderPlainTickerLink(q.ticker, identity.plain)} ${e(fmtQuoteMove(q))}`
-}
-
-function renderGlobalKoreaBridge(data: CollectedData): string {
-  const soxx = findQuote(data.quotes, 'SOXX')
-  const qqq = findQuote(data.quotes, 'QQQ')
-  const tlt = findQuote(data.quotes, 'TLT')
-  const semiconductor = findQuote(data.quotes, '091160.KS')
-  const growth = findQuote(data.quotes, '365040.KS')
-  const sp500Kr = findQuote(data.quotes, '360750.KS')
-  const leverage = findQuote(data.quotes, '122630.KS')
-  const inverse = findQuote(data.quotes, '252670.KS')
-
-  const bridgeItems = [
-    {
-      step: '미국 기술주 신호',
-      signal: `SOXX ${fmtQuoteMove(soxx)} · QQQ ${fmtQuoteMove(qqq)}`,
-      target: `${quoteLabel(semiconductor, '국내 반도체 ETF')}와 ${quoteLabel(growth, '국내 성장 테마 ETF')}의 장 초반 거래대금이 늘어나야 이 신호에 무게가 실립니다.`,
-    },
-    {
-      step: '환율 영향',
-      signal: `USD/KRW ${formatNumber(data.macro.usdKrw, 0)}`,
-      target: `${quoteLabel(sp500Kr, '국내 상장 해외 ETF')}는 이미 들고 있는 비중과 새로 담는 비용을 다른 방식으로 따져봐야 합니다.`,
-    },
-    {
-      step: '변동성 실행 리스크',
-      signal: `TLT ${fmtQuoteMove(tlt)} · VIX ${formatNumber(data.macro.vix, 2)}`,
-      target: `${quoteLabel(leverage, '레버리지 ETF')}와 ${quoteLabel(inverse, '인버스 ETF')}는 진입 전 기초지수 방향과 NAV를 꼭 한 번 더 짚어봅니다.`,
-    },
-  ]
-
-  return `<div class="section">
-  <div class="section-title">해외 신호가 국내 ETF에 미치는 영향</div>
-  <div class="bridge-grid">
-    ${bridgeItems.map(item => `
-    <div class="bridge-card">
-      <div class="bridge-step">${e(item.step)}</div>
-      <div class="bridge-signal">${renderReportText(item.signal, data.quotes)}</div>
-      <div class="bridge-target">${renderReportText(item.target, data.quotes)}</div>
-    </div>`).join('')}
-  </div>
-</div>`
-}
-
-function renderMarketHeatmap(data: CollectedData): string {
-  // C08 (2026-10-16 감사): 평균이 의미를 지우지 않게 묶는다. 미국·국내는 거래 세션이 달라 한 타일에서
-  // 평균내지 않고, 레버리지·인버스는 반대 노출이 상쇄되므로 평균 타일을 두지 않는다(전술 경고 보드에
-  // 각각 표시). 국내 평균은 전술형을 뺀 1배 ETF만.
-  const groups = [
-    { name: '미국 대표지수', meta: 'SPY·QQQ·IWM', tickers: ['SPY', 'QQQ', 'IWM'] },
-    { name: '미국 반도체', meta: 'SOXX', tickers: ['SOXX'] },
-    { name: '국내 반도체', meta: 'KODEX 반도체·TIGER 반도체TOP10·TIGER AI반도체핵심공정', tickers: ['091160.KS', '396500.KS', '471760.KS'] },
-    { name: '국내 1배 ETF', meta: '수집 국내 ETF 평균(레버리지·인버스 제외)', tickers: data.quotes.filter(q => q.market === 'KR' && !isTacticalEtf(q)).map(q => q.ticker).slice(0, 80) },
-    { name: '환노출 해외', meta: '국내 상장 미국 ETF', tickers: ['360750.KS', '133690.KS'] },
-    { name: '채권', meta: 'TLT·IEF·BND', tickers: ['TLT', 'IEF', 'BND'] },
-    { name: '금·원자재', meta: 'GLD·USO·DBC', tickers: ['GLD', 'USO', 'DBC'] },
-    { name: '미국 에너지', meta: 'XLE', tickers: ['XLE'] },
-  ]
-
-  const cells = groups
-    .map(group => {
-      const values = group.tickers
-        .map(ticker => findQuote(data.quotes, ticker)?.changePercent)
-        .filter((value): value is number => value !== null && value !== undefined)
-      if (values.length === 0) return ''
-      const avg = values.reduce((a, b) => a + b, 0) / values.length
-      const sampleText = values.length <= 2 ? `참고값 · ${values.length}개` : `${values.length}개 평균`
-      return `<div class="heat-cell ${heatClass(avg)}">
-        <div class="heat-name">${e(group.name)}</div>
-        <div class="heat-meta">${e(group.meta)} · ${e(sampleText)}</div>
-        <div class="heat-value">${e(`${avg > 0 ? '+' : ''}${avg.toFixed(2)}%`)}</div>
-      </div>`
-    })
-    .filter(Boolean)
-    .join('')
-
-  if (!cells) return ''
-
-  return `<div class="section">
-  <div class="section-title">ETF Market Heatmap</div>
-  <div class="heatmap-grid">${cells}</div>
-  <div class="legend"><span>1D 기준</span><span>-3% 이하</span><span>-1~-3%</span><span>-1~+1%</span><span>+1~+3%</span><span>+3% 이상</span></div>
-  <p class="heat-sub">모든 수치는 1D 기준입니다. 미국 타일은 간밤 미국 장, 국내 타일은 직전 한국 장 기준이며 서로 섞어 평균내지 않습니다. 표본 수 2개 이하는 시장 대표값이 아니라 참고값입니다. 5D 흐름은 12개월 시계열 수집 후 표시합니다.</p>
-</div>`
-}
-
-function heatClass(value: number): string {
-  if (value >= 3) return 'heat-pos-3'
-  if (value >= 1) return 'heat-pos-2'
-  if (value > 0) return 'heat-pos-1'
-  if (value <= -3) return 'heat-neg-3'
-  if (value <= -1) return 'heat-neg-2'
-  if (value < 0) return 'heat-neg-1'
-  return 'heat-flat'
-}
-
-function renderIssueEtfs(data: CollectedData): string {
-  const issues = [
-    { title: '반도체·AI', reason: '미국 반도체 흐름이 국내 반도체 ETF 거래대금으로 이어지는지가 오늘의 관전 포인트입니다.', tickers: ['SOXX', '091160.KS', '396500.KS'] },
-    { title: '장기채·금리', reason: '미국 10년 금리의 움직임이 장기채 ETF 가격에 어떻게 새겨지는지 읽어냅니다.', tickers: ['TLT', 'IEF', '458250.KS'] },
-    { title: '환노출 미국주식', reason: 'S&P500·나스닥 등락과 원/달러 환율 변화를 따로 떼어, 원화 기준 성과가 어디서 왔는지 계산해 봅니다.', tickers: ['360750.KS', '133690.KS'] },
-    { title: '레버리지·인버스', reason: 'NAV와 괴리 상태를 먼저 확인한 뒤에야 장 초반 진입을 고민할 수 있는 상품군입니다.', tickers: ['122630.KS', '252670.KS'] },
-    { title: '금·원자재', reason: '지정학 변수와 달러 방향이 원자재 ETF에 같은 신호를 보내는지 맞춰 봅니다.', tickers: ['GLD', 'SLV', 'USO', '132030.KS'] },
-  ]
-
-  const cards = issues.map(issue => {
-    const linked = issue.tickers
-      .map(ticker => findQuote(data.quotes, ticker))
-      .filter(Boolean) as EtfQuote[]
-    const fallbackLinks = issue.tickers
-      .slice(0, 3)
-      .map(ticker => renderPlainTickerLink(ticker, formatKnownTicker(ticker), 'etf-tag etf-link'))
-      .join('')
-    const links = linked.length
-      ? linked.slice(0, 4).map(q => renderEtfLink(q.ticker, `${e(formatEtfIdentity(q).plain)} ${e(fmtQuoteMove(q))}`, 'etf-tag etf-link')).join('')
-      : fallbackLinks
-    return `<div class="issue-card">
-      <div class="issue-title">${e(issue.title)}</div>
-      <div class="issue-reason">${e(issue.reason)}</div>
-      <div class="issue-links">${links}</div>
-    </div>`
-  }).join('')
-
-  return `<div class="section">
-  <div class="section-title">오늘 이슈별 관찰 ETF</div>
-  <p class="narrative" style="margin-bottom:12px">아래 ETF는 이슈 확인용 관찰 대상이며, 추천의 의미가 아닙니다.</p>
-  <div class="issue-grid">${cards}</div>
-</div>`
-}
-
-function renderRiskAlerts(strategy: MorningStrategyInput, quotes: EtfQuote[]): string {
-  if (strategy.riskAlerts.length === 0) return ''
-  return `<div class="section">
-  <div class="section-title">Risk Checklist</div>
-  ${strategy.riskAlerts.map(alert => `
-    <div class="risk-alert">
-      <div class="watch-title">${renderReportText(alert.title, quotes)}</div>
-      <div class="watch-body">${renderReportText(alert.body, quotes)}</div>
-    </div>`).join('')}
-</div>`
-}
-
-function renderKrEtfScan(quotes: EtfQuote[]): string {
-  const topKr = [...quotes]
-    .filter(q => q.market === 'KR' && q.changePercent !== null && !isTacticalEtf(q))
-    .sort((a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0))
-
-  if (topKr.length === 0) return ''
-
-  return `<div class="section">
-  <div class="section-title">KR ETF Market Scanner — 참고 데이터</div>
-  <p class="narrative" style="margin-bottom:16px">국내 ETF 스캐너는 KRX OpenAPI 일별매매정보를 기준으로 정리한 참고 데이터입니다. 레버리지·인버스 ETF는 일반 순위에서 제외하고 별도 경고 섹션에 표시합니다.</p>
-  <div class="scan-columns">
-    <div>
-      <div class="scan-label">전술형 제외 상승률 상위 5</div>
-      ${topKr.slice(0, 5).map(renderEtfCard).join('')}
-    </div>
-    <div>
-      <div class="scan-label">전술형 제외 하락률 하위 5</div>
-      ${topKr.slice(-5).reverse().map(renderEtfCard).join('')}
-    </div>
-  </div>
-</div>`
-}
-
-function renderTacticalEtfWarning(quotes: EtfQuote[]): string {
-  const tactical = [...quotes]
-    .filter(q => q.market === 'KR' && q.changePercent !== null && isTacticalEtf(q))
-    .sort((a, b) => Math.abs(b.changePercent ?? 0) - Math.abs(a.changePercent ?? 0))
-    .slice(0, 5)
-
-  if (tactical.length === 0) return ''
-
-  // P1+보강 [H1] (2026-04-24):
-  // 기존: 모든 전술형 ETF 카드에 "지수는 오르는데 ..." 같은 문구가 동일
-  // 반복 출력 + "지수" 단독 표기로 한국 독자 혼동 유발. '기초지수' 로 명확화
-  // + 3종 변주로 분산 (같은 카드가 같은 문장을 쓰지 않도록).
-  const TACTICAL_WARNINGS = [
-    '기초지수가 오르는데 NAV 괴리가 벌어진다면, 수익률이 커 보여도 들어가기엔 이릅니다.',
-    '전술형 상품은 기초지수 방향과 NAV 괴리를 같이 살펴야 진입 조건이 성립합니다.',
-    '장중 변동성이 커진 날 전술형 상품의 호가창 잔량을 먼저 확인하는 편이 안전합니다.',
-  ]
-  return `<div class="section">
-  <div class="section-title">Tactical ETF Warning Board</div>
-  <p class="narrative" style="margin-bottom:16px">레버리지·인버스 ETF는 일간 수익률을 추종하는 고위험 전술형 상품입니다. 장기 보유 목적, 원금보존 성향, 상품 구조를 이해하지 못한 고객에게 적합하지 않을 수 있습니다.</p>
-  <div class="action-board">
-    ${tactical.map((q, idx) => {
-      const identity = formatEtfIdentity(q)
-      // R4 (2026-07-22): 미확보 메트릭은 항목 생략. 셋 다 없으면 metric-grid 자체를 생략.
-      const metrics = metricItemsHtml([
-        { label: '거래대금(원)', value: q.tradingValue !== undefined && q.tradingValue !== null ? compactKrwAmount(q.tradingValue) : null },
-        { label: '괴리율', value: q.premiumDiscount !== null ? `${q.premiumDiscount > 0 ? '+' : ''}${q.premiumDiscount.toFixed(2)}%` : null },
-        { label: '지수대비', value: q.dailyIndexGap !== undefined && q.dailyIndexGap !== null ? `${q.dailyIndexGap > 0 ? '+' : ''}${q.dailyIndexGap.toFixed(2)}%p` : null },
-      ])
-      const note = TACTICAL_WARNINGS[idx % TACTICAL_WARNINGS.length]
-      return `<div class="action-panel">
-        <div class="compact-head">
-          <div class="compact-title">
-            <div class="compact-name">${renderEtfLink(q.ticker, `${e(identity.primary)}<span class="compact-code">${e(identity.secondary)}</span>`, 'etf-link compact-link')}</div>
-            <div class="etf-tags"><span class="etf-tag">전술형</span><span class="etf-tag">일반 순위 제외</span></div>
-          </div>
-          <span class="compact-change ${q.changePercent !== null && q.changePercent >= 0 ? 'change-up' : 'change-down'}">${e(fmtQuoteMove(q))}</span>
-        </div>
-        ${metrics ? `<div class="metric-grid">${metrics}</div>` : ''}
-        <div class="compact-note">${e(note)}</div>
-      </div>`
-    }).join('')}
-  </div>
-</div>`
-}
-
-function renderDomesticActionBoard(quotes: EtfQuote[]): string {
-  const kr = quotes.filter(q => q.market === 'KR')
-  const krCore = kr.filter(q => !isTacticalEtf(q))
-  const withPremium = krCore
-    .filter(q => q.premiumDiscount !== null)
-    .sort((a, b) => Math.abs(b.premiumDiscount ?? 0) - Math.abs(a.premiumDiscount ?? 0))
-    .slice(0, 3)
-  const withTradingValue = krCore
-    .filter(q => q.tradingValue !== undefined && q.tradingValue !== null)
-    .sort((a, b) => (b.tradingValue ?? 0) - (a.tradingValue ?? 0))
-    .slice(0, 3)
-  const withIndexGap = krCore
-    .filter(q => q.dailyIndexGap !== undefined && q.dailyIndexGap !== null)
-    .sort((a, b) => Math.abs(b.dailyIndexGap ?? 0) - Math.abs(a.dailyIndexGap ?? 0))
-    .slice(0, 3)
-
-  if (withPremium.length === 0 && withTradingValue.length === 0 && withIndexGap.length === 0) return ''
-
-  // 반복 문구 방지 — 같은 자리에 매일 같은 문장이 박히지 않도록
-  // 인덱스에 따라 2~3가지 변주를 돌려가며 사용합니다.
-  const liquidityNotes = [
-    '거래가 활발해 체결은 수월하지만, 장 초반 급등락은 따로 챙겨봅니다.',
-    '거래대금이 두꺼운 축입니다. 방향보다 변동폭의 크기를 먼저 가늠합니다.',
-    '거래가 두텁습니다. 지표나 거시 변화에 평소보다 민감하게 반응할 수 있습니다.',
-    '유동성은 풍부합니다. 장 초반 거래대금이 어느 쪽으로 늘어나는지 함께 살핍니다.',
-  ]
-  const premiumNotes = [
-    '체결가와 NAV가 벌어져 있어, 오늘은 지정가 주문이 시장가보다 안전합니다.',
-    'NAV 대비 가격이 기울어져 있습니다. 좁혀지는 방향으로 정상화될 때까지 기다려볼 만합니다.',
-    '괴리가 눈에 띄는 상품입니다. 체결 후 손실 방지 차원에서 NAV를 한 번 더 확인하세요.',
-  ]
-
-  return `<div class="section">
-  <div class="section-title">Domestic ETF Action Board</div>
-  <div class="action-board">
-    <div class="action-panel">
-      <div class="action-panel-title">유동성 집중</div>
-      ${withTradingValue.map((q, i) => renderCompactEtfRow(q, liquidityNotes[i % liquidityNotes.length], q.tradingValue ?? 0, '거래대금(원)', compactKrwAmount(q.tradingValue ?? 0), 'liquidity')).join('')}
-    </div>
-    <div class="action-panel">
-      <div class="action-panel-title">가격 괴리</div>
-      ${withPremium.map((q, i) => renderCompactEtfRow(q, premiumNotes[i % premiumNotes.length], q.premiumDiscount ?? 0, '괴리율', `${(q.premiumDiscount ?? 0) > 0 ? '+' : ''}${(q.premiumDiscount ?? 0).toFixed(2)}%`, 'premium')).join('')}
-    </div>
-    <div class="action-panel">
-      <div class="action-panel-title">기초지수 대비</div>
-      ${withIndexGap.map(q => renderCompactEtfRow(q, `${q.underlyingIndexName ?? '기초지수'} 대비 ETF 가격 반응을 확인합니다.`, q.dailyIndexGap ?? 0, '지수대비', `${(q.dailyIndexGap ?? 0) > 0 ? '+' : ''}${(q.dailyIndexGap ?? 0).toFixed(2)}%p`, 'gap')).join('')}
-    </div>
-  </div>
-</div>`
-}
-
-function renderCompactEtfRow(q: EtfQuote, note: string, magnitude: number, label: string, value: string, kind: 'liquidity' | 'premium' | 'gap'): string {
-  const identity = formatEtfIdentity(q)
-  const change = q.changePercent !== null ? `${q.changePercent > 0 ? '+' : ''}${q.changePercent.toFixed(2)}%` : '미확보'
-  const barMax = kind === 'liquidity' ? 2e12 : kind === 'premium' ? 1.5 : 5
-  const barValue = kind === 'liquidity' ? Math.min(magnitude, barMax) : magnitude
-  const spark = renderMicroSpark(Math.abs(magnitude), kind)
-  return `<div class="compact-etf-row">
-    <div class="compact-head">
-      <div class="compact-title">
-        <div class="compact-name">${renderEtfLink(q.ticker, `${e(identity.primary)}<span class="compact-code">${e(identity.secondary)}</span>`, 'etf-link compact-link')}</div>
-        <div class="etf-tags"><span class="etf-tag">${e(inferEtfTag(q))}</span><span class="etf-tag">${e(q.market)}</span></div>
+function renderMasthead(report: MorningReport, data: CollectedData, slots: AssetClassSlot[]): string {
+  // 미리보기 카드와 같은 슬롯(card.key, 없으면 주제 슬롯)의 구성원 타일을 강조한다(Ruling 19·21).
+  const slot = cardSlot(slots, report.card?.key)
+  const tiles = buildMosaicTiles(data.quotes, slot ? new Set(slot.memberTickers) : null)
+  const subline = report.cover?.subline
+  return `<header class="cover" data-section="masthead">
+  <div class="masthead">
+    <div class="brand-lockup">
+      <img class="brand-logo" src="${imBankLogoSrc()}" alt="iM뱅크">
+      <div>
+        <div class="brand-name">iM뱅크 AI Analyst</div>
+        <div class="report-name">ETF Today</div>
       </div>
-      <span class="compact-change ${q.changePercent !== null && q.changePercent >= 0 ? 'change-up' : 'change-down'}">${e(change)}</span>
     </div>
-    <div class="bar-row">
-      <span>${e(label)}</span>
-      ${kind === 'liquidity'
-        ? `<div class="metric-bar"><span class="metric-fill metric-pos" style="left:0;width:${Math.min(100, barValue / barMax * 100).toFixed(1)}%"></span></div>`
-        : renderMetricBarTrack(barValue, barMax)}
-      <strong>${e(value)}</strong>
+    <div class="issue-date">${e(mastheadDate(data.date))}</div>
+  </div>
+  <figure class="mosaic">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${MOSAIC_VIEW_W} ${MOSAIC_VIEW_H}" role="img" aria-label="${e(mosaicCaption(data.date))}">${renderMosaicSvg(tiles, MOSAIC_VIEW_W, MOSAIC_VIEW_H)}</svg>
+    <figcaption>${e(mosaicCaption(data.date))}</figcaption>
+  </figure>
+  <h1>${renderReportText(report.cover?.headline ?? '', data.quotes)}</h1>
+  ${filled(subline) ? `<p class="subline">${renderReportText(subline, data.quotes)}</p>` : ''}
+</header>`
+}
+
+// ── 3 세 줄 요약 ──────────────────────────────────────────────────────
+function renderSummary(report: MorningReport, quotes: EtfQuote[]): string {
+  const rows: Array<[string, unknown]> = [
+    ['해외 신호', report.summary?.overseas],
+    ['국내 상태', report.summary?.domestic],
+    ['오늘 핵심', report.summary?.focus],
+  ]
+  const visible = rows.filter((row): row is [string, string] => filled(row[1]))
+  if (visible.length === 0) return ''
+  return `<section class="summary-box" data-section="summary" aria-label="세 줄 요약">
+  <ul class="summary-list">
+    ${visible.map(([label, text]) => `<li class="summary-row"><span class="summary-label">${e(label)}</span><span class="summary-text">${renderReportText(text, quotes)}</span></li>`).join('\n    ')}
+  </ul>
+</section>`
+}
+
+// ── 4 자산군별 판단 재료 ──────────────────────────────────────────────
+// 슬롯(중요도순)은 코드가 정하고, 대표 ETF 예시·등락도 코드가 렌더한다.
+// 모델이 빠뜨린 슬롯은 숫자만 있는 카드로 그린다(마지막 축소판에서도 깨지지 않게).
+function renderRepRow(rep: AssetRep): string {
+  return `<li class="rep-row"><span class="rep-badge">예시</span><span>${renderNameAndCode(rep.ticker, rep.name, rep.market)}</span>${renderPct(rep.pct, 'rep-change')}</li>`
+}
+
+function renderAssetField(label: string, text: unknown, quotes: EtfQuote[]): string {
+  if (!filled(text)) return ''
+  return `<div class="asset-field"><div class="field-label">${e(label)}</div><p>${renderReportText(text, quotes)}</p></div>`
+}
+
+function renderAssetCards(report: MorningReport, quotes: EtfQuote[], slots: AssetClassSlot[], date: string): string {
+  if (slots.length === 0) return ''
+  const cards = Array.isArray(report.assetCards) ? report.assetCards : []
+  const session = previousSessionLabel(date) // M6: 어제·지난 금요일·직전 거래일
+  return `<section class="section" data-section="asset-cards">
+  <div class="section-title">자산군별 판단 재료</div>
+  <p class="section-note">${e(session)} 많이 움직인 자산군부터 놓았습니다. 대표 ETF는 흐름을 보여 주는 예시이며 추천 종목이 아닙니다.</p>
+  <div class="asset-grid">
+  ${slots.map(slot => {
+    const card = cards.find(c => typeof c === 'object' && c !== null && c.key === slot.key)
+    return `<article class="asset-card" data-asset="${e(slot.key)}">
+    <div class="asset-label">${e(slot.label)}</div>
+    <div class="field-label">${e(session)} 움직임</div>
+    <ul class="rep-list">${slot.reps.map(renderRepRow).join('')}</ul>
+    ${renderAssetField('이유', card?.reason, quotes)}${renderAssetField('갖고 있다면', card?.ifHolding, quotes)}${renderAssetField('새로 본다면', card?.ifConsidering, quotes)}
+  </article>`
+  }).join('\n  ')}
+  </div>
+</section>`
+}
+
+// ── 5 오늘 확인할 것 ──────────────────────────────────────────────────
+function renderTodayChecks(report: MorningReport, quotes: EtfQuote[]): string {
+  const checks = (Array.isArray(report.todayChecks) ? report.todayChecks : [])
+    .filter(check => typeof check === 'object' && check !== null && filled(check.what))
+  if (checks.length === 0) return ''
+  const field = (label: string, text: unknown) => filled(text)
+    ? `<div class="check-field"><span class="check-label">${e(label)}</span>${renderReportText(text, quotes)}</div>`
+    : ''
+  return `<section class="section" data-section="today-checks">
+  <div class="section-title">오늘 확인할 것</div>
+  <ol class="check-list">
+  ${checks.map(check => `<li class="check-item">
+    <div class="check-time">${e(check.time ?? '')}</div>
+    <div>
+      <div class="check-what">${renderReportText(check.what, quotes)}</div>
+      ${field('비교 기준', check.baseline)}${field('어긋나면', check.invalidation)}
     </div>
-    <div class="compact-note">${spark}${e(note)}</div>
+  </li>`).join('\n  ')}
+  </ol>
+</section>`
+}
+
+// ── 6 레버리지·인버스 주의(그날 해당할 때만 모델이 쓴다) ──────────────────
+function renderTacticalWarning(report: MorningReport, quotes: EtfQuote[]): string {
+  if (!filled(report.tacticalWarning)) return ''
+  return `<section class="section tactical" data-section="tactical">
+  <div class="section-title">레버리지·인버스 주의</div>
+  <p class="narrative">${renderReportText(report.tacticalWarning, quotes)}</p>
+  <p class="tactical-note">레버리지·인버스 ETF는 하루 수익률을 추종하는 고위험 상품입니다. 장기 보유 목적, 원금 보존 성향, 상품 구조를 이해하지 못한 경우에는 적합하지 않을 수 있습니다.</p>
+</section>`
+}
+
+// ── 7 펼쳐 보기: 국내·미국 ETF 표 ─────────────────────────────────────
+function estimatedTradingValue(q: EtfQuote): number | null {
+  if (q.price === null || q.volume === null || !Number.isFinite(q.price) || !Number.isFinite(q.volume)) return null
+  return q.price * q.volume
+}
+
+function renderEtfTable(title: string, quotes: EtfQuote[]): string {
+  if (quotes.length === 0) return ''
+  const sorted = [...quotes].sort((a, b) => (b.changePercent ?? -Infinity) - (a.changePercent ?? -Infinity))
+  const rows = sorted.map(q => {
+    const value = estimatedTradingValue(q)
+    return `<tr><td>${renderNameAndCode(q.ticker, q.name, q.market)}</td><td class="tag">${e(inferEtfTag(q))}</td><td class="num">${renderPct(q.changePercent)}</td><td class="num">${e(value !== null ? formatAmountForQuote(q, value) : '-')}</td></tr>`
+  }).join('\n      ')
+  return `<div class="table-title">${e(title)} (${sorted.length}개)</div>
+  <div class="table-wrap">
+    <table class="etf-table">
+      <thead><tr><th>ETF</th><th>구분</th><th class="num">등락</th><th class="num">추정 거래대금</th></tr></thead>
+      <tbody>
+      ${rows}
+      </tbody>
+    </table>
   </div>`
 }
 
-function renderMetricBarTrack(value: number, maxAbs: number): string {
-  const width = Math.min(50, Math.abs(value) / maxAbs * 50)
-  const left = value >= 0 ? 50 : 50 - width
-  const cls = value >= 0 ? 'metric-pos' : 'metric-neg'
-  return `<div class="metric-bar"><span class="metric-zero"></span><span class="metric-fill ${cls}" style="left:${left.toFixed(1)}%;width:${width.toFixed(1)}%"></span></div>`
+function renderDetails(data: CollectedData): string {
+  const kr = data.quotes.filter(q => q.market === 'KR')
+  const us = data.quotes.filter(q => q.market === 'US')
+  if (kr.length === 0 && us.length === 0) return ''
+  return `<details class="section details" data-section="details">
+  <summary>국내·미국 ETF 전체 등락 펼쳐 보기</summary>
+  ${renderEtfTable('국내 ETF · 직전 한국 장', kr)}
+  ${renderEtfTable('미국 ETF · 간밤 미국 장', us)}
+  <p class="table-note">등락률 높은 순입니다. 추정 거래대금은 종가 × 거래량(국내 원, 미국 달러)으로 계산한 참고값입니다.</p>
+</details>`
 }
 
-function renderMicroSpark(value: number, kind: 'liquidity' | 'premium' | 'gap'): string {
-  const scale = kind === 'liquidity' ? Math.min(1, value / 2e12) : Math.min(1, value / (kind === 'premium' ? 1.5 : 5))
-  const heights = [0.25, 0.4, 0.32, 0.55, 0.48, 0.7, 0.62, 0.85].map(v => Math.max(3, Math.round((v * 0.45 + scale * 0.55) * 18)))
-  return `<span class="micro-spark" aria-hidden="true">${heights.map(h => `<i style="height:${h}px"></i>`).join('')}</span>`
-}
-
-function renderDataCoverage(strategy: MorningStrategyInput): string {
-  return `<div class="data-note">
-  <strong>데이터 기준</strong><br>
-  생성 시각: ${e(formatKstDateTime(strategy.generatedAt))}<br>
-  ETF 시세: ${strategy.dataCoverage.quoteCount}개(US ${strategy.dataCoverage.usQuoteCount}, KR ${strategy.dataCoverage.krQuoteCount}) · 뉴스: ${strategy.dataCoverage.newsCount}개<br>
-  ${e(strategy.dataCoverage.sourceNote)}
-</div>`
-}
-
+// ── 8 참고한 뉴스 · 데이터 기준 · 투자자 보호 기준(법적 고지는 맨 끝) ─────────
 function formatKstDateTime(value: string): string {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
@@ -1438,113 +629,61 @@ function sourceDomain(url: string): string {
   }
 }
 
+function renderDataNote(): string {
+  return `<div class="data-note">
+  <strong>데이터 기준</strong><br>
+  전일 종가 기준, NAV·괴리율은 주문 전 장중 iNAV 확인이 필요합니다. 국내 ETF는 직전 한국 장, 미국 ETF는 간밤 미국 장의 종가이며, 추정 거래대금은 종가 × 거래량으로 계산한 참고값입니다.
+</div>`
+}
+
+function renderClientNotice(data: CollectedData): string {
+  // ETF 고유 확인사항(총보수·환헤지·괴리율 등)은 여기에, 법률 근거 고지는
+  // 마켓 리포트와 공유하는 lib/legal-disclaimer.ts 문구를 그대로 붙인다.
+  const legalItems = LEGAL_DISCLAIMER_ITEMS.map(item => `<li>${e(item)}</li>`).join('\n    ')
+
+  return `<div class="client-notice">
+  <div class="notice-title">투자자 보호 기준</div>
+  <div class="notice-text">이 자료는 iM뱅크 고객의 ETF 시장 이해를 돕는 시장정보입니다. ETF는 상품마다 기초지수, 총보수, 세금, 환헤지 여부, NAV/iNAV 대비 괴리율, 유동성이 다르므로 주문 전 개별 상품의 (간이)투자설명서와 거래 조건을 반드시 확인해야 합니다.</div>
+  <div class="pill-row">
+    <span class="pill">기준일 ${e(data.date)}</span>
+  </div>
+  <div class="legal-title">${e(LEGAL_DISCLAIMER_TITLE)}</div>
+  <ul class="legal-list">
+    ${legalItems}
+  </ul>
+</div>`
+}
+
 export function renderMorningHtml(report: MorningReport, data: CollectedData, options: RenderHtmlOptions = {}): string {
-  const strategy = buildMorningStrategyInput(data)
-  const logoSrc = imBankLogoSrc()
-  const topUs = [...data.quotes]
-    .filter(q => q.market === 'US' && q.changePercent !== null)
-    .sort((a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0))
+  const slots = buildAssetClassSlots(data.quotes)
 
   const body = `
-<div class="cover">
-  <div class="masthead">
-    <div class="brand-lockup">
-      <img class="brand-logo" src="${logoSrc}" alt="iM뱅크">
-      <div>
-        <div class="brand-name">iM뱅크 AI Analyst</div>
-        <div class="report-name">ETF Today</div>
-      </div>
-    </div>
-    <div class="issue-meta">
-      <span>ETF 전용 보고서</span>
-      <span>Morning Edition</span>
-      <span>${e(data.date)}</span>
-    </div>
-  </div>
-  <div class="cover-grid">
-    <div>
-      <div class="badge">ETF TODAY · MARKET DECISION NOTE</div>
-      <h1>${renderReportText(report.cover.headline, data.quotes)}</h1>
-      <div class="subline">${renderReportText(report.cover.subline, data.quotes)}</div>
-    </div>
-    <div class="cover-note"><strong>Source</strong>iM뱅크 AI Analyst가 ETF 시장 데이터와 KRX 지표를 바탕으로 작성한 ETF 전용 보고서입니다.</div>
-  </div>
-</div>
+${renderMasthead(report, data, slots)}
 
-${renderExecutiveSummary(strategy, data.quotes)}
+${renderSummary(report, data.quotes)}
 
-${renderBigPicture(report, data)}
+${renderAssetCards(report, data.quotes, slots, data.date)}
 
-${renderStoryOpening(report, data)}
+${renderTodayChecks(report, data.quotes)}
 
-${/* Phase E4 (2026-05-24): renderStorySpine 제거 — overnightBrief/sectorNarrative 와 순수 중복.
-     Story Spine 의 3막 narrative 는 storyCard(renderStoryOpening) 내 act 노트로 이미 표시됨. */ ''}
-${renderStoryCharacters(report, data)}
+${renderTacticalWarning(report, data.quotes)}
 
-${/* Phase E4: renderStoryResolution 제거 — checklist 와 시나리오 의미 중복.
-     resolutions 시나리오는 bigPicture·checklist 안에 흡수. */ ''}
-${renderTodayChecklist(report, data.quotes)}
-
-${renderDomesticActionBoard(data.quotes)}
-
-${renderTacticalEtfWarning(data.quotes)}
-
-${renderStrategyDashboard(strategy, data.quotes)}
-
-<div class="section">
-  <div class="section-title">Macro Corner</div>
-  ${formatMacro(data.macro)}
-</div>
-
-${renderGlobalKoreaBridge(data)}
-
-${renderGlobalKrMatching(data)}
-
-${renderStrategyMap(strategy, data.quotes, report)}
-
-${renderMarketHeatmap(data)}
-
-<div class="section">
-  <div class="section-title">간밤 시장 요약</div>
-  <p class="narrative">${renderReportText(report.overnightBrief.narrative, data.quotes)}</p>
-  <p class="narrative" style="margin-top:10px;color:#7b8ec8">${renderReportText(report.overnightBrief.krImpact, data.quotes)}</p>
-</div>
-
-<div class="section">
-  <div class="section-title">Sector Narrative</div>
-  <p class="narrative">${renderReportText(report.usEtfHighlights.sectorNarrative, data.quotes)}</p>
-</div>
-
-${renderIssueEtfs(data)}
-
-${renderKrEtfScan(data.quotes)}
-
-<div class="section">
-  <div class="section-title">US ETF Market Scanner — 상승률 상위 5</div>
-  <p class="narrative" style="margin-bottom:16px">미국 ETF 스캐너는 해외 신호 확인용입니다. 추정거래대금은 가격과 거래량을 곱한 USD 기준 참고값입니다.</p>
-  ${topUs.slice(0, 5).map(renderEtfCard).join('')}
-</div>
-
-<div class="section">
-  <div class="section-title">US ETF Market Scanner — 하락률 하위 5</div>
-  ${topUs.slice(-5).reverse().map(renderEtfCard).join('')}
-</div>
-
-${renderRiskAlerts(strategy, data.quotes)}
+${renderDetails(data)}
 
 ${renderNewsSources(data)}
 
-<div class="closing">${renderReportText(report.closingLine, data.quotes)}</div>
-${renderDataCoverage(strategy)}
-${renderClientNotice(data, strategy)}`
+${renderDataNote()}
+${renderClientNotice(data)}`
 
-  const previewHeadline = polishKoreanText(report.cover.headline)
-  const previewSubline = polishKoreanText(report.cover.subline)
+  const previewHeadline = polishKoreanText(report.cover?.headline ?? '')
   return baseHtml(`${data.date} ETF Today`, data.date, 'morning', body, {
     canonicalUrl: reportRouteUrl(data.date, options.publicBaseUrl),
-    description: reportPreviewDescription(data.date, previewSubline),
+    description: reportPreviewDescription(data.date, {
+      overseas: filled(report.summary?.overseas) ? polishKoreanText(report.summary.overseas) : '',
+      focus: filled(report.summary?.focus) ? polishKoreanText(report.summary.focus) : '',
+    }),
     imageUrl: reportPreviewImageUrl(data.date, options.publicBaseUrl),
-    previewTitle: reportPreviewTitle(previewHeadline),
+    previewTitle: reportPreviewTitle(previewHeadline, `${data.date} ETF Today`),
   })
 }
 
@@ -1565,20 +704,26 @@ export function saveReport(html: string, date: string): string {
   return filePath
 }
 
+/**
+ * 링크 미리보기 PNG(1080×1350) — 데이터 카드(모자이크 + 제목 + "○○를 갖고 있다면" + 한 줄, spec §4).
+ * holdingLabel·tiles는 호출 쪽(scripts/run-etf.ts)이 report.card.key 자산군 슬롯에서 정한다.
+ */
 export async function saveReportPreviewImage(
   date: string,
-  headline: string,
-  subline?: string,
+  input: { headline: string; holdingLabel: string; line: string; tiles: MosaicTile[] },
 ): Promise<string> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     throw new Error(`saveReportPreviewImage: invalid date format "${date}"`)
   }
-  const dir = path.join(process.cwd(), 'public', ETF_REPORTS_PUBLIC_DIR)
-  fs.mkdirSync(dir, { recursive: true })
-  const filename = reportPreviewImageFilename(date)
-  const filePath = path.join(dir, filename)
-  const svg = renderReportPreviewSvg(date, polishKoreanText(headline), subline ? polishKoreanText(subline) : undefined)
-  await sharp(Buffer.from(svg)).png().toFile(filePath)
+  const filePath = path.join(process.cwd(), 'public', ETF_REPORTS_PUBLIC_DIR, reportPreviewImageFilename(date))
+  const svg = renderEtfCardSvg({
+    date,
+    headline: polishKoreanText(input.headline),
+    holdingLabel: input.holdingLabel,
+    line: polishKoreanText(input.line),
+    tiles: input.tiles,
+  })
+  await saveCardPng(svg, filePath)
   console.log(`[renderer] 링크 프리뷰 이미지 저장: ${filePath}`)
   return filePath
 }

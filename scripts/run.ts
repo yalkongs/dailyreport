@@ -1,8 +1,9 @@
 import * as fs from "fs";
 import * as path from "path";
-import { collectAllMarketData, toKSTString } from "../lib/market-data";
+import { collectAllMarketData, collectKospiSessions, toKSTString } from "../lib/market-data";
 import { collectContextData } from "../lib/context-data";
 import { generateReport } from "../lib/claude-client";
+import { summarySentence } from "../lib/market-summary";
 import type { AntiRepetitionContext } from "../lib/claude-client";
 import type { ContextData } from "../lib/types";
 import { selectAngle } from "../lib/narrative-angles";
@@ -187,9 +188,15 @@ async function main() {
     } else if (action === "repair-png") {
       // repair-png는 HTML·인덱스 항목이 모두 있을 때만 나온다
       const entry = todayEntry!;
-      console.log(`🩹 오늘(${todayDate}) HTML·인덱스는 있으나 프리뷰 PNG가 없습니다 — 인덱스 헤드라인으로 PNG만 복구합니다 (AI 호출 없음).`);
+      console.log(`🩹 오늘(${todayDate}) HTML·인덱스는 있으나 프리뷰 PNG가 없습니다 — 인덱스 헤드라인·카드 한 줄로 PNG만 복구합니다 (AI 호출 없음).`);
+      // 개편 전 항목은 cardLine 이 없다 → 부제로 대신. 코스피 일봉은 수집 실패 시 [] (스트라이프 자리는 중립색).
+      const repairSessions = await collectKospiSessions(20);
       const previewPath = await retryOnce(
-        () => saveMarketPreviewImage(todayDate, entry.headline, entry.subline),
+        () => saveMarketPreviewImage(todayDate, {
+          headline: entry.headline,
+          line: entry.cardLine ?? entry.subline,
+          sessions: repairSessions,
+        }),
         (err) => console.warn(`⚠️  프리뷰 PNG 복구 실패 — 1회 재시도합니다:`, err),
       );
       console.log(`🖼️  프리뷰 이미지 복구 완료: ${previewPath}`);
@@ -320,10 +327,17 @@ async function main() {
   const { headline, subline } = extractHeadlineFromHtml(html);
   console.log(`📰 헤드라인: "${headline}"`);
 
+  // 카드 한 줄·코스피 일봉은 클로저가 쥔다 — 번들의 RenderPreview 시그니처는 그대로 (date, headline, subline).
+  const cardLine = reportContent.cardLine.text;
+  const kospiSessions = contextData?.kospiSessions ?? [];
   const { filePath } = await saveMarketReportBundle(
-    { date: reportDate, html, headline, subline, priceHash, generatedAt: toKSTString(new Date()) },
+    {
+      date: reportDate, html, headline, subline, priceHash, generatedAt: toKSTString(new Date()),
+      description: summarySentence(reportContent.summary),
+      cardLine,
+    },
     { reportsDir: REPORTS_DIR, indexPath: INDEX_PATH, hashPath: LAST_DATA_HASH_PATH },
-    { renderPreview: saveMarketPreviewImage },
+    { renderPreview: (d, h) => saveMarketPreviewImage(d, { headline: h, line: cardLine, sessions: kospiSessions }) },
   );
   console.log();
 
@@ -333,7 +347,7 @@ async function main() {
     // Claude JSON 출력에서 직접 내러티브 요소 추출
     const soWhatTopics = reportContent.soWhat.map((s) => s.title);
     const watchTopics = reportContent.watchPoints.map((w) => w.title);
-    const compassTopics = reportContent.compass.map((c) => c.title);
+    const compassTopics = (reportContent.compass ?? []).map((c) => c.title);
     const lookingAhead = reportContent.watchPoints[0]?.title || "";
 
     const narrativeEntry = {

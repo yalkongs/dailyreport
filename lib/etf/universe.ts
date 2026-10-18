@@ -4,6 +4,8 @@ import type { EtfDefinition } from './types'
 // 국내 코드는 실제 상장 목록과 대조해 확정한 값이다(universe.test.ts의 VERIFIED_KR 참조).
 // 코드를 추가·변경할 때는 상장 목록으로 상품명을 확인하고 테스트의 표도 함께 갱신할 것.
 // foreignUnderlying: 기초지수가 해외 세션인 국내 상장 ETF — KRX 병합에서 지수대비를 비운다(etf-data.ts).
+// theme: 국내 섹터·테마는 전부 짧은 명사 theme을 둔다 — ETF Today 자산군 슬롯(asset-classes.ts)의 '그날 움직인 섹터'가
+// theme별로 묶는다(2026-10-17). IT는 국내 반도체·IT 슬롯으로 간다.
 export const KR_ETF_UNIVERSE: EtfDefinition[] = [
   // 국내 주식 지수 (10)
   { ticker: '069500.KS', name: 'KODEX 200', market: 'KR', category: '지수' },
@@ -14,24 +16,24 @@ export const KR_ETF_UNIVERSE: EtfDefinition[] = [
   { ticker: '122630.KS', name: 'KODEX 레버리지', market: 'KR', category: '지수' },
   { ticker: '292190.KS', name: 'KODEX KRX300', market: 'KR', category: '지수' },
   { ticker: '091160.KS', name: 'KODEX 반도체', market: 'KR', category: '섹터', theme: '반도체' },
-  { ticker: '091170.KS', name: 'KODEX 은행', market: 'KR', category: '섹터' },
-  { ticker: '091180.KS', name: 'KODEX 자동차', market: 'KR', category: '섹터' },
+  { ticker: '091170.KS', name: 'KODEX 은행', market: 'KR', category: '섹터', theme: '은행' },
+  { ticker: '091180.KS', name: 'KODEX 자동차', market: 'KR', category: '섹터', theme: '자동차' },
   // 국내 섹터 (15)
   { ticker: '305720.KS', name: 'KODEX 2차전지산업', market: 'KR', category: '섹터', theme: '2차전지' },
-  { ticker: '266420.KS', name: 'KODEX 헬스케어', market: 'KR', category: '섹터' },
-  { ticker: '117460.KS', name: 'KODEX 에너지화학', market: 'KR', category: '섹터' },
+  { ticker: '266420.KS', name: 'KODEX 헬스케어', market: 'KR', category: '섹터', theme: '헬스케어' },
+  { ticker: '117460.KS', name: 'KODEX 에너지화학', market: 'KR', category: '섹터', theme: '에너지화학' },
   { ticker: '157490.KS', name: 'TIGER 소프트웨어', market: 'KR', category: '섹터', theme: 'AI' },
-  { ticker: '228810.KS', name: 'TIGER 미디어컨텐츠', market: 'KR', category: '섹터' },
+  { ticker: '228810.KS', name: 'TIGER 미디어컨텐츠', market: 'KR', category: '섹터', theme: '미디어' },
   { ticker: '305540.KS', name: 'TIGER 2차전지테마', market: 'KR', category: '섹터', theme: '2차전지' },
   { ticker: '396500.KS', name: 'TIGER 반도체TOP10', market: 'KR', category: '섹터', theme: '반도체' },
-  { ticker: '139260.KS', name: 'TIGER 200 IT', market: 'KR', category: '섹터' },
-  { ticker: '139220.KS', name: 'TIGER 200 건설', market: 'KR', category: '섹터' },
-  { ticker: '139250.KS', name: 'TIGER 200 에너지화학', market: 'KR', category: '섹터' },
-  { ticker: '139270.KS', name: 'TIGER 200 금융', market: 'KR', category: '섹터' },
+  { ticker: '139260.KS', name: 'TIGER 200 IT', market: 'KR', category: '섹터', theme: 'IT' },
+  { ticker: '139220.KS', name: 'TIGER 200 건설', market: 'KR', category: '섹터', theme: '건설' },
+  { ticker: '139250.KS', name: 'TIGER 200 에너지화학', market: 'KR', category: '섹터', theme: '에너지화학' },
+  { ticker: '139270.KS', name: 'TIGER 200 금융', market: 'KR', category: '섹터', theme: '금융' },
   { ticker: '449450.KS', name: 'PLUS K방산', market: 'KR', category: '섹터', theme: '방산' },
-  { ticker: '139240.KS', name: 'TIGER 200 철강소재', market: 'KR', category: '섹터' },
-  { ticker: '227560.KS', name: 'TIGER 200 생활소비재', market: 'KR', category: '섹터' },
-  { ticker: '139230.KS', name: 'TIGER 200 중공업', market: 'KR', category: '섹터' },
+  { ticker: '139240.KS', name: 'TIGER 200 철강소재', market: 'KR', category: '섹터', theme: '철강' },
+  { ticker: '227560.KS', name: 'TIGER 200 생활소비재', market: 'KR', category: '섹터', theme: '소비재' },
+  { ticker: '139230.KS', name: 'TIGER 200 중공업', market: 'KR', category: '섹터', theme: '중공업' },
   // 국내 테마 (10)
   { ticker: '365040.KS', name: 'TIGER AI코리아그로스액티브', market: 'KR', category: '테마', theme: 'AI' },
   { ticker: '445290.KS', name: 'KODEX 로봇액티브', market: 'KR', category: '테마', theme: '로봇' },
@@ -39,7 +41,7 @@ export const KR_ETF_UNIVERSE: EtfDefinition[] = [
   { ticker: '394670.KS', name: 'TIGER 글로벌리튬&2차전지SOLACTIVE(합성)', market: 'KR', category: '테마', theme: '2차전지', foreignUnderlying: true },
   { ticker: '494670.KS', name: 'TIGER 조선TOP10', market: 'KR', category: '테마', theme: '조선' },
   { ticker: '390390.KS', name: 'KODEX 미국반도체', market: 'KR', category: '테마', theme: '반도체', foreignUnderlying: true },
-  { ticker: '300610.KS', name: 'TIGER K게임', market: 'KR', category: '테마' },
+  { ticker: '300610.KS', name: 'TIGER K게임', market: 'KR', category: '테마', theme: '게임' },
   { ticker: '0098F0.KS', name: 'KODEX 원자력SMR', market: 'KR', category: '테마', theme: '원자력' },
   { ticker: '471760.KS', name: 'TIGER AI반도체핵심공정', market: 'KR', category: '테마', theme: 'AI' },
   { ticker: '463250.KS', name: 'TIGER K방산&우주', market: 'KR', category: '테마', theme: '방산' },

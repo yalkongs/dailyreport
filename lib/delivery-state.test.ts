@@ -9,7 +9,6 @@ import {
   pickTelegramStatus,
   decideDelivery,
   classifyTelegramResponse,
-  formatAnomalyBreakdown,
 } from "./delivery-state";
 
 const DATE = "2026-09-22";
@@ -101,12 +100,4 @@ test("classifyTelegramResponse: 빈 응답·JSON 아님·ok 필드 없음 → er
   assert.equal(classifyTelegramResponse("").state, "error");
   assert.equal(classifyTelegramResponse("<html>502 Bad Gateway</html>").state, "error");
   assert.equal(classifyTelegramResponse('{"result":1}').state, "error");
-});
-
-test("formatAnomalyBreakdown: 기존 워크플로 one-liner와 같은 출력", () => {
-  assert.equal(formatAnomalyBreakdown({ premiumDiscount: 8 }), "괴리율 8");
-  assert.equal(formatAnomalyBreakdown({ premiumDiscount: 2, volumeSpike: 1, consecutiveSell: 1 }), "괴리율 2/거래량 1/매도 1");
-  assert.equal(formatAnomalyBreakdown({ premiumDiscount: 0, trackingError: 3 }), "추적오차 3");
-  assert.equal(formatAnomalyBreakdown({ somethingNew: 2 }), "somethingNew 2");
-  assert.equal(formatAnomalyBreakdown(undefined), "");
 });

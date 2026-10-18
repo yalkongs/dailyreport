@@ -1,6 +1,8 @@
 import YahooFinance from "yahoo-finance2";
 import { koreanWeekday } from "./market-calendar";
 import { pickCloseOnOrBefore, weekStartKst } from "./historical-baseline";
+import { sessionDate } from "./etf/market-context";
+import type { StripeSession } from "./preview/data-card";
 import type {
   MarketIndex,
   ForexData,
@@ -291,6 +293,51 @@ export async function collectHistoricalData(): Promise<HistoricalComparison[]> {
   }
 
   return results;
+}
+
+/**
+ * 일봉 종가 → 거래일별 일간 등락. 종가가 유효한 일봉만 이어 붙이므로(휴장일·결측은 날짜 자체가 없다)
+ * 연속한 두 거래일의 등락이다. 같은 거래일이 두 번 오면 나중 값을 쓴다. 최근 n개만 돌려준다.
+ */
+export function dailyReturnsFromCloses(
+  quotes: ReadonlyArray<{ date: Date; close: number | null | undefined }>,
+  n: number,
+): StripeSession[] {
+  if (!(n > 0)) return [];
+  const byDate = new Map<string, number>();
+  for (const q of [...quotes].sort((a, b) => a.date.getTime() - b.date.getTime())) {
+    if (typeof q.close !== "number" || !Number.isFinite(q.close) || q.close <= 0) continue;
+    const day = sessionDate(q.date, "Asia/Seoul");
+    if (day) byDate.set(day, q.close);
+  }
+  const closes = [...byDate.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  const out: StripeSession[] = [];
+  for (let i = 1; i < closes.length; i++) {
+    out.push({ date: closes[i][0], pct: (closes[i][1] / closes[i - 1][1] - 1) * 100 });
+  }
+  return out.slice(-n);
+}
+
+/**
+ * 코스피 최근 n거래일 일간 등락(카드 스트라이프용, 기본 20). 오늘(KST) 세션 값은 제외한다 —
+ * 장중·장 마감 뒤 수동 재실행에도 '어제까지'로 고정. 실패하면 [] (카드 배경만 비고 리포트는 계속 간다).
+ */
+export async function collectKospiSessions(n = 20): Promise<StripeSession[]> {
+  try {
+    const todayKst = sessionDate(new Date(), "Asia/Seoul") as string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const history: any = await yahooFinance.chart("^KS11", {
+      period1: new Date(Date.now() - 45 * 86400000),
+      interval: "1d",
+    });
+    const quotes: Array<{ date: Date; close: number | null | undefined }> = (history?.quotes ?? []).filter(
+      (q: { date: Date }) => (sessionDate(q.date, "Asia/Seoul") ?? "") < todayKst,
+    );
+    return dailyReturnsFromCloses(quotes, n);
+  } catch (err) {
+    console.log(`  ⚠️ 코스피 일봉 수집 실패: ${(err as Error).message}`);
+    return [];
+  }
 }
 
 export async function collectAllMarketData(): Promise<MarketDataCollection> {

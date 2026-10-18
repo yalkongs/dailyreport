@@ -7,11 +7,15 @@ import type {
   ContextData,
   HistoricalComparison,
   ReportContent,
+  ReportSummary,
 } from "./types";
 import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS, MARKET_GENERATION_BUDGET_MS, makeDeadline } from "./claude-budget";
 import { EVIDENCE_RULES } from "./evidence-rules";
 import { formatEconomicEventLine } from "./economic-calendar";
 import { renderReport } from "./report-renderer";
+import { cardTextFits } from "./preview/data-card";
+import { stripEmphasisTags } from "./html-entities";
+import { plainText, cutAtSentence } from "./market-summary";
 import { BANNED_METAPHORS } from "./banned-metaphors";
 import { renderVoiceExemplars } from "./voice-exemplars";
 import { buildTemporalFramingBlock } from "./temporal-framing";
@@ -153,7 +157,7 @@ bigStory 섹션을 일일 해설 대신 **딥다이브 에세이**로 전환하�
 
 **딥다이브 주제: "${ctx.deepDiveTopic}"**
 
-이 주제를 paragraph 블록 10개 이상으로 풀어주십시오.
+이 주제를 paragraph 블록 4~6개로 풀어주십시오. (페이지 분량 상한은 일반 모드와 같습니다.)
 `;
 }
 
@@ -247,7 +251,7 @@ function buildContextBlock(context: ContextData | null, ctx?: AntiRepetitionCont
   // lib/krx-investor-flow.ts 는 deprecated stub이며 항상 null 반환.
   // 과거 이 블록은 매번 허위 수치로 채워져 Claude가 'compass.국내 투자자
   // 수급 동향' 섹션에 존재하지 않는 근거로 서술을 만들던 원인이었음.
-  // 프롬프트에서 블록 제거 + compass 슬롯 재설계로 대응 (본 파일 하단).
+  // 프롬프트에서 블록을 제거해 대응했다(2026-10 개편으로 compass 섹션 자체도 없어졌다).
 
   if (context.koreanBonds.length > 0) {
     block += `\n### 한국 국채 수익률\n`;
@@ -283,7 +287,7 @@ export function buildHistoricalBlock(historical: HistoricalComparison[]): string
   return block;
 }
 
-function buildReportPrompt(data: MarketDataCollection, ctx: AntiRepetitionContext, context: ContextData | null = null): string {
+export function buildReportPrompt(data: MarketDataCollection, ctx: AntiRepetitionContext, context: ContextData | null = null): string {
   const antiRepetition = buildAntiRepetitionBlock(ctx);
   const sidewaysBlock = buildSidewaysBlock(ctx);
   const evidenceBlock = buildEvidenceBlock(ctx);
@@ -330,12 +334,13 @@ ${lines}
   return `아래 시장 데이터를 바탕으로 리포트 콘텐츠를 JSON 형식으로 생성하십시오.
 
 ## ⚠️ 분량 요구사항 — **위 모드 가이드가 있으면 그것을 우선**
-- (기본/normal 모드 기준) bigStory.content: paragraph 블록 최소 12개 이상, pullQuote 2~3개, dataCard 2~3개
-- watchPoints: 3~4개
-- compass: 3개 소주제 (자산군별 온도계, 예금·적금 vs 투자, 오늘의 맥락 1개 — 아래 compass 작성 규칙의 [A]/[B]/[C] 중 택1)
-- soWhat: 5~6개
+- summary: 세 줄(yesterday / today / myAssets), 각 60자 이내
+- cardLine: 1개, 32자 이내
+- (기본/normal 모드 기준) bigStory.content: paragraph 블록 4~6개 (사건 → 근거 있는 원인 → 시장 반응), pullQuote 0~1개, dataCard는 쓰지 않음
+- watchPoints: 최대 3개 (한국시간 순서)
+- soWhat: 2~3개 ("확인되면 / 어긋나면" 조건형)
 - calendar: 경제 캘린더 데이터가 있으면 주요 일정 포함
-증권사 데일리 브리핑 수준의 깊이와 분량을 목표로 하십시오.
+독자는 모바일에서 1~2분 안에 읽습니다. 길게 쓰기보다 정확하고 근거 있게, 핵심을 위에 두십시오.
 ${modeBlock}
 ${calendarBlock}
 ${krMacroBlock}
@@ -365,6 +370,15 @@ ${JSON.stringify(data, null, 2)}
     "subline": string,    // 헤드라인 보충 1~2문장. 제목에서 뺀 구체 사건명·핵심 수치를 여기서 받침.
     "imageKeywords": string[],  // 제목/본문에서 사용한 핵심 이미지·은유 단어 1~3개. 사실 모드(은유 없음)면 빈 배열 []. (반복 회피 로그용)
   },
+  "summary": {            // 페이지 맨 위 세 줄 요약. 작성 규칙은 아래 [summary·cardLine 작성 규칙] 참조. HTML 태그 금지.
+    "yesterday": string,  // 어제 한국·미국 시장의 분위기와 배경을 말로 쓴 한 문장 (지수 등락률 나열 금지), 60자 이내
+    "today": string,      // 오늘 확인할 한 가지 (시각 또는 비교 기준 포함), 60자 이내
+    "myAssets": string    // 자산군 관점은 ETF Today에서 다룬다는 안내 + 오늘 가장 영향이 큰 자산군 하나, 60자 이내
+  },
+  "cardLine": {           // 링크 미리보기 카드의 제목 아래 한 줄
+    "kind": "cause" | "watch",  // cause = 입력 근거가 있는 배경 한 문장 / watch = 근거가 약할 때 오늘 확인점
+    "text": string        // 32자 이내 평서문. 질문형·도치·라벨 금지. HTML 태그 금지.
+  },
   "bigStory": {
     "content": Array<
       | { "type": "paragraph", "text": string }       // 본문 문단. <strong> 태그 사용 가능
@@ -374,30 +388,15 @@ ${JSON.stringify(data, null, 2)}
   },
   "watchPoints": [
     {
-      "badge": string,       // "오전", "오후", "이번 주" 등 시간대
+      "badge": string,       // 한국시간 기준 시각·시간대 ("09:00", "장중", "장 마감 후 → 다음 거래일 반영" 등)
       "title": string,       // 제목 (이모지 금지)
       "description": string  // 2~3문장 설명
-    }
-  ],
-  "compass": [
-    {
-      "label": string,     // "자산군별 온도계" / "예금·적금 vs 투자" / 세 번째 슬롯은 아래 compass 작성 규칙의 [A]/[B]/[C] 메뉴에서 선택한 label
-      "title": string,     // 소제목
-      "items": [            // 자산군별 온도계용
-        {
-          "asset": string,         // "주식", "채권", "금·귀금속" 등
-          "body": string,          // 분석 텍스트 (<strong> 사용 가능)
-          "gaugePercent": number,  // 매력도 0~100 (0=매우 부정, 100=매우 긍정)
-          "gaugeType": "cautious" | "neutral" | "positive" | "strong"
-        }
-      ],
-      "paragraphs": [string]   // items가 없는 서브섹션용 본문 문단
     }
   ],
   "soWhat": [
     {
       "title": string,   // 제목 한 줄
-      "body": string     // 3~5문장 (<strong> 사용 가능)
+      "body": string     // 2~3문장, "~가 확인되면 …, 어긋나면 …" 조건형 (<strong> 사용 가능)
     }
   ],
   "calendar": [
@@ -414,50 +413,35 @@ ${JSON.stringify(data, null, 2)}
 
 ### bigStory 작성 규칙
 
-이 섹션이 리포트의 본체입니다. 충분히 길게 쓰십시오.
+이 섹션은 "어제 무슨 일이 있었나"입니다. paragraph 4~6개를 **하나의 이야기 흐름**으로 쓰십시오.
 
-**반드시 포함할 내용 (하나의 이야기 흐름으로):**
-- 오늘 시장의 핵심 사건: 원인, 배경, 규모 (paragraph 3~4개)
-- 미국 시장 반응: 주요 지수별 차이와 그 이유 (paragraph 2~3개)
-- 유럽·아시아 시장의 연쇄 반응 (paragraph 2~3개)
-- 환율·채권·원자재 시장의 연결 (paragraph 2~3개)
-- 한국 시장에 미치는 구체적 의미 (paragraph 2~3개)
-- pullQuote 2~3개를 흐름 중간에 배치
-- dataCard 2~3개를 적절한 위치에 삽입
+- 사건: 어제 시장을 움직인 핵심 사건과 규모 (paragraph 1~2개)
+- 근거 있는 원인: 입력 데이터·뉴스로 뒷받침되는 원인만 (paragraph 1~2개). 근거가 없으면 원인을 만들지 말고 "~로 알려졌다" 수준으로 쓰거나 원인은 언급하지 마십시오.
+- 시장 반응: 미국·한국 시장의 차이와 환율·금리·원자재와의 연결 (paragraph 1~2개)
+- pullQuote는 쓰지 않거나 1개까지. dataCard는 쓰지 마십시오(수치 표는 코드가 따로 그립니다).
 
 시장별 소제목으로 분리하지 마십시오. 하나의 글에 녹여내십시오.
 
-### compass 작성 규칙
+### watchPoints 작성 규칙 ("오늘 볼 것")
+- 최대 3개. **한국시간 순서**대로 배열하십시오.
+- 미국에서 발표되는 지표·이벤트는 "장 마감 후 → 다음 거래일 반영"으로 표기하고, 오늘 한국 장중 변수처럼 쓰지 마십시오.
 
-3개 소주제를 반드시 포함:
-1. **자산군별 온도계**: items 배열에 주식/채권/금/달러/암호화폐 등 5~6개. gaugePercent는 VIX, 금리, 환율 데이터를 근거로 산출.
-2. **예금·적금 vs 투자**: paragraphs 배열 사용. 기준금리, CPI, 실질금리 비교.
-3. **[오늘의 맥락]** — 아래 3개 메뉴 중 오늘 데이터에 가장 부합하는 **1개**를 선택해 1개 compass 섹션으로 작성하십시오. 선택한 항목의 label 문자열을 그대로 사용합니다.
-
-   **[A] label="내 지갑과 이 뉴스"**
-   - 오늘의 금리·환율·물가 변화가 가계 재무(예적금 수익률, 대출이자, 환전비용, 장바구니 물가, 연금·국민연금)에 미치는 구체적 맥락을 paragraphs 2~3문단으로.
-   - 선택 기준: USD/KRW, 미 10Y, 한은 기준금리, CPI 등 거시 지표의 변동률이 유의미하거나 금리·환율 관련 정책 뉴스가 있을 때.
-   - soWhat 섹션은 '오늘 뉴스의 개별 산업·기업 영향'이므로 이 compass 섹션은 '가계 재무 맥락 (거시→개인 재무)' 로 역할 분리.
-
-   **[B] label="오늘의 글로벌 연결"**
-   - 미·유럽·아시아 시장의 연쇄 반응 구조와 그것이 한국 시장에 미치는 2차·3차 파급. paragraphs 2~3문단.
-   - 선택 기준: 해외(미국·중국·유럽)에서 발생한 사건이 글로벌 리플을 일으킨 날, bigStory에서 다 담지 못한 추가 연결고리가 있을 때.
-   - bigStory와 중복 금지. bigStory가 사건의 '무엇'을 다뤘다면 여기서는 '어떻게 퍼지나·어디로 갈 것인가' 만.
-
-   **[C] label="오늘의 업종 온도"**
-   - 한국 시장 섹터별 상대 강도 (반도체·자동차·에너지·금융·바이오 등). items 배열 사용 가능 (asset=섹터명, gaugePercent 0~100, gaugeType, body 짧은 설명) 또는 paragraphs 2~3문단.
-   - 선택 기준: 섹터 로테이션·특정 업종 급등락·업종별 수급 집중이 관측되는 날.
-
-   **선택 규칙 (위 3개 중 하나만)**:
-   - 오늘 제공된 데이터에서 **가장 두드러진 신호**가 있는 주제를 우선 선택.
-   - 어느 신호도 확실치 않으면 **[A]를 기본값**으로 선택 (거시 지표만 있어도 가계 맥락은 항상 쓸 수 있음).
-   - **제공된 실제 수치만 인용하십시오**. 외국인 순매수 금액·세대별 매매 비중 등 입력에 없는 수치는 절대 추측해 넣지 마십시오.
-   - 선택한 label을 compass 배열의 3번째 객체 label 필드에 그대로 사용.
-
-### soWhat 작성 규칙
-- 최소 5~6개
-- 산업/기업 영향, 개인 자산 영향, 정책 영향, 향후 이벤트 등 다양한 영역 커버
+### soWhat 작성 규칙 ("한국 시장에 주는 의미")
+- 2~3개. 각 항목은 "~가 확인되면 …, 어긋나면 …" 형태의 **조건형**으로 쓰십시오.
+- 산업·기업 영향, 개인 자산 영향, 정책 영향 중 오늘 가장 중요한 것만 고르십시오.
 - 오늘의 관점("${ctx.angle.name}")을 반영
+- 특정 종목·상품의 매수·매도 권유는 금지입니다. 판단 재료와 확인 조건만 씁니다.
+
+### summary·cardLine 작성 규칙
+
+summary는 페이지 맨 위 "세 줄 요약", cardLine은 링크 미리보기 카드의 제목 아래 한 줄입니다. bigStory·watchPoints·soWhat을 먼저 구상한 뒤 그 내용을 압축해 쓰고, 본문과 모순되면 안 됩니다. 위의 근거·시점 규칙(추론 경계, 일정 시각, 기간 표현)은 summary·cardLine에도 그대로 적용됩니다. 문체는 본문과 같은 격식 있는 해설체(~입니다·~합니다)이고, HTML 태그(<strong> 포함)는 쓰지 마십시오. 매수·매도 권유 표현도 금지입니다.
+
+- **summary.yesterday**: 어제 한국·미국 시장의 분위기와 그 배경을 **말로** 한 문장으로 쓰십시오. 지수 등락률을 나열하지 마십시오(숫자는 최대 1개, % 표기는 2개 이상 쓰지 않음). 숫자는 페이지의 핵심 지표가 보여 줍니다. 60자 이내.
+- **summary.today**: 오늘 확인할 한 가지. 시각 또는 비교 기준을 함께 쓰십시오. 60자 이내.
+- **summary.myAssets**: 자산군 관점은 ETF Today에서 다룬다는 안내와, 오늘 가장 영향이 큰 자산군 하나. 60자 이내.
+- **cardLine**: 미리보기 카드의 제목 아래 한 줄. 32자 이내의 평서문입니다. 질문형·도치("왜?", "~은?")·라벨("원인:" 등)을 쓰지 마십시오. 제목(headline)과 같은 말을 되풀이하지 마십시오.
+  - kind="cause": 입력 근거(수치·기사)로 뒷받침되는 배경일 때만 쓰십시오.
+  - kind="watch": 근거가 약하면(특히 [오늘의 근거 상태]가 hollow일 때) cause로 단정하지 말고, 같은 자리에 오늘 확인점을 평서문으로 쓰십시오.
 
 ### 제목 작성 규칙
 
@@ -478,6 +462,123 @@ ${JSON.stringify(data, null, 2)}
 - **hollow**: **사실 모드.** 은유를 만들지 마십시오. 절제된 사실 프레이밍(예: "조용한 N일, 다음 변수는 X")을 쓰고, imageKeywords 는 빈 배열로 두십시오.
 
 **JSON만 출력하십시오. \`\`\`json 마크다운 펜스도 사용하지 마십시오.**`;
+}
+
+// --- 2026-10 개편: 세 줄 요약·카드 한 줄 검증/보정 ---
+
+const SUMMARY_MAX_CHARS = 60;
+const CARD_LINE_MAX_CHARS = 32;
+const SUMMARY_FIELDS: ReadonlyArray<readonly [keyof ReportSummary, string]> = [
+  ["yesterday", "어제"],
+  ["today", "오늘 볼 것"],
+  ["myAssets", "내 자산"],
+];
+
+/**
+ * 세 줄 요약·카드 한 줄 검증 — 위반 목록(빈 배열이면 통과).
+ * 모델이 필드를 빼먹을 수 있으므로 누락도 던지지 않고 위반으로 돌려준다(재생성 사유).
+ * 호출자(generateReport)가 기존 정합성 위반(hardViolations)에 합쳐 재시도하고, 재시도 소진 후에는 F02대로 진행한다.
+ */
+export function validateMarketSummary(content: Pick<ReportContent, "summary" | "cardLine" | "cover">): string[] {
+  const violations: string[] = [];
+  const summary = content?.summary;
+  for (const [key, label] of SUMMARY_FIELDS) {
+    const text = plainText(summary?.[key]);
+    if (!text) violations.push(`summary.${key}(${label}) 누락`);
+    else if (text.length > SUMMARY_MAX_CHARS) violations.push(`summary.${key}(${label}) ${SUMMARY_MAX_CHARS}자 초과(${text.length}자)`);
+  }
+  // 어제 줄은 분위기·배경을 말로 쓰는 자리 — 지수 등락률을 나열하면(%가 2개 이상) 아래 핵심 지표와 겹친다.
+  const percentCount = (plainText(summary?.yesterday).match(/%/g) ?? []).length;
+  if (percentCount >= 2) violations.push(`summary.yesterday 지수 등락률 나열(% ${percentCount}개)`);
+
+  const card = content?.cardLine;
+  const cardText = plainText(card?.text);
+  if (!cardText) {
+    violations.push("cardLine.text 누락");
+  } else {
+    if (cardText.length > CARD_LINE_MAX_CHARS) violations.push(`cardLine.text ${CARD_LINE_MAX_CHARS}자 초과(${cardText.length}자)`);
+    if (/[?？]/.test(cardText) || cardText.startsWith("왜")) violations.push("cardLine.text 질문형·도치 금지");
+    // 라벨 = 글자로만 된 짧은 머리표("원인:"). 숫자는 제외 — "10:30 …"처럼 시각으로 시작하는 watch 한 줄을 오탐하지 않는다.
+    if (/^[[【(][^\]】)]{1,10}[\]】)]/.test(cardText) || /^[가-힣A-Za-z· ]{1,10}[:：]/.test(cardText)) {
+      violations.push("cardLine.text 라벨 금지");
+    }
+  }
+  if (card?.kind !== "cause" && card?.kind !== "watch") violations.push("cardLine.kind 는 cause 또는 watch");
+  return violations;
+}
+
+/**
+ * 미리보기 카드 글자 맞춤 검사 — 제목(cover.headline)과 한 줄(cardLine.text)이 카드 규칙 안에 들어가는지.
+ * 카드는 페이지와 같은 평문을 받으므로(강조 태그 제거) 같은 모양으로 재서 판정한다. 위반 목록(빈 배열이면 통과).
+ * 렌더러는 넘치는 글을 '…'로 줄여 항상 카드 안에 그리므로, 이 검사는 다시 쓰게 하는 정상 경로 관문일 뿐이다 —
+ * 호출자(generateReport)는 마지막 시도에서 경고만 남기고 발송을 막지 않는다.
+ */
+export function validateMarketCardText(content: Pick<ReportContent, "cardLine" | "cover">): string[] {
+  const headline = stripEmphasisTags(typeof content?.cover?.headline === "string" ? content.cover.headline : "").trim();
+  const line = plainText(content?.cardLine?.text);
+  return cardTextFits("market", { headline, line }).reasons.map((r) => `카드 ${r}`);
+}
+
+/**
+ * 필수 항목 검증 — 이게 없으면 렌더러가 던지거나 제목 없는 리포트가 되므로 발송 후보가 될 수 없다(Ruling 29).
+ * 누락 목록(빈 배열이면 통과). 던지지 않는다. 호출자(generateReport)가 기준 위반으로 합쳐 재생성하고,
+ * 앞선 결과 선택에서도 이 항목이 빠진 결과는 후보에서 뺀다.
+ * 필수는 cover(객체)·cover.headline(강조 태그를 벗겨도 비지 않는 문자열)·bigStory.content(비지 않은 배열)뿐 —
+ * 나머지(watchPoints·soWhat·calendar·compass·closingMessage·cover.subline)는 normalizeMarketOptionalParts 가 채운다.
+ */
+export function validateMarketRequired(content: unknown): string[] {
+  const c = content as Partial<ReportContent> | null | undefined;
+  const missing: string[] = [];
+  const cover = c?.cover;
+  if (typeof cover !== "object" || cover === null || Array.isArray(cover)) {
+    missing.push("cover 누락");
+  } else if (!stripEmphasisTags(typeof cover.headline === "string" ? cover.headline : "").trim()) {
+    missing.push("cover.headline 누락");
+  }
+  const blocks = c?.bigStory?.content;
+  if (!Array.isArray(blocks) || blocks.length === 0) missing.push("bigStory.content 누락");
+  return missing;
+}
+
+/**
+ * 선택 항목을 렌더·후속 로그가 던지지 않는 빈 값으로 맞춘다 — 발송하기로 한 content 에 한 번 적용한다.
+ * 배열(watchPoints·soWhat·calendar·compass)이 없거나 배열이 아니면 [], 문자열(closingMessage·cover.subline)이 없으면 ''.
+ * 필수 항목(validateMarketRequired)은 여기서 만들어 채우지 않는다. content 를 직접 고쳐 돌려준다.
+ */
+export function normalizeMarketOptionalParts(content: ReportContent): ReportContent {
+  const c = content as unknown as Record<string, unknown>;
+  for (const key of ["watchPoints", "soWhat", "calendar", "compass"]) {
+    if (!Array.isArray(c[key])) c[key] = [];
+  }
+  if (typeof content.closingMessage !== "string") content.closingMessage = "";
+  if (content.cover && typeof content.cover.subline !== "string") content.cover.subline = "";
+  return content;
+}
+
+const SUMMARY_DEFAULT_YESTERDAY = "어제 시장 흐름은 아래에서 정리했습니다.";
+const SUMMARY_DEFAULT_TODAY = "오늘 확인할 점은 아래 '오늘 볼 것'에서 정리했습니다.";
+const SUMMARY_DEFAULT_MY_ASSETS = "자산군별 판단 재료는 ETF Today에서 볼 수 있습니다.";
+const CARD_LINE_DEFAULT = "오늘 확인할 점을 아래에 정리했습니다";
+
+/**
+ * 세 줄 요약·카드 한 줄을 렌더가 깨지지 않는 형태로 맞춘다(재시도 소진 후에도 비지 않게).
+ * 인라인 태그·공백은 정리하고, 비어 있거나 누락된 칸만 기본 문장으로 채운다 —
+ * 어제 줄은 cover.subline, 오늘·내 자산은 고정 안내, 카드 한 줄은 근거를 단정하지 않는 watch.
+ * 길이·문형 위반은 고치지 않는다(F02: 품질이 낮아도 발송). content 를 직접 고쳐 돌려준다.
+ */
+export function fillMarketSummaryDefaults(content: ReportContent): ReportContent {
+  const s = (content.summary ?? {}) as Partial<ReportSummary>;
+  const subline = cutAtSentence(plainText(content.cover?.subline), SUMMARY_MAX_CHARS);
+  content.summary = {
+    yesterday: plainText(s.yesterday) || subline || SUMMARY_DEFAULT_YESTERDAY,
+    today: plainText(s.today) || SUMMARY_DEFAULT_TODAY,
+    myAssets: plainText(s.myAssets) || SUMMARY_DEFAULT_MY_ASSETS,
+  };
+  const cardText = plainText(content.cardLine?.text);
+  content.cardLine = cardText
+    ? { kind: content.cardLine?.kind === "cause" ? "cause" : "watch", text: cardText }
+    : { kind: "watch", text: CARD_LINE_DEFAULT };
+  return content;
 }
 
 export async function generateReport(
@@ -505,11 +606,23 @@ export async function generateReport(
   const maxRetries = 3;
   let content: ReportContent | null = null;
   let lastParseErr: unknown = null;
+  // 파싱은 됐지만 위반이 남은 앞선 결과 중 가장 나은 것(I2·Ruling 23, F02 "전송 > 침묵").
+  // 후보: 필수 항목(cover.headline·bigStory.content, Ruling 29)을 갖춘 결과만 — 빠진 결과는 렌더러가 던지므로
+  //   위반 수가 같거나 더 적어 보여도 후보가 되지 않는다(재생성 사유일 뿐).
+  // 선택: 카드 글자만 어긋난 결과(카드 외 위반 0) > 카드 외 위반이 가장 적은 결과 > 가장 최근 결과.
+  // 재생성을 이어가지 못하거나(예산 소진·후속 호출 실패·마지막 시도 파싱 실패·마지막 시도에 필수 항목 누락)
+  // 마지막 시도에 위반이 더 많이 남으면 이 결과를 마지막 시도처럼(위반은 경고로만) 발송한다.
+  // 후보가 한 번도 없을 때만 실패한다(파싱된 결과가 없거나, 파싱돼도 필수 항목을 갖춘 결과가 없을 때).
+  let best: { content: ReportContent; base: string[]; card: string[]; attempt: number } | null = null;
+  let lastRequiredMissing: { attempt: number; fields: string[] } | null = null;
+  let stopReason = "";
+  const remaining = (k: { base: string[]; card: string[] }) => [...k.base, ...k.card].join(", ");
 
   const deadline = makeDeadline(MARKET_GENERATION_BUDGET_MS);
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     // F07: 생성 예산을 넘기면 새 호출을 시작하지 않는다(다음 트리거가 새 runner에서 재시도).
     if (attempt > 1 && !deadline.canStartCall()) {
+      stopReason = `생성 예산 초과 ${Math.round(deadline.elapsedMs() / 1000)}초`;
       console.log(`⏱️ 생성 예산 초과(${Math.round(deadline.elapsedMs() / 1000)}초 경과) — 추가 재생성 중단`);
       break;
     }
@@ -540,6 +653,12 @@ export async function generateReport(
         await new Promise((r) => setTimeout(r, attempt * 10000));
         continue;
       }
+      if (best) {
+        // 마지막 시도의 529도 여기로 온다 — 파싱된 앞선 결과가 있으면 침묵 대신 그 결과로(아래 루프 뒤에서 발송).
+        stopReason = `재생성 호출 실패: ${err instanceof Error ? err.message : String(err)}`;
+        console.log(`⚠️ ${stopReason}`);
+        break;
+      }
       throw err;
     }
 
@@ -557,6 +676,10 @@ export async function generateReport(
     let parsed: ReportContent;
     try {
       parsed = JSON.parse(rawJson) as ReportContent;
+      // Ruling 28: 최상위가 객체가 아닌 JSON(문자열·배열·null)은 파싱 실패와 같다 — 앞선 결과 후보로 남기지 않는다.
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+        throw new Error(`JSON 최상위가 객체가 아님(${parsed === null ? "null" : Array.isArray(parsed) ? "array" : typeof parsed})`);
+      }
     } catch (parseErr) {
       lastParseErr = parseErr;
       console.error(`❌ JSON 파싱 실패 (시도 ${attempt}/${maxRetries}). 원문 길이:`, rawJson.length);
@@ -569,7 +692,9 @@ export async function generateReport(
 
     // R2·R3 (2026-07-22): 파싱 성공 직후 정합성 검사. 파싱 검증 완료된 JSON 문자열에
     // 시점·출처 soft fix 적용 후 re-parse. 교정 문자열은 JSON 메타문자 미포함이 보장됨.
-    {
+    // Ruling 28: 형식이 깨진 응답 때문에 검증 중 예외가 나면 파싱 실패처럼 다룬다 — 함수 밖으로 던지지 않고
+    // 기록·경고 뒤 다음 시도로(마지막 시도면 루프 뒤 앞선 결과 발송 경로로).
+    try {
       const reportDate = data.date;
       const todaySources = (context?.news ?? []).map((n) => n.source);
       const canonical = JSON.stringify(parsed);
@@ -584,33 +709,73 @@ export async function generateReport(
         console.log(`⚠️ 비승인 출처 잔존: ${sourceFix.warnings.join(", ")}`);
       }
 
-      const hardViolations = [...temporal.violations];
+      const requiredMissing = validateMarketRequired(parsed);
+      if (requiredMissing.length > 0) lastRequiredMissing = { attempt, fields: requiredMissing };
+      const baseViolations = [...temporal.violations, ...requiredMissing, ...validateMarketSummary(parsed)];
       const citationCount = countCitationPhrases(sourceFix.fixed);
       if (citationCount >= 8) {
-        hardViolations.push(`"에 따르면" 인용 ${citationCount}회 과다`);
+        baseViolations.push(`"에 따르면" 인용 ${citationCount}회 과다`);
       } else if (citationCount >= 5) {
         console.log(`⚠️ "에 따르면" 인용 ${citationCount}회 (허용 한도 이하)`);
       }
+      // 카드 글자 맞춤: 1~2번째 시도에선 다시 쓰게 하는 사유, 마지막 시도에선 아래 "위반 잔존" 경고로만 남는다.
+      const cardViolations = validateMarketCardText(parsed);
+      const hardViolations = [...baseViolations, ...cardViolations];
 
       if (hardViolations.length > 0 && attempt < maxRetries) {
         // ETF 와 달리 market 엔 Tier 1 fallback 이 없으므로, 남은 재시도가 있으면 re-roll.
         console.log(`♻️ 정합성 위반 ${hardViolations.length}건 — 재생성 (${attempt + 1}/${maxRetries}): ${hardViolations.join(", ")}`);
         lastParseErr = new Error(`정합성 위반: ${hardViolations.join(", ")}`);
+        // 같은 수면 더 최근 결과(<=). 카드 글자만 어긋난 결과는 카드 외 위반이 0이라 자연히 맨 앞이다.
+        // 필수 항목이 빠진 결과는 후보에서 뺀다 — 위반 수로 겨루면 갖춘 결과를 밀어낼 수 있다.
+        if (requiredMissing.length === 0 && (!best || baseViolations.length <= best.base.length)) {
+          best = { content: parsed, base: baseViolations, card: cardViolations, attempt };
+        }
+        continue;
+      }
+      if (requiredMissing.length > 0) {
+        // 마지막 시도인데 필수 항목이 없다 — 이 결과는 렌더할 수 없다. 파싱 실패처럼 다룬다:
+        // 필수 항목을 갖춘 앞선 결과가 있으면 루프 뒤에서 그 결과로 발송하고, 없으면 실패한다.
+        lastParseErr = new Error(`필수 항목 누락: ${requiredMissing.join(", ")}`);
+        console.error(`❌ 마지막 시도(${attempt}/${maxRetries})에 필수 항목 누락 — 이 결과는 발송할 수 없다: ${requiredMissing.join(", ")}`);
         continue;
       }
       if (hardViolations.length > 0) {
-        // maxRetries 소진 — "품질 낮아도 전송 > 침묵" 원칙으로 마지막 콘텐츠 발송 진행.
-        console.log(`⚠️ 정합성 위반 잔존(발송 진행): ${hardViolations.join(", ")}`);
+        // maxRetries 소진 — "품질 낮아도 전송 > 침묵" 원칙으로 발송 진행(위반은 경고로만).
+        if (best && best.base.length < baseViolations.length) {
+          // 마지막 시도에 카드 외 위반이 더 많이 남았다 → 위반이 적은 앞선 결과가 더 깨끗하다.
+          console.log(`⚠️ 마지막 시도에 정합성 위반 잔존(${hardViolations.join(", ")}) — 위반이 더 적은 앞선 결과로 발송 진행(${best.attempt}회차, 남은 위반: ${remaining(best)})`);
+          parsed = best.content;
+        } else {
+          console.log(`⚠️ 정합성 위반 잔존(발송 진행): ${hardViolations.join(", ")}`);
+        }
       }
+    } catch (validationErr) {
+      lastParseErr = validationErr;
+      console.error(`❌ 응답 검증 중 오류(시도 ${attempt}/${maxRetries}) — 파싱 실패처럼 다음 시도로: ${validationErr instanceof Error ? validationErr.message : String(validationErr)}`);
+      continue;
     }
 
     content = parsed;
     break; // 파싱·정합성 통과(또는 재시도 소진)
   }
 
+  if (!content && best) {
+    // 마지막 호출을 못 했거나(예산) 실패했거나 파싱되지 않았다 — 앞선 결과를 마지막 시도처럼(위반은 경고로만) 발송한다.
+    const why = stopReason || `마지막 시도 JSON 파싱·검증 실패: ${lastParseErr}`;
+    console.log(`⚠️ 재생성을 이어가지 못해(${why}) 앞선 결과로 발송 진행(${best.attempt}회차, 남은 위반: ${remaining(best)})`);
+    content = best.content;
+  }
   if (!content) {
+    if (lastRequiredMissing) {
+      // 파싱은 됐지만 필수 항목을 갖춘 결과가 한 번도 없었다 — 제목·본문 없는 리포트는 만들 수 없으니 크게 실패한다.
+      throw new Error(`Market 리포트 필수 항목 누락 — ${lastRequiredMissing.attempt}회차 응답에 ${lastRequiredMissing.fields.join(", ")}, 필수 항목을 갖춘 앞선 결과도 없어 발송할 수 없습니다 (${maxRetries}회 시도): ${lastParseErr}`);
+    }
     throw new Error(`Claude JSON 파싱 실패 (${maxRetries}회 시도): ${lastParseErr}`);
   }
+
+  // 발송할 content 의 선택 항목을 빈 값으로 맞춘다 — 아래 로그·렌더·run.ts(내러티브 로그·인덱스)가 던지지 않게.
+  normalizeMarketOptionalParts(content);
 
   // JSON 콘텐츠 후처리: 금지 표현 검사
   const jsonStr = JSON.stringify(content);
@@ -623,10 +788,13 @@ export async function generateReport(
     }
   }
 
-  console.log(`📄 JSON 파싱 성공 — bigStory: ${content.bigStory.content.length}블록, watchPoints: ${content.watchPoints.length}, compass: ${content.compass.length}, soWhat: ${content.soWhat.length}`);
+  // 세 줄 요약·카드 한 줄: 누락·빈 칸은 기본 문장으로 채워 렌더가 깨지지 않게 한다(검증은 위 재시도 루프에서 끝났다).
+  fillMarketSummaryDefaults(content);
 
-  // gaugePercent 정규화: gaugeType 기반 고정값으로 매핑 (Claude 임의값 방지)
-  for (const section of content.compass) {
+  console.log(`📄 JSON 파싱 성공 — bigStory: ${content.bigStory.content.length}블록, watchPoints: ${content.watchPoints.length}, soWhat: ${content.soWhat.length}, 카드 한 줄(${content.cardLine.kind}): "${content.cardLine.text}"`);
+
+  // gaugePercent 정규화: gaugeType 기반 고정값으로 매핑 (과거 compass 콘텐츠 호환 — 새 프롬프트는 compass 를 만들지 않는다)
+  for (const section of content.compass ?? []) {
     if (section.items) {
       for (const item of section.items) {
         item.gaugePercent = gaugeTypeToPercent(item.gaugeType);
@@ -655,7 +823,7 @@ export async function generateReport(
   const mode = (ctx ?? defaultCtx).marketMode?.mode;
   // C09: 입력으로 준 뉴스 일부를 원문 링크와 함께 리포트에 남긴다.
   const sources = (context?.news ?? []).map((n) => ({ title: n.title, source: n.source, url: n.url }));
-  const html = renderReport(content, data, historicalData, mode, sources);
+  const html = renderReport(content, data, historicalData, mode, sources, context?.kospiSessions ?? []);
 
   console.log(`✅ 리포트 렌더링 완료 (${html.length} bytes, 모드: ${mode ?? "n/a"})`);
   return { html, content };
