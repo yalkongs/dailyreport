@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-10-19",
+      "type": "morning",
+      "headline": "미 반도체 4% 급락, 국내는 헬스케어·방산이 받쳤다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-19",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-10-18T21:43:43.941Z"
+    },
+    {
       "date": "2026-10-16",
       "type": "morning",
       "headline": "코스피 8% 급락, 금·원유는 올랐다",
