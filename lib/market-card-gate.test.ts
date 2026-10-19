@@ -5,7 +5,7 @@ import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import Anthropic from '@anthropic-ai/sdk'
 import { cardTextFits } from './preview/data-card'
-import { generateReport, validateMarketCardText, validateMarketRequired, normalizeMarketOptionalParts } from './claude-client'
+import { generateReport, validateMarketCardText, validateMarketRequired, normalizeMarketOptionalParts, validateMarketComparativeClaims, buildReportPrompt } from './claude-client'
 
 const FITTING_HEADLINE = '코스피 급락 다음 날, 미 증시는 숨 고르기'
 const LONG_HEADLINE = '코스피 급락 다음 날 미 증시는 숨 고르기에 들어갔고 외국인 매도와 환율 부담이 한꺼번에 겹치며 투자자들의 관망이 길어졌습니다'
@@ -364,4 +364,64 @@ test('generateReport: 필수 항목이 빠진 응답만 있고 뒤 호출이 실
   t.after(() => mock.restoreAll())
   fakeStream([without(FITTING_HEADLINE, 'cover'), new Error('Internal server error')])
   await assert.rejects(generateReport(DATA), (e: Error) => /Internal server error/.test(e.message) && !(e instanceof TypeError))
+})
+
+// ── Ruling 31: 제목·카드 한 줄의 확인할 수 없는 기간 비교·최상급 표현 ────────────────────────────
+// 10/19 제목 "…한 주 만에 1년치 수익을 되돌렸다"가 본문(1년 상승분의 절반에 가까운 낙폭)보다 과장된 채 발송됐다.
+// 1·2번째 시도: 기준 위반(재생성 사유). 마지막 시도: 경고만 남기고 발송(F02). 앞선 결과 선택은 일반 기준 위반과 같다.
+const TODAY_HEADLINE = '코스피, 6,625에서 5,668로…한 주 만에 1년치 수익을 되돌렸다'
+
+test('기간 비교 관문: 오늘 제목·카드 한 줄의 최상급은 걸리고, 평범한 제목은 통과한다', () => {
+  const v = validateMarketComparativeClaims({ cover: cover(TODAY_HEADLINE), cardLine: cardLine(LINE) })
+  assert.equal(v.length, 1)
+  assert.match(v[0], /^cover\.headline 기간 비교·최상급/)
+  assert.match(v[0], /1년치/)
+  const line = validateMarketComparativeClaims({ cover: cover(FITTING_HEADLINE), cardLine: cardLine('코스피 사상 최고, 외국인 매수가 이끌었습니다') })
+  assert.equal(line.length, 1)
+  assert.match(line[0], /^cardLine\.text .*사상 최고/)
+  for (const headline of ['코스피 반등, 이번 주 금통위가 시험대', '미 반도체 4% 급락, 코스피는 반대로 올랐다', '금통위가 최대 변수', FITTING_HEADLINE]) {
+    assert.deepEqual(validateMarketComparativeClaims({ cover: cover(headline), cardLine: cardLine(LINE) }), [], headline)
+  }
+  assert.doesNotThrow(() => validateMarketComparativeClaims({} as never))
+  assert.deepEqual(validateMarketComparativeClaims({ cover: '문자열', cardLine: null } as never), [])
+})
+
+test('generateReport: 1회차 제목에 기간 비교·최상급이 있으면 다시 쓰게 하고, 고친 2회차 결과로 발송한다', async (t) => {
+  t.after(() => mock.restoreAll())
+  assert.deepEqual(validateMarketCardText({ cover: cover(TODAY_HEADLINE), cardLine: cardLine(LINE) }), [], '전제: 카드 글자는 맞는다')
+  const { stream, logs } = fakeStream([reportJson(TODAY_HEADLINE), reportJson(FITTING_HEADLINE)])
+  const { content } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 2)
+  assert.equal(content.cover.headline, FITTING_HEADLINE)
+  assert.ok(logs.some((l) => /재생성 \(2\/3\).*cover\.headline 기간 비교·최상급.*1년치/.test(l)))
+})
+
+test('generateReport: 마지막 시도까지 기간 비교·최상급이 남아도 경고만 남기고 발송한다(F02)', async (t) => {
+  t.after(() => mock.restoreAll())
+  const { stream, logs } = fakeStream([reportJson(TODAY_HEADLINE)])
+  const { content, html } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 3)
+  assert.equal(content.cover.headline, TODAY_HEADLINE)
+  assert.match(html, /class="cover-headline"/)
+  assert.ok(logs.some((l) => /정합성 위반 잔존\(발송 진행\).*기간 비교·최상급.*1년치/.test(l)))
+})
+
+test('generateReport: 기간 비교 위반은 일반 기준 위반이다 — 카드 글자만 어긋난 앞선 결과가 마지막 시도보다 깨끗하면 그쪽으로', async (t) => {
+  t.after(() => mock.restoreAll())
+  // 1회: 카드 글자만 위반(기준 위반 0) → 2·3회: 기간 비교 위반(기준 위반 1)
+  const { stream, logs } = fakeStream([reportJson(LONG_HEADLINE), reportJson(TODAY_HEADLINE), reportJson(TODAY_HEADLINE)])
+  const { content } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 3)
+  assert.equal(content.cover.headline, LONG_HEADLINE)
+  assert.ok(logs.some((l) => /마지막 시도에 정합성 위반 잔존.*1년치.*위반이 더 적은 앞선 결과로 발송 진행\(1회차/.test(l)))
+})
+
+test('프롬프트: 제목 작성 규칙에 기간 비교·최상급 금지(제목·카드 문구)가 있다', () => {
+  const ctx = {
+    angle: { id: 'a', name: '구조적 렌즈', description: '', promptGuide: 'g' },
+    recentLog: [], sideways: { isSideways: false, avgAbsChange: 0, deepDiveTopic: null }, deepDiveTopic: null,
+  }
+  const prompt = buildReportPrompt(DATA, ctx as never, null)
+  const rules = prompt.slice(prompt.indexOf('### 제목 작성 규칙'))
+  assert.match(rules, /제목·카드 문구에는 'N년치·N개월치', '역대·사상 최대\/최고\/최저', 'N년 만에 최고\/최저', '연중 최고\/최저' 같은 기간 비교·최상급 표현을 쓰지 않는다 — 입력 데이터로 확인되는 수치와 사실만/)
 })

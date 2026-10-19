@@ -3,7 +3,7 @@
 // 사실 검증(수치·주간·환율)은 새 산문 필드 전부에 적용되고, 축소판(factChecksAsWarnings)에서는 경고만 남는다.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { validateMorningReportQuality } from './report-quality'
+import { applySoftFixesInPlace, validateMorningReportQuality } from './report-quality'
 import { normalizeMorningReportLanguage } from './report-language'
 import { buildMorningStrategyInput } from './morning-strategy'
 import { buildAssetClassSlots } from './asset-classes'
@@ -90,10 +90,22 @@ test('(b) assetCards의 key가 슬롯에 없으면 위반', () => {
   assert.match(validate(r), /assetCards key가 자산군 슬롯에 없음: kr-sector/)
 })
 
-test('(c) card.line이 32자를 넘으면 위반', () => {
-  const r = validReport(); r.card.line = '반등인지 추가 하락인지 오전 흐름과 거래대금을 함께 지켜볼 때입니다'
-  assert.ok(Array.from(r.card.line).length > 32)
-  assert.match(validate(r), /card\.line/)
+test('(c) card.line이 40자를 넘으면 위반', () => {
+  const r = validReport(); r.card.line = '반등인지 추가 하락인지 오전 흐름과 거래대금, 환율을 함께 지켜볼 때입니다'
+  assert.equal(Array.from(r.card.line).length, 41)
+  assert.match(validate(r), /card\.line은 40자 이내/)
+})
+
+// Ruling 32: 34~38자 한 줄도 1080×1350 카드에 두 줄로 들어간다 — 글자 수 상한은 40자, 넘침은 픽셀 관문(cardTextFits)이 본다.
+test('(c) card.line 33~40자는 글자 수로 막지 않는다(카드에 들어가면 통과)', () => {
+  for (const line of [
+    '반등인지 추가 하락인지 오전 흐름과 거래대금을 함께 지켜볼 때입니다', // 37자
+    '반도체 낙폭이 줄어드는지, 거래대금이 다시 붙는지가 오늘의 관전점입니다', // 39자
+  ]) {
+    const r = validReport(); r.card.line = line
+    assert.ok(Array.from(line).length > 32 && Array.from(line).length <= 40, line)
+    assert.equal(validate(r), '', line)
+  }
 })
 
 test('(c) card.line이 질문형이면 위반', () => {
@@ -361,7 +373,8 @@ const LAST_ATTEMPT_DOWNGRADES: Array<[string, RegExp, (r: MorningReport) => void
   ['원화 긴 숫자', /원화 금액은 억 원\/조 원/, r => { r.assetCards[1].reason = '대형주 ETF에 거래대금 1234567890원이 몰렸습니다.' }, makeData],
   ['확인/점검/봅니다 과다', /확인\/점검\/봅니다 문장이 과도/, r => { r.tacticalWarning = ORDINALS.map(o => `${o} 지점을 확인합니다.`).join(' ') }, makeData],
   ['.KS 코드 표기', /종목명 \(6자리 코드\)/, r => { r.assetCards[0].reason = '091160.KS 흐름이 메모리 가격 둔화 보도에 약했습니다.' }, makeData],
-  ['코드 괄호 누락', /괄호로 감싸야/, r => { r.assetCards[0].reason = 'KODEX 반도체 091160 흐름이 메모리 가격 둔화 보도에 약했습니다.' }, makeData],
+  // 유니버스 코드(091160 등)는 soft fix가 괄호로 감싸므로(Ruling 33) 위반 경로는 유니버스 밖 6자리 수로 본다.
+  ['코드 괄호 누락', /괄호로 감싸야/, r => { r.assetCards[0].reason = 'KODEX 반도체 123456 흐름이 메모리 가격 둔화 보도에 약했습니다.' }, makeData],
   ['커버 애매어(시장 단독)', /커버\(헤드라인\/서브라인\)/, r => { r.cover.subline = '간밤 시장 분위기는 조용했지만 오늘 개장 흐름이 관건으로 남았습니다.' }, makeData],
 ]
 
@@ -420,4 +433,86 @@ test('M5: 확인 항목이 없으면 오늘 핵심(summary.focus)으로 — 확�
   assert.match(msg, /필수 필드 누락: todayChecks/)
   assert.doesNotMatch(msg, /card\./)
   assert.deepEqual(r.card, { key: 'kr-semi', line: '개장 직후 반도체 ETF가 낙폭을 줄이는지가 오늘의 핵심입니다.' })
+})
+
+// ─── Ruling 33 (2026-10-19): 괄호 없이 쓴 국내 ETF 코드 soft fix ─────────────────────────────
+// 오늘 ETF 검증이 "국내 ETF 코드는 반드시 괄호로 감싸야 합니다 \"(6자리)\": 체 091160, 어 266420"로 재생성을 반복했다.
+// 이름·단어 바로 뒤 공백 한 칸 + 유니버스 6자리 코드면 "이름 (코드)"(프롬프트·렌더러의 표기)로 감싼다.
+const BARE_CODES_TODAY = 'KODEX 반도체 091160과 KODEX 헬스케어 266420의 개장 흐름'
+
+test('Ruling 33 soft fix: 이름 뒤 공백 한 칸의 유니버스 코드를 괄호로 감싼다(모든 산문 필드)', () => {
+  const r = validReport()
+  r.assetCards[0].reason = 'KODEX 반도체 091160 흐름이 메모리 가격 둔화 보도에 약했습니다.'
+  r.todayChecks[0].what = BARE_CODES_TODAY
+  r.summary.domestic = '전일 KODEX 200 069500과 TIGER 미국S&P500 360750이 함께 밀렸습니다.'
+  const fixes = applySoftFixesInPlace(r)
+  assert.equal(r.assetCards[0].reason, 'KODEX 반도체 (091160) 흐름이 메모리 가격 둔화 보도에 약했습니다.')
+  assert.equal(r.todayChecks[0].what, 'KODEX 반도체 (091160)과 KODEX 헬스케어 (266420)의 개장 흐름')
+  assert.equal(r.summary.domestic, '전일 KODEX 200 (069500)과 TIGER 미국S&P500 (360750)이 함께 밀렸습니다.')
+  assert.ok(fixes.includes('국내 ETF 코드 괄호'), fixes.join(', '))
+})
+
+test('Ruling 33 soft fix: 이미 괄호 안인 코드는 그대로', () => {
+  for (const text of ['KODEX 반도체 (091160) 흐름', 'KODEX 반도체(091160) 흐름', '(KODEX 반도체 091160) 흐름']) {
+    const r = validReport(); r.assetCards[0].reason = text
+    assert.deepEqual(applySoftFixesInPlace(r), [], text)
+    assert.equal(r.assetCards[0].reason, text)
+  }
+})
+
+test('Ruling 33 soft fix: 유니버스 밖 6자리 수·쉼표/소수점이 이어지는 수·금액·.KS 접미사는 건드리지 않는다', () => {
+  for (const text of [
+    'KODEX 반도체 123456 흐름', // 유니버스 코드 아님
+    '거래대금 1,091,160원이 몰렸습니다', // 쉼표가 낀 금액
+    '종가 102,110원에서 출발합니다', // 쉼표 있는 가격
+    '종가 091160,5 수준', // 쉼표가 이어지는 수
+    '종가 102110.5 수준', // 소수점이 이어지는 수
+    '종가 102110원에서 출발합니다', // 단위가 붙은 금액(코드와 같은 숫자라도)
+    '평가액 102110 원', // 띄어 쓴 단위
+    'KODEX 반도체 0911600 흐름', // 7자리
+    'KODEX 반도체 091160.KS 흐름', // .KS 표기는 별도 검사가 본다
+    'KODEX 반도체  091160 흐름', // 공백 두 칸(한 칸만 교정)
+  ]) {
+    const r = validReport(); r.assetCards[0].reason = text
+    applySoftFixesInPlace(r)
+    assert.equal(r.assetCards[0].reason, text, text)
+  }
+})
+
+test('Ruling 33 soft fix: 교정 뒤에는 괄호 누락 위반이 나지 않는다(1회차 엄격 검증 통과)', () => {
+  const r = validReport()
+  r.assetCards[0].reason = 'KODEX 반도체 091160 흐름이 메모리 가격 둔화 보도에 약했습니다.'
+  r.todayChecks[0].what = BARE_CODES_TODAY
+  assert.equal(validate(r), '')
+  // 유니버스 밖 수는 그대로 위반(재생성 사유) — 교정이 위반 경로를 가리지 않는다.
+  const other = validReport(); other.assetCards[0].reason = 'KODEX 반도체 123456 흐름이 메모리 가격 둔화 보도에 약했습니다.'
+  assert.match(validate(other), /괄호로 감싸야/)
+})
+
+// ─── Ruling 31 (2026-10-19): 제목·카드 한 줄의 확인할 수 없는 기간 비교·최상급 표현 ─────────────────
+// 1·2회차는 재생성 사유(카드 문구 위반이 아니라 기준 위반), 마지막 축소판은 경고만(F02).
+test('Ruling 31: cover.headline·card.line의 기간 비교·최상급은 1회차 위반, 마지막 시도는 경고만 남기고 통과', (t) => {
+  const cases: Array<[string, (r: MorningReport) => void, RegExp]> = [
+    ['cover.headline', r => { r.cover.headline = '국내 반도체 급락, 1년치 상승분 반납' }, /cover\.headline 기간 비교·최상급[^\n]*1년치/],
+    ['card.line', r => { r.card.line = '반도체 사상 최고 뒤 숨 고르기를 지켜볼 때입니다' }, /card\.line 기간 비교·최상급[^\n]*사상 최고/],
+  ]
+  const warn = t.mock.method(console, 'warn', () => {})
+  for (const [label, set, pattern] of cases) {
+    const first = validReport(); set(first)
+    const msg = validate(first)
+    assert.match(msg, pattern, label)
+    assert.doesNotMatch(msg, /미리보기 카드 문구|card\.line은/, `${label}: 카드 문구 위반이 아니라 기준 위반`)
+    const last = validReport(); set(last)
+    assert.equal(validateLast(last), '', label)
+    assert.ok(warn.mock.calls.some(c => /\[comparative-warn\]/.test(String(c.arguments[0])) && pattern.test(String(c.arguments[0]))), `${label} 경고 기록`)
+  }
+})
+
+test('Ruling 31: 평범한 제목·카드 문구와 본문(요약·카드 이유)의 비교 표현은 걸지 않는다', () => {
+  for (const headline of ['미 반도체 4% 급락, 국내는 헬스케어·방산이 받쳤다', '코스피 반등, 이번 주 금통위가 시험대', '금통위가 최대 변수']) {
+    const r = validReport(); r.cover.headline = headline
+    assert.doesNotMatch(validate(r), /기간 비교/, headline)
+  }
+  const body = validReport(); body.assetCards[0].reason = '메모리 가격이 3년 만에 최저로 내려갔다는 보도가 반도체 매물을 키웠습니다.'
+  assert.doesNotMatch(validate(body), /기간 비교/, '짧은 노출 필드(제목·카드 한 줄)에만 적용')
 })

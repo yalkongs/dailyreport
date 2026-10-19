@@ -23,6 +23,10 @@ import { cardTextFits } from '../preview/data-card'
 // 정합성 검사 (2026-07-22): R2 시점 / R3 출처 인용. (R1 Characters 카드-산문 정합은 스키마 개편으로 제거)
 import { checkAndFixTemporal } from '../temporal-consistency'
 import { softFixUnquotableSources, countCitationPhrases } from '../quotable-sources'
+// Ruling 33: 괄호 누락 코드 soft fix는 유니버스 코드만 감싼다.
+import { KR_ETF_UNIVERSE } from './universe'
+// Ruling 31: 제목·카드 한 줄의 확인할 수 없는 기간 비교·최상급 표현(Market과 공용).
+import { comparativeClaimViolations } from '../comparative-claims'
 
 // ─── Hard patterns: 진짜 투자 권유 ─────────────────────────────────────
 const INVESTMENT_ADVICE_PATTERNS = [
@@ -94,12 +98,27 @@ const SOFT_FIXES: SoftFix[] = [
   { pattern: /투자에\s*주의하시기\s*바랍니다/g, replace: '점검 대상으로 남겨 둡니다' },
 ]
 
+// Ruling 33 (2026-10-19): 괄호 없이 쓴 국내 ETF 코드("KODEX 반도체 091160") → "KODEX 반도체 (091160)".
+// 프롬프트 규칙·렌더러 chip과 같은 "종목명 (6자리 코드)" 표기로, 괄호만 더한다(앞 공백은 그대로).
+// 대상: 유니버스의 6자리 숫자 코드(NNNNNN.KS)가 이름·단어(글자·숫자·닫는 괄호·&) 바로 뒤 공백 한 칸 뒤에 올 때만.
+// 건드리지 않는 것: 유니버스 밖 수, 이미 괄호 안(앞이 '('이거나 뒤가 ')'), 숫자·쉼표·소수점이 이어지는 수,
+// .KS/.KQ 접미사(별도 검사), 금액 단위(원·달러·포인트·%·억·조·만 원)가 붙은 수.
+const KR_UNIVERSE_NUMERIC_CODES = KR_ETF_UNIVERSE
+  .map(etf => /^(\d{6})\.KS$/.exec(etf.ticker)?.[1])
+  .filter((code): code is string => typeof code === 'string')
+const BARE_KR_CODE_SOURCE =
+  `(?<=[가-힣A-Za-z0-9)&]) (${KR_UNIVERSE_NUMERIC_CODES.join('|')})` +
+  `(?![\\d)]|[.,]\\d|\\.(?:KS|KQ)|\\s?(?:원|달러|포인트|%|억|조|만\\s?원))`
+const BARE_KR_CODE = new RegExp(BARE_KR_CODE_SOURCE, 'g')
+const BARE_KR_CODE_ANY = new RegExp(BARE_KR_CODE_SOURCE) // 검사용(lastIndex 상태 없음)
+const BARE_KR_CODE_FIX_LABEL = '국내 ETF 코드 괄호'
+
 const UNFORMATTED_USD_KRW_PATTERN = /USD\/KRW\s+(?:1[0-9]{3}|[2-9][0-9]{3})(?![,\d])/g
 const RAW_KRW_AMOUNT_PATTERN = /\d{10,}원/g
 
-// 미리보기 카드 한 줄(card.line): 32자 이내 평서문. 질문형 = 물음표가 있거나 의문형 어미로 끝나는 문장
+// 미리보기 카드 한 줄(card.line): 40자 이내 평서문(Ruling 32, 2026-10-19: 32 → 40 — 실제 넘침은 cardTextFits 픽셀 관문이 본다). 질문형 = 물음표가 있거나 의문형 어미로 끝나는 문장
 // ("~까/~까요"(을까·할까·습니까 포함), "~나요", "~는가", "~인가").
-export const CARD_LINE_MAX_CHARS = 32
+export const CARD_LINE_MAX_CHARS = 40
 const QUESTION_FORM = /[?？]|(?:까요?|나요|는가|인가)[.!…]?\s*$/
 
 // ─── Soft fix: 리포트 전체 문자열 필드에 치환 적용 ──────────────────
@@ -109,7 +128,7 @@ function applySoftFix(value: string | undefined): string | undefined {
   for (const { pattern, replace } of SOFT_FIXES) {
     next = next.replace(pattern, replace)
   }
-  return next
+  return next.replace(BARE_KR_CODE, ' ($1)')
 }
 
 function isObjectValue<T>(value: T): value is T & object {
@@ -166,6 +185,8 @@ export function applySoftFixesInPlace(report: MorningReport): string[] {
         fixed.push(pattern.source)
       }
     }
+    // 코드 괄호는 유니버스 코드 전체를 담은 긴 패턴이라 source 대신 이름으로 남긴다.
+    if (BARE_KR_CODE_ANY.test(before) && !BARE_KR_CODE_ANY.test(after)) fixed.push(BARE_KR_CODE_FIX_LABEL)
   }
   return fixed
 }
@@ -346,7 +367,7 @@ const DIGIT = /[0-9]/
  *  - 필수 필드(cover·summary 세 줄·assetCards·todayChecks와 각 필드·card.key·card.line)
  *  - todayChecks 정확히 3개
  *  - assetCards key ⊆ 자산군 슬롯(중복 없이), card.key ∈ 자산군 슬롯 (buildAssetClassSlots(data.quotes))
- *  - card.line 32자 이내·질문형 금지
+ *  - card.line 40자 이내·질문형 금지
  *  - 미리보기 카드 문구(제목·card 자산군 라벨·card.line)가 카드 규칙 안에 들어감(cardTextFits, Ruling 15)
  * Ruling 10(2026-10-17): 마지막 축소판(lastAttempt = factChecksAsWarnings)에서는 코드가 고칠 수 있는 구조 문제를
  * 그 자리에서 교정하고 console.warn으로 남긴다 — 발송을 막지 않는다(전송 > 침묵). 1·2회차는 재생성 사유.
@@ -692,6 +713,15 @@ export function assessMorningReportQuality(
   if (ambiguous.bodyCount > 0) {
     console.log(`  [soft-warn] 본문 애매어 ${ambiguous.bodyCount}건 (기록 전용): ${ambiguous.bodySamples.join(' | ')}`)
   }
+
+  // Ruling 31 (2026-10-19): 제목·카드 한 줄의 기간 비교·최상급('N년치', '사상 최고', 'N년 만에 최저', '연중 최고' 등)은
+  // 입력으로 확인할 수 없다 — 1·2회차 재생성 사유(기준 위반), 마지막 축소판은 경고만(F02). 구조 교정 뒤 card 기준.
+  const comparativeCard = isObjectValue(report.card) ? report.card : undefined
+  const comparative = comparativeClaimViolations([
+    ['cover.headline', isObjectValue(report.cover) ? report.cover.headline : undefined],
+    ['card.line', comparativeCard?.line],
+  ])
+  for (const v of comparative) violateOrWarn('comparative', v)
 
   return { violations, cardViolations: structural.cardViolations }
 }

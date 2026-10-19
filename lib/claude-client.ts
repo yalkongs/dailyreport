@@ -23,6 +23,8 @@ import { buildTemporalFramingBlock } from "./temporal-framing";
 import { checkAndFixTemporal } from "./temporal-consistency";
 import { softFixUnquotableSources, countCitationPhrases, QUOTABLE_SOURCES } from "./quotable-sources";
 import { renderPolicyRateBlock, POLICY_RATE_RULE, findPolicyDirectionMismatches, extractReportText } from "./policy-rate";
+// Ruling 31 (2026-10-19): 제목·카드 한 줄의 확인할 수 없는 기간 비교·최상급 표현(ETF와 공용).
+import { comparativeClaimViolations } from "./comparative-claims";
 
 // F07: 요청 상한·SDK 재시도를 명시(기본 10분·2회는 job 상한 20분과 맞지 않았다).
 const client = new Anthropic({ timeout: CLAUDE_REQUEST_TIMEOUT_MS, maxRetries: CLAUDE_MAX_RETRIES });
@@ -335,7 +337,7 @@ ${lines}
 
 ## ⚠️ 분량 요구사항 — **위 모드 가이드가 있으면 그것을 우선**
 - summary: 세 줄(yesterday / today / myAssets), 각 60자 이내
-- cardLine: 1개, 32자 이내
+- cardLine: 1개, 40자 이내
 - (기본/normal 모드 기준) bigStory.content: paragraph 블록 4~6개 (사건 → 근거 있는 원인 → 시장 반응), pullQuote 0~1개, dataCard는 쓰지 않음
 - watchPoints: 최대 3개 (한국시간 순서)
 - soWhat: 2~3개 ("확인되면 / 어긋나면" 조건형)
@@ -377,7 +379,7 @@ ${JSON.stringify(data, null, 2)}
   },
   "cardLine": {           // 링크 미리보기 카드의 제목 아래 한 줄
     "kind": "cause" | "watch",  // cause = 입력 근거가 있는 배경 한 문장 / watch = 근거가 약할 때 오늘 확인점
-    "text": string        // 32자 이내 평서문. 질문형·도치·라벨 금지. HTML 태그 금지.
+    "text": string        // 40자 이내 평서문. 질문형·도치·라벨 금지. HTML 태그 금지.
   },
   "bigStory": {
     "content": Array<
@@ -439,7 +441,7 @@ summary는 페이지 맨 위 "세 줄 요약", cardLine은 링크 미리보기 �
 - **summary.yesterday**: 어제 한국·미국 시장의 분위기와 그 배경을 **말로** 한 문장으로 쓰십시오. 지수 등락률을 나열하지 마십시오(숫자는 최대 1개, % 표기는 2개 이상 쓰지 않음). 숫자는 페이지의 핵심 지표가 보여 줍니다. 60자 이내.
 - **summary.today**: 오늘 확인할 한 가지. 시각 또는 비교 기준을 함께 쓰십시오. 60자 이내.
 - **summary.myAssets**: 자산군 관점은 ETF Today에서 다룬다는 안내와, 오늘 가장 영향이 큰 자산군 하나. 60자 이내.
-- **cardLine**: 미리보기 카드의 제목 아래 한 줄. 32자 이내의 평서문입니다. 질문형·도치("왜?", "~은?")·라벨("원인:" 등)을 쓰지 마십시오. 제목(headline)과 같은 말을 되풀이하지 마십시오.
+- **cardLine**: 미리보기 카드의 제목 아래 한 줄. 40자 이내의 평서문입니다. 질문형·도치("왜?", "~은?")·라벨("원인:" 등)을 쓰지 마십시오. 제목(headline)과 같은 말을 되풀이하지 마십시오. 아래 [제목 작성 규칙]의 기간 비교·최상급 금지는 cardLine에도 적용됩니다.
   - kind="cause": 입력 근거(수치·기사)로 뒷받침되는 배경일 때만 쓰십시오.
   - kind="watch": 근거가 약하면(특히 [오늘의 근거 상태]가 hollow일 때) cause로 단정하지 말고, 같은 자리에 오늘 확인점을 평서문으로 쓰십시오.
 
@@ -452,6 +454,7 @@ summary는 페이지 맨 위 "세 줄 요약", cardLine은 링크 미리보기 �
 - **신선한 은유·관점을 적극 허용합니다.** 단 그 은유는 오늘의 지배적 서사(위 [오늘의 관점] 앵글 + 최상위 catalyst)에서 길어올린 것이어야 합니다. 아무 날에나 붙일 수 있는 은유면 실패입니다.
 - **진부한 클리셰는 피하십시오** — 위 [목표 보이스] 예시의 결을 따르고, 매번 어느 날에나 붙일 수 있는 비유면 실패입니다.
 - **수치 앵커**(코스피 +X%, 환율 N원 등)는 기본적으로 **부제(subline)** 가 받칩니다. 단 그 숫자 자체가 오늘의 후크(예: 코스피 3000 돌파, 환율 1,500 같은 심리적 분기점)라면 제목에 남길지 직접 판단하십시오.
+- **기간 비교·최상급 금지 (제목·cardLine 공통).** 제목·카드 문구에는 'N년치·N개월치', '역대·사상 최대/최고/최저', 'N년 만에 최고/최저', '연중 최고/최저' 같은 기간 비교·최상급 표현을 쓰지 않는다 — 입력 데이터로 확인되는 수치와 사실만. (과거 기준점은 historicalComparison의 1주·1개월·3개월·1년뿐이라 이런 주장은 확인할 수 없습니다. 비교가 필요하면 부제·본문에서 그 기준점의 수치("1년 전 대비 N%" 등)로 쓰십시오.)
 - 길이는 압축 지향(대략 15~25자 권장). 은유가 살아있으면 약간 넘어도 됩니다 — 경직되지 마십시오.
 - **본문 연결**: bigStory 의 첫 문단 또는 pullQuote 하나가 제목의 이미지를 명시적으로 받아 전개해야 합니다. 제목이 던진 은유를 본문이 갚으십시오.
 - **반복 회피**: 같은 catalyst·이미지·**구문 틀**이 최근 3일 헤드라인에 등장했다면 (a) 사건의 국면·단계를 다르게 표현하거나 (b) catalyst를 부제로 내리고 제목은 새 각도로. 같은 문형("X가 그린 Y" 류)을 연일 반복하지 마십시오.
@@ -467,7 +470,8 @@ summary는 페이지 맨 위 "세 줄 요약", cardLine은 링크 미리보기 �
 // --- 2026-10 개편: 세 줄 요약·카드 한 줄 검증/보정 ---
 
 const SUMMARY_MAX_CHARS = 60;
-const CARD_LINE_MAX_CHARS = 32;
+// Ruling 32 (2026-10-19): 32 → 40자. 34~38자 한 줄도 카드에 두 줄로 들어간다 — 실제 넘침은 validateMarketCardText(cardTextFits)가 본다.
+const CARD_LINE_MAX_CHARS = 40;
 const SUMMARY_FIELDS: ReadonlyArray<readonly [keyof ReportSummary, string]> = [
   ["yesterday", "어제"],
   ["today", "오늘 볼 것"],
@@ -505,6 +509,18 @@ export function validateMarketSummary(content: Pick<ReportContent, "summary" | "
   }
   if (card?.kind !== "cause" && card?.kind !== "watch") violations.push("cardLine.kind 는 cause 또는 watch");
   return violations;
+}
+
+/**
+ * 제목·카드 한 줄의 확인할 수 없는 기간 비교·최상급 표현 검사(Ruling 31) — 위반 목록(빈 배열이면 통과). 던지지 않는다.
+ * 'N년치', '역대·사상 최대', 'N년 만에 최고', '연중 최저' 같은 주장은 입력(과거 기준점 1주·1개월·3개월·1년)으로 확인할 수 없다.
+ * 호출자(generateReport)가 기준 위반(baseViolations)으로 합친다 — 1~2번째 시도는 재생성 사유, 마지막 시도는 경고만(F02).
+ */
+export function validateMarketComparativeClaims(content: Pick<ReportContent, "cover" | "cardLine">): string[] {
+  return comparativeClaimViolations([
+    ["cover.headline", content?.cover?.headline],
+    ["cardLine.text", content?.cardLine?.text],
+  ]);
 }
 
 /**
@@ -711,7 +727,8 @@ export async function generateReport(
 
       const requiredMissing = validateMarketRequired(parsed);
       if (requiredMissing.length > 0) lastRequiredMissing = { attempt, fields: requiredMissing };
-      const baseViolations = [...temporal.violations, ...requiredMissing, ...validateMarketSummary(parsed)];
+      // Ruling 31: 제목·카드 한 줄의 기간 비교·최상급은 일반 기준 위반(1~2번째 재생성, 마지막 시도 경고만).
+      const baseViolations = [...temporal.violations, ...requiredMissing, ...validateMarketSummary(parsed), ...validateMarketComparativeClaims(parsed)];
       const citationCount = countCitationPhrases(sourceFix.fixed);
       if (citationCount >= 8) {
         baseViolations.push(`"에 따르면" 인용 ${citationCount}회 과다`);

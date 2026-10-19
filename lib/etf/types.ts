@@ -215,7 +215,7 @@ export interface MorningReport {
   assetCards: Array<{ key: AssetClassKey; reason?: string; ifHolding: string; ifConsidering: string }>
   // 오늘 확인할 것 — 정확히 3개. time은 한국시간, baseline은 비교 기준, invalidation은 어긋나면 버릴 가설.
   todayChecks: Array<{ time: string; what: string; baseline: string; invalidation: string }>
-  // 링크 미리보기 카드: key 자산군의 holdingLabel("○○를 갖고 있다면") 아래 한 줄(32자 이내 평서문).
+  // 링크 미리보기 카드: key 자산군의 holdingLabel("○○를 갖고 있다면") 아래 한 줄(40자 이내 평서문).
   card: { key: AssetClassKey; line: string }
   // 레버리지·인버스 |등락| 10% 이상인 날에만.
   tacticalWarning?: string
