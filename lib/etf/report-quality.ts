@@ -25,6 +25,8 @@ import { checkAndFixTemporal } from '../temporal-consistency'
 import { softFixUnquotableSources, countCitationPhrases } from '../quotable-sources'
 // Ruling 33: 괄호 누락 코드 soft fix는 유니버스 코드만 감싼다.
 import { KR_ETF_UNIVERSE } from './universe'
+// Ruling 31: 제목·카드 한 줄의 확인할 수 없는 기간 비교·최상급 표현(Market과 공용).
+import { comparativeClaimViolations } from '../comparative-claims'
 
 // ─── Hard patterns: 진짜 투자 권유 ─────────────────────────────────────
 const INVESTMENT_ADVICE_PATTERNS = [
@@ -711,6 +713,15 @@ export function assessMorningReportQuality(
   if (ambiguous.bodyCount > 0) {
     console.log(`  [soft-warn] 본문 애매어 ${ambiguous.bodyCount}건 (기록 전용): ${ambiguous.bodySamples.join(' | ')}`)
   }
+
+  // Ruling 31 (2026-10-19): 제목·카드 한 줄의 기간 비교·최상급('N년치', '사상 최고', 'N년 만에 최저', '연중 최고' 등)은
+  // 입력으로 확인할 수 없다 — 1·2회차 재생성 사유(기준 위반), 마지막 축소판은 경고만(F02). 구조 교정 뒤 card 기준.
+  const comparativeCard = isObjectValue(report.card) ? report.card : undefined
+  const comparative = comparativeClaimViolations([
+    ['cover.headline', isObjectValue(report.cover) ? report.cover.headline : undefined],
+    ['card.line', comparativeCard?.line],
+  ])
+  for (const v of comparative) violateOrWarn('comparative', v)
 
   return { violations, cardViolations: structural.cardViolations }
 }

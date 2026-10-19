@@ -76,6 +76,13 @@ test('국내 ETF 6자리 코드 규칙에 제목 예외 표기', () => {
   assert.match(p, /예: "KODEX 반도체 \(091160\)"처럼 코드를 괄호로 감쌉니다\. 괄호 없는 "KODEX 반도체 091160"은 금지입니다\./)
 })
 
+test('Ruling 31: 제목 작성 규칙에 기간 비교·최상급 금지(제목·카드 문구)', () => {
+  const p = buildMorningPrompt(makeData('2026-10-19', []))
+  const rules = p.slice(p.indexOf('[cover.headline 작성 규칙]'))
+  assert.match(rules, /제목·카드 문구\(cover\.headline·card\.line\)에는 'N년치·N개월치', '역대·사상 최대\/최고\/최저', 'N년 만에 최고\/최저', '연중 최고\/최저' 같은 기간 비교·최상급 표현을 쓰지 않습니다 — 입력 데이터로 확인되는 수치와 사실만 씁니다/)
+  for (const s of REMOVED) assert.ok(!p.includes(s), s)
+})
+
 test('환율 앵글: "두 얼굴" 대신 "상반된 효과"', () => {
   const p = buildMorningPrompt(makeData('2026-09-30', [], { angle: '환율_양면성' }))
   assert.match(p, /오늘의 서사 앵글: 환율_양면성/)

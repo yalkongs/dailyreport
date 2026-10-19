@@ -229,3 +229,25 @@ test('응답이 객체가 아니면(null·배열·문자열) 파싱 실패처럼
   const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) })
   assert.equal(report.cover.headline, '사실 위반 1회차')
 })
+
+// ── Ruling 31: 제목의 확인할 수 없는 기간 비교·최상급 — 1회차는 재생성, 마지막 축소판(Tier 1)은 경고만 남기고 발송 ──
+const COMPARATIVE_HEADLINE = '국내 반도체 급락, 1년치 상승분 반납'
+
+test('Ruling 31: 1회차 제목에 기간 비교·최상급이 있으면 2회차로 다시 쓰고, 고친 결과로 발송한다', async (t) => {
+  const logs = quiet(t)
+  const gen = fakeGenerator([validReport(COMPARATIVE_HEADLINE), validReport('국내 반도체 급락, 미 증시는 버텼다')])
+  const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) })
+  assert.equal(gen.calls(), 2)
+  assert.equal(report.cover.headline, '국내 반도체 급락, 미 증시는 버텼다')
+  assert.ok(logs.some(l => /1\/2회 품질 검증 실패[\s\S]*그중 카드 문구 0건[\s\S]*cover\.headline 기간 비교·최상급[\s\S]*1년치/.test(l)))
+})
+
+test('Ruling 31: 마지막 축소판까지 기간 비교·최상급이 남아도 경고만 남기고 발송한다(F02)', async (t) => {
+  const logs = quiet(t)
+  const gen = fakeGenerator([validReport(COMPARATIVE_HEADLINE)])
+  const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) })
+  assert.equal(gen.calls(), 3)
+  assert.equal(report.cover.headline, COMPARATIVE_HEADLINE)
+  assert.ok(logs.some(l => /Tier 1 fallback 성공/.test(l)))
+  assert.ok(logs.some(l => /\[comparative-warn\][\s\S]*1년치/.test(l)))
+})

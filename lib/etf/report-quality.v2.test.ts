@@ -488,3 +488,31 @@ test('Ruling 33 soft fix: 교정 뒤에는 괄호 누락 위반이 나지 않는
   const other = validReport(); other.assetCards[0].reason = 'KODEX 반도체 123456 흐름이 메모리 가격 둔화 보도에 약했습니다.'
   assert.match(validate(other), /괄호로 감싸야/)
 })
+
+// ─── Ruling 31 (2026-10-19): 제목·카드 한 줄의 확인할 수 없는 기간 비교·최상급 표현 ─────────────────
+// 1·2회차는 재생성 사유(카드 문구 위반이 아니라 기준 위반), 마지막 축소판은 경고만(F02).
+test('Ruling 31: cover.headline·card.line의 기간 비교·최상급은 1회차 위반, 마지막 시도는 경고만 남기고 통과', (t) => {
+  const cases: Array<[string, (r: MorningReport) => void, RegExp]> = [
+    ['cover.headline', r => { r.cover.headline = '국내 반도체 급락, 1년치 상승분 반납' }, /cover\.headline 기간 비교·최상급[^\n]*1년치/],
+    ['card.line', r => { r.card.line = '반도체 사상 최고 뒤 숨 고르기를 지켜볼 때입니다' }, /card\.line 기간 비교·최상급[^\n]*사상 최고/],
+  ]
+  const warn = t.mock.method(console, 'warn', () => {})
+  for (const [label, set, pattern] of cases) {
+    const first = validReport(); set(first)
+    const msg = validate(first)
+    assert.match(msg, pattern, label)
+    assert.doesNotMatch(msg, /미리보기 카드 문구|card\.line은/, `${label}: 카드 문구 위반이 아니라 기준 위반`)
+    const last = validReport(); set(last)
+    assert.equal(validateLast(last), '', label)
+    assert.ok(warn.mock.calls.some(c => /\[comparative-warn\]/.test(String(c.arguments[0])) && pattern.test(String(c.arguments[0]))), `${label} 경고 기록`)
+  }
+})
+
+test('Ruling 31: 평범한 제목·카드 문구와 본문(요약·카드 이유)의 비교 표현은 걸지 않는다', () => {
+  for (const headline of ['미 반도체 4% 급락, 국내는 헬스케어·방산이 받쳤다', '코스피 반등, 이번 주 금통위가 시험대', '금통위가 최대 변수']) {
+    const r = validReport(); r.cover.headline = headline
+    assert.doesNotMatch(validate(r), /기간 비교/, headline)
+  }
+  const body = validReport(); body.assetCards[0].reason = '메모리 가격이 3년 만에 최저로 내려갔다는 보도가 반도체 매물을 키웠습니다.'
+  assert.doesNotMatch(validate(body), /기간 비교/, '짧은 노출 필드(제목·카드 한 줄)에만 적용')
+})
