@@ -90,10 +90,22 @@ test('(b) assetCards의 key가 슬롯에 없으면 위반', () => {
   assert.match(validate(r), /assetCards key가 자산군 슬롯에 없음: kr-sector/)
 })
 
-test('(c) card.line이 32자를 넘으면 위반', () => {
-  const r = validReport(); r.card.line = '반등인지 추가 하락인지 오전 흐름과 거래대금을 함께 지켜볼 때입니다'
-  assert.ok(Array.from(r.card.line).length > 32)
-  assert.match(validate(r), /card\.line/)
+test('(c) card.line이 40자를 넘으면 위반', () => {
+  const r = validReport(); r.card.line = '반등인지 추가 하락인지 오전 흐름과 거래대금, 환율을 함께 지켜볼 때입니다'
+  assert.equal(Array.from(r.card.line).length, 41)
+  assert.match(validate(r), /card\.line은 40자 이내/)
+})
+
+// Ruling 32: 34~38자 한 줄도 1080×1350 카드에 두 줄로 들어간다 — 글자 수 상한은 40자, 넘침은 픽셀 관문(cardTextFits)이 본다.
+test('(c) card.line 33~40자는 글자 수로 막지 않는다(카드에 들어가면 통과)', () => {
+  for (const line of [
+    '반등인지 추가 하락인지 오전 흐름과 거래대금을 함께 지켜볼 때입니다', // 37자
+    '반도체 낙폭이 줄어드는지, 거래대금이 다시 붙는지가 오늘의 관전점입니다', // 39자
+  ]) {
+    const r = validReport(); r.card.line = line
+    assert.ok(Array.from(line).length > 32 && Array.from(line).length <= 40, line)
+    assert.equal(validate(r), '', line)
+  }
 })
 
 test('(c) card.line이 질문형이면 위반', () => {

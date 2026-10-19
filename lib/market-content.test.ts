@@ -27,7 +27,7 @@ test('요약·카드 한 줄 검증: 정상 통과', () => assert.deepEqual(vali
 test('요약·카드 한 줄 검증: 누락·길이·질문형·숫자 나열', () => {
   assert.ok(validateMarketSummary({ ...OK, summary: { ...OK.summary, today: '' } }).length > 0)
   assert.ok(validateMarketSummary({ ...OK, cardLine: { kind: 'cause', text: '왜? 국내 수급' } }).length > 0)
-  assert.ok(validateMarketSummary({ ...OK, cardLine: { kind: 'cause', text: '가'.repeat(40) } }).length > 0)
+  assert.ok(validateMarketSummary({ ...OK, cardLine: { kind: 'cause', text: '가'.repeat(41) } }).length > 0)
   assert.ok(validateMarketSummary({ ...OK, summary: { ...OK.summary, yesterday: '코스피 −7.57%, S&P500 +0.33%, 나스닥 +0.08%' } }).length > 0)
 })
 
@@ -72,7 +72,7 @@ test('검증: 태그는 길이에서 제외, % 한 개·오늘 줄 숫자는 허
   assert.ok(validateMarketSummary({ ...OK, cardLine: { kind: 'cause', text: '국내 수급 부담이 더 컸을까요?' } }).length > 0)
   assert.ok(validateMarketSummary({ ...OK, cardLine: { kind: 'cause', text: '원인: 국내 수급 부담' } }).length > 0)
   assert.ok(validateMarketSummary({ ...OK, cardLine: { kind: 'x' as unknown as 'cause', text: OK.cardLine.text } }).length > 0)
-  assert.deepEqual(validateMarketSummary({ ...OK, cardLine: { kind: 'watch', text: '가'.repeat(32) } }), [])
+  assert.deepEqual(validateMarketSummary({ ...OK, cardLine: { kind: 'watch', text: '가'.repeat(40) } }), []) // Ruling 32: 상한 40자
 })
 
 test('검증: 시각으로 시작하는 watch 한 줄은 라벨로 오인하지 않는다', () => {
@@ -116,7 +116,7 @@ test('기본값: 누락된 요약·카드는 subline·고정 안내로 채워 �
   assert.equal(c.summary.yesterday, '미 증시는 숨을 골랐고 국내 증시는 수급 부담에 밀렸습니다. 두 번째 문장입니다.')
   assert.ok(c.summary.today.length > 0 && c.summary.myAssets.includes('ETF Today'))
   assert.equal(c.cardLine.kind, 'watch')
-  assert.ok(c.cardLine.text.length > 0 && c.cardLine.text.length <= 32)
+  assert.ok(c.cardLine.text.length > 0 && c.cardLine.text.length <= 40)
   assert.deepEqual(validateMarketSummary(c), [])
 })
 
@@ -157,7 +157,8 @@ test('프롬프트: summary·cardLine 스키마와 규칙이 있고 compass 는 
     assert.doesNotMatch(prompt, /자산군별 온도계|iM 투자 나침반/)
     assert.doesNotMatch(prompt, /12개 이상|12블록|5~6개/)
     assert.match(prompt, /60자 이내/)
-    assert.match(prompt, /32자 이내/)
+    assert.match(prompt, /40자 이내/)
+    assert.doesNotMatch(prompt, /32자 이내/)
     assert.match(prompt, /장 마감 후 → 다음 거래일 반영/)
   }
 })

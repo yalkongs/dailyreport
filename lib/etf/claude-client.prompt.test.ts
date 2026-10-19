@@ -129,7 +129,8 @@ test('새 스키마: 자산군 슬롯 블록(코드 확정)·카드 key·숫자 
     assert.ok(p.includes(field), field)
   }
   assert.match(p, /todayChecks는 정확히 3개/)
-  assert.match(p, /32자 이내/)
+  assert.match(p, /40자 이내/)
+  assert.doesNotMatch(p, /32자 이내/)
 })
 
 test('새 스키마: assetCards 예시는 오늘 슬롯 key를 슬롯 순서대로 전부 담는다', () => {

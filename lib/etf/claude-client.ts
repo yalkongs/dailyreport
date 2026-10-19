@@ -548,7 +548,7 @@ ${data.recentHeadlines.map(h => `- ${h}`).join('\n')}
 
 [card 작성 규칙 — 링크 미리보기 카드 한 줄]
 - card.key는 [자산군 슬롯]에서 정한 값을 그대로 씁니다.
-- card.line: 32자 이내 평서문 한 줄. 자산군 문구("○○를 갖고 있다면")를 반복하지 말고, 그 자산군에서 오늘 지켜볼 점을 관찰형으로 씁니다. 질문형(?, ~까요, ~나요, ~인가) 금지, 숫자는 넣지 않습니다.
+- card.line: 40자 이내 평서문 한 줄. 자산군 문구("○○를 갖고 있다면")를 반복하지 말고, 그 자산군에서 오늘 지켜볼 점을 관찰형으로 씁니다. 질문형(?, ~까요, ~나요, ~인가) 금지, 숫자는 넣지 않습니다.
 
 [cover.headline 작성 규칙]
 
@@ -611,7 +611,7 @@ ${assetCardsSchema}
     { "time": "HH:MM", "what": "...", "baseline": "...", "invalidation": "..." },
     { "time": "HH:MM", "what": "...", "baseline": "...", "invalidation": "..." }
   ],
-  "card": { "key": "${featured?.key ?? ''}", "line": "32자 이내 평서문" }${tacticalAlert ? `,
+  "card": { "key": "${featured?.key ?? ''}", "line": "40자 이내 평서문" }${tacticalAlert ? `,
   "tacticalWarning": "1~2문장"` : ''}
 }`
 }

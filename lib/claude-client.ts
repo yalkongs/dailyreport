@@ -335,7 +335,7 @@ ${lines}
 
 ## ⚠️ 분량 요구사항 — **위 모드 가이드가 있으면 그것을 우선**
 - summary: 세 줄(yesterday / today / myAssets), 각 60자 이내
-- cardLine: 1개, 32자 이내
+- cardLine: 1개, 40자 이내
 - (기본/normal 모드 기준) bigStory.content: paragraph 블록 4~6개 (사건 → 근거 있는 원인 → 시장 반응), pullQuote 0~1개, dataCard는 쓰지 않음
 - watchPoints: 최대 3개 (한국시간 순서)
 - soWhat: 2~3개 ("확인되면 / 어긋나면" 조건형)
@@ -377,7 +377,7 @@ ${JSON.stringify(data, null, 2)}
   },
   "cardLine": {           // 링크 미리보기 카드의 제목 아래 한 줄
     "kind": "cause" | "watch",  // cause = 입력 근거가 있는 배경 한 문장 / watch = 근거가 약할 때 오늘 확인점
-    "text": string        // 32자 이내 평서문. 질문형·도치·라벨 금지. HTML 태그 금지.
+    "text": string        // 40자 이내 평서문. 질문형·도치·라벨 금지. HTML 태그 금지.
   },
   "bigStory": {
     "content": Array<
@@ -439,7 +439,7 @@ summary는 페이지 맨 위 "세 줄 요약", cardLine은 링크 미리보기 �
 - **summary.yesterday**: 어제 한국·미국 시장의 분위기와 그 배경을 **말로** 한 문장으로 쓰십시오. 지수 등락률을 나열하지 마십시오(숫자는 최대 1개, % 표기는 2개 이상 쓰지 않음). 숫자는 페이지의 핵심 지표가 보여 줍니다. 60자 이내.
 - **summary.today**: 오늘 확인할 한 가지. 시각 또는 비교 기준을 함께 쓰십시오. 60자 이내.
 - **summary.myAssets**: 자산군 관점은 ETF Today에서 다룬다는 안내와, 오늘 가장 영향이 큰 자산군 하나. 60자 이내.
-- **cardLine**: 미리보기 카드의 제목 아래 한 줄. 32자 이내의 평서문입니다. 질문형·도치("왜?", "~은?")·라벨("원인:" 등)을 쓰지 마십시오. 제목(headline)과 같은 말을 되풀이하지 마십시오.
+- **cardLine**: 미리보기 카드의 제목 아래 한 줄. 40자 이내의 평서문입니다. 질문형·도치("왜?", "~은?")·라벨("원인:" 등)을 쓰지 마십시오. 제목(headline)과 같은 말을 되풀이하지 마십시오.
   - kind="cause": 입력 근거(수치·기사)로 뒷받침되는 배경일 때만 쓰십시오.
   - kind="watch": 근거가 약하면(특히 [오늘의 근거 상태]가 hollow일 때) cause로 단정하지 말고, 같은 자리에 오늘 확인점을 평서문으로 쓰십시오.
 
@@ -467,7 +467,8 @@ summary는 페이지 맨 위 "세 줄 요약", cardLine은 링크 미리보기 �
 // --- 2026-10 개편: 세 줄 요약·카드 한 줄 검증/보정 ---
 
 const SUMMARY_MAX_CHARS = 60;
-const CARD_LINE_MAX_CHARS = 32;
+// Ruling 32 (2026-10-19): 32 → 40자. 34~38자 한 줄도 카드에 두 줄로 들어간다 — 실제 넘침은 validateMarketCardText(cardTextFits)가 본다.
+const CARD_LINE_MAX_CHARS = 40;
 const SUMMARY_FIELDS: ReadonlyArray<readonly [keyof ReportSummary, string]> = [
   ["yesterday", "어제"],
   ["today", "오늘 볼 것"],

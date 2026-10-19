@@ -97,9 +97,9 @@ const SOFT_FIXES: SoftFix[] = [
 const UNFORMATTED_USD_KRW_PATTERN = /USD\/KRW\s+(?:1[0-9]{3}|[2-9][0-9]{3})(?![,\d])/g
 const RAW_KRW_AMOUNT_PATTERN = /\d{10,}원/g
 
-// 미리보기 카드 한 줄(card.line): 32자 이내 평서문. 질문형 = 물음표가 있거나 의문형 어미로 끝나는 문장
+// 미리보기 카드 한 줄(card.line): 40자 이내 평서문(Ruling 32, 2026-10-19: 32 → 40 — 실제 넘침은 cardTextFits 픽셀 관문이 본다). 질문형 = 물음표가 있거나 의문형 어미로 끝나는 문장
 // ("~까/~까요"(을까·할까·습니까 포함), "~나요", "~는가", "~인가").
-export const CARD_LINE_MAX_CHARS = 32
+export const CARD_LINE_MAX_CHARS = 40
 const QUESTION_FORM = /[?？]|(?:까요?|나요|는가|인가)[.!…]?\s*$/
 
 // ─── Soft fix: 리포트 전체 문자열 필드에 치환 적용 ──────────────────
@@ -346,7 +346,7 @@ const DIGIT = /[0-9]/
  *  - 필수 필드(cover·summary 세 줄·assetCards·todayChecks와 각 필드·card.key·card.line)
  *  - todayChecks 정확히 3개
  *  - assetCards key ⊆ 자산군 슬롯(중복 없이), card.key ∈ 자산군 슬롯 (buildAssetClassSlots(data.quotes))
- *  - card.line 32자 이내·질문형 금지
+ *  - card.line 40자 이내·질문형 금지
  *  - 미리보기 카드 문구(제목·card 자산군 라벨·card.line)가 카드 규칙 안에 들어감(cardTextFits, Ruling 15)
  * Ruling 10(2026-10-17): 마지막 축소판(lastAttempt = factChecksAsWarnings)에서는 코드가 고칠 수 있는 구조 문제를
  * 그 자리에서 교정하고 console.warn으로 남긴다 — 발송을 막지 않는다(전송 > 침묵). 1·2회차는 재생성 사유.
