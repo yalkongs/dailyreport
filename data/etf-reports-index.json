@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-10-20",
+      "type": "morning",
+      "headline": "바이오·반도체 오르고 유틸리티·부동산 밀렸다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-20",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-10-19T21:41:50.673Z"
+    },
+    {
       "date": "2026-10-19",
       "type": "morning",
       "headline": "미 반도체 4% 급락, 국내는 헬스케어·방산이 받쳤다",
