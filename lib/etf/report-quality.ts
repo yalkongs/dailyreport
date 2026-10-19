@@ -23,6 +23,8 @@ import { cardTextFits } from '../preview/data-card'
 // 정합성 검사 (2026-07-22): R2 시점 / R3 출처 인용. (R1 Characters 카드-산문 정합은 스키마 개편으로 제거)
 import { checkAndFixTemporal } from '../temporal-consistency'
 import { softFixUnquotableSources, countCitationPhrases } from '../quotable-sources'
+// Ruling 33: 괄호 누락 코드 soft fix는 유니버스 코드만 감싼다.
+import { KR_ETF_UNIVERSE } from './universe'
 
 // ─── Hard patterns: 진짜 투자 권유 ─────────────────────────────────────
 const INVESTMENT_ADVICE_PATTERNS = [
@@ -94,6 +96,21 @@ const SOFT_FIXES: SoftFix[] = [
   { pattern: /투자에\s*주의하시기\s*바랍니다/g, replace: '점검 대상으로 남겨 둡니다' },
 ]
 
+// Ruling 33 (2026-10-19): 괄호 없이 쓴 국내 ETF 코드("KODEX 반도체 091160") → "KODEX 반도체 (091160)".
+// 프롬프트 규칙·렌더러 chip과 같은 "종목명 (6자리 코드)" 표기로, 괄호만 더한다(앞 공백은 그대로).
+// 대상: 유니버스의 6자리 숫자 코드(NNNNNN.KS)가 이름·단어(글자·숫자·닫는 괄호·&) 바로 뒤 공백 한 칸 뒤에 올 때만.
+// 건드리지 않는 것: 유니버스 밖 수, 이미 괄호 안(앞이 '('이거나 뒤가 ')'), 숫자·쉼표·소수점이 이어지는 수,
+// .KS/.KQ 접미사(별도 검사), 금액 단위(원·달러·포인트·%·억·조·만 원)가 붙은 수.
+const KR_UNIVERSE_NUMERIC_CODES = KR_ETF_UNIVERSE
+  .map(etf => /^(\d{6})\.KS$/.exec(etf.ticker)?.[1])
+  .filter((code): code is string => typeof code === 'string')
+const BARE_KR_CODE_SOURCE =
+  `(?<=[가-힣A-Za-z0-9)&]) (${KR_UNIVERSE_NUMERIC_CODES.join('|')})` +
+  `(?![\\d)]|[.,]\\d|\\.(?:KS|KQ)|\\s?(?:원|달러|포인트|%|억|조|만\\s?원))`
+const BARE_KR_CODE = new RegExp(BARE_KR_CODE_SOURCE, 'g')
+const BARE_KR_CODE_ANY = new RegExp(BARE_KR_CODE_SOURCE) // 검사용(lastIndex 상태 없음)
+const BARE_KR_CODE_FIX_LABEL = '국내 ETF 코드 괄호'
+
 const UNFORMATTED_USD_KRW_PATTERN = /USD\/KRW\s+(?:1[0-9]{3}|[2-9][0-9]{3})(?![,\d])/g
 const RAW_KRW_AMOUNT_PATTERN = /\d{10,}원/g
 
@@ -109,7 +126,7 @@ function applySoftFix(value: string | undefined): string | undefined {
   for (const { pattern, replace } of SOFT_FIXES) {
     next = next.replace(pattern, replace)
   }
-  return next
+  return next.replace(BARE_KR_CODE, ' ($1)')
 }
 
 function isObjectValue<T>(value: T): value is T & object {
@@ -166,6 +183,8 @@ export function applySoftFixesInPlace(report: MorningReport): string[] {
         fixed.push(pattern.source)
       }
     }
+    // 코드 괄호는 유니버스 코드 전체를 담은 긴 패턴이라 source 대신 이름으로 남긴다.
+    if (BARE_KR_CODE_ANY.test(before) && !BARE_KR_CODE_ANY.test(after)) fixed.push(BARE_KR_CODE_FIX_LABEL)
   }
   return fixed
 }

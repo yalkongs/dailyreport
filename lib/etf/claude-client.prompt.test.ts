@@ -72,6 +72,8 @@ test('ETF 시스템 프롬프트: ETF 예시 세트 + 본문 규칙의 제목 �
 test('국내 ETF 6자리 코드 규칙에 제목 예외 표기', () => {
   const p = buildMorningPrompt(makeData('2026-09-30', []))
   assert.match(p, /"종목명 \(6자리 코드\)"로 표기하십시오\. \(cover\.headline 제외 — \[cover\.headline 작성 규칙\] 참조\)/)
+  // Ruling 33: 한 줄 예시 — 괄호로 감싼 형태와 금지 형태.
+  assert.match(p, /예: "KODEX 반도체 \(091160\)"처럼 코드를 괄호로 감쌉니다\. 괄호 없는 "KODEX 반도체 091160"은 금지입니다\./)
 })
 
 test('환율 앵글: "두 얼굴" 대신 "상반된 효과"', () => {
