@@ -579,7 +579,9 @@ test('권유 관문(Market 목록): 해설·인용 문장은 어느 칸에 있�
     o.summary.today = s
     assert.deepEqual(validateMarketAdvice(o), [], s)
   }
-  for (const [text, hit] of [['KODEX 200을 지금 매수하세요.', '"매수하세요"'], ['반도체 비중을 줄이세요.', '"비중을 줄이세요"']] as const) {
+  for (const [text, hit] of [['KODEX 200을 지금 매수하세요.', '"매수하세요"'], ['반도체 비중을 줄이세요.', '"비중을 줄이세요"'],
+    // Ruling 37b
+    ['반도체는 지금 사야 합니다.', '"지금 사야 합니다"'], ['지금 사도 늦지 않습니다.', '"사도 늦지 않습니다"'], ['지금이 매수 기회입니다.', '"지금이 매수 기회"'], ['반도체는 매수 적기입니다.', '"매수 적기"']] as const) {
     const o = JSON.parse(reportJson(FITTING_HEADLINE))
     o.summary.myAssets = text
     assert.deepEqual(validateMarketAdvice(o), [`투자 권유성 표현(summary.myAssets): ${hit}`], text)

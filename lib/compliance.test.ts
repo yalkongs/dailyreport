@@ -73,6 +73,27 @@ test('Market 목록: 독자에게 사라·팔라는 지시형과 수익 보장�
   }
 })
 
+// Ruling 37b: 명령형이 아니어도 독자에게 지금 사라는 뜻이 분명한 꼴 — 인용부호 밖에서만.
+const BUY_NOW_FORMS: ReadonlyArray<readonly [string, string]> = [
+  ['지금 사야 합니다.', '지금 사야 합니다'],
+  ['반도체는 지금 사야 한다', '지금 사야 한다'],
+  ['지금 사야 할 때입니다', '지금 사야 할 때'],
+  ['지금 사도 늦지 않습니다.', '사도 늦지 않습니다'],
+  ['반도체 ETF는 사도 늦지 않다', '사도 늦지 않다'],
+  ['지금이 매수 기회입니다.', '지금이 매수 기회'],
+  ['반도체는 매수 적기입니다.', '매수 적기'],
+]
+
+test('Market 목록: "지금 사야 합니다·사도 늦지 않습니다·지금이 매수 기회·매수 적기"는 막는다(인용 밖)', () => {
+  for (const [text, hit] of BUY_NOW_FORMS) {
+    assert.ok(findDirectiveAdvice(text).includes(hit), `${text}: ${findDirectiveAdvice(text).join(', ')}`)
+    assert.deepEqual(findDirectiveAdvice(`일부는 '${text}'라고 주장했습니다.`), [], `인용: ${text}`)
+  }
+  for (const text of ['2022년의 VIX 30과 지금 사이에는 아직 거리가 있습니다.', '지금 사상 최고치 부근입니다.', '조사도 늦지 않습니다', ...MARKET_FALSE_POSITIVES]) {
+    assert.deepEqual(findDirectiveAdvice(text), [], text)
+  }
+})
+
 test('Market 목록: "매수해야/매도해야"는 인용부호 안이면 두고(남의 주장 전달), 밖이면 막는다', () => {
   for (const text of ["일부 증권사는 '지금 매수해야 한다'는 의견을 냈습니다.", '“매도해야 할 때”라는 주장도 나왔습니다.', '「매수해야 한다」는 보고서']) {
     assert.deepEqual(findDirectiveAdvice(text), [], text)
