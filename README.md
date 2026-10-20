@@ -392,7 +392,7 @@ Fine-grained PAT(Actions write 전용) 폐기가 정리 절차다. 남아 있으
 
 ## 사용 기술
 
-- **언어/런타임**: TypeScript 5 · Node.js 20 (GitHub Actions `daily-report.yml`의 `node-version`) · tsx
+- **언어/런타임**: TypeScript 5 · Node.js 22 (GitHub Actions 4개 워크플로의 `node-version`, 2026-10-20 20→22 — yahoo-finance2가 22 이상 요구) · tsx
 - **프레임워크**: Next.js 16 App Router · React 19 · Tailwind CSS 4
 - **AI**: Anthropic Claude Sonnet (`claude-sonnet-4-6`) · `max_tokens`: ETF 16384 · Market 64000(스트리밍)
 - **데이터 소스**: Yahoo Finance · KRX OpenAPI(조건부 병합) · FRED · ECOS · Google News RSS · 연합뉴스 RSS
