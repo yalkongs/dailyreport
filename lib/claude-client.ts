@@ -12,7 +12,7 @@ import type {
 import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS, MARKET_GENERATION_BUDGET_MS, makeDeadline } from "./claude-budget";
 import { EVIDENCE_RULES } from "./evidence-rules";
 import { formatEconomicEventLine } from "./economic-calendar";
-import { renderReport } from "./report-renderer";
+import { renderReport, sanitizeInlineHtml } from "./report-renderer";
 import { cardTextFits } from "./preview/data-card";
 import { decodeCharacterReferences, stripEmphasisTags } from "./html-entities";
 import { plainText, cutAtSentence } from "./market-summary";
@@ -25,8 +25,8 @@ import { softFixUnquotableSources, countCitationPhrases, QUOTABLE_SOURCES } from
 import { renderPolicyRateBlock, POLICY_RATE_RULE, findPolicyDirectionMismatches, extractReportText } from "./policy-rate";
 // Ruling 31 (2026-10-19): 제목·카드 한 줄의 확인할 수 없는 기간 비교·최상급 표현(ETF와 공용).
 import { comparativeClaimViolations } from "./comparative-claims";
-// Ruling 37·37a (2026-10-20): 독자에게 사라·팔라는 지시형·수익 보장(Market용 좁은 목록) — 마지막 시도에도 막는다.
-import { findDirectiveAdvice } from "./compliance";
+// Ruling 37·37e (2026-10-20): 매수·매도 권유 두 단계 — HARD(명령형, 마지막 시도에도 막음)·SOFT(단정·보장, 일반 기준 위반).
+import { findHardAdvice, findSoftAdvice } from "./compliance";
 
 // F07: 요청 상한·SDK 재시도를 명시(기본 10분·2회는 job 상한 20분과 맞지 않았다).
 const client = new Anthropic({ timeout: CLAUDE_REQUEST_TIMEOUT_MS, maxRetries: CLAUDE_MAX_RETRIES });
@@ -596,7 +596,9 @@ function marketProseFields(content: unknown): Array<[string, unknown]> {
   if (!c) return [];
   const fields: Array<[string, unknown]> = [];
   const cover = asRecord(c.cover);
-  fields.push(["cover.headline", cover?.headline], ["cover.subline", cover?.subline]);
+  // 제목·부제는 렌더러가 강조 태그(<strong>·<b>·<em> 등)를 벗긴 뒤 escape해 넣는다 — 같은 변환을 먼저 거친다.
+  const titleText = (v: unknown) => (typeof v === "string" ? stripEmphasisTags(v) : v);
+  fields.push(["cover.headline", titleText(cover?.headline)], ["cover.subline", titleText(cover?.subline)]);
   const summary = asRecord(c.summary);
   for (const [key] of SUMMARY_FIELDS) fields.push([`summary.${key}`, summary?.[key]]);
   fields.push(["cardLine.text", asRecord(c.cardLine)?.text]);
@@ -622,39 +624,52 @@ function marketProseFields(content: unknown): Array<[string, unknown]> {
   return fields;
 }
 
-// 보이지 않는 글자: 소프트 하이픈(U+00AD), 폭 없는 공백·방향 표시(U+200B–U+200F), 단어 결합자 등(U+2060–U+2064), BOM(U+FEFF).
-const INVISIBLE_CHARS = new RegExp("[\\u00ad\\u200b-\\u200f\\u2060-\\u2064\\ufeff]", "g");
-
 /**
- * 권유 검사가 보는 글 — 화면에 보이는 글자(Ruling 37c·37d). 두 가지로 만들어 둘 다 본다:
- *  ① 태그를 벗긴 뒤 문자 참조를 한 번 푼 글 — 인코딩된 부등호로 감싼 권유("금리 &lt; 5%면 매수하세요 &gt;")가 지워지지 않게.
- *  ② 문자 참조를 한 번 푼 뒤 태그를 벗긴 글 — 렌더러(sanitizeInlineHtml)는 참조를 풀어 인코딩된 <strong>을 굵게 만들므로
- *     "매수&lt;strong&gt;하세요"는 화면에 "매수하세요"로 보인다.
- * 둘 다 보이지 않는 글자를 지우고 공백을 하나로 모은다("매수&nbsp;하세요" → "매수 하세요").
+ * 권유 검사가 보는 글 = 화면에 보이는 글자(Ruling 37e). 렌더러의 본문 변환을 그대로 거친다:
+ * sanitizeInlineHtml(참조 한 번 풀기 → 전부 escape → 속성 없는 <strong>만 되살리기) → <strong>·</strong> 지우기 →
+ * escape를 글자로 되돌리기 → 서식 문자(\p{Cf} — 폭 없는 공백·방향 표시 U+200B–U+200F·U+2060–U+206F·BOM·소프트 하이픈) 지우기,
+ * 줄바꿈 없는 공백은 공백으로 → 공백 하나로 모으기.
+ * escape해서 넣는 칸(제목·요약·일정 등)도 같은 함수를 쓴다 — escape 뒤 되돌리기는 항등이다(참조를 푸는 만큼 보수적).
+ * 그래서 "<매수하세요>"(화면에 글자로 보임)·"매수&#8294;하세요"·"매수&lt;strong&gt;하세요"도 "매수하세요"로 검사된다.
+ * 매 시도 검사와 마지막 재검사가 이 함수 하나를 쓴다. 글 길이에 선형.
  */
-function adviceCheckTexts(value: unknown): string[] {
-  if (typeof value !== "string") return [];
-  const tidy = (s: string) => s.replace(INVISIBLE_CHARS, "").replace(/\s+/g, " ").trim();
-  const stripThenDecode = tidy(decodeCharacterReferences(plainText(value)));
-  const decodeThenStrip = tidy(plainText(decodeCharacterReferences(value)));
-  return stripThenDecode === decodeThenStrip ? [stripThenDecode] : [stripThenDecode, decodeThenStrip];
+export function marketAdviceText(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const shown = sanitizeInlineHtml(value).replace(/<\/?strong>/g, "");
+  return decodeCharacterReferences(shown)
+    .replace(/\p{Cf}/gu, "")
+    .replace(/\u00a0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** 칸마다 화면 글자로 finder를 돌려 "라벨(경로): "문구"" 위반 목록을 만든다. */
+function adviceViolationsBy(content: unknown, label: string, finder: (text: string) => string[]): string[] {
+  const violations: string[] = [];
+  for (const [path, value] of marketProseFields(content)) {
+    const found = finder(marketAdviceText(value));
+    if (found.length > 0) violations.push(`${label}(${path}): ${found.map((f) => `"${f}"`).join(", ")}`);
+  }
+  return violations;
 }
 
 /**
- * 매수·매도 권유 표현 검사(Ruling 37·37a) — 위반 목록(빈 배열이면 통과). 던지지 않는다.
- * Market용 좁은 목록(lib/compliance.ts DIRECTIVE_ADVICE_PATTERNS — 독자에게 사라·팔라는 지시형과 수익 보장만)으로
- * 본문 모든 칸(제목·부제·세 줄 요약·카드 한 줄·본문 블록·오늘 볼 것·의미·일정·마무리)을 강조 태그를 벗기고 칸마다 본다.
- * ETF 전체 목록은 쓰지 않는다 — "현지 생산 비중 확대"·증권사 '비중확대' 의견 같은 해설이 걸려 세 번 다 막히면 Market이 멈춘다(37a).
- * 호출자(generateReport)는 1~2번째 시도에선 재생성 사유로, 마지막 시도에서도 막는다 —
- * 권유 표현이 남은 결과는 발송 후보가 될 수 없다(필수 항목 누락과 같다). 준법은 F02(전송 > 침묵)보다 앞선다.
+ * 매수·매도 권유 HARD 검사(Ruling 37·37e) — 독자에게 사라·팔라는 명령형만(lib/compliance.ts HARD_ADVICE_PATTERNS).
+ * 위반 목록(빈 배열이면 통과). 던지지 않는다. 본문 모든 칸(제목·부제·세 줄 요약·카드 한 줄·본문 블록·오늘 볼 것·의미·일정·마무리)을
+ * 화면 글자(marketAdviceText)로 칸마다 본다. 호출자(generateReport)는 1~2번째 시도에선 재생성 사유로, 마지막 시도에서도 막는다 —
+ * HARD가 남은 결과는 발송 후보가 될 수 없다(필수 항목 누락과 같다). 준법은 F02(전송 > 침묵)보다 앞선다.
  */
 export function validateMarketAdvice(content: unknown): string[] {
-  const violations: string[] = [];
-  for (const [path, value] of marketProseFields(content)) {
-    const found = [...new Set(adviceCheckTexts(value).flatMap(findDirectiveAdvice))];
-    if (found.length > 0) violations.push(`투자 권유성 표현(${path}): ${found.map((f) => `"${f}"`).join(", ")}`);
-  }
-  return violations;
+  return adviceViolationsBy(content, "투자 권유성 표현", findHardAdvice);
+}
+
+/**
+ * 권유성 단정 SOFT 검사(Ruling 37e) — 단정·보장·'지금 사야' 꼴(lib/compliance.ts SOFT_ADVICE_PATTERNS, 인용부호 안은 보지 않음).
+ * 부정·유보는 판정하지 않는다("지금은 매수 적기가 아닌 상황입니다"도 걸린다) — 그래서 일반 기준 위반으로만 다룬다:
+ * 1~2번째 시도는 재생성 사유, 마지막 시도는 경고만(F02). 발송 후보가 될 수 있고, 위반 수로 더 깨끗한 결과에 밀린다.
+ */
+export function validateMarketSoftAdvice(content: unknown): string[] {
+  return adviceViolationsBy(content, "권유성 단정 표현", findSoftAdvice);
 }
 
 /**
@@ -863,7 +878,8 @@ export async function generateReport(
       const requiredMissing = validateMarketRequired(parsed);
       if (requiredMissing.length > 0) lastRequiredMissing = { attempt, fields: requiredMissing };
       // Ruling 31: 제목·카드 한 줄의 기간 비교·최상급은 일반 기준 위반(1~2번째 재생성, 마지막 시도 경고만).
-      const baseViolations = [...temporal.violations, ...requiredMissing, ...validateMarketSummary(parsed), ...validateMarketComparativeClaims(parsed)];
+      // Ruling 37e: 권유성 단정(SOFT)도 일반 기준 위반 — 해설에 섞여 걸려도 재생성 한 번이 비용이고 마지막 시도는 경고만.
+      const baseViolations = [...temporal.violations, ...requiredMissing, ...validateMarketSummary(parsed), ...validateMarketComparativeClaims(parsed), ...validateMarketSoftAdvice(parsed)];
       const citationCount = countCitationPhrases(sourceFix.fixed);
       if (citationCount >= 8) {
         baseViolations.push(`"에 따르면" 인용 ${citationCount}회 과다`);
@@ -872,7 +888,7 @@ export async function generateReport(
       }
       // 카드 글자 맞춤: 1~2번째 시도에선 다시 쓰게 하는 사유, 마지막 시도에선 아래 "위반 잔존" 경고로만 남는다.
       const cardViolations = validateMarketCardText(parsed);
-      // Ruling 37: 매수·매도 권유 — 모든 시도에서 위반(마지막 시도도 경고로 넘기지 않는다).
+      // Ruling 37·37e: 매수·매도 권유 HARD(명령형) — 모든 시도에서 위반(마지막 시도도 경고로 넘기지 않는다).
       const adviceViolations = validateMarketAdvice(parsed);
       if (adviceViolations.length > 0) lastAdvice = { attempt, fields: adviceViolations };
       const hardViolations = [...baseViolations, ...adviceViolations, ...cardViolations];
@@ -1009,7 +1025,8 @@ function finalizeMarketReport(
     console.log(`📅 캘린더: 실제 경제 데이터에서 ${content.calendar.length}건 사용 (Claude 생성 대체)`);
   }
 
-  // Ruling 37: 발송할 content(기본 문장·실제 일정을 채운 뒤)도 권유 표현 검사를 통과해야 한다 — 후보는 이미 통과했으므로 방어선.
+  // Ruling 37·37e: 발송할 content(기본 문장·실제 일정을 채운 뒤)도 HARD 검사를 통과해야 한다 — 후보는 이미 통과했으므로 방어선.
+  // 매 시도 검사와 같은 화면 글자 함수(marketAdviceText)를 쓴다. SOFT는 루프에서 이미 경고로 남겼다(F02).
   const finalAdvice = validateMarketAdvice(content);
   if (finalAdvice.length > 0) throw new Error(`Market 리포트 투자 권유성 표현 — 발송할 결과에 ${finalAdvice.join(", ")}`);
 

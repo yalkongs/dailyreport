@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import Anthropic from '@anthropic-ai/sdk'
 import { cardTextFits } from './preview/data-card'
 import { renderReport } from './report-renderer'
-import { generateReport, validateMarketCardText, validateMarketRequired, normalizeMarketOptionalParts, validateMarketComparativeClaims, validateMarketAdvice, buildReportPrompt } from './claude-client'
+import { generateReport, validateMarketCardText, validateMarketRequired, normalizeMarketOptionalParts, validateMarketComparativeClaims, validateMarketAdvice, validateMarketSoftAdvice, marketAdviceText, buildReportPrompt } from './claude-client'
 
 const FITTING_HEADLINE = '코스피 급락 다음 날, 미 증시는 숨 고르기'
 const LONG_HEADLINE = '코스피 급락 다음 날 미 증시는 숨 고르기에 들어갔고 외국인 매도와 환율 부담이 한꺼번에 겹치며 투자자들의 관망이 길어졌습니다'
@@ -527,73 +527,87 @@ const ADVICE = 'KODEX 200을 지금 매수하세요.'
 const withAdvice = (headline: string) =>
   JSON.stringify({ ...JSON.parse(reportJson(headline)), summary: { ...JSON.parse(reportJson(headline)).summary, myAssets: ADVICE } })
 
-test('권유 관문: 본문 모든 칸의 매수·매도 권유를 칸 이름과 함께 찾고, 평범한 글·깨진 모양은 통과(던지지 않는다)', () => {
+// Ruling 37e: Market 권유 검사는 두 단계 — HARD(validateMarketAdvice, 명령형, 마지막 시도에도 막음)·SOFT(validateMarketSoftAdvice,
+// 단정·보장·'지금 사야' 꼴, 일반 기준 위반). 검사 글은 화면 글자(marketAdviceText). 부정·유보 판정은 없다.
+test('권유 관문: 칸마다 HARD·SOFT를 칸 이름과 함께 찾고, 평범한 글·깨진 모양은 통과(던지지 않는다)', () => {
   const ok = JSON.parse(reportJson(FITTING_HEADLINE))
   assert.deepEqual(validateMarketAdvice(ok), [])
-  const v = validateMarketAdvice(JSON.parse(withAdvice(FITTING_HEADLINE)))
-  assert.equal(v.length, 1)
-  assert.match(v[0], /^투자 권유성 표현\(summary\.myAssets\): "매수하세요"/)
+  assert.deepEqual(validateMarketSoftAdvice(ok), [])
   type Editable = {
-    cover: { headline: string; subline: string }; summary: { yesterday: string; today: string }; cardLine: { text: string }
+    cover: { headline: string; subline: string }; summary: { yesterday: string; today: string; myAssets: string }; cardLine: { text: string }
     bigStory: { content: Array<{ type: string; text: string }> }; watchPoints: unknown; soWhat: unknown; calendar: unknown; closingMessage: string
   }
-  const cases: Array<[string, (o: Editable) => void]> = [
-    ['cover.headline', (o) => { o.cover.headline = '반도체 <strong>지금 사세요</strong>' }],
-    ['cover.subline', (o) => { o.cover.subline = '반도체 비중을 높이는 것이 좋습니다' }],
-    ['summary.yesterday', (o) => { o.summary.yesterday = '확실한 수익 구간이었습니다.' }],
-    ['summary.today', (o) => { o.summary.today = '개장 뒤 필수 매수 종목을 봅니다.' }],
-    ['cardLine.text', (o) => { o.cardLine.text = '반도체는 매수해야 할 때입니다' }],
-    ['bigStory.content[1].text', (o) => { o.bigStory.content.push({ type: 'pullQuote', text: '폭등 예상 구간입니다.' }) }],
-    ['bigStory.content[0].text', (o) => { o.bigStory.content[0].text = '이제 <strong>매도하십시오</strong>.' }],
-    ['watchPoints[0].description', (o) => { o.watchPoints = [{ badge: '09:00', title: '개장', description: '반도체 ETF를 담으세요.' }] }],
-    ['soWhat[0].body', (o) => { o.soWhat = [{ title: '확인되면', body: '확인되면 비중을 늘리세요.' }] }],
-    ['calendar[0].event', (o) => { o.calendar = [{ date: '10/21', country: '한국', event: '강력 매수 신호', importance: 3 }] }],
-    ['closingMessage', (o) => { o.closingMessage = '지금은 반도체를 편입하시기 바랍니다.' }],
+  const cases: Array<['HARD' | 'SOFT', string, (o: Editable) => void]> = [
+    ['HARD', 'cover.headline', (o) => { o.cover.headline = '반도체 <strong>지금 사세요</strong>' }],
+    ['HARD', 'cover.headline', (o) => { o.cover.headline = '반도체 매수<em></em>하세요' }], // 제목은 강조 태그를 벗겨 넣는다
+    ['HARD', 'cover.subline', (o) => { o.cover.subline = '반도체 비중을 높이는 것이 좋습니다' }],
+    ['HARD', 'summary.myAssets', (o) => { o.summary.myAssets = ADVICE }],
+    ['HARD', 'bigStory.content[0].text', (o) => { o.bigStory.content[0].text = '이제 <strong>매도하십시오</strong>.' }],
+    ['HARD', 'watchPoints[0].description', (o) => { o.watchPoints = [{ badge: '09:00', title: '개장', description: '반도체 ETF를 담으세요.' }] }],
+    ['HARD', 'soWhat[0].body', (o) => { o.soWhat = [{ title: '확인되면', body: '확인되면 비중을 늘리세요.' }] }],
+    ['HARD', 'closingMessage', (o) => { o.closingMessage = '지금은 반도체를 편입하시기 바랍니다.' }],
+    ['SOFT', 'summary.yesterday', (o) => { o.summary.yesterday = '확실한 수익 구간이었습니다.' }],
+    ['SOFT', 'summary.today', (o) => { o.summary.today = '개장 뒤 필수 매수 종목을 봅니다.' }],
+    ['SOFT', 'cardLine.text', (o) => { o.cardLine.text = '반도체는 매수해야 할 때입니다' }],
+    ['SOFT', 'bigStory.content[1].text', (o) => { o.bigStory.content.push({ type: 'pullQuote', text: '폭등 예상 구간입니다.' }) }],
+    ['SOFT', 'calendar[0].event', (o) => { o.calendar = [{ date: '10/21', country: '한국', event: '강력 매수 신호', importance: 3 }] }],
   ]
-  for (const [path, edit] of cases) {
+  for (const [tier, path, edit] of cases) {
     const o = JSON.parse(reportJson(FITTING_HEADLINE))
     edit(o)
-    const found = validateMarketAdvice(o)
-    assert.equal(found.length, 1, `${path}: ${found.join(' / ')}`)
-    assert.ok(found[0].startsWith(`투자 권유성 표현(${path}):`), found[0])
+    const hard = validateMarketAdvice(o)
+    const soft = validateMarketSoftAdvice(o)
+    const [hit, miss, label] = tier === 'HARD' ? [hard, soft, '투자 권유성 표현'] : [soft, hard, '권유성 단정 표현']
+    assert.equal(hit.length, 1, `${tier} ${path}: ${hit.join(' / ')}`)
+    assert.ok(hit[0].startsWith(`${label}(${path}):`), hit[0])
+    assert.deepEqual(miss, [], `${tier} ${path}`)
   }
   for (const bad of [null, undefined, '문자열', [], { cover: null, bigStory: { content: [null, 3] }, watchPoints: [null], soWhat: 'x', calendar: [null] }]) {
     assert.doesNotThrow(() => validateMarketAdvice(bad), JSON.stringify(bad))
     assert.deepEqual(validateMarketAdvice(bad), [])
+    assert.deepEqual(validateMarketSoftAdvice(bad), [])
   }
 })
 
-// Ruling 37a: Market은 지시형·수익 보장만 막는다 — 최근 60개 리포트에서 전체 목록에 걸렸던 해설·인용 문장은 통과(세 번 다 걸려 멈추지 않게).
-test('권유 관문(Market 목록): 해설·인용 문장은 어느 칸에 있어도 통과, 지시형은 막는다', () => {
-  const sentences = [
+test('권유 관문: 해설·인용 다섯 문장과 "지금 사이에는·지금 사상 최고·조사도 늦지 않다"는 어느 칸에 있어도 HARD·SOFT 모두 통과', () => {
+  for (const s of [
     '현지 생산 비중 확대',
     "'환율 강세라고 무조건 미국 주식이 좋은 것은 아니다'라는 경고(뉴시스 인용)",
     'VIX 30과 지금 사이에는',
     "월가는 SK하이닉스에 '매수·비중확대'를 내걸었고",
     '신규 진입 시 가격 수준 자체를 맥락으로 삼아야',
-  ]
-  for (const s of sentences) {
+    '2022년의 VIX 30과 지금 사이에는 거리가 있습니다.',
+    '지금 사상 최고치 부근입니다.',
+    '조사도 늦지 않다',
+  ]) {
     const o = JSON.parse(reportJson(FITTING_HEADLINE))
     o.bigStory.content.push({ type: 'paragraph', text: s })
     o.soWhat = [{ title: '확인되면', body: s }]
     o.summary.today = s
     assert.deepEqual(validateMarketAdvice(o), [], s)
+    assert.deepEqual(validateMarketSoftAdvice(o), [], s)
   }
-  for (const [text, hit] of [['KODEX 200을 지금 매수하세요.', '"매수하세요"'], ['반도체 비중을 줄이세요.', '"비중을 줄이세요"'],
-    // Ruling 37b
-    ['반도체는 지금 사야 합니다.', '"지금 사야 합니다"'], ['지금 사도 늦지 않습니다.', '"사도 늦지 않습니다"'], ['지금이 매수 기회입니다.', '"지금이 매수 기회"'], ['반도체는 매수 적기입니다.', '"매수 적기"']] as const) {
-    const o = JSON.parse(reportJson(FITTING_HEADLINE))
-    o.summary.myAssets = text
-    assert.deepEqual(validateMarketAdvice(o), [`투자 권유성 표현(summary.myAssets): ${hit}`], text)
-  }
+  // "확실한 수익을 보장하는 상품은 없습니다."는 SOFT 패턴(확실한 수익)에 걸린다 — 부정 판정이 없으므로. 재생성 한 번이 비용(HARD 아님).
+  const o = JSON.parse(reportJson(FITTING_HEADLINE))
+  o.soWhat = [{ title: '확인되면', body: '확실한 수익을 보장하는 상품은 없습니다.' }]
+  assert.deepEqual(validateMarketAdvice(o), [])
+  assert.deepEqual(validateMarketSoftAdvice(o), ['권유성 단정 표현(soWhat[0].body): "확실한 수익"'])
 })
 
-// Ruling 37c ③: 문자 참조·보이지 않는 글자로 띄운 권유("매수&nbsp;하세요")도 화면에 보이는 글자로 풀어 검사한다.
-test('권유 관문: 문자 참조(&nbsp;·&#32;·&#x20;)·보이지 않는 글자로 띄운 권유도 막는다', () => {
-  // Ruling 37d: 렌더러가 참조를 풀어 인코딩된 <strong>을 굵게 만들므로("매수&lt;strong&gt;하세요" → 화면 "매수하세요") 풀린 뒤 태그를 벗긴 글도 본다.
-  // 인코딩된 부등호로 감싼 권유("&lt; … &gt;")는 태그를 벗긴 뒤 푼 글로 잡는다.
-  for (const text of ['KODEX 200을 매수&nbsp;하세요.', '매수&#32;하세요.', '매수&#x20;하세요.', '매수&#8203;하세요.', '매수\u200b하세요.', '지금이 매수&nbsp;적기입니다.',
-    '매수&lt;strong&gt;하세요.', '금리 &lt; 5%면 매수하세요 &gt;']) {
+test('marketAdviceText: 화면 글자 그대로 — 참조 한 번 풀기·<strong>만 태그·서식 문자 지우기·NBSP는 공백', () => {
+  assert.equal(marketAdviceText('<매수하세요>'), '<매수하세요>') // 화면에 글자로 보인다
+  assert.equal(marketAdviceText('매수&#8294;하세요'), '매수하세요') // U+2066(서식 문자)
+  assert.equal(marketAdviceText('매수\u200b하세요\ufeff'), '매수하세요')
+  assert.equal(marketAdviceText('매수&nbsp;하세요'), '매수 하세요')
+  assert.equal(marketAdviceText('매수&lt;strong&gt;하세요'), '매수하세요') // 렌더러가 굵게로 되살린다
+  assert.equal(marketAdviceText('<strong>굵게</strong> S&amp;P &lt;script&gt;'), '굵게 S&P <script>')
+  assert.equal(marketAdviceText('<strong onclick="x">a</strong>'), '<strong onclick="x">a') // 속성 붙은 태그는 글자로 보인다
+  assert.equal(marketAdviceText(42), '')
+})
+
+test('권유 관문 HARD: 화면에 명령형으로 보이는 글은 문자 참조·서식 문자·태그 모양과 상관없이 막는다', () => {
+  for (const text of ['KODEX 200을 지금 매수하세요.', '지금 사두세요.', '반도체 비중을 줄이세요.', '매수&nbsp;하세요', '매수&#8294;하세요', '<매수하세요>',
+    '매수&lt;strong&gt;하세요', '매수&#32;하세요.', '매수&#x20;하세요.', '매수&#8203;하세요.', '매수\u200b하세요.', '매수\u2066하세요', '금리 &lt; 5%면 매수하세요 &gt;']) {
     const o = JSON.parse(reportJson(FITTING_HEADLINE))
     o.bigStory.content[0].text = text
     const v = validateMarketAdvice(o)
@@ -602,15 +616,56 @@ test('권유 관문: 문자 참조(&nbsp;·&#32;·&#x20;)·보이지 않는 글�
   }
 })
 
-test('generateReport: 세 번 다 "지금은 매수 적기가 아닙니다."여도 해설이므로 1회차로 발송한다(Codex 재현)', async (t) => {
-  t.after(() => mock.restoreAll())
-  const o = JSON.parse(reportJson(FITTING_HEADLINE))
-  o.soWhat = [{ title: '확인되면', body: '지금은 매수 적기가 아닙니다.' }]
-  const { stream } = fakeStream([JSON.stringify(o)])
-  const { html } = await generateReport(DATA)
-  assert.equal(stream.mock.callCount(), 1)
-  assert.match(html, /지금은 매수 적기가 아닙니다\./)
+test('권유 관문 SOFT: 단정·보장은 부정·유보가 뒤따라도 SOFT(HARD 아님)', () => {
+  for (const text of ['지금 매수해야 합니다 손실 걱정은 없습니다.', '확실한 수익을 보장합니다 손실은 없습니다.', '지금이 매수 적기입니다.', '지금은 매수 적기가 아닌 상황입니다.', '지금이 매수&nbsp;적기입니다.']) {
+    const o = JSON.parse(reportJson(FITTING_HEADLINE))
+    o.soWhat = [{ title: '확인되면', body: text }]
+    assert.deepEqual(validateMarketAdvice(o), [], text)
+    assert.equal(validateMarketSoftAdvice(o).length, 1, text)
+  }
 })
+
+const withSoWhat = (headline: string, body: string) =>
+  JSON.stringify({ ...JSON.parse(reportJson(headline)), soWhat: [{ title: '확인되면', body }] })
+
+test('generateReport: 1회차에 SOFT("지금이 매수 적기입니다.")가 있으면 다시 쓰게 하고, 깨끗한 2회차로 발송한다', async (t) => {
+  t.after(() => mock.restoreAll())
+  const { stream, logs } = fakeStream([withSoWhat(FITTING_HEADLINE, '지금이 매수 적기입니다.'), reportJson(OTHER_HEADLINE)])
+  const { content } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 2)
+  assert.equal(content.cover.headline, OTHER_HEADLINE)
+  assert.ok(logs.some((l) => /재생성 \(2\/3\).*권유성 단정 표현\(soWhat\[0\]\.body\): "매수 적기"/.test(l)))
+})
+
+test('generateReport: 세 번 다 SOFT뿐이면("지금은 매수 적기가 아닌 상황입니다.") 실패하지 않고 경고와 함께 발송한다(F02)', async (t) => {
+  t.after(() => mock.restoreAll())
+  const { stream, logs } = fakeStream([withSoWhat(FITTING_HEADLINE, '지금은 매수 적기가 아닌 상황입니다.')])
+  const { html } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 3)
+  assert.match(html, /지금은 매수 적기가 아닌 상황입니다\./)
+  assert.ok(logs.some((l) => /정합성 위반 잔존\(발송 진행\).*권유성 단정 표현/.test(l)))
+})
+
+test('generateReport: SOFT가 남은 결과는 후보지만 더 깨끗한 결과에 밀린다 — 카드 글자만 어긋난 1회차가 이긴다', async (t) => {
+  t.after(() => mock.restoreAll())
+  const { stream, logs } = fakeStream([reportJson(LONG_HEADLINE), withSoWhat(OTHER_HEADLINE, '확실한 수익을 보장합니다 손실은 없습니다.'), withSoWhat(OTHER_HEADLINE, '확실한 수익을 보장합니다 손실은 없습니다.')])
+  const { content } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 3)
+  assert.equal(content.cover.headline, LONG_HEADLINE)
+  assert.ok(logs.some((l) => /마지막 시도에 정합성 위반 잔존.*권유성 단정 표현.*위반이 더 적은 앞선 결과로 발송 진행\(1회차/.test(l)))
+})
+
+test('권유 관문: 10만 자 본문도 선형으로 빠르게 검사한다(HARD·SOFT, 화면 글자 변환 포함)', () => {
+  const chunk = '코스피는 외국인 매도에 밀렸고 <strong>지금 사이에는</strong> 변수가 많습니다&nbsp;— S&amp;P도 흔들렸습니다. '
+  const o = JSON.parse(reportJson(FITTING_HEADLINE))
+  o.bigStory.content[0].text = chunk.repeat(Math.ceil(100_000 / chunk.length)).slice(0, 100_000)
+  const start = performance.now()
+  validateMarketAdvice(o)
+  validateMarketSoftAdvice(o)
+  const ms = performance.now() - start
+  assert.ok(ms < 200, `${ms.toFixed(1)}ms`)
+})
+
 
 test('generateReport: 해설·인용 문장(예전 전체 목록에 걸리던)은 재생성 사유가 아니다 — 1회차로 발송', async (t) => {
   t.after(() => mock.restoreAll())
