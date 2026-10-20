@@ -25,6 +25,8 @@ import { softFixUnquotableSources, countCitationPhrases, QUOTABLE_SOURCES } from
 import { renderPolicyRateBlock, POLICY_RATE_RULE, findPolicyDirectionMismatches, extractReportText } from "./policy-rate";
 // Ruling 31 (2026-10-19): 제목·카드 한 줄의 확인할 수 없는 기간 비교·최상급 표현(ETF와 공용).
 import { comparativeClaimViolations } from "./comparative-claims";
+// Ruling 37 (2026-10-20): 매수·매도 권유 표현(ETF와 공용 목록) — 마지막 시도에도 막는다.
+import { findInvestmentAdvice } from "./compliance";
 
 // F07: 요청 상한·SDK 재시도를 명시(기본 10분·2회는 job 상한 20분과 맞지 않았다).
 const client = new Anthropic({ timeout: CLAUDE_REQUEST_TIMEOUT_MS, maxRetries: CLAUDE_MAX_RETRIES });
@@ -102,7 +104,7 @@ ${EVIDENCE_RULES}
 2. **시장별 칸막이 금지**: 하나의 이야기 흐름 안에서 각 시장을 자연스럽게 엮을 것.
 3. **인과관계 체인**: 사건 → 원인 → 파급 → 한국 영향 순서로 서술할 것.
 4. **맥락 제공**: historicalComparison 데이터로 현재 수치의 위치를 보여줄 것. historicalComparison·[정책금리] 블록에 포함되지 않은 과거 수치는 절대 사용 금지.
-5. **방향성 제시, 추천 금지**: 특정 종목 매수·매도 추천은 절대 금지.
+5. **방향성 제시, 추천 금지**: 특정 종목 매수·매도 추천은 절대 금지. "비중 확대"·"신규 진입"·"매수 검토"·"분할 접근"·"무조건"·"~하세요/~하십시오" 같은 권유형 표현은 기관·외신 의견을 옮길 때도 쓰지 마십시오(검사가 권유로 보고 다시 쓰게 합니다).
 
 ## ⛔ 트리비얼 연결 금지 목록
 
@@ -556,6 +558,61 @@ export function validateMarketRequired(content: unknown): string[] {
   return missing;
 }
 
+function asRecord(v: unknown): Record<string, unknown> | null {
+  return typeof v === "object" && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+}
+
+function asArray(v: unknown): unknown[] {
+  return Array.isArray(v) ? v : [];
+}
+
+/** 검사할 본문 칸(경로, 값) — 렌더·발송되는 모델 글 전부. 모양이 깨진 칸은 값이 없는 것으로 둔다. */
+function marketProseFields(content: unknown): Array<[string, unknown]> {
+  const c = asRecord(content);
+  if (!c) return [];
+  const fields: Array<[string, unknown]> = [];
+  const cover = asRecord(c.cover);
+  fields.push(["cover.headline", cover?.headline], ["cover.subline", cover?.subline]);
+  const summary = asRecord(c.summary);
+  for (const [key] of SUMMARY_FIELDS) fields.push([`summary.${key}`, summary?.[key]]);
+  fields.push(["cardLine.text", asRecord(c.cardLine)?.text]);
+  asArray(asRecord(c.bigStory)?.content).forEach((b, i) => {
+    const block = asRecord(b);
+    if (!block) return;
+    fields.push([`bigStory.content[${i}].text`, block.text], [`bigStory.content[${i}].title`, block.title]);
+    asArray(block.rows).forEach((r, j) => {
+      const row = asRecord(r);
+      fields.push([`bigStory.content[${i}].rows[${j}].label`, row?.label], [`bigStory.content[${i}].rows[${j}].value`, row?.value]);
+    });
+  });
+  asArray(c.watchPoints).forEach((w, i) => {
+    const wp = asRecord(w);
+    fields.push([`watchPoints[${i}].badge`, wp?.badge], [`watchPoints[${i}].title`, wp?.title], [`watchPoints[${i}].description`, wp?.description]);
+  });
+  asArray(c.soWhat).forEach((s, i) => {
+    const sw = asRecord(s);
+    fields.push([`soWhat[${i}].title`, sw?.title], [`soWhat[${i}].body`, sw?.body]);
+  });
+  asArray(c.calendar).forEach((e, i) => fields.push([`calendar[${i}].event`, asRecord(e)?.event]));
+  fields.push(["closingMessage", c.closingMessage]);
+  return fields;
+}
+
+/**
+ * 매수·매도 권유 표현 검사(Ruling 37) — 위반 목록(빈 배열이면 통과). 던지지 않는다.
+ * ETF와 같은 목록(lib/compliance.ts)으로 본문 모든 칸(제목·부제·세 줄 요약·카드 한 줄·본문 블록·오늘 볼 것·의미·일정·마무리)을
+ * 강조 태그를 벗기고 칸마다 본다. 호출자(generateReport)는 1~2번째 시도에선 재생성 사유로, 마지막 시도에서도 막는다 —
+ * 권유 표현이 남은 결과는 발송 후보가 될 수 없다(필수 항목 누락과 같다). 준법은 F02(전송 > 침묵)보다 앞선다.
+ */
+export function validateMarketAdvice(content: unknown): string[] {
+  const violations: string[] = [];
+  for (const [path, value] of marketProseFields(content)) {
+    const found = findInvestmentAdvice(plainText(value));
+    if (found.length > 0) violations.push(`투자 권유성 표현(${path}): ${found.map((f) => `"${f}"`).join(", ")}`);
+  }
+  return violations;
+}
+
 /**
  * 선택 항목을 렌더·후속 로그가 던지지 않는 빈 값으로 맞춘다 — 발송하기로 한 content 에 한 번 적용한다.
  * 배열(watchPoints·soWhat·calendar·compass)이 없거나 배열이 아니면 [], 문자열(closingMessage·cover.subline)이 없으면 ''.
@@ -629,8 +686,10 @@ export async function generateReport(
   // 재생성을 이어가지 못하거나(예산 소진·후속 호출 실패·마지막 시도 파싱 실패·마지막 시도에 필수 항목 누락)
   // 마지막 시도에 위반이 더 많이 남으면 이 결과를 마지막 시도처럼(위반은 경고로만) 발송한다.
   // 후보가 한 번도 없을 때만 실패한다(파싱된 결과가 없거나, 파싱돼도 필수 항목을 갖춘 결과가 없을 때).
+  // Ruling 37: 매수·매도 권유 표현이 남은 결과도 후보가 되지 않는다(필수 항목 누락과 같다) — 마지막 시도에 남아도 발송할 수 없다.
   let best: { content: ReportContent; base: string[]; card: string[]; attempt: number } | null = null;
   let lastRequiredMissing: { attempt: number; fields: string[] } | null = null;
+  let lastAdvice: { attempt: number; fields: string[] } | null = null;
   let stopReason = "";
   const remaining = (k: { base: string[]; card: string[] }) => [...k.base, ...k.card].join(", ");
 
@@ -675,6 +734,7 @@ export async function generateReport(
         console.log(`⚠️ ${stopReason}`);
         break;
       }
+      if (lastAdvice) console.error(`❌ 앞선 결과는 투자 권유성 표현이 남아 발송 후보가 아니다(${lastAdvice.attempt}회차: ${lastAdvice.fields.join(", ")})`);
       throw err;
     }
 
@@ -737,15 +797,18 @@ export async function generateReport(
       }
       // 카드 글자 맞춤: 1~2번째 시도에선 다시 쓰게 하는 사유, 마지막 시도에선 아래 "위반 잔존" 경고로만 남는다.
       const cardViolations = validateMarketCardText(parsed);
-      const hardViolations = [...baseViolations, ...cardViolations];
+      // Ruling 37: 매수·매도 권유 — 모든 시도에서 위반(마지막 시도도 경고로 넘기지 않는다).
+      const adviceViolations = validateMarketAdvice(parsed);
+      if (adviceViolations.length > 0) lastAdvice = { attempt, fields: adviceViolations };
+      const hardViolations = [...baseViolations, ...adviceViolations, ...cardViolations];
 
       if (hardViolations.length > 0 && attempt < maxRetries) {
         // ETF 와 달리 market 엔 Tier 1 fallback 이 없으므로, 남은 재시도가 있으면 re-roll.
         console.log(`♻️ 정합성 위반 ${hardViolations.length}건 — 재생성 (${attempt + 1}/${maxRetries}): ${hardViolations.join(", ")}`);
         lastParseErr = new Error(`정합성 위반: ${hardViolations.join(", ")}`);
         // 같은 수면 더 최근 결과(<=). 카드 글자만 어긋난 결과는 카드 외 위반이 0이라 자연히 맨 앞이다.
-        // 필수 항목이 빠진 결과는 후보에서 뺀다 — 위반 수로 겨루면 갖춘 결과를 밀어낼 수 있다.
-        if (requiredMissing.length === 0 && (!best || baseViolations.length <= best.base.length)) {
+        // 필수 항목이 빠진 결과·권유 표현이 남은 결과는 후보에서 뺀다 — 위반 수로 겨루면 발송할 수 있는 결과를 밀어낼 수 있다.
+        if (requiredMissing.length === 0 && adviceViolations.length === 0 && (!best || baseViolations.length <= best.base.length)) {
           best = { content: parsed, base: baseViolations, card: cardViolations, attempt };
         }
         continue;
@@ -755,6 +818,12 @@ export async function generateReport(
         // 필수 항목을 갖춘 앞선 결과가 있으면 루프 뒤에서 그 결과로 발송하고, 없으면 실패한다.
         lastParseErr = new Error(`필수 항목 누락: ${requiredMissing.join(", ")}`);
         console.error(`❌ 마지막 시도(${attempt}/${maxRetries})에 필수 항목 누락 — 이 결과는 발송할 수 없다: ${requiredMissing.join(", ")}`);
+        continue;
+      }
+      if (adviceViolations.length > 0) {
+        // 마지막 시도에 권유 표현이 남았다 — 준법 위반은 경고로 넘기지 않는다. 권유 없는 앞선 결과가 있으면 그 결과로, 없으면 실패한다.
+        lastParseErr = new Error(`투자 권유성 표현: ${adviceViolations.join(", ")}`);
+        console.error(`❌ 마지막 시도(${attempt}/${maxRetries})에 투자 권유성 표현 — 이 결과는 발송할 수 없다: ${adviceViolations.join(", ")}`);
         continue;
       }
       if (hardViolations.length > 0) {
@@ -784,6 +853,11 @@ export async function generateReport(
     content = best.content;
   }
   if (!content) {
+    if (lastAdvice) {
+      // 파싱은 됐지만 권유 표현 없는(필수 항목도 갖춘) 결과가 한 번도 없었다 — 준법 위반 리포트는 보내지 않고 크게 실패한다.
+      const required = lastRequiredMissing ? ` · ${lastRequiredMissing.attempt}회차 필수 항목 누락: ${lastRequiredMissing.fields.join(", ")}` : "";
+      throw new Error(`Market 리포트 투자 권유성 표현 — ${lastAdvice.attempt}회차 응답에 ${lastAdvice.fields.join(", ")}${required}, 권유 표현 없이 발송할 수 있는 결과가 없어 발송하지 않습니다 (${maxRetries}회 시도): ${lastParseErr}`);
+    }
     if (lastRequiredMissing) {
       // 파싱은 됐지만 필수 항목을 갖춘 결과가 한 번도 없었다 — 제목·본문 없는 리포트는 만들 수 없으니 크게 실패한다.
       throw new Error(`Market 리포트 필수 항목 누락 — ${lastRequiredMissing.attempt}회차 응답에 ${lastRequiredMissing.fields.join(", ")}, 필수 항목을 갖춘 앞선 결과도 없어 발송할 수 없습니다 (${maxRetries}회 시도): ${lastParseErr}`);
@@ -834,6 +908,10 @@ export async function generateReport(
       }));
     console.log(`📅 캘린더: 실제 경제 데이터에서 ${content.calendar.length}건 사용 (Claude 생성 대체)`);
   }
+
+  // Ruling 37: 발송할 content(기본 문장·실제 일정을 채운 뒤)도 권유 표현 검사를 통과해야 한다 — 후보는 이미 통과했으므로 방어선.
+  const finalAdvice = validateMarketAdvice(content);
+  if (finalAdvice.length > 0) throw new Error(`Market 리포트 투자 권유성 표현 — 발송할 결과에 ${finalAdvice.join(", ")}`);
 
   // 코드 템플릿으로 HTML 렌더링 (Phase 1: 모드 전달)
   const historicalData = context?.historicalComparison ?? [];

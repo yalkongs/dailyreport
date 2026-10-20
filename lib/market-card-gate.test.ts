@@ -5,7 +5,7 @@ import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import Anthropic from '@anthropic-ai/sdk'
 import { cardTextFits } from './preview/data-card'
-import { generateReport, validateMarketCardText, validateMarketRequired, normalizeMarketOptionalParts, validateMarketComparativeClaims, buildReportPrompt } from './claude-client'
+import { generateReport, validateMarketCardText, validateMarketRequired, normalizeMarketOptionalParts, validateMarketComparativeClaims, validateMarketAdvice, buildReportPrompt } from './claude-client'
 
 const FITTING_HEADLINE = '코스피 급락 다음 날, 미 증시는 숨 고르기'
 const LONG_HEADLINE = '코스피 급락 다음 날 미 증시는 숨 고르기에 들어갔고 외국인 매도와 환율 부담이 한꺼번에 겹치며 투자자들의 관망이 길어졌습니다'
@@ -414,6 +414,101 @@ test('generateReport: 기간 비교 위반은 일반 기준 위반이다 — 카
   assert.equal(stream.mock.callCount(), 3)
   assert.equal(content.cover.headline, LONG_HEADLINE)
   assert.ok(logs.some((l) => /마지막 시도에 정합성 위반 잔존.*1년치.*위반이 더 적은 앞선 결과로 발송 진행\(1회차/.test(l)))
+})
+
+// ── Ruling 37: 매수·매도 권유 표현(ETF와 같은 목록, lib/compliance.ts)은 마지막 시도에도 막는다 ─────────────
+// 1~2번째 시도: 재생성 사유. 권유 표현이 남은 결과는 앞선 결과 후보가 되지 않고, 마지막 시도에 남으면 발송할 수 없다(필수 항목 누락과 같다).
+// 권유 표현 없는 파싱 결과가 하나도 없으면 원인을 밝히며 실패한다.
+const ADVICE = 'KODEX 200을 지금 매수하세요.'
+const withAdvice = (headline: string) =>
+  JSON.stringify({ ...JSON.parse(reportJson(headline)), summary: { ...JSON.parse(reportJson(headline)).summary, myAssets: ADVICE } })
+
+test('권유 관문: 본문 모든 칸의 매수·매도 권유를 칸 이름과 함께 찾고, 평범한 글·깨진 모양은 통과(던지지 않는다)', () => {
+  const ok = JSON.parse(reportJson(FITTING_HEADLINE))
+  assert.deepEqual(validateMarketAdvice(ok), [])
+  const v = validateMarketAdvice(JSON.parse(withAdvice(FITTING_HEADLINE)))
+  assert.equal(v.length, 1)
+  assert.match(v[0], /^투자 권유성 표현\(summary\.myAssets\): "매수하세요"/)
+  const cases: Array<[string, (o: Record<string, any>) => void]> = [
+    ['cover.headline', (o) => { o.cover.headline = '반도체 <strong>지금 사세요</strong>' }],
+    ['cover.subline', (o) => { o.cover.subline = '반도체 비중 확대 구간' }],
+    ['summary.yesterday', (o) => { o.summary.yesterday = '무조건 오르는 장이었습니다.' }],
+    ['summary.today', (o) => { o.summary.today = '개장 뒤 신규 진입을 노려볼 만합니다.' }],
+    ['cardLine.text', (o) => { o.cardLine.text = '반도체는 매수해야 할 때입니다' }],
+    ['bigStory.content[1].text', (o) => { o.bigStory.content.push({ type: 'pullQuote', text: '분할 접근이 답입니다.' }) }],
+    ['bigStory.content[0].text', (o) => { o.bigStory.content[0].text = '이제 <strong>매수 검토</strong>가 필요합니다.' }],
+    ['watchPoints[0].description', (o) => { o.watchPoints = [{ badge: '09:00', title: '개장', description: '반도체 ETF를 담으세요.' }] }],
+    ['soWhat[0].body', (o) => { o.soWhat = [{ title: '확인되면', body: '확인되면 비중을 늘리세요.' }] }],
+    ['calendar[0].event', (o) => { o.calendar = [{ date: '10/21', country: '한국', event: '강력 매수 신호', importance: 3 }] }],
+    ['closingMessage', (o) => { o.closingMessage = '지금 사도 늦지 않습니다.' }],
+  ]
+  for (const [path, edit] of cases) {
+    const o = JSON.parse(reportJson(FITTING_HEADLINE))
+    edit(o)
+    const found = validateMarketAdvice(o)
+    assert.equal(found.length, 1, `${path}: ${found.join(' / ')}`)
+    assert.ok(found[0].startsWith(`투자 권유성 표현(${path}):`), found[0])
+  }
+  for (const bad of [null, undefined, '문자열', [], { cover: null, bigStory: { content: [null, 3] }, watchPoints: [null], soWhat: 'x', calendar: [null] }]) {
+    assert.doesNotThrow(() => validateMarketAdvice(bad), JSON.stringify(bad))
+    assert.deepEqual(validateMarketAdvice(bad), [])
+  }
+})
+
+test('generateReport: 1회차에 매수 권유가 있으면 다시 쓰게 하고, 권유 없는 2회차 결과로 발송한다', async (t) => {
+  t.after(() => mock.restoreAll())
+  const { stream, logs } = fakeStream([withAdvice(FITTING_HEADLINE), reportJson(OTHER_HEADLINE)])
+  const { content, html } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 2)
+  assert.equal(content.cover.headline, OTHER_HEADLINE)
+  assert.doesNotMatch(html, /매수하세요/)
+  assert.ok(logs.some((l) => /재생성 \(2\/3\).*투자 권유성 표현\(summary\.myAssets\)/.test(l)))
+})
+
+test('generateReport: 권유가 있는 결과는 앞선 결과 후보가 되지 않는다 — 1회차(긴 제목+권유) 대신 2·3회차(요약 한 칸 누락)로 발송', async (t) => {
+  t.after(() => mock.restoreAll())
+  // 예전에는 1회차가 카드 외 위반 0이라 앞선 결과로 뽑혀 권유 문장이 그대로 발송됐다(Codex 재현).
+  const { stream, logs } = fakeStream([withAdvice(LONG_HEADLINE), yesterdayOnlyMissing(OTHER_HEADLINE), yesterdayOnlyMissing(OTHER_HEADLINE)])
+  const { content, html } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 3)
+  assert.equal(content.cover.headline, OTHER_HEADLINE)
+  assert.doesNotMatch(JSON.stringify(content), /매수하세요/)
+  assert.doesNotMatch(html, /매수하세요/)
+  assert.ok(!logs.some((l) => /앞선 결과로 발송 진행\(1회차/.test(l)), '1회차로 되돌아가지 않는다')
+})
+
+test('generateReport: 마지막 시도에 권유가 남으면 발송할 수 없다 — 권유 없는 앞선 결과로 발송한다', async (t) => {
+  t.after(() => mock.restoreAll())
+  const { stream, logs } = fakeStream([withAdvice(LONG_HEADLINE), yesterdayOnlyMissing(OTHER_HEADLINE), withAdvice(FITTING_HEADLINE)])
+  const { content, html } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 3)
+  assert.equal(content.cover.headline, OTHER_HEADLINE)
+  assert.doesNotMatch(html, /매수하세요/)
+  assert.ok(logs.some((l) => /마지막 시도\(3\/3\)에 투자 권유성 표현/.test(l)))
+  const line = logs.find((l) => /앞선 결과로 발송 진행/.test(l))
+  assert.ok(line && /2회차/.test(line) && /투자 권유성 표현/.test(line), line)
+})
+
+test('generateReport: 모든 시도에 권유가 있으면 원인을 밝히며 실패한다(발송하지 않는다)', async (t) => {
+  t.after(() => mock.restoreAll())
+  const { stream } = fakeStream([withAdvice(FITTING_HEADLINE)])
+  await assert.rejects(generateReport(DATA), (e: Error) => /투자 권유성 표현/.test(e.message) && /summary\.myAssets/.test(e.message) && !(e instanceof TypeError))
+  assert.equal(stream.mock.callCount(), 3)
+})
+
+test('generateReport: 권유가 있는 결과뿐인데 예산이 끝나 재생성을 못 하면 실패한다(권유 결과를 발송하지 않는다)', async (t) => {
+  t.after(() => mock.restoreAll())
+  const { stream } = fakeStream([withAdvice(FITTING_HEADLINE)], 12 * 60_000)
+  await assert.rejects(generateReport(DATA), (e: Error) => /투자 권유성 표현/.test(e.message) && !(e instanceof TypeError))
+  assert.equal(stream.mock.callCount(), 1)
+})
+
+test('프롬프트: 시스템 프롬프트가 검사가 막는 권유형 표현을 미리 알려 준다', async (t) => {
+  t.after(() => mock.restoreAll())
+  const { stream } = fakeStream([reportJson(FITTING_HEADLINE)])
+  await generateReport(DATA)
+  const system = String((stream.mock.calls[0].arguments[0] as { system?: unknown }).system)
+  assert.match(system, /"비중 확대"·"신규 진입"·"매수 검토"·"분할 접근"/)
 })
 
 test('프롬프트: 제목 작성 규칙에 기간 비교·최상급 금지(제목·카드 문구)가 있다', () => {
