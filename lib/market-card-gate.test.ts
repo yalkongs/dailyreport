@@ -669,7 +669,7 @@ test('권유 관문: "매수<strong></strong>하세요"는 태그가 글자로 �
 })
 
 test('권유 관문 HARD: "매수해 주세요"·"주식 비중, 줄이세요"는 막고, 인용된 경고는 통과(Ruling 37f·37g)', () => {
-  for (const text of ['반도체 ETF를 매수해 주세요.', '반도체 ETF를 사 주세요.', '주식 비중, 줄이세요.', '반도체 비중을 낮추십시오']) {
+  for (const text of ['반도체 ETF를 매수해 주세요.', '반도체 ETF를 사 주세요.', '주식 비중, 줄이세요.', '반도체 비중을 낮추십시오', '주식 비중도 줄이세요.', '주식 비중만 줄이세요.']) {
     const o = JSON.parse(reportJson(FITTING_HEADLINE))
     o.bigStory.content[0].text = text
     assert.equal(validateMarketAdvice(o).length, 1, text)
