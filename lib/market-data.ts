@@ -296,24 +296,30 @@ export async function collectHistoricalData(): Promise<HistoricalComparison[]> {
 }
 
 /**
- * 일봉 종가 → 거래일별 일간 등락. 종가가 유효한 일봉만 이어 붙이므로(휴장일·결측은 날짜 자체가 없다)
- * 연속한 두 거래일의 등락이다. 같은 거래일이 두 번 오면 나중 값을 쓴다. 최근 n개만 돌려준다.
+ * 일봉 종가 → 거래일별 일간 등락. 연속한 두 일봉의 등락이다 — 휴장일은 일봉 자체가 없으므로 건너 이어진다.
+ * Ruling 42: 종가가 없는(무효한) 일봉은 빈칸이다 — 그 날도, 그 다음 날도 등락을 만들지 않는다. 빈칸을 건너
+ * 이웃끼리 비교하면 두 거래일치 변화가 하루 등락으로 보인다(10/16=100, 10/19=결측, 10/20=110 → 10/20 +10%).
+ * 같은 거래일이 두 번 오면 유효한 종가 중 나중 값을 쓴다(유효한 종가가 결측 일봉보다 우선). 최근 n개만 돌려준다.
  */
 export function dailyReturnsFromCloses(
   quotes: ReadonlyArray<{ date: Date; close: number | null | undefined }>,
   n: number,
 ): StripeSession[] {
   if (!(n > 0)) return [];
-  const byDate = new Map<string, number>();
+  const byDate = new Map<string, number | null>(); // null = 일봉은 있는데 종가가 없다(빈칸)
   for (const q of [...quotes].sort((a, b) => a.date.getTime() - b.date.getTime())) {
-    if (typeof q.close !== "number" || !Number.isFinite(q.close) || q.close <= 0) continue;
     const day = sessionDate(q.date, "Asia/Seoul");
-    if (day) byDate.set(day, q.close);
+    if (!day) continue;
+    if (typeof q.close === "number" && Number.isFinite(q.close) && q.close > 0) byDate.set(day, q.close);
+    else if (!byDate.has(day)) byDate.set(day, null);
   }
   const closes = [...byDate.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
   const out: StripeSession[] = [];
   for (let i = 1; i < closes.length; i++) {
-    out.push({ date: closes[i][0], pct: (closes[i][1] / closes[i - 1][1] - 1) * 100 });
+    const prev = closes[i - 1][1];
+    const cur = closes[i][1];
+    if (prev === null || cur === null) continue;
+    out.push({ date: closes[i][0], pct: (cur / prev - 1) * 100 });
   }
   return out.slice(-n);
 }

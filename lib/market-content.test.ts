@@ -12,8 +12,42 @@ test('코스피 일봉 → 일간 등락(휴장일 없음, 최근 n개)', () => 
     { date: new Date('2026-10-14T00:00:00Z'), close: 6008.5 },
   ]
   const r = dailyReturnsFromCloses(q, 20)
-  assert.deepEqual(r.map(x => x.date), ['2026-10-12', '2026-10-14'])
+  // Ruling 42: 10/13 종가 결측은 빈칸 — 10/14 등락을 10/12 대비(두 거래일치)로 계산하지 않는다.
+  assert.deepEqual(r.map(x => x.date), ['2026-10-12'])
   assert.ok(Math.abs(r[0].pct - (6384.24 / 6625.5 - 1) * 100) < 1e-9)
+})
+
+// Ruling 42 (2026-10-20): 종가가 없는 일봉은 빈칸이다 — 그 날과 그 다음 날의 등락을 만들지 않는다(이틀치를 하루치로 보이지 않게).
+// 휴장일(일봉 자체가 없음)은 그대로 이어서 계산한다.
+test('코스피 일봉: 종가 결측 일봉 다음 날은 등락을 만들지 않는다(10/16=100, 10/19=결측, 10/20=110)', () => {
+  const day = (d: string, close: number | null | undefined) => ({ date: new Date(`${d}T00:00:00Z`), close })
+  const r = dailyReturnsFromCloses([day('2026-10-15', 95), day('2026-10-16', 100), day('2026-10-19', null), day('2026-10-20', 110), day('2026-10-21', 121)], 20)
+  assert.deepEqual(r.map(x => x.date), ['2026-10-16', '2026-10-21'])
+  assert.ok(Math.abs(r[1].pct - 10) < 1e-9)
+  assert.ok(!r.some(x => x.date === '2026-10-20'), '10/20 +10%(두 거래일치)를 하루 등락으로 보이지 않는다')
+  // NaN·0·음수·undefined 종가도 같은 빈칸
+  for (const bad of [Number.NaN, 0, -1, undefined]) {
+    assert.deepEqual(dailyReturnsFromCloses([day('2026-10-16', 100), day('2026-10-19', bad), day('2026-10-20', 110)], 20), [], String(bad))
+  }
+})
+
+test('코스피 일봉: 휴장일(일봉 없음)은 그대로 이어서 계산한다 — 10/09 한글날 건너 10/08 → 10/12', () => {
+  const day = (d: string, close: number) => ({ date: new Date(`${d}T00:00:00Z`), close })
+  const r = dailyReturnsFromCloses([day('2026-10-07', 100), day('2026-10-08', 102), day('2026-10-12', 99.96)], 20)
+  assert.deepEqual(r.map(x => x.date), ['2026-10-08', '2026-10-12'])
+  assert.ok(Math.abs(r[1].pct - (99.96 / 102 - 1) * 100) < 1e-9)
+})
+
+test('코스피 일봉: 같은 거래일에 결측 일봉과 종가가 함께 오면 종가를 쓴다(순서 무관)', () => {
+  const at = (iso: string, close: number | null) => ({ date: new Date(iso), close })
+  for (const sameDay of [
+    [at('2026-10-06T00:00:00Z', null), at('2026-10-06T06:30:00Z', 110)],
+    [at('2026-10-06T00:00:00Z', 110), at('2026-10-06T06:30:00Z', null)],
+  ]) {
+    const r = dailyReturnsFromCloses([at('2026-10-05T00:00:00Z', 100), ...sameDay], 20)
+    assert.equal(r.length, 1)
+    assert.ok(Math.abs(r[0].pct - 10) < 1e-9)
+  }
 })
 
 const OK = {

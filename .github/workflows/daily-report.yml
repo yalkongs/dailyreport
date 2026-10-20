@@ -422,19 +422,24 @@ jobs:
           IS_RESEND: ${{ steps.delivery_market.outputs.resend }}
           FORCE_RESEND: ${{ (inputs.resend_telegram_only == true || inputs.resend_telegram_only == 'true') && 'true' || 'false' }}
         run: |
-          # 발송 직전 재확인 — 수동 re-run·겹친 실행 방어. 이 실행이 방금 생성한 리포트
-          # (IS_RESEND=false)는 아직 발송됐을 수 없으므로 건너뛰고, 사람의 명시적 재발송도 우회한다.
-          if [ "$IS_RESEND" = "true" ] && [ "$FORCE_RESEND" != "true" ]; then
-            CURRENT=$(npx tsx scripts/delivery-state.ts status market "$REPORT_SHA" | tail -1)
+          # 발송 직전 재확인 — 수동 re-run·겹친 실행 방어. 방금 생성한 리포트(IS_RESEND=false)도 본다(Ruling 39):
+          # resolve가 status를 못 읽은 채 '방금 생성'으로 판정했을 수 있고, 그 사이 겹친 실행(only=market 등)이 먼저 보냈을 수 있다.
+          # 사람의 명시적 재발송(FORCE_RESEND)만 우회한다. `|| true`: 명령이 죽어도(pipefail) 아래 조회 실패 분기로 간다.
+          if [ "$FORCE_RESEND" != "true" ]; then
+            CURRENT=$(npx tsx scripts/delivery-state.ts status market "$REPORT_SHA" | tail -1) || true
             case "$CURRENT" in
               none|failure) ;;
               success|pending)
                 echo "발송 생략: 현재 status=${CURRENT} (success=이미 발송, pending=다른 실행이 발송 중이거나 결과 불명)"
                 exit 0 ;;
               *)
-                # 조회 실패를 조용히 넘기면 job은 녹색인데 아무것도 안 나간다 — 실패로 알린다.
-                echo "::error::발송 상태 재확인 실패(status=${CURRENT}) — 보내지 않았습니다. status가 없으므로 다음 실행이 복구합니다."
-                exit 1 ;;
+                if [ "$IS_RESEND" = "true" ]; then
+                  # 조회 실패를 조용히 넘기면 job은 녹색인데 아무것도 안 나간다 — 실패로 알린다.
+                  echo "::error::발송 상태 재확인 실패(status=${CURRENT}) — 보내지 않았습니다. status가 없으므로 다음 실행이 복구합니다."
+                  exit 1
+                fi
+                # 이 실행이 방금 생성한 리포트 — 아직 안 나갔을 가능성이 크다. 재확인을 못 해도 보낸다(F02 전송 > 침묵).
+                echo "::warning::발송 상태 재확인 실패(status=${CURRENT}) — 방금 생성한 리포트라 발송을 진행합니다(전송 > 침묵)." ;;
             esac
           fi
           # utm_source=telegram: Web Analytics 유입 구분(spec §6). 본문 URL에는 cache-bust가 없어 ?로 붙인다
@@ -560,19 +565,23 @@ jobs:
           IS_RESEND: ${{ steps.delivery_etf.outputs.resend }}
           FORCE_RESEND: ${{ (inputs.resend_telegram_only == true || inputs.resend_telegram_only == 'true') && 'true' || 'false' }}
         run: |
-          # 발송 직전 재확인 — 수동 re-run·겹친 실행 방어. 이 실행이 방금 생성한 리포트
-          # (IS_RESEND=false)는 아직 발송됐을 수 없으므로 건너뛰고, 사람의 명시적 재발송도 우회한다.
-          if [ "$IS_RESEND" = "true" ] && [ "$FORCE_RESEND" != "true" ]; then
-            CURRENT=$(npx tsx scripts/delivery-state.ts status etf "$REPORT_SHA" | tail -1)
+          # 발송 직전 재확인 — send market의 같은 블록 주석 참조(Ruling 39: resend 여부와 무관, FORCE_RESEND만 우회,
+          # 조회 실패는 재발송이면 막고 방금 생성이면 경고 후 발송).
+          if [ "$FORCE_RESEND" != "true" ]; then
+            CURRENT=$(npx tsx scripts/delivery-state.ts status etf "$REPORT_SHA" | tail -1) || true
             case "$CURRENT" in
               none|failure) ;;
               success|pending)
                 echo "발송 생략: 현재 status=${CURRENT} (success=이미 발송, pending=다른 실행이 발송 중이거나 결과 불명)"
                 exit 0 ;;
               *)
-                # 조회 실패를 조용히 넘기면 job은 녹색인데 아무것도 안 나간다 — 실패로 알린다.
-                echo "::error::발송 상태 재확인 실패(status=${CURRENT}) — 보내지 않았습니다. status가 없으므로 다음 실행이 복구합니다."
-                exit 1 ;;
+                if [ "$IS_RESEND" = "true" ]; then
+                  # 조회 실패를 조용히 넘기면 job은 녹색인데 아무것도 안 나간다 — 실패로 알린다.
+                  echo "::error::발송 상태 재확인 실패(status=${CURRENT}) — 보내지 않았습니다. status가 없으므로 다음 실행이 복구합니다."
+                  exit 1
+                fi
+                # 이 실행이 방금 생성한 리포트 — 아직 안 나갔을 가능성이 크다. 재확인을 못 해도 보낸다(F02 전송 > 침묵).
+                echo "::warning::발송 상태 재확인 실패(status=${CURRENT}) — 방금 생성한 리포트라 발송을 진행합니다(전송 > 침묵)." ;;
             esac
           fi
           # utm_source=telegram — send market의 같은 줄 주석 참조.

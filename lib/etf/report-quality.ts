@@ -31,28 +31,8 @@ import { comparativeClaimViolations } from '../comparative-claims'
 import { headlineCoversSlot, subjectAliasesOf, subjectNameOf } from './headline-subject'
 
 // ─── Hard patterns: 진짜 투자 권유 ─────────────────────────────────────
-const INVESTMENT_ADVICE_PATTERNS = [
-  /강력\s*매수/,
-  /무조건/,
-  /지금\s*사/,
-  /매수해야/,
-  /매도해야/,
-  /매수\s*검토/,
-  /신규\s*진입/,
-  /분할\s*접근/,
-  /비중\s*확대/,
-  /선호\s*ETF군/,
-  /일반적인\s*매수/,
-  /확실히\s*(매수|매도|상승|하락|수익|오를|떨어질|돈)/,
-  /확실한\s*(매수|매도|수익|투자\s*기회|종목|상승|하락)/,
-  /폭등\s*예상/,
-  /필수\s*(매수|매도|종목|전략|포지션|편입|진입)/,
-  /(매수|매도|편입|진입|투자)\s*(가|는)?\s*필수/,
-  // 2026-10-17: "갖고 있다면 / 새로 본다면"은 조건·관찰형만 — 지시형 매매 표현을 잡는다.
-  /(?:매수|매도|처분|편입|교체)\s*하(?:세요|십시오|시기\s*바랍니다)/,
-  /(?<![가-힣])(?:사|파|팔|담으)(?:세요|십시오)/,
-  /(?:비중|노출)[^.!?\n]{0,8}(?:줄이|늘리|낮추|높이)(?:세요|십시오|시기\s*바랍니다|는\s*것이\s*좋(?:습니다|겠습니다))/,
-]
+// Ruling 37 (2026-10-20): 목록은 Market과 공용 모듈(lib/compliance.ts)로 옮겼다 — 내용·판정은 그대로.
+import { INVESTMENT_ADVICE_PATTERNS } from '../compliance'
 
 const FLOW_WORD_PATTERNS = [
   /자금\s*유입/,
@@ -214,7 +194,7 @@ function flattenMorningReport(report: MorningReport, options: { includeCover?: b
   return core.filter((s): s is string => typeof s === 'string' && s.length > 0).join('\n')
 }
 
-function findMatches(text: string, patterns: RegExp[]): string[] {
+function findMatches(text: string, patterns: readonly RegExp[]): string[] {
   return patterns.filter(p => p.test(text)).map(p => p.source)
 }
 

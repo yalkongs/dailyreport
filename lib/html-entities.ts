@@ -30,6 +30,27 @@ export function decodeHtmlEntities(input: string): string {
   return out;
 }
 
+// 문자 참조 풀이용 이름 표 — 흔한 것만. 모르는 이름은 그대로 둔다.
+const NAMED_REFERENCES: Record<string, string> = {
+  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'",
+  nbsp: "\u00a0", ensp: "\u2002", emsp: "\u2003", thinsp: "\u2009", shy: "\u00ad",
+  zwsp: "\u200b", ZeroWidthSpace: "\u200b", zwnj: "\u200c", zwj: "\u200d", NewLine: "\n", Tab: "\t",
+  hellip: "…", middot: "·", ndash: "–", mdash: "—", lsquo: "‘", rsquo: "’", ldquo: "“", rdquo: "”",
+};
+
+/**
+ * 이름·10진·16진 문자 참조를 **한 번만** 푼다("&amp;nbsp;" → "&nbsp;") — Ruling 37c.
+ * 권유 검사가 화면에 보이는 글자로 보게 한다("매수&nbsp;하세요" → "매수 하세요"). 모르는 이름, 0·서러게이트·범위 밖 코드는 그대로 둔다.
+ */
+export function decodeCharacterReferences(input: string): string {
+  return input.replace(/&(?:#(\d{1,8})|#[xX]([0-9a-fA-F]{1,7})|([A-Za-z][A-Za-z0-9]{1,31}));/g, (ref, dec, hex, name) => {
+    if (name !== undefined) return Object.prototype.hasOwnProperty.call(NAMED_REFERENCES, name) ? NAMED_REFERENCES[name] : ref;
+    const code = dec !== undefined ? Number.parseInt(dec, 10) : Number.parseInt(hex, 16);
+    if (!(code > 0) || code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff)) return ref;
+    return String.fromCodePoint(code);
+  });
+}
+
 /**
  * 인라인 강조 태그(<strong> 등)를 제거해 평문으로 만든다.
  *

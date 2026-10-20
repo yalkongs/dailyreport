@@ -47,6 +47,25 @@ test('kr-*: "미 ○○"·"美 ○○"처럼 해외 시장을 붙인 표현(· �
   assert.equal(headlineCoversSlot('美 증시 훈풍, 반도체·2차전지 급등', sector('2차전지')), true)
 })
 
+// Ruling 41 (2026-10-20): 앞의 해외 시장 표시는 '·'뿐 아니라 ','·'，'·'와/과'·'및'·'그리고' 목록에도 이어진다.
+// 뒤 항목에 국내 표시(국내·한국·코스피·코스닥)가 붙으면 거기서 끊긴다.
+test('kr-*: 해외 시장 표시는 쉼표·와/과·및·그리고로 이은 목록에도 이어지고, 국내 표시에서 끊긴다', () => {
+  assert.equal(headlineCoversSlot('미국 반도체·IT 동반 상승', KR_SEMI), false)
+  assert.equal(headlineCoversSlot('미국 반도체, IT 동반 상승', KR_SEMI), false)
+  assert.equal(headlineCoversSlot('미국 반도체，IT 동반 상승', KR_SEMI), false)
+  assert.equal(headlineCoversSlot('미 반도체와 IT가 함께 올랐다', KR_SEMI), false)
+  assert.equal(headlineCoversSlot('미 바이오와 반도체가 함께 올랐다', KR_SEMI), false)
+  assert.equal(headlineCoversSlot('미국 바이오 및 반도체 강세', KR_SEMI), false)
+  assert.equal(headlineCoversSlot('미국 바이오 그리고 반도체 강세', KR_SEMI), false)
+  // 국내 표시가 뒤 항목에 붙으면 국내 주제
+  assert.equal(headlineCoversSlot('미 반도체와 국내 IT가 함께 올랐다', KR_SEMI), true)
+  assert.equal(headlineCoversSlot('미 바이오, 한국 반도체 동반 강세', KR_SEMI), true)
+  assert.equal(headlineCoversSlot('미 바이오, 코스닥·IT 동반 강세', KR_SEMI), true)
+  // 여러 낱말로 된 앞 절(쉼표가 절을 나눈다)이나 '효과·인상과' 같은 낱말은 목록으로 보지 않는다
+  assert.equal(headlineCoversSlot('미 반도체 4% 급락, IT는 버텼다', KR_SEMI), true)
+  assert.equal(headlineCoversSlot('미 금리 인상과 반도체 급락', KR_SEMI), true)
+})
+
 // ─── 슬롯 유형별 양성·음성 ─────────────────────────────────────────────────
 const CASES: Array<[string, SubjectSlot, string[], string[]]> = [
   ['kr-large', KR_LARGE,

@@ -12,9 +12,9 @@ import type {
 import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS, MARKET_GENERATION_BUDGET_MS, makeDeadline } from "./claude-budget";
 import { EVIDENCE_RULES } from "./evidence-rules";
 import { formatEconomicEventLine } from "./economic-calendar";
-import { renderReport } from "./report-renderer";
+import { renderReport, sanitizeInlineHtml } from "./report-renderer";
 import { cardTextFits } from "./preview/data-card";
-import { stripEmphasisTags } from "./html-entities";
+import { decodeCharacterReferences, stripEmphasisTags } from "./html-entities";
 import { plainText, cutAtSentence } from "./market-summary";
 import { BANNED_METAPHORS } from "./banned-metaphors";
 import { renderVoiceExemplars } from "./voice-exemplars";
@@ -25,6 +25,8 @@ import { softFixUnquotableSources, countCitationPhrases, QUOTABLE_SOURCES } from
 import { renderPolicyRateBlock, POLICY_RATE_RULE, findPolicyDirectionMismatches, extractReportText } from "./policy-rate";
 // Ruling 31 (2026-10-19): 제목·카드 한 줄의 확인할 수 없는 기간 비교·최상급 표현(ETF와 공용).
 import { comparativeClaimViolations } from "./comparative-claims";
+// Ruling 37·37e (2026-10-20): 매수·매도 권유 두 단계 — HARD(명령형, 마지막 시도에도 막음)·SOFT(단정·보장, 일반 기준 위반).
+import { findHardAdvice, findSoftAdvice } from "./compliance";
 
 // F07: 요청 상한·SDK 재시도를 명시(기본 10분·2회는 job 상한 20분과 맞지 않았다).
 const client = new Anthropic({ timeout: CLAUDE_REQUEST_TIMEOUT_MS, maxRetries: CLAUDE_MAX_RETRIES });
@@ -102,7 +104,7 @@ ${EVIDENCE_RULES}
 2. **시장별 칸막이 금지**: 하나의 이야기 흐름 안에서 각 시장을 자연스럽게 엮을 것.
 3. **인과관계 체인**: 사건 → 원인 → 파급 → 한국 영향 순서로 서술할 것.
 4. **맥락 제공**: historicalComparison 데이터로 현재 수치의 위치를 보여줄 것. historicalComparison·[정책금리] 블록에 포함되지 않은 과거 수치는 절대 사용 금지.
-5. **방향성 제시, 추천 금지**: 특정 종목 매수·매도 추천은 절대 금지.
+5. **방향성 제시, 추천 금지**: 특정 종목 매수·매도 추천은 절대 금지. 독자에게 사라·팔라는 지시형("~하세요·~하십시오", "비중을 줄이세요")과 "강력 매수"·"폭등 예상"·"확실한 수익"·"필수 매수" 같은 단정은 쓰지 마십시오(검사가 막고 다시 쓰게 합니다). 기관·외신 의견은 출처와 함께 사실로만 옮기십시오.
 
 ## ⛔ 트리비얼 연결 금지 목록
 
@@ -539,8 +541,9 @@ export function validateMarketCardText(content: Pick<ReportContent, "cardLine" |
  * 필수 항목 검증 — 이게 없으면 렌더러가 던지거나 제목 없는 리포트가 되므로 발송 후보가 될 수 없다(Ruling 29).
  * 누락 목록(빈 배열이면 통과). 던지지 않는다. 호출자(generateReport)가 기준 위반으로 합쳐 재생성하고,
  * 앞선 결과 선택에서도 이 항목이 빠진 결과는 후보에서 뺀다.
- * 필수는 cover(객체)·cover.headline(강조 태그를 벗겨도 비지 않는 문자열)·bigStory.content(비지 않은 배열)뿐 —
+ * 필수는 cover(객체)·cover.headline(강조 태그를 벗겨도 비지 않는 문자열)·bigStory.content(렌더할 수 있는 블록이 하나 이상인 배열)뿐 —
  * 나머지(watchPoints·soWhat·calendar·compass·closingMessage·cover.subline)는 normalizeMarketOptionalParts 가 채운다.
+ * Ruling 38: 배열이기만 하면 통과하던 때 [null]이 후보가 됐다가 루프 밖 렌더에서 던졌다 — 블록 모양까지 본다(isRenderableBlock).
  */
 export function validateMarketRequired(content: unknown): string[] {
   const c = content as Partial<ReportContent> | null | undefined;
@@ -552,22 +555,175 @@ export function validateMarketRequired(content: unknown): string[] {
     missing.push("cover.headline 누락");
   }
   const blocks = c?.bigStory?.content;
-  if (!Array.isArray(blocks) || blocks.length === 0) missing.push("bigStory.content 누락");
+  if (!Array.isArray(blocks) || !blocks.some(isRenderableBlock)) missing.push("bigStory.content 누락");
   return missing;
+}
+
+function asRecord(v: unknown): Record<string, unknown> | null {
+  return typeof v === "object" && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+}
+
+function asArray(v: unknown): unknown[] {
+  return Array.isArray(v) ? v : [];
+}
+
+function asString(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+
+function isDataRow(v: unknown): boolean {
+  const row = asRecord(v);
+  return !!row && typeof row.label === "string" && typeof row.value === "string";
+}
+
+/**
+ * 렌더러(renderContentBlock)가 그릴 수 있는 본문 블록인지 — 객체이고 type 이 아는 값이며 그 type 이 읽는 칸이 맞는 모양.
+ * paragraph·pullQuote: text 가 태그를 벗겨도 비지 않는 문자열. dataCard: title 이 없거나 문자열, rows 에 label·value 가 문자열인 행이 하나 이상.
+ */
+function isRenderableBlock(v: unknown): boolean {
+  const block = asRecord(v);
+  if (!block) return false;
+  if (block.type === "paragraph" || block.type === "pullQuote") return plainText(block.text) !== "";
+  if (block.type === "dataCard") {
+    return (block.title === undefined || block.title === null || typeof block.title === "string") && asArray(block.rows).some(isDataRow);
+  }
+  return false;
+}
+
+/**
+ * 칸의 렌더 경로(Ruling 37f) — 권유 검사가 화면 글자를 그 칸의 실제 변환대로 만든다.
+ *  - inline: 본문 문단·인용, 오늘 볼 것 설명, 의미 본문 — sanitizeInlineHtml(참조 풀기 → escape → <strong>만 태그)
+ *  - title: 제목·부제 — 강조 태그(<strong>·<b>·<em> 등)를 벗긴 뒤 escape
+ *  - plain: 세 줄 요약·카드 한 줄 — 발송 전 fillMarketSummaryDefaults 가 plainText(모든 태그 제거·공백 정리)를 한 뒤 escape
+ *  - escaped: 그 밖(오늘 볼 것 배지·제목, 의미 제목, 일정, 마무리, dataCard) — 그대로 escape(태그·참조가 글자로 보인다)
+ */
+export type MarketFieldRender = "inline" | "title" | "plain" | "escaped";
+
+/** 검사할 본문 칸(경로, 값, 렌더 경로) — 렌더·발송되는 모델 글 전부. 모양이 깨진 칸은 값이 없는 것으로 둔다. */
+function marketProseFields(content: unknown): Array<[string, unknown, MarketFieldRender]> {
+  const c = asRecord(content);
+  if (!c) return [];
+  const fields: Array<[string, unknown, MarketFieldRender]> = [];
+  const cover = asRecord(c.cover);
+  fields.push(["cover.headline", cover?.headline, "title"], ["cover.subline", cover?.subline, "title"]);
+  const summary = asRecord(c.summary);
+  for (const [key] of SUMMARY_FIELDS) fields.push([`summary.${key}`, summary?.[key], "plain"]);
+  fields.push(["cardLine.text", asRecord(c.cardLine)?.text, "plain"]);
+  asArray(asRecord(c.bigStory)?.content).forEach((b, i) => {
+    const block = asRecord(b);
+    if (!block) return;
+    fields.push([`bigStory.content[${i}].text`, block.text, "inline"], [`bigStory.content[${i}].title`, block.title, "escaped"]);
+    asArray(block.rows).forEach((r, j) => {
+      const row = asRecord(r);
+      fields.push([`bigStory.content[${i}].rows[${j}].label`, row?.label, "escaped"], [`bigStory.content[${i}].rows[${j}].value`, row?.value, "escaped"]);
+    });
+  });
+  asArray(c.watchPoints).forEach((w, i) => {
+    const wp = asRecord(w);
+    fields.push([`watchPoints[${i}].badge`, wp?.badge, "escaped"], [`watchPoints[${i}].title`, wp?.title, "escaped"], [`watchPoints[${i}].description`, wp?.description, "inline"]);
+  });
+  asArray(c.soWhat).forEach((s, i) => {
+    const sw = asRecord(s);
+    fields.push([`soWhat[${i}].title`, sw?.title, "escaped"], [`soWhat[${i}].body`, sw?.body, "inline"]);
+  });
+  asArray(c.calendar).forEach((e, i) => fields.push([`calendar[${i}].event`, asRecord(e)?.event, "escaped"]));
+  fields.push(["closingMessage", c.closingMessage, "escaped"]);
+  return fields;
+}
+
+/**
+ * 권유 검사가 보는 글 = 그 칸이 화면에 보이는 글자(Ruling 37e·37f). 칸의 렌더 경로(MarketFieldRender)를 그대로 거친 뒤
+ * escape를 글자로 되돌리고, 서식 문자(\p{Cf} — 폭 없는 공백·방향 표시 U+200B–U+200F·U+2060–U+206F·BOM·소프트 하이픈)를 지우고
+ * 줄바꿈 없는 공백은 공백으로, 공백은 하나로 모은다.
+ *  - inline: sanitizeInlineHtml → <strong>·</strong> 지우기 → 되돌리기 — "<매수하세요>"·"매수&#8294;하세요"·"매수&lt;strong&gt;하세요"는 "매수하세요"
+ *  - escaped: escape 뒤 되돌리기는 항등 — 태그·문자 참조가 글자 그대로("매수<strong></strong>하세요"는 그 글자대로 보인다)
+ *  - title: 강조 태그를 벗긴 뒤 escaped와 같다. plain: plainText 뒤 escaped와 같다.
+ * 매 시도 검사와 마지막 재검사가 이 함수를 쓴다. 글 길이에 선형.
+ */
+export function marketAdviceText(value: unknown, render: MarketFieldRender = "inline"): string {
+  if (typeof value !== "string") return "";
+  const shown =
+    render === "inline" ? decodeCharacterReferences(sanitizeInlineHtml(value).replace(/<\/?strong>/g, ""))
+    : render === "title" ? stripEmphasisTags(value)
+    : render === "plain" ? plainText(value)
+    : value;
+  return shown
+    .replace(/\p{Cf}/gu, "")
+    .replace(/\u00a0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** 칸마다 화면 글자로 finder를 돌려 "라벨(경로): "문구"" 위반 목록을 만든다. */
+function adviceViolationsBy(content: unknown, label: string, finder: (text: string) => string[]): string[] {
+  const violations: string[] = [];
+  for (const [path, value, render] of marketProseFields(content)) {
+    const found = finder(marketAdviceText(value, render));
+    if (found.length > 0) violations.push(`${label}(${path}): ${found.map((f) => `"${f}"`).join(", ")}`);
+  }
+  return violations;
+}
+
+/**
+ * 매수·매도 권유 HARD 검사(Ruling 37·37e) — 독자에게 사라·팔라는 명령형만(lib/compliance.ts HARD_ADVICE_PATTERNS).
+ * 위반 목록(빈 배열이면 통과). 던지지 않는다. 본문 모든 칸(제목·부제·세 줄 요약·카드 한 줄·본문 블록·오늘 볼 것·의미·일정·마무리)을
+ * 화면 글자(marketAdviceText)로 칸마다 본다. 호출자(generateReport)는 1~2번째 시도에선 재생성 사유로, 마지막 시도에서도 막는다 —
+ * HARD가 남은 결과는 발송 후보가 될 수 없다(필수 항목 누락과 같다). 준법은 F02(전송 > 침묵)보다 앞선다.
+ */
+export function validateMarketAdvice(content: unknown): string[] {
+  return adviceViolationsBy(content, "투자 권유성 표현", findHardAdvice);
+}
+
+/**
+ * 권유성 단정 SOFT 검사(Ruling 37e) — 단정·보장·'지금 사야' 꼴(lib/compliance.ts SOFT_ADVICE_PATTERNS, 인용부호 안은 보지 않음).
+ * 부정·유보는 판정하지 않는다("지금은 매수 적기가 아닌 상황입니다"도 걸린다) — 그래서 일반 기준 위반으로만 다룬다:
+ * 1~2번째 시도는 재생성 사유, 마지막 시도는 경고만(F02). 발송 후보가 될 수 있고, 위반 수로 더 깨끗한 결과에 밀린다.
+ */
+export function validateMarketSoftAdvice(content: unknown): string[] {
+  return adviceViolationsBy(content, "권유성 단정 표현", findSoftAdvice);
 }
 
 /**
  * 선택 항목을 렌더·후속 로그가 던지지 않는 빈 값으로 맞춘다 — 발송하기로 한 content 에 한 번 적용한다.
  * 배열(watchPoints·soWhat·calendar·compass)이 없거나 배열이 아니면 [], 문자열(closingMessage·cover.subline)이 없으면 ''.
+ * Ruling 38: 배열 안의 깨진 원소(객체가 아니거나 내용이 빈 것)는 걸러 내고, 렌더러·run.ts 가 읽는 칸은 문자열로,
+ * 일정 중요도는 0~5 정수로 맞춘다(음수는 '★'.repeat 에서 던진다). bigStory.content 도 렌더할 수 있는 블록만 남긴다.
  * 필수 항목(validateMarketRequired)은 여기서 만들어 채우지 않는다. content 를 직접 고쳐 돌려준다.
  */
 export function normalizeMarketOptionalParts(content: ReportContent): ReportContent {
   const c = content as unknown as Record<string, unknown>;
-  for (const key of ["watchPoints", "soWhat", "calendar", "compass"]) {
-    if (!Array.isArray(c[key])) c[key] = [];
+  const objects = (v: unknown) => asArray(v).map(asRecord).filter((o): o is Record<string, unknown> => o !== null);
+
+  const bigStory = asRecord(c.bigStory);
+  if (bigStory) {
+    bigStory.content = asArray(bigStory.content).filter(isRenderableBlock).map((b) => {
+      const block = b as Record<string, unknown>;
+      if (block.type === "dataCard") {
+        block.title = asString(block.title);
+        block.rows = asArray(block.rows).filter(isDataRow);
+      }
+      return block;
+    });
   }
+  c.watchPoints = objects(c.watchPoints)
+    .filter((wp) => plainText(wp.title) || plainText(wp.description))
+    .map((wp) => Object.assign(wp, { badge: asString(wp.badge), title: asString(wp.title), description: asString(wp.description) }));
+  c.soWhat = objects(c.soWhat)
+    .filter((sw) => plainText(sw.title) || plainText(sw.body))
+    .map((sw) => Object.assign(sw, { title: asString(sw.title), body: asString(sw.body) }));
+  c.calendar = objects(c.calendar)
+    .filter((e) => plainText(e.event))
+    .map((e) => {
+      const n = Number(e.importance);
+      return Object.assign(e, { date: asString(e.date), country: asString(e.country), event: asString(e.event), importance: Number.isFinite(n) ? Math.min(5, Math.max(0, Math.trunc(n))) : 0 });
+    });
+  c.compass = objects(c.compass).map((s) => Object.assign(s, { items: objects(s.items) }));
+
   if (typeof content.closingMessage !== "string") content.closingMessage = "";
   if (content.cover && typeof content.cover.subline !== "string") content.cover.subline = "";
+  if (content.cover && content.cover.imageKeywords !== undefined) {
+    content.cover.imageKeywords = asArray(content.cover.imageKeywords).filter((k): k is string => typeof k === "string");
+  }
   return content;
 }
 
@@ -620,17 +776,21 @@ export async function generateReport(
   // 모델이 낸 JSON이 한 번 삐끗해도(예: 문자열 값 안 이스케이프 안 된 큰따옴표) 그날
   // 마켓 리포트 전체가 사망하지 않도록. ETF의 report-quality 재시도와 동형의 보호.
   const maxRetries = 3;
-  let content: ReportContent | null = null;
   let lastParseErr: unknown = null;
-  // 파싱은 됐지만 위반이 남은 앞선 결과 중 가장 나은 것(I2·Ruling 23, F02 "전송 > 침묵").
-  // 후보: 필수 항목(cover.headline·bigStory.content, Ruling 29)을 갖춘 결과만 — 빠진 결과는 렌더러가 던지므로
+  // 발송 후보: 파싱된 결과 전부(I2·Ruling 23, F02 "전송 > 침묵") — 위반이 남았어도 마지막 시도처럼(위반은 경고로만) 보낼 수 있다.
+  // 후보: 필수 항목(cover.headline·렌더할 수 있는 bigStory 블록, Ruling 29·38)을 갖춘 결과만 — 빠진 결과는 렌더러가 던지므로
   //   위반 수가 같거나 더 적어 보여도 후보가 되지 않는다(재생성 사유일 뿐).
-  // 선택: 카드 글자만 어긋난 결과(카드 외 위반 0) > 카드 외 위반이 가장 적은 결과 > 가장 최근 결과.
-  // 재생성을 이어가지 못하거나(예산 소진·후속 호출 실패·마지막 시도 파싱 실패·마지막 시도에 필수 항목 누락)
-  // 마지막 시도에 위반이 더 많이 남으면 이 결과를 마지막 시도처럼(위반은 경고로만) 발송한다.
-  // 후보가 한 번도 없을 때만 실패한다(파싱된 결과가 없거나, 파싱돼도 필수 항목을 갖춘 결과가 없을 때).
-  let best: { content: ReportContent; base: string[]; card: string[]; attempt: number } | null = null;
+  // Ruling 37: 매수·매도 권유 표현이 남은 결과도 후보가 되지 않는다(필수 항목 누락과 같다) — 마지막 시도에 남아도 발송할 수 없다.
+  // 선호 순서: 카드 외 위반이 적은 결과 > 같으면 더 최근 결과(카드 글자만 어긋난 결과는 카드 외 위반이 0이라 자연히 맨 앞).
+  //   마지막 시도 결과도 후보로 함께 겨룬다 — 앞선 결과가 카드 외 위반이 더 적을 때만 앞선 결과가 이긴다.
+  // 재생성을 이어가지 못해도(예산 소진·후속 호출 실패·마지막 시도 파싱 실패·마지막 시도에 필수 항목 누락·권유) 후보가 있으면 보낸다.
+  // Ruling 38: 고른 후보의 마무리·렌더가 던지면 다음 후보로 넘어간다. 후보가 한 번도 없거나 모두 렌더하지 못할 때만 실패한다.
+  type MarketCandidate = { content: ReportContent; base: string[]; card: string[]; attempt: number };
+  const candidates: MarketCandidate[] = [];
+  const preferenceOrder = () => [...candidates].sort((a, b) => a.base.length - b.base.length || b.attempt - a.attempt);
+  let settled = false; // 루프가 발송할 결과를 정하고 끝났다(위반 없는 결과 또는 마지막 시도 결과)
   let lastRequiredMissing: { attempt: number; fields: string[] } | null = null;
+  let lastAdvice: { attempt: number; fields: string[] } | null = null;
   let stopReason = "";
   const remaining = (k: { base: string[]; card: string[] }) => [...k.base, ...k.card].join(", ");
 
@@ -669,12 +829,13 @@ export async function generateReport(
         await new Promise((r) => setTimeout(r, attempt * 10000));
         continue;
       }
-      if (best) {
+      if (candidates.length > 0) {
         // 마지막 시도의 529도 여기로 온다 — 파싱된 앞선 결과가 있으면 침묵 대신 그 결과로(아래 루프 뒤에서 발송).
         stopReason = `재생성 호출 실패: ${err instanceof Error ? err.message : String(err)}`;
         console.log(`⚠️ ${stopReason}`);
         break;
       }
+      if (lastAdvice) console.error(`❌ 앞선 결과는 투자 권유성 표현이 남아 발송 후보가 아니다(${lastAdvice.attempt}회차: ${lastAdvice.fields.join(", ")})`);
       throw err;
     }
 
@@ -728,7 +889,8 @@ export async function generateReport(
       const requiredMissing = validateMarketRequired(parsed);
       if (requiredMissing.length > 0) lastRequiredMissing = { attempt, fields: requiredMissing };
       // Ruling 31: 제목·카드 한 줄의 기간 비교·최상급은 일반 기준 위반(1~2번째 재생성, 마지막 시도 경고만).
-      const baseViolations = [...temporal.violations, ...requiredMissing, ...validateMarketSummary(parsed), ...validateMarketComparativeClaims(parsed)];
+      // Ruling 37e: 권유성 단정(SOFT)도 일반 기준 위반 — 해설에 섞여 걸려도 재생성 한 번이 비용이고 마지막 시도는 경고만.
+      const baseViolations = [...temporal.violations, ...requiredMissing, ...validateMarketSummary(parsed), ...validateMarketComparativeClaims(parsed), ...validateMarketSoftAdvice(parsed)];
       const citationCount = countCitationPhrases(sourceFix.fixed);
       if (citationCount >= 8) {
         baseViolations.push(`"에 따르면" 인용 ${citationCount}회 과다`);
@@ -737,17 +899,19 @@ export async function generateReport(
       }
       // 카드 글자 맞춤: 1~2번째 시도에선 다시 쓰게 하는 사유, 마지막 시도에선 아래 "위반 잔존" 경고로만 남는다.
       const cardViolations = validateMarketCardText(parsed);
-      const hardViolations = [...baseViolations, ...cardViolations];
+      // Ruling 37·37e: 매수·매도 권유 HARD(명령형) — 모든 시도에서 위반(마지막 시도도 경고로 넘기지 않는다).
+      const adviceViolations = validateMarketAdvice(parsed);
+      if (adviceViolations.length > 0) lastAdvice = { attempt, fields: adviceViolations };
+      const hardViolations = [...baseViolations, ...adviceViolations, ...cardViolations];
+      // 필수 항목이 빠진 결과·권유 표현이 남은 결과는 후보에서 뺀다 — 위반 수로 겨루면 발송할 수 있는 결과를 밀어낼 수 있다.
+      if (requiredMissing.length === 0 && adviceViolations.length === 0) {
+        candidates.push({ content: parsed, base: baseViolations, card: cardViolations, attempt });
+      }
 
       if (hardViolations.length > 0 && attempt < maxRetries) {
         // ETF 와 달리 market 엔 Tier 1 fallback 이 없으므로, 남은 재시도가 있으면 re-roll.
         console.log(`♻️ 정합성 위반 ${hardViolations.length}건 — 재생성 (${attempt + 1}/${maxRetries}): ${hardViolations.join(", ")}`);
         lastParseErr = new Error(`정합성 위반: ${hardViolations.join(", ")}`);
-        // 같은 수면 더 최근 결과(<=). 카드 글자만 어긋난 결과는 카드 외 위반이 0이라 자연히 맨 앞이다.
-        // 필수 항목이 빠진 결과는 후보에서 뺀다 — 위반 수로 겨루면 갖춘 결과를 밀어낼 수 있다.
-        if (requiredMissing.length === 0 && (!best || baseViolations.length <= best.base.length)) {
-          best = { content: parsed, base: baseViolations, card: cardViolations, attempt };
-        }
         continue;
       }
       if (requiredMissing.length > 0) {
@@ -757,12 +921,18 @@ export async function generateReport(
         console.error(`❌ 마지막 시도(${attempt}/${maxRetries})에 필수 항목 누락 — 이 결과는 발송할 수 없다: ${requiredMissing.join(", ")}`);
         continue;
       }
+      if (adviceViolations.length > 0) {
+        // 마지막 시도에 권유 표현이 남았다 — 준법 위반은 경고로 넘기지 않는다. 권유 없는 앞선 결과가 있으면 그 결과로, 없으면 실패한다.
+        lastParseErr = new Error(`투자 권유성 표현: ${adviceViolations.join(", ")}`);
+        console.error(`❌ 마지막 시도(${attempt}/${maxRetries})에 투자 권유성 표현 — 이 결과는 발송할 수 없다: ${adviceViolations.join(", ")}`);
+        continue;
+      }
       if (hardViolations.length > 0) {
         // maxRetries 소진 — "품질 낮아도 전송 > 침묵" 원칙으로 발송 진행(위반은 경고로만).
-        if (best && best.base.length < baseViolations.length) {
+        const top = preferenceOrder()[0];
+        if (top.attempt !== attempt) {
           // 마지막 시도에 카드 외 위반이 더 많이 남았다 → 위반이 적은 앞선 결과가 더 깨끗하다.
-          console.log(`⚠️ 마지막 시도에 정합성 위반 잔존(${hardViolations.join(", ")}) — 위반이 더 적은 앞선 결과로 발송 진행(${best.attempt}회차, 남은 위반: ${remaining(best)})`);
-          parsed = best.content;
+          console.log(`⚠️ 마지막 시도에 정합성 위반 잔존(${hardViolations.join(", ")}) — 위반이 더 적은 앞선 결과로 발송 진행(${top.attempt}회차, 남은 위반: ${remaining(top)})`);
         } else {
           console.log(`⚠️ 정합성 위반 잔존(발송 진행): ${hardViolations.join(", ")}`);
         }
@@ -773,17 +943,22 @@ export async function generateReport(
       continue;
     }
 
-    content = parsed;
+    settled = true;
     break; // 파싱·정합성 통과(또는 재시도 소진)
   }
 
-  if (!content && best) {
-    // 마지막 호출을 못 했거나(예산) 실패했거나 파싱되지 않았다 — 앞선 결과를 마지막 시도처럼(위반은 경고로만) 발송한다.
+  if (candidates.length > 0 && !settled) {
+    // 마지막 호출을 못 했거나(예산) 실패했거나 파싱·검증되지 않았다 — 앞선 결과를 마지막 시도처럼(위반은 경고로만) 발송한다.
+    const top = preferenceOrder()[0];
     const why = stopReason || `마지막 시도 JSON 파싱·검증 실패: ${lastParseErr}`;
-    console.log(`⚠️ 재생성을 이어가지 못해(${why}) 앞선 결과로 발송 진행(${best.attempt}회차, 남은 위반: ${remaining(best)})`);
-    content = best.content;
+    console.log(`⚠️ 재생성을 이어가지 못해(${why}) 앞선 결과로 발송 진행(${top.attempt}회차, 남은 위반: ${remaining(top)})`);
   }
-  if (!content) {
+  if (candidates.length === 0) {
+    if (lastAdvice) {
+      // 파싱은 됐지만 권유 표현 없는(필수 항목도 갖춘) 결과가 한 번도 없었다 — 준법 위반 리포트는 보내지 않고 크게 실패한다.
+      const required = lastRequiredMissing ? ` · ${lastRequiredMissing.attempt}회차 필수 항목 누락: ${lastRequiredMissing.fields.join(", ")}` : "";
+      throw new Error(`Market 리포트 투자 권유성 표현 — ${lastAdvice.attempt}회차 응답에 ${lastAdvice.fields.join(", ")}${required}, 권유 표현 없이 발송할 수 있는 결과가 없어 발송하지 않습니다 (${maxRetries}회 시도): ${lastParseErr}`);
+    }
     if (lastRequiredMissing) {
       // 파싱은 됐지만 필수 항목을 갖춘 결과가 한 번도 없었다 — 제목·본문 없는 리포트는 만들 수 없으니 크게 실패한다.
       throw new Error(`Market 리포트 필수 항목 누락 — ${lastRequiredMissing.attempt}회차 응답에 ${lastRequiredMissing.fields.join(", ")}, 필수 항목을 갖춘 앞선 결과도 없어 발송할 수 없습니다 (${maxRetries}회 시도): ${lastParseErr}`);
@@ -791,6 +966,32 @@ export async function generateReport(
     throw new Error(`Claude JSON 파싱 실패 (${maxRetries}회 시도): ${lastParseErr}`);
   }
 
+  // Ruling 38: 선호 순서대로 마무리·렌더한다 — 고른 결과가 던지면(모양이 깨진 응답) 다음 후보로. 모두 실패할 때만 실패한다.
+  const ordered = preferenceOrder();
+  let finalizeErr: unknown = null;
+  for (const [i, candidate] of ordered.entries()) {
+    if (i > 0) console.log(`⚠️ 다음 후보로 발송 진행(${candidate.attempt}회차, 남은 위반: ${remaining(candidate)})`);
+    try {
+      return finalizeMarketReport(candidate.content, data, ctx ?? defaultCtx, context);
+    } catch (err) {
+      finalizeErr = err;
+      const next = i + 1 < ordered.length ? "다음 후보로" : "남은 후보 없음";
+      console.error(`❌ ${candidate.attempt}회차 결과 마무리·렌더 실패 — ${next}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+  throw new Error(`Market 리포트 렌더 실패 — 발송 후보 ${ordered.length}개를 모두 렌더하지 못했습니다: ${finalizeErr instanceof Error ? finalizeErr.message : String(finalizeErr)}`);
+}
+
+/**
+ * 발송하기로 한 content 를 마무리해 HTML로 렌더한다 — 선택 항목 보정·금지 표현 기록·요약 기본값·일정 교체·권유 재검사·렌더.
+ * content 를 직접 고친다. 던지면 호출자(generateReport)가 다음 발송 후보로 넘어간다(Ruling 38).
+ */
+function finalizeMarketReport(
+  content: ReportContent,
+  data: MarketDataCollection,
+  ctx: AntiRepetitionContext,
+  context: ContextData | null | undefined,
+): { html: string; content: ReportContent } {
   // 발송할 content 의 선택 항목을 빈 값으로 맞춘다 — 아래 로그·렌더·run.ts(내러티브 로그·인덱스)가 던지지 않게.
   normalizeMarketOptionalParts(content);
 
@@ -835,9 +1036,14 @@ export async function generateReport(
     console.log(`📅 캘린더: 실제 경제 데이터에서 ${content.calendar.length}건 사용 (Claude 생성 대체)`);
   }
 
+  // Ruling 37·37e: 발송할 content(기본 문장·실제 일정을 채운 뒤)도 HARD 검사를 통과해야 한다 — 후보는 이미 통과했으므로 방어선.
+  // 매 시도 검사와 같은 화면 글자 함수(marketAdviceText)를 쓴다. SOFT는 루프에서 이미 경고로 남겼다(F02).
+  const finalAdvice = validateMarketAdvice(content);
+  if (finalAdvice.length > 0) throw new Error(`Market 리포트 투자 권유성 표현 — 발송할 결과에 ${finalAdvice.join(", ")}`);
+
   // 코드 템플릿으로 HTML 렌더링 (Phase 1: 모드 전달)
   const historicalData = context?.historicalComparison ?? [];
-  const mode = (ctx ?? defaultCtx).marketMode?.mode;
+  const mode = ctx.marketMode?.mode;
   // C09: 입력으로 준 뉴스 일부를 원문 링크와 함께 리포트에 남긴다.
   const sources = (context?.news ?? []).map((n) => ({ title: n.title, source: n.source, url: n.url }));
   const html = renderReport(content, data, historicalData, mode, sources, context?.kospiSessions ?? []);

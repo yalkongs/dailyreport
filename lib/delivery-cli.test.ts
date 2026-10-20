@@ -320,7 +320,10 @@ test("resolve: 재실행(attempt 2)에서 status 조회만 실패하면 CHANGED=
   });
 });
 
-test("resolve: 첫 시도(attempt 1)에서는 방금 생성한 리포트를 status 조회 실패와 무관하게 보낸다(기존 동작)", async () => {
+// Ruling 39: resolve의 '방금 생성' 판정(조회 실패여도 send, resend=false)은 그대로 둔다 — 다만 이 결과로 바로 보내지 않는다.
+// send step이 resend와 무관하게 발송 직전 status를 다시 읽어 success·pending이면 건너뛴다(겹친 only=market 실행이 먼저 보낸 경우).
+// 재확인 조회마저 실패하면 방금 생성(resend=false)은 경고 후 보낸다(전송 > 침묵). 셸 동작은 workflow-shell 테스트가 본다.
+test("resolve: 첫 시도(attempt 1)에서는 방금 생성한 리포트를 status 조회 실패와 무관하게 send(resend=false) — 발송 직전 재확인은 send step이 한다", async () => {
   const repo = todayRepo();
   await fakeGitHub("status-500", async (api) => {
     const r = await runCli("delivery-state.ts", ["resolve", "market"], { ...resolveEnv(api, repo.dir), CHANGED: "true" });
@@ -328,6 +331,13 @@ test("resolve: 첫 시도(attempt 1)에서는 방금 생성한 리포트를 stat
     assert.match(r.output, /^action=send$/m);
     assert.match(r.output, /^resend=false$/m);
   });
+  const yml = fs.readFileSync(path.join(ROOT, ".github", "workflows", "daily-report.yml"), "utf8");
+  for (const kind of ["market", "etf"]) {
+    const send = yml.slice(yml.indexOf(`- name: send ${kind}`));
+    const run = send.slice(0, send.indexOf(`delivery-state.ts mark ${kind} "$REPORT_SHA" pending`));
+    assert.match(run, new RegExp(`delivery-state\\.ts status ${kind} "\\$REPORT_SHA"`), `send ${kind}: pending 기록 전에 재확인`);
+    assert.doesNotMatch(run, /if \[ "\$IS_RESEND" = "true" \] && \[ "\$FORCE_RESEND" != "true" \]/, `send ${kind}: 재확인이 재발송 경로에만 묶이지 않는다`);
+  }
 });
 
 test("resolve: 재실행(attempt 2)에서 status가 없으면 일반 경로로 send — 발송 직전 재확인·cache-bust(resend=true)", async () => {

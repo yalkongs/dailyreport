@@ -27,7 +27,7 @@ import { buildAssetClassSlots, cardSlot, type AssetClassSlot, type AssetRep } fr
 import { buildMosaicTiles, renderEtfCardSvg, renderMosaicSvg, saveCardPng, type MosaicTile } from '../preview/data-card'
 import { LEGAL_DISCLAIMER_ITEMS, LEGAL_DISCLAIMER_TITLE } from '../legal-disclaimer'
 import { koreanWeekday } from '../market-calendar'
-import { previousSessionLabel } from '../session-label'
+import { previousSessionLabel, usPreviousSessionDate, usPreviousSessionNote } from '../session-label'
 
 export function escapeHtml(s: string): string {
   return s
@@ -422,8 +422,10 @@ function filled(text: unknown): text is string {
 const MOSAIC_VIEW_W = 1080
 const MOSAIC_VIEW_H = 600
 // M6: "어제"는 직전 한국 거래일 라벨로(월요일 '지난 금요일', 휴장 다음 날 '직전 거래일').
+// Ruling 40: 미국 직전 거래일이 한국과 다른 날은 미국 날짜를 붙인다(" · 미국은 11/25(수) 종가") — 평일은 그대로.
 function mosaicCaption(date: string): string {
-  return `${previousSessionLabel(date)} 분석한 ETF 등락(Korea·USA, 레버리지·인버스 제외)`
+  const us = usPreviousSessionNote(date)
+  return `${previousSessionLabel(date)} 분석한 ETF 등락(Korea·USA, 레버리지·인버스 제외)${us ? ` · ${us}` : ''}`
 }
 
 // Market 머리글과 같은 날짜 표기: "2026년 10월 16일 금요일"
@@ -489,15 +491,18 @@ function renderAssetCards(report: MorningReport, quotes: EtfQuote[], slots: Asse
   if (slots.length === 0) return ''
   const cards = Array.isArray(report.assetCards) ? report.assetCards : []
   const session = previousSessionLabel(date) // M6: 어제·지난 금요일·직전 거래일
+  // Ruling 40: 미국 대표 ETF가 있는 카드는 미국 직전 거래일이 한국과 다른 날 미국 날짜를 붙인다.
+  const usNote = usPreviousSessionNote(date)
   return `<section class="section" data-section="asset-cards">
   <div class="section-title">자산군별 판단 재료</div>
   <p class="section-note">${e(session)} 많이 움직인 자산군부터 놓았습니다. 대표 ETF는 흐름을 보여 주는 예시이며 추천 종목이 아닙니다.</p>
   <div class="asset-grid">
   ${slots.map(slot => {
     const card = cards.find(c => typeof c === 'object' && c !== null && c.key === slot.key)
+    const moveLabel = usNote && slot.reps.some(rep => rep.market === 'US') ? `${session} 움직임 · ${usNote}` : `${session} 움직임`
     return `<article class="asset-card" data-asset="${e(slot.key)}">
     <div class="asset-label">${e(slot.label)}</div>
-    <div class="field-label">${e(session)} 움직임</div>
+    <div class="field-label">${e(moveLabel)}</div>
     <ul class="rep-list">${slot.reps.map(renderRepRow).join('')}</ul>
     ${renderAssetField('이유', card?.reason, quotes)}${renderAssetField('갖고 있다면', card?.ifHolding, quotes)}${renderAssetField('새로 본다면', card?.ifConsidering, quotes)}
   </article>`
@@ -566,10 +571,12 @@ function renderDetails(data: CollectedData): string {
   const kr = data.quotes.filter(q => q.market === 'KR')
   const us = data.quotes.filter(q => q.market === 'US')
   if (kr.length === 0 && us.length === 0) return ''
+  // Ruling 40: 미국 직전 거래일이 한국과 다른 날은 '간밤' 대신 미국 날짜.
+  const usSession = usPreviousSessionDate(data.date)
   return `<details class="section details" data-section="details">
   <summary>국내·미국 ETF 전체 등락 펼쳐 보기</summary>
   ${renderEtfTable('국내 ETF · 직전 한국 장', kr)}
-  ${renderEtfTable('미국 ETF · 간밤 미국 장', us)}
+  ${renderEtfTable(`미국 ETF · ${usSession ?? '간밤'} 미국 장`, us)}
   <p class="table-note">등락률 높은 순입니다. 추정 거래대금은 종가 × 거래량(국내 원, 미국 달러)으로 계산한 참고값입니다.</p>
 </details>`
 }

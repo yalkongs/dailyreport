@@ -324,10 +324,10 @@ case "$url" in
   *) resp="\${PAGE_RESP:-200 text/html; charset=utf-8}" ;;
 esac
 printf '%s' "$resp"`;
-// 가짜 npx(delivery-state CLI): classify는 success, status는 none, mark는 기록만.
+// 가짜 npx(delivery-state CLI): classify는 success, status는 STATUS_RESP(기본 none — 실제 CLI는 조회 실패 때 error를 찍고 exit 0), mark는 기록만.
 const NPX_STUB = `case "$*" in
   *" classify"*) cat > /dev/null; echo success; echo ok:true ;;
-  *" status "*) echo none ;;
+  *" status "*) echo "\${STATUS_RESP:-none}" ;;
 esac`;
 
 const sendCases = [
@@ -353,6 +353,7 @@ for (const c of sendCases) {
   const stubs = { curl: CURL_STUB, npx: NPX_STUB, sleep: "exit 0" };
   const telegramCalls = (r: ShellResult) => r.calls("curl").filter((l) => l.includes("api.telegram.org"));
   const markCalls = (r: ShellResult) => r.calls("npx").filter((l) => l.includes(" mark "));
+  const statusCalls = (r: ShellResult) => r.calls("npx").filter((l) => l.includes(" status "));
   const pngChecks = (r: ShellResult) =>
     r.calls("curl").filter((l) => l.includes("-preview.png") && !l.includes("api.telegram.org"));
 
@@ -415,6 +416,59 @@ for (const c of sendCases) {
       const png = `${base}-preview.png?v=123`;
       assert.ok(r.calls("curl").some((l) => l.endsWith(` ${png}`)), r.calls("curl").join("\n"));
       assert.ok(telegramCalls(r)[0].includes(`photo=${png}`), telegramCalls(r)[0]);
+      assert.equal(statusCalls(r).length, 0, "사람의 명시적 재발송(FORCE_RESEND)은 재확인을 우회한다");
+    });
+
+    // Ruling 39: 발송 직전 재확인은 resend 여부와 무관하다 — 첫 실행이 status를 못 읽은 채 '방금 생성'(resend=false)으로
+    // 보내는 사이 겹친 실행(only=market 등)이 먼저 보냈을 수 있다.
+    for (const isResend of ["false", "true"] as const) {
+      for (const already of ["success", "pending"] as const) {
+        test(`${c.job} 발송 [bash ${mode}]: resend=${isResend}여도 발송 직전 status가 ${already}면 보내지 않는다(pending 기록도 없음)`, () => {
+          const r = runStep(script, stubs, { ...env, IS_RESEND: isResend, STATUS_RESP: already }, flags);
+          assert.equal(r.status, 0, r.out);
+          assert.match(r.out, new RegExp(`발송 생략: 현재 status=${already}`));
+          assert.equal(statusCalls(r).length, 1);
+          assert.match(statusCalls(r)[0], new RegExp(`delivery-state\\.ts status ${c.job} ${FAKE_SHA}$`));
+          assert.equal(telegramCalls(r).length, 0);
+          assert.equal(markCalls(r).length, 0);
+        });
+      }
+    }
+
+    test(`${c.job} 발송 [bash ${mode}]: 방금 생성(resend=false)이면 재확인을 하고, status가 없으면 보낸다`, () => {
+      const r = runStep(script, stubs, env, flags);
+      assert.equal(r.status, 0, r.out);
+      assert.equal(statusCalls(r).length, 1);
+      assert.equal(telegramCalls(r).length, 1);
+      // 재확인은 pending 기록·발송보다 먼저
+      const npx = r.calls("npx");
+      assert.ok(npx.findIndex((l) => l.includes(" status ")) < npx.findIndex((l) => l.includes(" mark ")), npx.join("\n"));
+    });
+
+    test(`${c.job} 발송 [bash ${mode}]: 방금 생성(resend=false)인데 재확인 조회가 실패하면 경고하고 보낸다(전송 > 침묵)`, () => {
+      const r = runStep(script, stubs, { ...env, STATUS_RESP: "error" }, flags);
+      assert.equal(r.status, 0, r.out);
+      assert.match(r.out, /::warning::발송 상태 재확인 실패\(status=error\)/);
+      assert.equal(telegramCalls(r).length, 1);
+      assert.equal(markCalls(r).length, 2);
+    });
+
+    test(`${c.job} 발송 [bash ${mode}]: 재발송(resend=true)인데 재확인 조회가 실패하면 보내지 않고 exit 1(기존대로)`, () => {
+      const r = runStep(script, stubs, { ...env, IS_RESEND: "true", STATUS_RESP: "error" }, flags);
+      assert.equal(r.status, 1, r.out);
+      assert.match(r.out, /::error::발송 상태 재확인 실패\(status=error\)/);
+      assert.equal(telegramCalls(r).length, 0);
+      assert.equal(markCalls(r).length, 0);
+    });
+
+    test(`${c.job} 발송 [bash ${mode}]: 재확인 명령 자체가 실패해도(빈 출력) resend에 따라 같은 규칙`, () => {
+      const crash = { ...stubs, npx: `case "$*" in *" status "*) exit 7 ;; esac\n${NPX_STUB}` };
+      const fresh = runStep(script, crash, env, flags);
+      assert.equal(fresh.status, 0, fresh.out);
+      assert.equal(telegramCalls(fresh).length, 1);
+      const resend = runStep(script, crash, { ...env, IS_RESEND: "true" }, flags);
+      assert.equal(resend.status, 1, resend.out);
+      assert.equal(telegramCalls(resend).length, 0);
     });
   }
 }

@@ -204,14 +204,45 @@ test('og:description: 길면 오늘 핵심은 그대로 두고 해외 신호를 
 // M6 (Ruling 26): 모자이크 설명·자산군 카드의 고정 라벨 "어제"는 직전 한국 거래일에 맞춘다.
 test('고정 라벨: 금요일 발행은 어제, 월요일은 지난 금요일, 휴장 다음 날은 직전 거래일', () => {
   const at = (date: string) => renderMorningHtml(report, { ...data, date })
-  for (const [date, label] of [['2026-10-16', '어제'], ['2026-10-19', '지난 금요일'], ['2026-10-12', '직전 거래일']] as const) {
+  // 10/12는 한국만 휴장(한글날 10/09) — 미국 직전 거래일(10/09)이 한국(10/08)과 달라 모자이크 설명에 미국 날짜가 붙는다(Ruling 40).
+  for (const [date, label, us] of [['2026-10-16', '어제', ''], ['2026-10-19', '지난 금요일', ''], ['2026-10-12', '직전 거래일', ' · 미국은 10/9\\(금\\) 종가']] as const) {
     const html = at(date)
-    assert.match(html, new RegExp(`<figcaption>${label} 분석한 ETF 등락\\(Korea·USA, 레버리지·인버스 제외\\)</figcaption>`), date)
+    assert.match(html, new RegExp(`<figcaption>${label} 분석한 ETF 등락\\(Korea·USA, 레버리지·인버스 제외\\)${us}</figcaption>`), date)
     assert.match(html, new RegExp(`aria-label="${label} 분석한 ETF 등락`), date)
     assert.match(html, new RegExp(`<div class="field-label">${label} 움직임</div>`), date)
     assert.match(html, new RegExp(`${label} 많이 움직인 자산군부터 놓았습니다`), date)
     if (label !== '어제') assert.doesNotMatch(html.slice(html.indexOf('<body')), /어제 (분석한|움직임|많이 움직인)/, date)
   }
+})
+
+// Ruling 40 (2026-10-20): 미국 직전 거래일이 한국과 다른 날(11/27: 한국 11/26 · 미국 11/25 — 추수감사절)은 미국 숫자가 나오는 곳에
+// 미국 날짜를 밝힌다 — 미국 대표 ETF가 있는 자산군 카드, 모자이크 설명(Korea·USA), 펼쳐 보기의 미국 ETF 표 제목. 평일은 오늘과 같다.
+test('미국 날짜: 미국 직전 거래일이 한국과 다르면 미국 대표가 있는 카드·모자이크 설명·미국 표 제목에 밝힌다(11/27)', () => {
+  const html = renderMorningHtml(report, { ...data, date: '2026-11-27' })
+  assert.match(html, /<figcaption>어제 분석한 ETF 등락\(Korea·USA, 레버리지·인버스 제외\) · 미국은 11\/25\(수\) 종가<\/figcaption>/)
+  assert.match(html, /aria-label="어제 분석한 ETF 등락\(Korea·USA, 레버리지·인버스 제외\) · 미국은 11\/25\(수\) 종가"/)
+  assert.match(assetCard(html, 'us-equity'), /<div class="field-label">어제 움직임 · 미국은 11\/25\(수\) 종가<\/div>/)
+  for (const key of ['kr-semi', 'kr-large']) {
+    const card = assetCard(html, key)
+    assert.match(card, /<div class="field-label">어제 움직임<\/div>/, key)
+    assert.doesNotMatch(card, /미국은/, `${key}: 국내 대표만 있는 카드에는 붙이지 않는다`)
+  }
+  assert.match(html, /미국 ETF · 11\/25\(수\) 미국 장 \(1개\)/)
+  assert.doesNotMatch(html, /간밤 미국 장 \(/)
+})
+
+test('미국 날짜: 양국 직전 거래일이 같은 평일(화)은 지금과 똑같다 — 미국 날짜를 붙이지 않는다', () => {
+  const html = renderMorningHtml(report, { ...data, date: '2026-10-20' })
+  assert.match(html, /<figcaption>어제 분석한 ETF 등락\(Korea·USA, 레버리지·인버스 제외\)<\/figcaption>/)
+  assert.match(assetCard(html, 'us-equity'), /<div class="field-label">어제 움직임<\/div>/)
+  assert.match(html, /미국 ETF · 간밤 미국 장 \(1개\)/)
+  assert.doesNotMatch(html.slice(html.indexOf('<body')), /미국은 \d/)
+})
+
+test('미국 날짜: 한국만 휴장한 다음 날(10/12)은 미국 날짜가 한국보다 늦다 — 미국 대표 카드에 10/9(금)', () => {
+  const html = renderMorningHtml(report, { ...data, date: '2026-10-12' })
+  assert.match(assetCard(html, 'us-equity'), /<div class="field-label">직전 거래일 움직임 · 미국은 10\/9\(금\) 종가<\/div>/)
+  assert.match(html, /미국 ETF · 10\/9\(금\) 미국 장 \(1개\)/)
 })
 
 // M2 (spec §4): og:title = 제목(Market과 같이 접두어 없이). 제목이 비면 날짜 기반 기본값.

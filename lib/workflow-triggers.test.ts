@@ -256,13 +256,18 @@ for (const kind of ["market", "etf"] as const) {
     assert.match(s, /--max-time 30/);
   });
 
-  test(`deliver ${kind}: 발송 직전 재확인은 재발송 경로에서만 하고, 조회 실패는 조용히 넘기지 않는다`, () => {
+  // Ruling 39: 재확인은 resend 여부와 무관하게(사람의 명시적 재발송만 우회) — 조회 실패만 resend에 따라 갈린다.
+  test(`deliver ${kind}: 발송 직전 재확인은 resend와 무관하게 하고, 조회 실패는 재발송이면 막고 방금 생성이면 경고 후 보낸다`, () => {
     const s = stepBlock(jobBlock(yml, "deliver"), `send ${kind}`);
-    assert.match(s, /if \[ "\$IS_RESEND" = "true" \] && \[ "\$FORCE_RESEND" != "true" \]; then/);
-    assert.match(s, new RegExp(`delivery-state\\.ts status ${kind} "\\$REPORT_SHA"`));
+    assert.match(s, /\n {10}if \[ "\$FORCE_RESEND" != "true" \]; then/);
+    assert.doesNotMatch(s, /if \[ "\$IS_RESEND" = "true" \] && \[ "\$FORCE_RESEND" != "true" \]; then/);
+    assert.match(s, new RegExp(`delivery-state\\.ts status ${kind} "\\$REPORT_SHA" \\| tail -1\\) \\|\\| true`));
     assert.match(s, /success\|pending\)/);
     assert.match(s, /::error::발송 상태 재확인 실패/);
+    assert.match(s, /::warning::발송 상태 재확인 실패/);
     assert.match(s, /::error::Telegram \$\{STATE\} 이후 상태 기록 실패/);
+    // 재확인은 pending 기록(발송 직전) 앞
+    assert.ok(s.indexOf(`delivery-state.ts status ${kind}`) < s.indexOf(`delivery-state.ts mark ${kind} "$REPORT_SHA" pending`));
   });
 }
 
