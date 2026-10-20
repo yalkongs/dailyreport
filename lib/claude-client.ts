@@ -25,8 +25,8 @@ import { softFixUnquotableSources, countCitationPhrases, QUOTABLE_SOURCES } from
 import { renderPolicyRateBlock, POLICY_RATE_RULE, findPolicyDirectionMismatches, extractReportText } from "./policy-rate";
 // Ruling 31 (2026-10-19): 제목·카드 한 줄의 확인할 수 없는 기간 비교·최상급 표현(ETF와 공용).
 import { comparativeClaimViolations } from "./comparative-claims";
-// Ruling 37 (2026-10-20): 매수·매도 권유 표현(ETF와 공용 목록) — 마지막 시도에도 막는다.
-import { findInvestmentAdvice } from "./compliance";
+// Ruling 37·37a (2026-10-20): 독자에게 사라·팔라는 지시형·수익 보장(Market용 좁은 목록) — 마지막 시도에도 막는다.
+import { findDirectiveAdvice } from "./compliance";
 
 // F07: 요청 상한·SDK 재시도를 명시(기본 10분·2회는 job 상한 20분과 맞지 않았다).
 const client = new Anthropic({ timeout: CLAUDE_REQUEST_TIMEOUT_MS, maxRetries: CLAUDE_MAX_RETRIES });
@@ -104,7 +104,7 @@ ${EVIDENCE_RULES}
 2. **시장별 칸막이 금지**: 하나의 이야기 흐름 안에서 각 시장을 자연스럽게 엮을 것.
 3. **인과관계 체인**: 사건 → 원인 → 파급 → 한국 영향 순서로 서술할 것.
 4. **맥락 제공**: historicalComparison 데이터로 현재 수치의 위치를 보여줄 것. historicalComparison·[정책금리] 블록에 포함되지 않은 과거 수치는 절대 사용 금지.
-5. **방향성 제시, 추천 금지**: 특정 종목 매수·매도 추천은 절대 금지. "비중 확대"·"신규 진입"·"매수 검토"·"분할 접근"·"무조건"·"~하세요/~하십시오" 같은 권유형 표현은 기관·외신 의견을 옮길 때도 쓰지 마십시오(검사가 권유로 보고 다시 쓰게 합니다).
+5. **방향성 제시, 추천 금지**: 특정 종목 매수·매도 추천은 절대 금지. 독자에게 사라·팔라는 지시형("~하세요·~하십시오", "비중을 줄이세요")과 "강력 매수"·"폭등 예상"·"확실한 수익"·"필수 매수" 같은 단정은 쓰지 마십시오(검사가 막고 다시 쓰게 합니다). 기관·외신 의견은 출처와 함께 사실로만 옮기십시오.
 
 ## ⛔ 트리비얼 연결 금지 목록
 
@@ -623,15 +623,17 @@ function marketProseFields(content: unknown): Array<[string, unknown]> {
 }
 
 /**
- * 매수·매도 권유 표현 검사(Ruling 37) — 위반 목록(빈 배열이면 통과). 던지지 않는다.
- * ETF와 같은 목록(lib/compliance.ts)으로 본문 모든 칸(제목·부제·세 줄 요약·카드 한 줄·본문 블록·오늘 볼 것·의미·일정·마무리)을
- * 강조 태그를 벗기고 칸마다 본다. 호출자(generateReport)는 1~2번째 시도에선 재생성 사유로, 마지막 시도에서도 막는다 —
+ * 매수·매도 권유 표현 검사(Ruling 37·37a) — 위반 목록(빈 배열이면 통과). 던지지 않는다.
+ * Market용 좁은 목록(lib/compliance.ts DIRECTIVE_ADVICE_PATTERNS — 독자에게 사라·팔라는 지시형과 수익 보장만)으로
+ * 본문 모든 칸(제목·부제·세 줄 요약·카드 한 줄·본문 블록·오늘 볼 것·의미·일정·마무리)을 강조 태그를 벗기고 칸마다 본다.
+ * ETF 전체 목록은 쓰지 않는다 — "현지 생산 비중 확대"·증권사 '비중확대' 의견 같은 해설이 걸려 세 번 다 막히면 Market이 멈춘다(37a).
+ * 호출자(generateReport)는 1~2번째 시도에선 재생성 사유로, 마지막 시도에서도 막는다 —
  * 권유 표현이 남은 결과는 발송 후보가 될 수 없다(필수 항목 누락과 같다). 준법은 F02(전송 > 침묵)보다 앞선다.
  */
 export function validateMarketAdvice(content: unknown): string[] {
   const violations: string[] = [];
   for (const [path, value] of marketProseFields(content)) {
-    const found = findInvestmentAdvice(plainText(value));
+    const found = findDirectiveAdvice(plainText(value));
     if (found.length > 0) violations.push(`투자 권유성 표현(${path}): ${found.map((f) => `"${f}"`).join(", ")}`);
   }
   return violations;

@@ -539,16 +539,16 @@ test('권유 관문: 본문 모든 칸의 매수·매도 권유를 칸 이름과
   }
   const cases: Array<[string, (o: Editable) => void]> = [
     ['cover.headline', (o) => { o.cover.headline = '반도체 <strong>지금 사세요</strong>' }],
-    ['cover.subline', (o) => { o.cover.subline = '반도체 비중 확대 구간' }],
-    ['summary.yesterday', (o) => { o.summary.yesterday = '무조건 오르는 장이었습니다.' }],
-    ['summary.today', (o) => { o.summary.today = '개장 뒤 신규 진입을 노려볼 만합니다.' }],
+    ['cover.subline', (o) => { o.cover.subline = '반도체 비중을 높이는 것이 좋습니다' }],
+    ['summary.yesterday', (o) => { o.summary.yesterday = '확실한 수익 구간이었습니다.' }],
+    ['summary.today', (o) => { o.summary.today = '개장 뒤 필수 매수 종목을 봅니다.' }],
     ['cardLine.text', (o) => { o.cardLine.text = '반도체는 매수해야 할 때입니다' }],
-    ['bigStory.content[1].text', (o) => { o.bigStory.content.push({ type: 'pullQuote', text: '분할 접근이 답입니다.' }) }],
-    ['bigStory.content[0].text', (o) => { o.bigStory.content[0].text = '이제 <strong>매수 검토</strong>가 필요합니다.' }],
+    ['bigStory.content[1].text', (o) => { o.bigStory.content.push({ type: 'pullQuote', text: '폭등 예상 구간입니다.' }) }],
+    ['bigStory.content[0].text', (o) => { o.bigStory.content[0].text = '이제 <strong>매도하십시오</strong>.' }],
     ['watchPoints[0].description', (o) => { o.watchPoints = [{ badge: '09:00', title: '개장', description: '반도체 ETF를 담으세요.' }] }],
     ['soWhat[0].body', (o) => { o.soWhat = [{ title: '확인되면', body: '확인되면 비중을 늘리세요.' }] }],
     ['calendar[0].event', (o) => { o.calendar = [{ date: '10/21', country: '한국', event: '강력 매수 신호', importance: 3 }] }],
-    ['closingMessage', (o) => { o.closingMessage = '지금 사도 늦지 않습니다.' }],
+    ['closingMessage', (o) => { o.closingMessage = '지금은 반도체를 편입하시기 바랍니다.' }],
   ]
   for (const [path, edit] of cases) {
     const o = JSON.parse(reportJson(FITTING_HEADLINE))
@@ -561,6 +561,39 @@ test('권유 관문: 본문 모든 칸의 매수·매도 권유를 칸 이름과
     assert.doesNotThrow(() => validateMarketAdvice(bad), JSON.stringify(bad))
     assert.deepEqual(validateMarketAdvice(bad), [])
   }
+})
+
+// Ruling 37a: Market은 지시형·수익 보장만 막는다 — 최근 60개 리포트에서 전체 목록에 걸렸던 해설·인용 문장은 통과(세 번 다 걸려 멈추지 않게).
+test('권유 관문(Market 목록): 해설·인용 문장은 어느 칸에 있어도 통과, 지시형은 막는다', () => {
+  const sentences = [
+    '현지 생산 비중 확대',
+    "'환율 강세라고 무조건 미국 주식이 좋은 것은 아니다'라는 경고(뉴시스 인용)",
+    'VIX 30과 지금 사이에는',
+    "월가는 SK하이닉스에 '매수·비중확대'를 내걸었고",
+    '신규 진입 시 가격 수준 자체를 맥락으로 삼아야',
+  ]
+  for (const s of sentences) {
+    const o = JSON.parse(reportJson(FITTING_HEADLINE))
+    o.bigStory.content.push({ type: 'paragraph', text: s })
+    o.soWhat = [{ title: '확인되면', body: s }]
+    o.summary.today = s
+    assert.deepEqual(validateMarketAdvice(o), [], s)
+  }
+  for (const [text, hit] of [['KODEX 200을 지금 매수하세요.', '"매수하세요"'], ['반도체 비중을 줄이세요.', '"비중을 줄이세요"']] as const) {
+    const o = JSON.parse(reportJson(FITTING_HEADLINE))
+    o.summary.myAssets = text
+    assert.deepEqual(validateMarketAdvice(o), [`투자 권유성 표현(summary.myAssets): ${hit}`], text)
+  }
+})
+
+test('generateReport: 해설·인용 문장(예전 전체 목록에 걸리던)은 재생성 사유가 아니다 — 1회차로 발송', async (t) => {
+  t.after(() => mock.restoreAll())
+  const o = JSON.parse(reportJson(FITTING_HEADLINE))
+  o.bigStory.content.push({ type: 'paragraph', text: "월가는 SK하이닉스에 '매수·비중확대'를 내걸었고, 2022년의 VIX 30과 지금 사이에는 아직 거리가 있습니다." })
+  const { stream } = fakeStream([JSON.stringify(o)])
+  const { html } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 1)
+  assert.match(html, /매수·비중확대/)
 })
 
 test('generateReport: 1회차에 매수 권유가 있으면 다시 쓰게 하고, 권유 없는 2회차 결과로 발송한다', async (t) => {
@@ -616,7 +649,9 @@ test('프롬프트: 시스템 프롬프트가 검사가 막는 권유형 표현�
   const { stream } = fakeStream([reportJson(FITTING_HEADLINE)])
   await generateReport(DATA)
   const system = String((stream.mock.calls[0].arguments[0] as { system?: unknown }).system)
-  assert.match(system, /"비중 확대"·"신규 진입"·"매수 검토"·"분할 접근"/)
+  assert.match(system, /독자에게 사라·팔라는 지시형\("~하세요·~하십시오", "비중을 줄이세요"\)과 "강력 매수"·"폭등 예상"·"확실한 수익"·"필수 매수"/)
+  // Ruling 37a: 해설에 흔한 낱말(비중 확대·신규 진입 등)은 검사가 막지 않으므로 금지어로 적지 않는다
+  assert.doesNotMatch(system, /"비중 확대"·"신규 진입"/)
 })
 
 test('프롬프트: 제목 작성 규칙에 기간 비교·최상급 금지(제목·카드 문구)가 있다', () => {
