@@ -21,6 +21,8 @@ import { normalizeMorningReportLanguage } from './report-language'
 import { describeAngle, ETF_NARRATIVE_ANGLES, type EtfNarrativeAngle } from './narrative-angle'
 import { renderVoiceExemplars } from '../voice-exemplars'
 import { buildTemporalFramingBlock } from '../temporal-framing'
+// Ruling 35: 오늘의 주제 자산군(카드 슬롯) 이름 — 제목 규칙과 검사(report-quality)가 같은 단어를 쓴다.
+import { subjectAliasesOf, subjectNameOf } from './headline-subject'
 
 // Lazy initialization: env vars may not be loaded at module parse time
 let _client: Anthropic | null = null
@@ -317,14 +319,29 @@ function buildAssetSlotBlock(slots: AssetClassSlot[], featured: AssetClassSlot |
   const lines = slots.length > 0
     ? slots.map(s => `- ${s.key} | ${s.label} | 대표 ETF 예시: ${s.reps.map(formatRep).join(' · ')}`).join('\n')
     : '- (오늘 자산군으로 분류할 시세가 없습니다)'
+  // Ruling 35: 카드 슬롯이 곧 오늘의 주제 자산군 — 제목·카드·페이지 모자이크가 모두 이 자산군을 다룬다.
   const cardLine = featured
-    ? `- card.key는 "${featured.key}"입니다. 미리보기 카드에는 "${featured.holdingLabel}"이 코드로 붙고, 그 아래에 card.line이 들어갑니다.`
+    ? `- card.key는 "${featured.key}"입니다. 미리보기 카드에는 "${featured.holdingLabel}"이 코드로 붙고, 그 아래에 card.line이 들어갑니다.
+- 오늘의 주제 자산군: ${featured.key} | ${featured.label} — 제목(cover.headline)·미리보기 카드·페이지 모자이크가 모두 이 자산군을 다룹니다. 제목에 넣을 이름: "${subjectNameOf(featured)}"${subjectAliasesOf(featured).length > 0 ? `(같은 뜻으로 인정: ${subjectAliasesOf(featured).join('·')})` : ''}.`
     : '- 카드 자산군을 정할 슬롯이 없습니다.'
   return `[자산군 슬롯 — 코드가 확정]
 ${lines}
 - 위 대표 ETF의 이름·등락률은 화면에 "예시"로 코드가 표시합니다. 숫자는 화면에 코드가 표시하므로 문장에 반복하지 마십시오. 문장은 움직임의 의미와 판단 재료만 씁니다.
 - assetCards는 위 key를 위 순서대로 하나씩 모두 씁니다. 목록에 없는 key는 쓰지 마십시오.
 ${cardLine}`
+}
+
+// Ruling 35 (2026-10-20): [cover.headline 작성 규칙] 1번의 주제 자산군 필수 규칙. 10/20 제목(미국 섹터 이야기)과
+// 카드("2차전지를 갖고 있다면")가 따로 놀았다 — 제목 주제를 카드 슬롯에 묶는다. 검사(report-quality)도 같은 단어로 본다.
+function buildHeadlineSubjectRule(featured: AssetClassSlot): string {
+  const name = subjectNameOf(featured)
+  const words = [name, ...subjectAliasesOf(featured)].map(w => `"${w}"`)
+  const wordList = words.length > 1 ? `${words[0]} 또는 ${words.slice(1).join('·')}` : words[0]
+  const domesticNote = featured.key.startsWith('kr-')
+    ? ' 국내 자산군이므로 "미 ○○"처럼 해외 시장을 붙인 표현은 국내 주제를 다룬 것으로 치지 않습니다.'
+    : ''
+  return `
+- 주제 자산군 (필수 — 아래 tier·catalyst·반복 회피 규칙보다 우선): 제목은 오늘의 주제 자산군(${name})의 움직임을 반드시 다루고, 제목에 그 자산군 이름(${wordList})을 넣습니다. 미리보기 카드("${featured.holdingLabel}")와 페이지 모자이크가 이 자산군을 보여 주므로, 제목이 다른 자산군만 다루면 카드와 제목이 서로 다른 이야기를 합니다. 해외 원인·다른 자산군과의 대비는 함께 써도 됩니다(예: "미 반도체 급락에도 국내 헬스케어가 받쳤다").${domesticNote}`
 }
 
 // 국내 ETF 거래대금 상위 5 (원). KRX 거래대금(tradingValue)이 있으면 그 값을 쓴다.
@@ -507,7 +524,7 @@ ${data.news.slice(0, 6).map(n => {
 ${data.recentHeadlines && data.recentHeadlines.length > 0 ? `
 [최근 ETF 리포트 헤드라인 — 절대 반복·유사 표현 금지]
 ${data.recentHeadlines.map(h => `- ${h}`).join('\n')}
-위 문장들과 3어절 이상 겹치거나 같은 구문 틀("~가 ~로 이어지는지", "~신호를 ~로 확인" 등)을 재사용하지 마십시오. 최근 헤드라인에서 눈에 띄는 핵심 단어·동사도 반복하지 마십시오.
+위 문장들과 3어절 이상 겹치거나 같은 구문 틀("~가 ~로 이어지는지", "~신호를 ~로 확인" 등)을 재사용하지 마십시오. 최근 헤드라인에서 눈에 띄는 핵심 단어·동사도 반복하지 마십시오.${featured ? ` 단, 오늘의 주제 자산군 이름("${subjectNameOf(featured)}" 등)은 예외입니다 — 최근 헤드라인에 있어도 제목에 넣고, 각도·동사를 바꿉니다.` : ''}
 ` : ''}
 [필드별 독자 목적 — 이 목적을 충족하지 못하면 해당 필드는 실패]
 - 독자는 주식·금융상품 경험이 조금 있는 개인 금융 고객입니다. 페이지 위쪽만 읽고도 "어제 분위기 / 오늘 볼 것 / 내 자산군에 주는 의미"를 1~2분 안에 얻어야 합니다.
@@ -557,7 +574,7 @@ ${data.recentHeadlines.map(h => `- ${h}`).join('\n')}
 1. 형태 (모든 tier 공통)
 - 주어·핵심 사실을 앞세워 한 호흡으로 씁니다. 정확한 등락률·티커는 cover.subline 이 받칩니다.
 - 제목에는 티커·6자리 코드 대신 한국어 명칭을 씁니다 (예: SOXX → 미 반도체, GDX → 금광주, TLT → 미 장기채).
-- 등락률·티커를 제목 맨 앞 앵커로 두지 마십시오. 사건의 규모를 전하는 수치 하나(20원·45조·성장률 3.5% 상향 등)는 문장 안에 둘 수 있고, 코스피 7,000·환율 1,500원 같은 심리적 분기점 숫자는 앞에 와도 됩니다.
+- 등락률·티커를 제목 맨 앞 앵커로 두지 마십시오. 사건의 규모를 전하는 수치 하나(20원·45조·성장률 3.5% 상향 등)는 문장 안에 둘 수 있고, 코스피 7,000·환율 1,500원 같은 심리적 분기점 숫자는 앞에 와도 됩니다.${featured ? buildHeadlineSubjectRule(featured) : ''}
 
 2. 종결
 - 기사체 '~다' 또는 서술성 명사(급등·반등·마감·경신·진입·본격화 등)로 끝냅니다.
@@ -571,7 +588,7 @@ ${data.recentHeadlines.map(h => `- ${h}`).join('\n')}
 
 4. 그 밖의 규칙
 - catalyst 반영 (기본 + 예외): strong·thin 에서 [🔥 오늘의 forward catalyst] 항목이 있으면 사건을 근거로 반영합니다. [반복 회피 — 기본보다 우선] 같은 catalyst·anchor 가 [최근 ETF 리포트 헤드라인]에 이미 등장했으면 (a) 사건의 국면·단계를 다르게(진전→타결→후속/확산/정착) 쓰거나 (b) anchor 를 subline 으로 내리고 새 각도(환율·금·은·원유·국내 ETF 등 오늘 의미 있게 움직인 지표)로 씁니다.
-- 시장 특정: "지수/시장/증시" 단독 표기 금지. 어느 시장인지 명시합니다(S&P500·나스닥·코스피 등 구체 명칭, 또는 "미·국내·채권" 수식어).
+- 시장 특정: "지수/시장/증시" 단독 표기 금지. 어느 시장인지 명시합니다(S&P500·나스닥·코스피 등 구체 명칭, 또는 "미·국내·채권" 수식어). 해외 시장의 섹터·자산을 가리키는 단어(반도체·바이오·유틸리티·부동산·기술주 등)에는 반드시 그 시장(미·미국·중국 등)을 붙입니다 — 한국 독자는 시장 표시 없는 섹터 이름을 국내 섹터로 읽습니다(예: 미국 섹터 이야기라면 "바이오·반도체 올랐다"가 아니라 "미 바이오·반도체 올랐다").
 - 기간 비교·최상급 금지: 제목·카드 문구(cover.headline·card.line)에는 'N년치·N개월치', '역대·사상 최대/최고/최저', 'N년 만에 최고/최저', '연중 최고/최저' 같은 기간 비교·최상급 표현을 쓰지 않습니다 — 입력 데이터로 확인되는 수치와 사실만 씁니다. (입력의 등락률은 직전 거래일 하루 기준이라 이런 주장은 확인할 수 없습니다.)
 - 길이: 14~26자 권장, 최대 28자. 프리뷰는 3줄까지만 깔끔히 렌더되므로 보조 수치·맥락은 subline 으로 넘깁니다.
 - 본문 payoff: summary 세 줄이 헤드라인의 이미지를 받아 전개하되, 헤드라인 문장을 그대로 되풀이하지 않습니다.

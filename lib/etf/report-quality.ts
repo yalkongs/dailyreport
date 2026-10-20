@@ -27,6 +27,8 @@ import { softFixUnquotableSources, countCitationPhrases } from '../quotable-sour
 import { KR_ETF_UNIVERSE } from './universe'
 // Ruling 31: 제목·카드 한 줄의 확인할 수 없는 기간 비교·최상급 표현(Market과 공용).
 import { comparativeClaimViolations } from '../comparative-claims'
+// Ruling 35: 제목이 오늘의 주제 자산군(카드 슬롯)을 다루는지.
+import { headlineCoversSlot, subjectAliasesOf, subjectNameOf } from './headline-subject'
 
 // ─── Hard patterns: 진짜 투자 권유 ─────────────────────────────────────
 const INVESTMENT_ADVICE_PATTERNS = [
@@ -722,6 +724,17 @@ export function assessMorningReportQuality(
     ['card.line', comparativeCard?.line],
   ])
   for (const v of comparative) violateOrWarn('comparative', v)
+
+  // Ruling 35 (2026-10-20): 제목은 오늘의 주제 자산군 — 미리보기 카드·페이지 모자이크와 같은 슬롯 — 을 다룬다.
+  // 주제 슬롯은 카드와 같은 계산(cardSlot, 구조 교정 뒤 card.key)이라 마지막 시도에 교정된 card.key와 검사가 어긋나지 않는다.
+  // 1·2회차 재생성 사유(기준 위반), 마지막 축소판은 경고만(F02). 자산군 슬롯이 없는 날·제목이 빈 날(필수 필드 누락이 보고)은 보지 않는다.
+  const subjectSlot = cardSlot(buildAssetClassSlots(data.quotes), comparativeCard?.key)
+  const subjectHeadline = isObjectValue(report.cover) ? report.cover.headline : undefined
+  if (subjectSlot && isFilled(subjectHeadline) && !headlineCoversSlot(subjectHeadline as string, subjectSlot)) {
+    const name = subjectNameOf(subjectSlot)
+    const words = [name, ...subjectAliasesOf(subjectSlot)].map(w => `"${w}"`).join('·')
+    violateOrWarn('subject', `제목이 오늘의 주제 자산군(${name})을 다루지 않음 — 미리보기 카드("${subjectSlot.holdingLabel}")·페이지 모자이크와 같은 자산군을 제목에(${words} 중 하나): ${subjectHeadline}`)
+  }
 
   return { violations, cardViolations: structural.cardViolations }
 }

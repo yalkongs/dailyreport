@@ -239,9 +239,13 @@ test('마지막 시도에도 진짜 필수 필드 누락과 투자 권유는 막
 })
 
 test('card.key가 슬롯에 있지만 주제 슬롯과 다르면 경고만', () => {
-  const r = validReport(); r.card.key = 'kr-large'
+  // Ruling 35: 제목은 카드 슬롯(cardSlot — 여기선 kr-large)을 다뤄야 한다 — 제목도 대형주(코스피)로.
+  const r = validReport(); r.card.key = 'kr-large'; r.cover.headline = '코스피 급락, 미 증시는 버텼다'
   assert.equal(validate(r), '')
   assert.equal(r.card.key, 'kr-large')
+  // 카드는 대형주인데 제목은 반도체만 — 카드와 제목이 따로 놀면 1·2회차 재생성 사유.
+  const apart = validReport(); apart.card.key = 'kr-large'
+  assert.match(validate(apart), /제목이 오늘의 주제 자산군\(국내 대형주\)을 다루지 않음/)
 })
 
 test('card.line의 숫자는 경고만(숫자 자체가 뉴스일 때 카드에 쓸 수 있다)', () => {
