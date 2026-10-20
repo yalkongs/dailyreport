@@ -161,7 +161,8 @@ async function resolve(k: ReportKind): Promise<void> {
     sha: reportSha ?? "",
     date,
     headline: entry.headline,
-    // 방금 생성한 정상 경로가 아니면 재발송 — Telegram 이미지 캐시를 피하려고 cache-bust 하고, 발송 직전 status를 재확인한다.
+    // 방금 생성한 정상 경로가 아니면 재발송 — Telegram 이미지 캐시를 피하려고 cache-bust 한다. 발송 직전 status 재확인은
+    // resend와 무관하게 send step이 한다(Ruling 39). resend는 그 재확인 조회가 실패했을 때만 갈린다(true=보내지 않음, false=경고 후 발송).
     resend: justGenerated ? "false" : "true",
   });
 
