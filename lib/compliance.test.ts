@@ -111,22 +111,45 @@ test('Market SOFT: 인용부호 안은 보지 않는다(남의 주장 전달)', 
   assert.deepEqual(findSoftAdvice("일부는 '반등'을 말하지만 지금은 매수해야 합니다."), ['매수해야 합니다'])
 })
 
-// Ruling 37f ①: '…해 주세요'·'사 주세요' 명령형, 같은 절 안에서 더 떨어진 '비중 … 줄이세요'.
-test('Market HARD: "매수해 주세요·사 주세요"와 같은 절의 "비중을 지금보다 조금 더 줄이세요"도 막는다', () => {
+// Ruling 37f ①: '…해 주세요'·'사 주세요' 명령형.
+test('Market HARD: "매수해 주세요·사 주세요"도 막는다', () => {
   for (const [text, hit] of [
     ['반도체 ETF를 매수해 주세요.', '매수해 주세요'],
     ['반도체 ETF를 매수해주세요.', '매수해주세요'],
     ['지금은 매도해 주십시오.', '매도해 주십시오'],
     ['교체해 주세요', '교체해 주세요'],
     ['반도체 ETF를 사 주세요.', '사 주세요'],
-    ['삼성전자 비중을 지금보다 조금 더 줄이세요.', '비중을 지금보다 조금 더 줄이세요'],
-    ['해외 주식 노출을 이번 주 안에 조금씩 낮추는 것이 좋습니다.', '노출을 이번 주 안에 조금씩 낮추는 것이 좋습니다'],
   ] as const) {
     assert.ok(findHardAdvice(text).includes(hit), `${text}: ${findHardAdvice(text).join(', ')}`)
   }
-  // 창은 같은 절 안만 — 문장 끝·쉼표를 넘지 않는다(앞 절의 '비중'과 뒤 절의 '늘리세요'를 잇지 않음)
-  for (const text of ['외국인 비중이 늘었습니다. 현금을 늘리세요', '외국인 비중이 늘었고, 현금은 줄이세요', '반도체 비중은 그대로 두고 현금 흐름을 꼼꼼히 들여다본 뒤 줄이세요', '검사 주세요']) {
+  assert.deepEqual(findHardAdvice('검사 주세요'), [])
+})
+
+// Ruling 37g: HARD는 오탐이 거의 없어야 한다 — '비중·노출' 지시는 목적어 바로 뒤 동사(조사·쉼표만 사이에)일 때만 HARD,
+// 같은 문장 안에서 떨어진 꼴(20자 이내, 쉼표 허용)은 SOFT(재생성·마지막 시도 경고 — Market이 멈추지 않는다).
+test('Market 비중·노출: 붙은 꼴은 HARD, 같은 문장 안에서 떨어진 꼴은 SOFT', () => {
+  for (const [text, hit] of [
+    ['주식 비중, 줄이세요.', '비중, 줄이세요'],
+    ['비중을 줄이세요', '비중을 줄이세요'],
+    ['반도체 비중을 낮추십시오', '비중을 낮추십시오'],
+    ['노출 늘리세요', '노출 늘리세요'],
+    ['해외 주식 노출은 낮추는 것이 좋습니다.', '노출은 낮추는 것이 좋습니다'],
+  ] as const) {
+    assert.ok(findHardAdvice(text).includes(hit), `HARD ${text}: ${findHardAdvice(text).join(', ')}`)
+  }
+  for (const [text, hit] of [
+    ['삼성전자 비중을 지금보다 조금 더 줄이세요.', '비중을 지금보다 조금 더 줄이세요'],
+    ['주식 비중과 관계없이 불필요한 지출을 줄이세요.', '비중과 관계없이 불필요한 지출을 줄이세요'],
+    ['해외 주식 노출을 이번 주 안에 조금씩 낮추는 것이 좋습니다.', '노출을 이번 주 안에 조금씩 낮추는 것이 좋습니다'],
+    ['외국인 비중이 늘었고, 현금은 줄이세요', '비중이 늘었고, 현금은 줄이세요'], // 쉼표는 SOFT 창 안
+  ] as const) {
+    assert.deepEqual(findHardAdvice(text), [], `HARD 아님: ${text}`)
+    assert.ok(findSoftAdvice(text).includes(hit), `SOFT ${text}: ${findSoftAdvice(text).join(', ')}`)
+  }
+  // SOFT 창도 문장을 넘지 않고 20자를 넘지 않는다
+  for (const text of ['외국인 비중이 늘었습니다. 현금을 늘리세요', '반도체 비중은 그대로 두고 현금 흐름을 꼼꼼히 들여다본 뒤 줄이세요']) {
     assert.deepEqual(findHardAdvice(text), [], text)
+    assert.deepEqual(findSoftAdvice(text), [], text)
   }
 })
 

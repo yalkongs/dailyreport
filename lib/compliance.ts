@@ -51,8 +51,9 @@ export const HARD_ADVICE_PATTERNS: readonly RegExp[] = [
   // 사두다·담아두다 명령형("지금 사두세요", "사 두세요", "담아두십시오"), Ruling 37f: '사 주세요'
   /(?<![가-힣])(?:사|담아)\s*두(?:세요|십시오)/,
   /(?<![가-힣])사\s*주(?:세요|십시오)/,
-  // 같은 절 안(20자 이내, 문장 끝·쉼표·세미콜론을 넘지 않음) — "비중을 지금보다 조금 더 줄이세요"
-  /(?:비중|노출)[^.!?\n,，;]{0,20}(?:줄이|늘리|낮추|높이)(?:세요|십시오|시기\s*바랍니다|는\s*것이\s*좋(?:습니다|겠습니다))/,
+  // Ruling 37g: 목적어 바로 뒤 동사(사이에 조사·쉼표만)일 때만 HARD — "주식 비중, 줄이세요", "반도체 비중을 낮추십시오".
+  // 떨어진 꼴("비중과 관계없이 불필요한 지출을 줄이세요")은 오탐이 있어 SOFT로 내렸다.
+  /(?:비중|노출)\s*(?:을|를|은|는)?\s*,?\s*(?:줄이|늘리|낮추|높이)(?:세요|십시오|시기\s*바랍니다|는\s*것이\s*좋(?:습니다|겠습니다))/,
 ]
 
 /**
@@ -71,6 +72,9 @@ export const SOFT_ADVICE_PATTERNS: readonly RegExp[] = [
   /(?:매수|매도)해야\s*(?:합니다|한다|할\s*때)/,
   /필수\s*(?:매수|매도|편입|진입)/,
   /(?:매수|매도|편입|진입)\s*(?:가|는)?\s*필수/,
+  // Ruling 37g: 같은 문장 안에서 떨어진 비중·노출 지시(20자 이내, 쉼표 허용) — "비중을 지금보다 조금 더 줄이세요".
+  // "비중과 관계없이 불필요한 지출을 줄이세요" 같은 오탐은 재생성 한 번(마지막 시도는 경고)으로 끝난다.
+  /(?:비중|노출)[^.!?\n]{0,20}(?:줄이|늘리|낮추|높이)(?:세요|십시오|시기\s*바랍니다|는\s*것이\s*좋(?:습니다|겠습니다))/,
 ]
 
 // 인용 구간: 여는 따옴표 → 짝이 되는 닫는 따옴표(같은 줄 안). 닫히지 않은 따옴표는 인용이 아니다(글자로 둔다).
@@ -114,9 +118,14 @@ export function findHardAdvice(text: string): string[] {
   return firstMatches(stripQuotedSpans(text), HARD_ADVICE_PATTERNS)
 }
 
-/** Market SOFT 권유의 실제 문구(인용 구간 밖, 패턴마다 첫 일치 하나). 없으면 빈 배열. */
+// HARD에 이미 걸린 구간은 SOFT에서 다시 세지 않는다("비중을 줄이세요"는 HARD 하나 — SOFT 창 패턴과 겹친다).
+const HARD_ADVICE_GLOBAL = HARD_ADVICE_PATTERNS.map((p) => new RegExp(p.source, `${p.flags}g`))
+
+/** Market SOFT 권유의 실제 문구(인용 구간 밖, HARD에 걸린 구간 밖, 패턴마다 첫 일치 하나). 없으면 빈 배열. */
 export function findSoftAdvice(text: string): string[] {
-  return firstMatches(stripQuotedSpans(text), SOFT_ADVICE_PATTERNS)
+  let rest = stripQuotedSpans(text)
+  for (const hard of HARD_ADVICE_GLOBAL) rest = rest.replace(hard, ' ')
+  return firstMatches(rest, SOFT_ADVICE_PATTERNS)
 }
 
 function firstMatches(text: string, patterns: readonly RegExp[]): string[] {

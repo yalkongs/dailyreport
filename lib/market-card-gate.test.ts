@@ -668,11 +668,18 @@ test('권유 관문: "매수<strong></strong>하세요"는 태그가 글자로 �
   }
 })
 
-test('권유 관문 HARD: "매수해 주세요"·"비중을 지금보다 조금 더 줄이세요"는 막고, 인용된 경고는 통과(Ruling 37f)', () => {
-  for (const text of ['반도체 ETF를 매수해 주세요.', '삼성전자 비중을 지금보다 조금 더 줄이세요.', '반도체 ETF를 사 주세요.']) {
+test('권유 관문 HARD: "매수해 주세요"·"주식 비중, 줄이세요"는 막고, 인용된 경고는 통과(Ruling 37f·37g)', () => {
+  for (const text of ['반도체 ETF를 매수해 주세요.', '반도체 ETF를 사 주세요.', '주식 비중, 줄이세요.', '반도체 비중을 낮추십시오']) {
     const o = JSON.parse(reportJson(FITTING_HEADLINE))
     o.bigStory.content[0].text = text
     assert.equal(validateMarketAdvice(o).length, 1, text)
+  }
+  // Ruling 37g: 떨어진 비중·노출 지시는 SOFT(HARD 아님)
+  for (const text of ['삼성전자 비중을 지금보다 조금 더 줄이세요.', '주식 비중과 관계없이 불필요한 지출을 줄이세요.']) {
+    const o = JSON.parse(reportJson(FITTING_HEADLINE))
+    o.bigStory.content[0].text = text
+    assert.deepEqual(validateMarketAdvice(o), [], text)
+    assert.equal(validateMarketSoftAdvice(o).length, 1, text)
   }
   const o = JSON.parse(reportJson(FITTING_HEADLINE))
   o.soWhat = [{ title: '확인되면', body: "금융당국은 '지금 매수하세요'라는 광고를 경계하라고 당부했습니다." }]
@@ -687,6 +694,16 @@ test('generateReport: 세 번 다 인용된 경고("\'지금 매수하세요\'�
   const { html } = await generateReport(DATA)
   assert.equal(stream.mock.callCount(), 1)
   assert.match(html, /광고를 경계하라고/)
+})
+
+test('generateReport: 세 번 다 "주식 비중과 관계없이 불필요한 지출을 줄이세요."여도(SOFT) 실패하지 않고 경고와 함께 발송한다(Ruling 37g)', async (t) => {
+  t.after(() => mock.restoreAll())
+  const reply = JSON.stringify({ ...JSON.parse(reportJson(FITTING_HEADLINE)), soWhat: [{ title: '확인되면', body: '주식 비중과 관계없이 불필요한 지출을 줄이세요.' }] })
+  const { stream, logs } = fakeStream([reply])
+  const { html } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 3)
+  assert.match(html, /불필요한 지출을 줄이세요/)
+  assert.ok(logs.some((l) => /정합성 위반 잔존\(발송 진행\).*권유성 단정 표현\(soWhat\[0\]\.body\)/.test(l)))
 })
 
 const withSoWhat = (headline: string, body: string) =>
