@@ -411,7 +411,7 @@ test("delivery-monitor: 읽기 전용 최소 권한, check-delivery를 env로 �
   assert.match(monitorYml, /GH_TOKEN: \$\{\{ secrets\.GITHUB_TOKEN \}\}/);
   assert.match(monitorYml, /run: npx tsx scripts\/check-delivery\.ts "\$KIND"/);
   assert.doesNotMatch(monitorYml, /TELEGRAM|ANTHROPIC/);
-  assert.match(monitorYml, /node-version: '20'/);
+  assert.match(monitorYml, /node-version: '22'/);
 });
 
 // ── ci.yml: 변경을 막는 자동 검증(감사 F11) ────────────────────────────────────────────

@@ -42,7 +42,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           # daily-report.yml과 같은 버전 — 운영에서 도는 Node로 검증한다.
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
