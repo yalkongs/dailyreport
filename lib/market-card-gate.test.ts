@@ -588,6 +588,27 @@ test('권유 관문(Market 목록): 해설·인용 문장은 어느 칸에 있�
   }
 })
 
+// Ruling 37c ③: 문자 참조·보이지 않는 글자로 띄운 권유("매수&nbsp;하세요")도 화면에 보이는 글자로 풀어 검사한다.
+test('권유 관문: 문자 참조(&nbsp;·&#32;·&#x20;)·보이지 않는 글자로 띄운 권유도 막는다', () => {
+  for (const text of ['KODEX 200을 매수&nbsp;하세요.', '매수&#32;하세요.', '매수&#x20;하세요.', '매수&#8203;하세요.', '매수​하세요.', '지금이 매수&nbsp;적기입니다.']) {
+    const o = JSON.parse(reportJson(FITTING_HEADLINE))
+    o.bigStory.content[0].text = text
+    const v = validateMarketAdvice(o)
+    assert.equal(v.length, 1, `${JSON.stringify(text)}: ${v.join(' / ')}`)
+    assert.match(v[0], /^투자 권유성 표현\(bigStory\.content\[0\]\.text\)/)
+  }
+})
+
+test('generateReport: 세 번 다 "지금은 매수 적기가 아닙니다."여도 해설이므로 1회차로 발송한다(Codex 재현)', async (t) => {
+  t.after(() => mock.restoreAll())
+  const o = JSON.parse(reportJson(FITTING_HEADLINE))
+  o.soWhat = [{ title: '확인되면', body: '지금은 매수 적기가 아닙니다.' }]
+  const { stream } = fakeStream([JSON.stringify(o)])
+  const { html } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 1)
+  assert.match(html, /지금은 매수 적기가 아닙니다\./)
+})
+
 test('generateReport: 해설·인용 문장(예전 전체 목록에 걸리던)은 재생성 사유가 아니다 — 1회차로 발송', async (t) => {
   t.after(() => mock.restoreAll())
   const o = JSON.parse(reportJson(FITTING_HEADLINE))

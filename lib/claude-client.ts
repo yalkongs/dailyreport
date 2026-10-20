@@ -14,7 +14,7 @@ import { EVIDENCE_RULES } from "./evidence-rules";
 import { formatEconomicEventLine } from "./economic-calendar";
 import { renderReport } from "./report-renderer";
 import { cardTextFits } from "./preview/data-card";
-import { stripEmphasisTags } from "./html-entities";
+import { decodeCharacterReferences, stripEmphasisTags } from "./html-entities";
 import { plainText, cutAtSentence } from "./market-summary";
 import { BANNED_METAPHORS } from "./banned-metaphors";
 import { renderVoiceExemplars } from "./voice-exemplars";
@@ -623,6 +623,17 @@ function marketProseFields(content: unknown): Array<[string, unknown]> {
 }
 
 /**
+ * 권유 검사가 보는 글 — 화면에 보이는 글자(Ruling 37c). 태그를 벗기고 문자 참조를 한 번 풀고("매수&nbsp;하세요" → "매수 하세요"),
+ * 보이지 않는 글자(소프트 하이픈·폭 없는 공백·BOM 등)를 지운 뒤 공백을 하나로 모은다.
+ */
+function adviceCheckText(value: unknown): string {
+  return decodeCharacterReferences(plainText(value))
+    .replace(/[­​-‏⁠-⁤﻿]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
  * 매수·매도 권유 표현 검사(Ruling 37·37a) — 위반 목록(빈 배열이면 통과). 던지지 않는다.
  * Market용 좁은 목록(lib/compliance.ts DIRECTIVE_ADVICE_PATTERNS — 독자에게 사라·팔라는 지시형과 수익 보장만)으로
  * 본문 모든 칸(제목·부제·세 줄 요약·카드 한 줄·본문 블록·오늘 볼 것·의미·일정·마무리)을 강조 태그를 벗기고 칸마다 본다.
@@ -633,7 +644,7 @@ function marketProseFields(content: unknown): Array<[string, unknown]> {
 export function validateMarketAdvice(content: unknown): string[] {
   const violations: string[] = [];
   for (const [path, value] of marketProseFields(content)) {
-    const found = findDirectiveAdvice(plainText(value));
+    const found = findDirectiveAdvice(adviceCheckText(value));
     if (found.length > 0) violations.push(`투자 권유성 표현(${path}): ${found.map((f) => `"${f}"`).join(", ")}`);
   }
   return violations;

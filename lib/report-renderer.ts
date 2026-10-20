@@ -37,14 +37,13 @@ function escapeHtml(text: string): string {
  * 모델이 쓴 본문 글(강조 태그 허용 칸)을 HTML에 넣기 전 정리 — Ruling 43 (2026-10-20).
  * 뉴스 제목·요약이 모델 출력으로 흘러 들어가므로 끼어든 태그(<script>·<img onerror> 등)가 공개 페이지에 그대로 나가면 안 된다.
  * 전부 escape한 뒤, 프롬프트가 쓰라고 한 강조 태그(속성 없는 <strong>·</strong>)만 되살린다. 속성이 붙은 태그는 글자로 남는다.
- * 이미 쓴 문자 참조(&amp; &nbsp; &#39; 등)는 두 번 escape하지 않는다 — 요소 본문 안이라 글자로만 풀린다.
+ * Ruling 37c: 모델이 쓴 문자 참조(&nbsp; &#32; 등)도 escape해 글자로 보인다 — 숨은 공백으로 풀려 권유 검사("매수하세요")를
+ * 비켜 가지 못하게. 모델이 쓴 "&lt;strong&gt;"도 태그로 되살아나지 않는다(escape 뒤 "&amp;lt;…"이 된다).
  * 문자열이 아니면 빈 문자열.
  */
 export function sanitizeInlineHtml(text: unknown): string {
   if (typeof text !== "string") return "";
-  return escapeHtml(text)
-    .replace(/&amp;(#\d{1,7}|#x[0-9a-f]{1,6}|[a-z][a-z0-9]{1,31});/gi, "&$1;")
-    .replace(/&lt;(\/?)strong&gt;/gi, "<$1strong>");
+  return escapeHtml(text).replace(/&lt;(\/?)strong&gt;/gi, "<$1strong>");
 }
 
 /** 변동률 절대값 → 히트맵 강도 등급 (1~5) */
