@@ -5,6 +5,7 @@ import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import Anthropic from '@anthropic-ai/sdk'
 import { cardTextFits } from './preview/data-card'
+import { renderReport } from './report-renderer'
 import { generateReport, validateMarketCardText, validateMarketRequired, normalizeMarketOptionalParts, validateMarketComparativeClaims, validateMarketAdvice, buildReportPrompt } from './claude-client'
 
 const FITTING_HEADLINE = '코스피 급락 다음 날, 미 증시는 숨 고르기'
@@ -364,6 +365,109 @@ test('generateReport: 필수 항목이 빠진 응답만 있고 뒤 호출이 실
   t.after(() => mock.restoreAll())
   fakeStream([without(FITTING_HEADLINE, 'cover'), new Error('Internal server error')])
   await assert.rejects(generateReport(DATA), (e: Error) => /Internal server error/.test(e.message) && !(e instanceof TypeError))
+})
+
+// ── Ruling 38: 렌더할 수 없는 결과는 발송 후보가 아니다 — 필수 항목은 '렌더할 수 있는 블록 하나 이상', 선택 항목은 깨진 원소를 걸러 내고,
+// 고른 결과의 렌더가 던지면 다음 후보로 넘어간다 ──────────────────────────────────────────────
+const withBlocks = (headline: string, blocks: unknown[]) =>
+  JSON.stringify({ ...JSON.parse(reportJson(headline)), bigStory: { content: blocks } })
+
+test('필수 항목 관문: bigStory.content 에 렌더할 수 있는 블록이 하나도 없으면 누락', () => {
+  const ok = JSON.parse(reportJson(FITTING_HEADLINE))
+  for (const blocks of [[null], [3], ['문자열'], [{}], [[]], [{ type: 1, text: '본문' }], [{ type: 'paragraph' }], [{ type: 'paragraph', text: '' }],
+    [{ type: 'paragraph', text: '<strong></strong>' }], [{ type: 'paragraph', text: 42 }], [{ type: 'heading', text: '본문' }],
+    [{ type: 'dataCard', title: '표', rows: '행' }], [{ type: 'dataCard', title: '표', rows: [{ label: 'a', value: 1 }] }], [{ type: 'dataCard', title: 5, rows: [{ label: 'a', value: 'b' }] }]]) {
+    assert.deepEqual(validateMarketRequired({ ...ok, bigStory: { content: blocks } }), ['bigStory.content 누락'], JSON.stringify(blocks))
+  }
+  for (const blocks of [[null, { type: 'paragraph', text: '본문' }], [{ type: 'pullQuote', text: '인용' }], [{ type: 'dataCard', title: '표', rows: [null, { label: 'a', value: 'b' }] }], [{ type: 'dataCard', rows: [{ label: 'a', value: 'b' }] }]]) {
+    assert.deepEqual(validateMarketRequired({ ...ok, bigStory: { content: blocks } }), [], JSON.stringify(blocks))
+  }
+})
+
+test('선택 항목 보정: 배열 안의 깨진 원소는 걸러 내고, 렌더러가 읽는 칸은 문자열·범위 안 숫자로 맞춘다', () => {
+  const c = JSON.parse(reportJson(FITTING_HEADLINE))
+  c.bigStory.content = [null, 3, '문자열', {}, { type: 'heading', text: 'x' }, { type: 'paragraph', text: '본문' }, { type: 'dataCard', title: 5, rows: [{ label: 'a', value: 'b' }] },
+    { type: 'dataCard', title: null, rows: [null, { label: 'a', value: 1 }, { label: 'a', value: 'b' }] }]
+  c.watchPoints = [null, '문자열', { badge: 1, title: '개장', description: null }, {}, { badge: '10:00', title: 7, description: '설명' }]
+  c.soWhat = [null, { title: '확인되면', body: 3 }, { title: 5 }]
+  c.calendar = [null, { date: 1, country: null, event: 'CPI', importance: -3 }, { event: '' }, { date: '10/22', country: '미국', event: 'FOMC', importance: 'x' }, { date: '10/23', country: '한국', event: '금통위', importance: 9 }]
+  c.compass = [null, { title: 'c', items: 5 }, { title: 'd', items: [null, { gaugeType: 'strong' }] }]
+  c.cover.imageKeywords = ['은유', 3]
+  normalizeMarketOptionalParts(c)
+  assert.deepEqual(c.bigStory.content, [{ type: 'paragraph', text: '본문' }, { type: 'dataCard', title: '', rows: [{ label: 'a', value: 'b' }] }])
+  assert.deepEqual(c.watchPoints, [{ badge: '', title: '개장', description: '' }, { badge: '10:00', title: '', description: '설명' }])
+  assert.deepEqual(c.soWhat, [{ title: '확인되면', body: '' }])
+  assert.deepEqual(c.calendar, [
+    { date: '', country: '', event: 'CPI', importance: 0 },
+    { date: '10/22', country: '미국', event: 'FOMC', importance: 0 },
+    { date: '10/23', country: '한국', event: '금통위', importance: 5 },
+  ])
+  assert.deepEqual(c.compass, [{ title: 'c', items: [] }, { title: 'd', items: [{ gaugeType: 'strong' }] }])
+  assert.deepEqual(c.cover.imageKeywords, ['은유'])
+  // 보정한 결과는 렌더가 던지지 않는다
+  assert.doesNotThrow(() => renderReport(c, DATA, []))
+})
+
+test('generateReport: 1회차(카드 글자만 위반)의 bigStory.content 가 [null]이면 후보가 아니다 — 렌더할 수 있는 뒤 결과로 발송(던지지 않는다)', async (t) => {
+  t.after(() => mock.restoreAll())
+  // 예전에는 [null]이 필수 항목을 통과해 1회차가 앞선 결과로 뽑혔고, 루프 밖 렌더에서 "Cannot read properties of null (reading 'type')"로 죽었다(Codex 재현).
+  const { stream, logs } = fakeStream([withBlocks(LONG_HEADLINE, [null]), yesterdayOnlyMissing(OTHER_HEADLINE), yesterdayOnlyMissing(OTHER_HEADLINE)])
+  const { content, html } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 3)
+  assert.equal(content.cover.headline, OTHER_HEADLINE)
+  assert.match(html, /<p>본문입니다\.<\/p>/)
+  assert.ok(logs.some((l) => /재생성 \(2\/3\).*bigStory\.content 누락/.test(l)))
+})
+
+test('generateReport: 선택 항목 배열의 깨진 원소는 재생성 사유가 아니고, 걸러 낸 채 던지지 않고 렌더한다', async (t) => {
+  t.after(() => mock.restoreAll())
+  const o = JSON.parse(reportJson(FITTING_HEADLINE))
+  o.bigStory.content = [null, { type: 'paragraph', text: '본문입니다.' }, 7]
+  o.watchPoints = [null, { badge: 1, title: '개장', description: null }]
+  o.soWhat = ['문자열', { title: '확인되면', body: 3 }]
+  o.calendar = [null, { date: '10/21', country: '미국', event: 'CPI', importance: -3 }]
+  o.compass = [null, { title: 'c', items: 5 }]
+  const { stream } = fakeStream([JSON.stringify(o)])
+  const { content, html } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 1)
+  assert.equal(content.bigStory.content.length, 1)
+  assert.match(html, /<div class="watch-title">개장<\/div>/)
+  assert.match(html, /<div class="sowhat-title">확인되면<\/div>/)
+  assert.match(html, /<td>CPI<\/td>/)
+})
+
+test('generateReport: 고른 결과의 마무리·렌더가 던지면 다음 후보로 발송한다(모두 실패할 때만 실패)', async (t) => {
+  t.after(() => mock.restoreAll())
+  // 1회: 카드 글자만 위반(맨 앞 후보) → 2·3회: 요약 한 칸 누락. 1회차 결과의 마무리 단계(금지 표현 검사의 JSON.stringify)에서만 던지게 한다.
+  // 검증 단계가 시도마다 한 번, 마무리 단계가 후보마다 한 번 같은 객체를 문자열로 만든다 — 1회차 객체의 두 번째 호출이 마무리 단계다.
+  const replies = [reportJson(LONG_HEADLINE), yesterdayOnlyMissing(OTHER_HEADLINE), yesterdayOnlyMissing(OTHER_HEADLINE)]
+  const { stream, logs } = fakeStream(replies)
+  const original = JSON.stringify
+  let longCalls = 0
+  mock.method(JSON, 'stringify', (...args: Parameters<typeof JSON.stringify>) => {
+    const v = args[0] as { cover?: { headline?: unknown } } | null
+    if (args.length === 1 && v && typeof v === 'object' && v.cover?.headline === LONG_HEADLINE && ++longCalls === 2) throw new TypeError('렌더 직전 오류')
+    return original(...args)
+  })
+  const { content } = await generateReport(DATA)
+  assert.equal(longCalls, 2, '1회차 결과를 먼저 마무리하려 했다')
+  assert.equal(stream.mock.callCount(), 3)
+  assert.equal(content.cover.headline, OTHER_HEADLINE)
+  assert.ok(logs.some((l) => /1회차 결과 마무리·렌더 실패[\s\S]*다음 후보로[\s\S]*렌더 직전 오류/.test(l)), logs.join('\n'))
+})
+
+test('generateReport: 후보를 모두 렌더하지 못하면 원인을 밝히며 실패한다', async (t) => {
+  t.after(() => mock.restoreAll())
+  const replies = [reportJson(LONG_HEADLINE)]
+  fakeStream(replies)
+  const original = JSON.stringify
+  let calls = 0
+  mock.method(JSON, 'stringify', (...args: Parameters<typeof JSON.stringify>) => {
+    const v = args[0] as { cover?: { headline?: unknown } } | null
+    if (args.length === 1 && v && typeof v === 'object' && v.cover?.headline === LONG_HEADLINE && ++calls > 3) throw new TypeError('렌더 직전 오류')
+    return original(...args)
+  })
+  await assert.rejects(generateReport(DATA), (e: Error) => /Market 리포트 렌더 실패/.test(e.message) && /렌더 직전 오류/.test(e.message))
 })
 
 // ── Ruling 31: 제목·카드 한 줄의 확인할 수 없는 기간 비교·최상급 표현 ────────────────────────────
