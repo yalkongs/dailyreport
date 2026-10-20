@@ -215,3 +215,63 @@ test('06:40 근거 상태: 실패한 데이터 소스에 krx-nav가 없다(KRX �
   const p = buildMorningPrompt(makeData('2026-10-19', [], { tier: 'thin' }))
   assert.match(p, /실패한 데이터 소스: 없음/)
 })
+
+// ─── Ruling 35 (2026-10-20): 오늘의 주제 자산군 — 제목·카드·모자이크가 같은 자산군을 다룬다 ───
+// 10/20 제목 "바이오·반도체 오르고 유틸리티·부동산 밀렸다"(미국 섹터)와 카드 "2차전지를 갖고 있다면"이 따로 놀았다.
+// 주제 슬롯(카드 슬롯)을 프롬프트에 이름과 함께 주고, 제목 규칙 1번에 필수 규칙으로 둔다.
+function headlineSection1(p: string): string {
+  const rules = p.slice(p.indexOf('[cover.headline 작성 규칙]'))
+  return rules.slice(0, rules.indexOf('2. 종결'))
+}
+
+// 10/20 모양: KODEX 2차전지산업 +8.20%가 국내 최대 움직임
+const OCT20_QUOTES = [
+  pq('305720.KS', 'KODEX 2차전지산업', 8.2), pq('305540.KS', 'TIGER 2차전지테마', 7.1),
+  pq('069500.KS', 'KODEX 200', 1.7), pq('091160.KS', 'KODEX 반도체', 2.4), pq('SPY', 'SPDR S&P 500', 0.5),
+]
+
+test('Ruling 35: 슬롯 블록에 오늘의 주제 자산군(카드 슬롯)과 제목에 넣을 이름을 준다', () => {
+  const p = buildMorningPrompt(withQuotes('2026-10-16', SLOT_QUOTES))
+  const block = slotBlock(p)
+  assert.match(block, /card\.key는 "kr-semi"/)
+  assert.match(block, /오늘의 주제 자산군: kr-semi \| 국내 반도체·IT — 제목\(cover\.headline\)·미리보기 카드·페이지 모자이크가 모두 이 자산군을 다룹니다/)
+  assert.match(block, /제목에 넣을 이름: "국내 반도체"\(같은 뜻으로 인정: 반도체·IT·AI·HBM·하이닉스·삼성전자·소프트웨어\)/)
+})
+
+test('Ruling 35: 제목 규칙 1번에 주제 자산군 필수 규칙(이름 포함·해외 원인 대비 허용·해외 표시는 국내 주제 아님)', () => {
+  const s1 = headlineSection1(buildMorningPrompt(withQuotes('2026-10-16', SLOT_QUOTES)))
+  assert.match(s1, /주제 자산군 \(필수 — 아래 tier·catalyst·반복 회피 규칙보다 우선\)/)
+  assert.match(s1, /제목은 오늘의 주제 자산군\(국내 반도체\)의 움직임을 반드시 다루고, 제목에 그 자산군 이름\("국내 반도체" 또는 "반도체"·"IT"/)
+  assert.match(s1, /"반도체를 갖고 있다면"/)
+  assert.match(s1, /해외 원인·다른 자산군과의 대비는 함께 써도 됩니다\(예: "미 반도체 급락에도 국내 헬스케어가 받쳤다"\)/)
+  assert.match(s1, /"미 ○○"처럼 해외 시장을 붙인 표현은 국내 주제를 다룬 것으로 치지 않습니다/)
+})
+
+test('Ruling 35: 국내 섹터가 주제인 날(10/20 모양)은 theme 이름(2차전지)과 같은 뜻 단어를 준다', () => {
+  const p = buildMorningPrompt(withQuotes('2026-10-20', OCT20_QUOTES))
+  assert.match(p, /card\.key는 "kr-sector"/)
+  assert.match(slotBlock(p), /오늘의 주제 자산군: kr-sector \| 2차전지 — /)
+  const s1 = headlineSection1(p)
+  assert.match(s1, /제목은 오늘의 주제 자산군\(2차전지\)의 움직임을 반드시 다루고, 제목에 그 자산군 이름\("2차전지" 또는 "이차전지"·"배터리"\)을 넣습니다/)
+  assert.match(s1, /"2차전지를 갖고 있다면"/)
+})
+
+test('Ruling 35: 최근 헤드라인 반복 금지는 주제 자산군 이름을 막지 않는다(예외 명시)', () => {
+  const p = buildMorningPrompt({ ...withQuotes('2026-10-20', OCT20_QUOTES), recentHeadlines: ['2차전지 반등, 원화는 강세'] })
+  const block = p.slice(p.indexOf('[최근 ETF 리포트 헤드라인 — 절대'))
+  assert.match(block.split('\n').slice(0, 4).join('\n'), /단, 오늘의 주제 자산군 이름\("2차전지" 등\)은 예외입니다 — 최근 헤드라인에 있어도 제목에 넣고, 각도·동사를 바꿉니다/)
+})
+
+test('Ruling 35: 시장 특정 규칙 — 해외 시장의 섹터·자산 단어에는 시장(미·미국·중국 등)을 붙인다', () => {
+  const p = buildMorningPrompt(withQuotes('2026-10-20', OCT20_QUOTES))
+  const rules = p.slice(p.indexOf('[cover.headline 작성 규칙]'))
+  assert.match(rules, /- 시장 특정: "지수\/시장\/증시" 단독 표기 금지\.[^\n]*해외 시장의 섹터·자산을 가리키는 단어\(반도체·바이오·유틸리티·부동산·기술주 등\)에는 반드시 그 시장\(미·미국·중국 등\)을 붙입니다/)
+  assert.match(rules, /"바이오·반도체 올랐다"가 아니라 "미 바이오·반도체 올랐다"/)
+})
+
+test('Ruling 35: 자산군 슬롯이 없는 날은 주제 규칙을 넣지 않고 깨진 값(undefined)도 없다', () => {
+  const p = buildMorningPrompt(makeData('2026-09-30', []))
+  assert.doesNotMatch(p, /오늘의 주제 자산군/)
+  assert.doesNotMatch(p, /undefined/)
+  assert.match(p, /\[cover\.headline 작성 규칙\]/)
+})

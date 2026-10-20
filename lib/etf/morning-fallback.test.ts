@@ -30,6 +30,8 @@ const DATA: CollectedData = {
   indices: INDICES,
 }
 
+// 이 픽스처의 주제 자산군(카드 슬롯)은 국내 반도체(kr-semi) — 결과를 구분하는 이름표 제목도 '반도체'로 시작해야
+// 주제 검사(Ruling 35)를 통과해 원래 경로(1회차 통과·앞선 결과 선택 등)를 시험한다.
 function validReport(headline = '국내 반도체 급락, 미 증시는 버텼다'): MorningReport {
   return {
     cover: { headline, subline: '간밤 미 증시는 소폭 올랐지만 국내 반도체의 낙폭이 오늘 개장의 부담으로 남았습니다.' },
@@ -106,26 +108,26 @@ test('픽스처 전제: 사실 위반은 카드 외 위반, 긴 제목은 카드
 
 test('1회차가 통과하면 그 결과로, 더 부르지 않는다', async (t) => {
   quiet(t)
-  const gen = fakeGenerator([validReport('첫 결과')])
+  const gen = fakeGenerator([validReport('반도체 첫 결과')])
   const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) })
-  assert.equal(report.cover.headline, '첫 결과')
+  assert.equal(report.cover.headline, '반도체 첫 결과')
   assert.equal(gen.calls(), 1)
 })
 
 test('예산이 모자라 2회차·Tier 1을 못 부르면 1회차 결과를 축소판으로 검증해 발송한다', async (t) => {
   const logs = quiet(t)
-  const gen = fakeGenerator([factReport('예산 전 결과')])
+  const gen = fakeGenerator([factReport('반도체 예산 전 결과')])
   // 한 호출에 8분 → 두 번째 호출(추정 3분)은 10분 예산을 넘는다
   const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(8 * 60_000, gen) })
   assert.equal(gen.calls(), 1)
-  assert.equal(report.cover.headline, '예산 전 결과')
+  assert.equal(report.cover.headline, '반도체 예산 전 결과')
   assert.ok(logs.some(l => /\[fact-warn\][\s\S]*수치가 입력 데이터와 다름/.test(l)), '사실 위반은 경고로 남는다')
   assert.ok(logs.some(l => /앞선 1회차 결과로 발송/.test(l)))
 })
 
 test('Tier 1 호출이 실패하면 앞선 결과 중 카드 문구만 어긋난 결과를 우선해 발송한다', async (t) => {
   const logs = quiet(t)
-  const gen = fakeGenerator([validReport(LONG_HEADLINE), factReport('사실 위반 2회차'), new Error('Internal server error')])
+  const gen = fakeGenerator([validReport(LONG_HEADLINE), factReport('반도체 사실 위반 2회차'), new Error('Internal server error')])
   const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) })
   assert.equal(gen.calls(), 3)
   assert.equal(report.cover.headline, LONG_HEADLINE)
@@ -135,21 +137,21 @@ test('Tier 1 호출이 실패하면 앞선 결과 중 카드 문구만 어긋난
 
 test('Tier 1 응답이 파싱되지 않으면, 위반 수가 같은 앞선 결과 중 더 최근 것을 발송한다', async (t) => {
   quiet(t)
-  const gen = fakeGenerator([factReport('사실 위반 1회차'), factReport('사실 위반 2회차'), new Error('[claude-client] morning 리포트 JSON 파싱 실패')])
+  const gen = fakeGenerator([factReport('반도체 사실 위반 1회차'), factReport('반도체 사실 위반 2회차'), new Error('[claude-client] morning 리포트 JSON 파싱 실패')])
   const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) })
-  assert.equal(report.cover.headline, '사실 위반 2회차')
+  assert.equal(report.cover.headline, '반도체 사실 위반 2회차')
 })
 
 test('Tier 1 결과가 준법 위반으로 막히면 축소판을 통과하는 앞선 결과로 발송한다', async (t) => {
   quiet(t)
-  const gen = fakeGenerator([factReport('사실 위반 1회차'), adviceReport('권유 2회차'), adviceReport('권유 Tier1')])
+  const gen = fakeGenerator([factReport('반도체 사실 위반 1회차'), adviceReport('반도체 권유 2회차'), adviceReport('반도체 권유 Tier1')])
   const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) })
-  assert.equal(report.cover.headline, '사실 위반 1회차')
+  assert.equal(report.cover.headline, '반도체 사실 위반 1회차')
 })
 
 test('준법(매수 권유) 위반뿐인 결과는 어느 경로로도 발송하지 않는다', async (t) => {
   quiet(t)
-  const gen = fakeGenerator([adviceReport('권유 1'), adviceReport('권유 2'), adviceReport('권유 3')])
+  const gen = fakeGenerator([adviceReport('반도체 권유 1'), adviceReport('반도체 권유 2'), adviceReport('반도체 권유 3')])
   await assert.rejects(
     generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) }),
     /투자 권유성 표현/,
@@ -159,7 +161,7 @@ test('준법(매수 권유) 위반뿐인 결과는 어느 경로로도 발송하
 
 test('준법 위반 결과뿐인데 예산이 끝나 Tier 1을 못 불러도 발송하지 않는다', async (t) => {
   quiet(t)
-  const gen = fakeGenerator([adviceReport('권유 1')])
+  const gen = fakeGenerator([adviceReport('반도체 권유 1')])
   await assert.rejects(
     generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(8 * 60_000, gen) }),
     /투자 권유성 표현/,
@@ -178,9 +180,9 @@ test('파싱된 결과가 한 번도 없으면 실패한다(원인 포함)', asy
 
 test('1·2회차가 모두 실패해도 Tier 1이 축소판을 통과하면 발송한다(기존 경로)', async (t) => {
   quiet(t)
-  const gen = fakeGenerator([new Error('overloaded'), new Error('overloaded'), factReport('Tier1 결과')])
+  const gen = fakeGenerator([new Error('overloaded'), new Error('overloaded'), factReport('반도체 Tier1 결과')])
   const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) })
-  assert.equal(report.cover.headline, 'Tier1 결과')
+  assert.equal(report.cover.headline, '반도체 Tier1 결과')
 })
 
 // ─── Ruling 28: 형식이 깨진 응답의 검증 중 예외가 함수 밖으로 새지 않는다(파싱 실패처럼 다음 시도로) ─────
@@ -188,9 +190,9 @@ const broken = (patch: Record<string, unknown>) => () => ({ ...structuredClone(v
 
 test('1회차 cover가 문자열이어도 던지지 않고 2회차 정상 결과로 발송한다', async (t) => {
   quiet(t)
-  const gen = fakeGenerator([broken({ cover: '국내 반도체 급락' }), validReport('정상 2회차')])
+  const gen = fakeGenerator([broken({ cover: '국내 반도체 급락' }), validReport('반도체 정상 2회차')])
   const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) })
-  assert.equal(report.cover.headline, '정상 2회차')
+  assert.equal(report.cover.headline, '반도체 정상 2회차')
   assert.equal(gen.calls(), 2)
 })
 
@@ -211,23 +213,23 @@ test('검증 중 예외가 나도(형식 깨짐) 파싱 실패처럼 다음 시�
     Object.defineProperty(r, 'summary', { enumerable: true, get() { throw new Error('형식이 깨진 응답') } })
     return r
   }
-  const gen = fakeGenerator([throwing, validReport('정상 2회차')])
+  const gen = fakeGenerator([throwing, validReport('반도체 정상 2회차')])
   const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) })
-  assert.equal(report.cover.headline, '정상 2회차')
+  assert.equal(report.cover.headline, '반도체 정상 2회차')
   assert.ok(logs.some(l => /응답 검증 중 오류[\s\S]*형식이 깨진 응답/.test(l)))
 })
 
 test('응답이 객체가 아니면(null·배열·문자열) 파싱 실패처럼 다음 시도로, 앞선 정상 결과는 그대로 쓴다', async (t) => {
   quiet(t)
   for (const bad of [null, [], '문자열']) {
-    const gen = fakeGenerator([() => bad, validReport('정상 2회차')])
+    const gen = fakeGenerator([() => bad, validReport('반도체 정상 2회차')])
     const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) })
-    assert.equal(report.cover.headline, '정상 2회차', JSON.stringify(bad))
+    assert.equal(report.cover.headline, '반도체 정상 2회차', JSON.stringify(bad))
   }
   // 객체가 아닌 응답은 앞선 결과 후보에 들지 않는다 — 사실 위반 1회차가 Tier 1 실패 뒤 발송된다.
-  const gen = fakeGenerator([factReport('사실 위반 1회차'), () => null, new Error('Internal server error')])
+  const gen = fakeGenerator([factReport('반도체 사실 위반 1회차'), () => null, new Error('Internal server error')])
   const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) })
-  assert.equal(report.cover.headline, '사실 위반 1회차')
+  assert.equal(report.cover.headline, '반도체 사실 위반 1회차')
 })
 
 // ── Ruling 31: 제목의 확인할 수 없는 기간 비교·최상급 — 1회차는 재생성, 마지막 축소판(Tier 1)은 경고만 남기고 발송 ──
@@ -250,4 +252,28 @@ test('Ruling 31: 마지막 축소판까지 기간 비교·최상급이 남아도
   assert.equal(report.cover.headline, COMPARATIVE_HEADLINE)
   assert.ok(logs.some(l => /Tier 1 fallback 성공/.test(l)))
   assert.ok(logs.some(l => /\[comparative-warn\][\s\S]*1년치/.test(l)))
+})
+
+// ── Ruling 35: 제목이 오늘의 주제 자산군(카드 슬롯 — 이 픽스처는 국내 반도체)을 다루지 않으면 1회차는 재생성,
+// 마지막 축소판(Tier 1)은 경고만 남기고 발송(F02). 10/20처럼 카드는 국내 자산군인데 제목은 다른 이야기를 한 경우.
+const OFF_SUBJECT_HEADLINE = '미 증시 반등, 금값도 올랐다'
+
+test('Ruling 35: 1회차 제목이 주제 자산군을 다루지 않으면 2회차로 다시 쓰고, 주제를 다룬 결과로 발송한다', async (t) => {
+  const logs = quiet(t)
+  const gen = fakeGenerator([validReport(OFF_SUBJECT_HEADLINE), validReport('국내 반도체 급락, 미 증시는 버텼다')])
+  const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) })
+  assert.equal(gen.calls(), 2)
+  assert.equal(report.cover.headline, '국내 반도체 급락, 미 증시는 버텼다')
+  assert.equal(report.card.key, 'kr-semi')
+  assert.ok(logs.some(l => /1\/2회 품질 검증 실패[\s\S]*그중 카드 문구 0건[\s\S]*제목이 오늘의 주제 자산군\(국내 반도체\)을 다루지 않음/.test(l)))
+})
+
+test('Ruling 35: 마지막 축소판까지 주제를 벗어나도 경고만 남기고 발송한다(F02)', async (t) => {
+  const logs = quiet(t)
+  const gen = fakeGenerator([validReport(OFF_SUBJECT_HEADLINE)])
+  const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, deadline: fakeDeadline(60_000, gen) })
+  assert.equal(gen.calls(), 3)
+  assert.equal(report.cover.headline, OFF_SUBJECT_HEADLINE)
+  assert.ok(logs.some(l => /Tier 1 fallback 성공/.test(l)))
+  assert.ok(logs.some(l => /\[subject-warn\][\s\S]*제목이 오늘의 주제 자산군\(국내 반도체\)을 다루지 않음/.test(l)))
 })
