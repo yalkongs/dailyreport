@@ -1,6 +1,23 @@
 {
   "entries": [
     {
+      "date": "2026-10-21",
+      "narrativeAngle": "supply_chain",
+      "headline": "코스피 3.7% 밀린 날, 금통위가 내일 답한다",
+      "bigStoryTopic": "전 거래일 코스피가 <strong>-3.73%</strong>, 5,552선까지 내려앉았습",
+      "walletTopics": [
+        "내일 금통위 — 인상이면 채권·주식 동시 조정 가능성",
+        "유가 98달러 — 제조·물류 원가 체인의 압력",
+        "D램 가격 반등과 반도체 섹터의 방향"
+      ],
+      "metaphors": [
+        "공사현장",
+        "산단",
+        "체인"
+      ],
+      "lookingAhead": "한국은행 9월 생산자물가지수(PPI) 발표"
+    },
+    {
       "date": "2026-10-20",
       "narrativeAngle": "hidden_variable",
       "headline": "나스닥 반등, 코스피는 이미 앞서갔다",
@@ -544,25 +561,6 @@
         "빅테크"
       ],
       "lookingAhead": "간밤 미 랠리, 오늘 코스피 개장 방향에 어떻게 실릴까"
-    },
-    {
-      "date": "2026-09-03",
-      "narrativeAngle": "structural_lens",
-      "headline": "코스피 4% 급락, 뉴욕은 반등했다",
-      "bigStoryTopic": "전 거래일(2026-09-02) 코스피가 <strong>273포인트</strong> 빠지며",
-      "walletTopics": [
-        "반도체 보유자 — DRAM 가격 전망, 실적 반영 시점을 따져야 합니다",
-        "현대차 관련 보유자 — EREV 북미 시장 진출, 구체성에 주목하십시오",
-        "에너지·석유화학 관련 보유자 — WTI 90달러, 수혜와 부담의 비대칭을 확인하십시오",
-        "지금 각 자산이 서 있는 온도",
-        "금리 4%대, 예금의 실질 가치는 지금 어디에"
-      ],
-      "metaphors": [
-        "급락",
-        "반등",
-        "국채금리"
-      ],
-      "lookingAhead": "2026년 8월 한국 소비자물가지수(CPI) 발표"
     }
   ]
 }
