@@ -625,6 +625,70 @@ test('권유 관문 SOFT: 단정·보장은 부정·유보가 뒤따라도 SOFT(
   }
 })
 
+// Ruling 37f ③: 검사 글은 칸마다 그 칸의 실제 렌더 경로를 따른다 — 본문(문단·인용·오늘 볼 것 설명·의미 본문)은 sanitizeInlineHtml,
+// escape해 넣는 칸(오늘 볼 것 제목·의미 제목·일정·마무리·dataCard)은 글자 그대로, 제목·부제는 강조 태그를 벗긴 뒤 글자 그대로,
+// 세 줄 요약·카드 한 줄은 발송 전에 plainText(태그 제거)를 거친 뒤 escape된다.
+test('marketAdviceText: 칸 종류마다 렌더 경로를 따른다(inline·escaped·title·plain)', () => {
+  const v = '매수<strong></strong>하세요'
+  assert.equal(marketAdviceText(v), '매수하세요') // 기본 inline: <strong>은 태그라 화면에 안 보인다
+  assert.equal(marketAdviceText(v, 'inline'), '매수하세요')
+  assert.equal(marketAdviceText(v, 'escaped'), '매수<strong></strong>하세요') // 태그가 글자로 보인다
+  assert.equal(marketAdviceText('매수<em></em>하세요', 'title'), '매수하세요') // 제목은 강조 태그를 벗긴다
+  assert.equal(marketAdviceText('매수<strong></strong>하세요', 'plain'), '매수하세요') // 요약은 plainText로 태그를 지운다
+  assert.equal(marketAdviceText('매수&nbsp;하세요', 'escaped'), '매수&nbsp;하세요') // 참조도 글자로 보인다
+  assert.equal(marketAdviceText('매수&nbsp;하세요', 'inline'), '매수 하세요')
+  assert.equal(marketAdviceText('매수\u2066하세요\u00a0끝', 'escaped'), '매수하세요 끝') // 서식 문자는 어느 칸이든 안 보인다
+})
+
+type ReportEdit = {
+  cover: { headline: string; subline: string }; summary: { today: string }; cardLine: { text: string }
+  bigStory: { content: Array<{ type: string; text: string }> }; watchPoints: unknown; soWhat: unknown; calendar: unknown; closingMessage: string
+}
+
+test('권유 관문: "매수<strong></strong>하세요"는 태그가 글자로 보이는 칸에선 통과, 화면에 "매수하세요"로 보이는 칸에선 HARD', () => {
+  const v = '매수<strong></strong>하세요'
+  const at = (edit: (o: ReportEdit) => void) => { const o = JSON.parse(reportJson(FITTING_HEADLINE)); edit(o); return validateMarketAdvice(o) }
+  assert.deepEqual(at((o) => { o.closingMessage = v }), [])
+  assert.deepEqual(at((o) => { o.watchPoints = [{ badge: '09:00', title: v, description: 'd' }] }), [])
+  assert.deepEqual(at((o) => { o.soWhat = [{ title: v, body: 'b' }] }), [])
+  assert.deepEqual(at((o) => { o.closingMessage = '매수&nbsp;하세요' }), []) // 마무리는 참조를 글자로 보인다
+  assert.equal(at((o) => { o.bigStory.content[0].text = v }).length, 1)
+  assert.equal(at((o) => { o.watchPoints = [{ badge: '09:00', title: '개장', description: v }] }).length, 1)
+  assert.equal(at((o) => { o.summary.today = v }).length, 1) // 요약은 발송 전에 태그가 지워져 화면에 "매수하세요"
+  assert.equal(at((o) => { o.cover.headline = '반도체 매수<strong></strong>하세요' }).length, 1)
+  // "매수하세요"는 어느 칸에서든 HARD
+  for (const edit of [
+    (o: ReportEdit) => { o.closingMessage = '매수하세요' },
+    (o: ReportEdit) => { o.watchPoints = [{ badge: '매수하세요', title: 't', description: 'd' }] },
+    (o: ReportEdit) => { o.calendar = [{ date: '1/1', country: '한국', event: '<매수하세요>', importance: 3 }] },
+    (o: ReportEdit) => { o.cardLine.text = '매수하세요' },
+    (o: ReportEdit) => { o.cover.subline = '매수하세요' },
+  ]) {
+    assert.equal(at(edit).length, 1)
+  }
+})
+
+test('권유 관문 HARD: "매수해 주세요"·"비중을 지금보다 조금 더 줄이세요"는 막고, 인용된 경고는 통과(Ruling 37f)', () => {
+  for (const text of ['반도체 ETF를 매수해 주세요.', '삼성전자 비중을 지금보다 조금 더 줄이세요.', '반도체 ETF를 사 주세요.']) {
+    const o = JSON.parse(reportJson(FITTING_HEADLINE))
+    o.bigStory.content[0].text = text
+    assert.equal(validateMarketAdvice(o).length, 1, text)
+  }
+  const o = JSON.parse(reportJson(FITTING_HEADLINE))
+  o.soWhat = [{ title: '확인되면', body: "금융당국은 '지금 매수하세요'라는 광고를 경계하라고 당부했습니다." }]
+  assert.deepEqual(validateMarketAdvice(o), [])
+  assert.deepEqual(validateMarketSoftAdvice(o), [])
+})
+
+test('generateReport: 세 번 다 인용된 경고("\'지금 매수하세요\'라는 광고를 경계")여도 1회차로 발송한다', async (t) => {
+  t.after(() => mock.restoreAll())
+  const reply = JSON.stringify({ ...JSON.parse(reportJson(FITTING_HEADLINE)), soWhat: [{ title: '확인되면', body: "금융당국은 '지금 매수하세요'라는 광고를 경계하라고 당부했습니다." }] })
+  const { stream } = fakeStream([reply])
+  const { html } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 1)
+  assert.match(html, /광고를 경계하라고/)
+})
+
 const withSoWhat = (headline: string, body: string) =>
   JSON.stringify({ ...JSON.parse(reportJson(headline)), soWhat: [{ title: '확인되면', body }] })
 

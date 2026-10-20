@@ -590,53 +590,64 @@ function isRenderableBlock(v: unknown): boolean {
   return false;
 }
 
-/** 검사할 본문 칸(경로, 값) — 렌더·발송되는 모델 글 전부. 모양이 깨진 칸은 값이 없는 것으로 둔다. */
-function marketProseFields(content: unknown): Array<[string, unknown]> {
+/**
+ * 칸의 렌더 경로(Ruling 37f) — 권유 검사가 화면 글자를 그 칸의 실제 변환대로 만든다.
+ *  - inline: 본문 문단·인용, 오늘 볼 것 설명, 의미 본문 — sanitizeInlineHtml(참조 풀기 → escape → <strong>만 태그)
+ *  - title: 제목·부제 — 강조 태그(<strong>·<b>·<em> 등)를 벗긴 뒤 escape
+ *  - plain: 세 줄 요약·카드 한 줄 — 발송 전 fillMarketSummaryDefaults 가 plainText(모든 태그 제거·공백 정리)를 한 뒤 escape
+ *  - escaped: 그 밖(오늘 볼 것 배지·제목, 의미 제목, 일정, 마무리, dataCard) — 그대로 escape(태그·참조가 글자로 보인다)
+ */
+export type MarketFieldRender = "inline" | "title" | "plain" | "escaped";
+
+/** 검사할 본문 칸(경로, 값, 렌더 경로) — 렌더·발송되는 모델 글 전부. 모양이 깨진 칸은 값이 없는 것으로 둔다. */
+function marketProseFields(content: unknown): Array<[string, unknown, MarketFieldRender]> {
   const c = asRecord(content);
   if (!c) return [];
-  const fields: Array<[string, unknown]> = [];
+  const fields: Array<[string, unknown, MarketFieldRender]> = [];
   const cover = asRecord(c.cover);
-  // 제목·부제는 렌더러가 강조 태그(<strong>·<b>·<em> 등)를 벗긴 뒤 escape해 넣는다 — 같은 변환을 먼저 거친다.
-  const titleText = (v: unknown) => (typeof v === "string" ? stripEmphasisTags(v) : v);
-  fields.push(["cover.headline", titleText(cover?.headline)], ["cover.subline", titleText(cover?.subline)]);
+  fields.push(["cover.headline", cover?.headline, "title"], ["cover.subline", cover?.subline, "title"]);
   const summary = asRecord(c.summary);
-  for (const [key] of SUMMARY_FIELDS) fields.push([`summary.${key}`, summary?.[key]]);
-  fields.push(["cardLine.text", asRecord(c.cardLine)?.text]);
+  for (const [key] of SUMMARY_FIELDS) fields.push([`summary.${key}`, summary?.[key], "plain"]);
+  fields.push(["cardLine.text", asRecord(c.cardLine)?.text, "plain"]);
   asArray(asRecord(c.bigStory)?.content).forEach((b, i) => {
     const block = asRecord(b);
     if (!block) return;
-    fields.push([`bigStory.content[${i}].text`, block.text], [`bigStory.content[${i}].title`, block.title]);
+    fields.push([`bigStory.content[${i}].text`, block.text, "inline"], [`bigStory.content[${i}].title`, block.title, "escaped"]);
     asArray(block.rows).forEach((r, j) => {
       const row = asRecord(r);
-      fields.push([`bigStory.content[${i}].rows[${j}].label`, row?.label], [`bigStory.content[${i}].rows[${j}].value`, row?.value]);
+      fields.push([`bigStory.content[${i}].rows[${j}].label`, row?.label, "escaped"], [`bigStory.content[${i}].rows[${j}].value`, row?.value, "escaped"]);
     });
   });
   asArray(c.watchPoints).forEach((w, i) => {
     const wp = asRecord(w);
-    fields.push([`watchPoints[${i}].badge`, wp?.badge], [`watchPoints[${i}].title`, wp?.title], [`watchPoints[${i}].description`, wp?.description]);
+    fields.push([`watchPoints[${i}].badge`, wp?.badge, "escaped"], [`watchPoints[${i}].title`, wp?.title, "escaped"], [`watchPoints[${i}].description`, wp?.description, "inline"]);
   });
   asArray(c.soWhat).forEach((s, i) => {
     const sw = asRecord(s);
-    fields.push([`soWhat[${i}].title`, sw?.title], [`soWhat[${i}].body`, sw?.body]);
+    fields.push([`soWhat[${i}].title`, sw?.title, "escaped"], [`soWhat[${i}].body`, sw?.body, "inline"]);
   });
-  asArray(c.calendar).forEach((e, i) => fields.push([`calendar[${i}].event`, asRecord(e)?.event]));
-  fields.push(["closingMessage", c.closingMessage]);
+  asArray(c.calendar).forEach((e, i) => fields.push([`calendar[${i}].event`, asRecord(e)?.event, "escaped"]));
+  fields.push(["closingMessage", c.closingMessage, "escaped"]);
   return fields;
 }
 
 /**
- * 권유 검사가 보는 글 = 화면에 보이는 글자(Ruling 37e). 렌더러의 본문 변환을 그대로 거친다:
- * sanitizeInlineHtml(참조 한 번 풀기 → 전부 escape → 속성 없는 <strong>만 되살리기) → <strong>·</strong> 지우기 →
- * escape를 글자로 되돌리기 → 서식 문자(\p{Cf} — 폭 없는 공백·방향 표시 U+200B–U+200F·U+2060–U+206F·BOM·소프트 하이픈) 지우기,
- * 줄바꿈 없는 공백은 공백으로 → 공백 하나로 모으기.
- * escape해서 넣는 칸(제목·요약·일정 등)도 같은 함수를 쓴다 — escape 뒤 되돌리기는 항등이다(참조를 푸는 만큼 보수적).
- * 그래서 "<매수하세요>"(화면에 글자로 보임)·"매수&#8294;하세요"·"매수&lt;strong&gt;하세요"도 "매수하세요"로 검사된다.
- * 매 시도 검사와 마지막 재검사가 이 함수 하나를 쓴다. 글 길이에 선형.
+ * 권유 검사가 보는 글 = 그 칸이 화면에 보이는 글자(Ruling 37e·37f). 칸의 렌더 경로(MarketFieldRender)를 그대로 거친 뒤
+ * escape를 글자로 되돌리고, 서식 문자(\p{Cf} — 폭 없는 공백·방향 표시 U+200B–U+200F·U+2060–U+206F·BOM·소프트 하이픈)를 지우고
+ * 줄바꿈 없는 공백은 공백으로, 공백은 하나로 모은다.
+ *  - inline: sanitizeInlineHtml → <strong>·</strong> 지우기 → 되돌리기 — "<매수하세요>"·"매수&#8294;하세요"·"매수&lt;strong&gt;하세요"는 "매수하세요"
+ *  - escaped: escape 뒤 되돌리기는 항등 — 태그·문자 참조가 글자 그대로("매수<strong></strong>하세요"는 그 글자대로 보인다)
+ *  - title: 강조 태그를 벗긴 뒤 escaped와 같다. plain: plainText 뒤 escaped와 같다.
+ * 매 시도 검사와 마지막 재검사가 이 함수를 쓴다. 글 길이에 선형.
  */
-export function marketAdviceText(value: unknown): string {
+export function marketAdviceText(value: unknown, render: MarketFieldRender = "inline"): string {
   if (typeof value !== "string") return "";
-  const shown = sanitizeInlineHtml(value).replace(/<\/?strong>/g, "");
-  return decodeCharacterReferences(shown)
+  const shown =
+    render === "inline" ? decodeCharacterReferences(sanitizeInlineHtml(value).replace(/<\/?strong>/g, ""))
+    : render === "title" ? stripEmphasisTags(value)
+    : render === "plain" ? plainText(value)
+    : value;
+  return shown
     .replace(/\p{Cf}/gu, "")
     .replace(/\u00a0/g, " ")
     .replace(/\s+/g, " ")
@@ -646,8 +657,8 @@ export function marketAdviceText(value: unknown): string {
 /** 칸마다 화면 글자로 finder를 돌려 "라벨(경로): "문구"" 위반 목록을 만든다. */
 function adviceViolationsBy(content: unknown, label: string, finder: (text: string) => string[]): string[] {
   const violations: string[] = [];
-  for (const [path, value] of marketProseFields(content)) {
-    const found = finder(marketAdviceText(value));
+  for (const [path, value, render] of marketProseFields(content)) {
+    const found = finder(marketAdviceText(value, render));
     if (found.length > 0) violations.push(`${label}(${path}): ${found.map((f) => `"${f}"`).join(", ")}`);
   }
   return violations;

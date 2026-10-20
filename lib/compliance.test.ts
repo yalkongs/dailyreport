@@ -4,7 +4,7 @@
 // 일반 기준 위반 — 마지막 시도는 경고만). 부정·유보 판정은 없다.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { INVESTMENT_ADVICE_PATTERNS, HARD_ADVICE_PATTERNS, SOFT_ADVICE_PATTERNS, findInvestmentAdvice, findHardAdvice, findSoftAdvice } from './compliance'
+import { INVESTMENT_ADVICE_PATTERNS, HARD_ADVICE_PATTERNS, SOFT_ADVICE_PATTERNS, findInvestmentAdvice, findHardAdvice, findSoftAdvice, stripQuotedSpans } from './compliance'
 
 // Ruling 37 이전 ETF 목록(lib/etf/report-quality.ts) — '지금 사' 한 줄만 바뀌었는지 본다.
 const ETF_BEFORE = [
@@ -61,7 +61,7 @@ test('Market: 해설·인용 다섯 문장과 비슷한 말들은 HARD·SOFT 모
   }
 })
 
-test('Market HARD: 독자에게 사라·팔라는 명령형 — 앞뒤에 무엇이 오든, 인용 안이어도 막는다', () => {
+test('Market HARD: 독자에게 사라·팔라는 명령형 — 앞뒤에 무엇이 오든 막는다(인용 밖)', () => {
   for (const [text, hit] of [
     ['KODEX 200을 지금 매수하세요.', '매수하세요'],
     ['반도체 비중을 줄이세요.', '비중을 줄이세요'],
@@ -74,7 +74,6 @@ test('Market HARD: 독자에게 사라·팔라는 명령형 — 앞뒤에 무엇
     ['지금은 반도체를 편입하시기 바랍니다.', '편입하시기 바랍니다'],
     ['노출을 낮추는 것이 좋습니다.', '노출을 낮추는 것이 좋습니다'],
     ['지금 매수하세요 손해 볼 일은 없습니다.', '매수하세요'],
-    ["전문가는 '지금 매수하세요'라고 말했습니다.", '매수하세요'],
   ] as const) {
     assert.ok(findHardAdvice(text).includes(hit), `${text}: ${findHardAdvice(text).join(', ')}`)
   }
@@ -110,6 +109,55 @@ test('Market SOFT: 인용부호 안은 보지 않는다(남의 주장 전달)', 
     assert.deepEqual(findSoftAdvice(text), [], text)
   }
   assert.deepEqual(findSoftAdvice("일부는 '반등'을 말하지만 지금은 매수해야 합니다."), ['매수해야 합니다'])
+})
+
+// Ruling 37f ①: '…해 주세요'·'사 주세요' 명령형, 같은 절 안에서 더 떨어진 '비중 … 줄이세요'.
+test('Market HARD: "매수해 주세요·사 주세요"와 같은 절의 "비중을 지금보다 조금 더 줄이세요"도 막는다', () => {
+  for (const [text, hit] of [
+    ['반도체 ETF를 매수해 주세요.', '매수해 주세요'],
+    ['반도체 ETF를 매수해주세요.', '매수해주세요'],
+    ['지금은 매도해 주십시오.', '매도해 주십시오'],
+    ['교체해 주세요', '교체해 주세요'],
+    ['반도체 ETF를 사 주세요.', '사 주세요'],
+    ['삼성전자 비중을 지금보다 조금 더 줄이세요.', '비중을 지금보다 조금 더 줄이세요'],
+    ['해외 주식 노출을 이번 주 안에 조금씩 낮추는 것이 좋습니다.', '노출을 이번 주 안에 조금씩 낮추는 것이 좋습니다'],
+  ] as const) {
+    assert.ok(findHardAdvice(text).includes(hit), `${text}: ${findHardAdvice(text).join(', ')}`)
+  }
+  // 창은 같은 절 안만 — 문장 끝·쉼표를 넘지 않는다(앞 절의 '비중'과 뒤 절의 '늘리세요'를 잇지 않음)
+  for (const text of ['외국인 비중이 늘었습니다. 현금을 늘리세요', '외국인 비중이 늘었고, 현금은 줄이세요', '반도체 비중은 그대로 두고 현금 흐름을 꼼꼼히 들여다본 뒤 줄이세요', '검사 주세요']) {
+    assert.deepEqual(findHardAdvice(text), [], text)
+  }
+})
+
+// Ruling 37f ②: 인용 안의 명령형은 남의 말(경고·광고 전달)이다 — HARD도 인용 구간을 보지 않는다.
+test('Market HARD: 인용부호 안의 명령형은 보지 않고, 인용 밖은 막는다', () => {
+  for (const text of ["금융당국은 '지금 매수하세요'라는 광고를 경계하라고 당부했습니다.", '“반도체를 담으세요”라는 문자에 주의하라는 당부', '「매도하십시오」라는 보고서 제목', '『지금 사두세요』 같은 권유']) {
+    assert.deepEqual(findHardAdvice(text), [], text)
+  }
+  assert.deepEqual(findHardAdvice("금융당국의 '경고'와 달리 지금 매수하세요."), ['매수하세요'])
+  assert.deepEqual(findHardAdvice("'따옴표가 닫히지 않은 채 매수하세요."), ['매수하세요']) // 닫히지 않은 따옴표는 인용이 아니다
+})
+
+test('stripQuotedSpans: 예전 정규식과 같은 결과(짝 맞는 구간만 공백 하나로, 줄을 넘지 않음, 닫히지 않으면 그대로)', () => {
+  const OLD = /'[^'\n]*'|"[^"\n]*"|‘[^’\n]*’|“[^”\n]*”|「[^」\n]*」|『[^』\n]*』/g
+  const samples = [
+    "a'b'c'd'e", '"x" 그리고 “y” 「z」 『w』', "‘열림만 있고 닫힘 없음", "'줄을\n넘는' 따옴표", "'a'b'c'", '“중첩 ‘안’ 바깥”', "끝에 '", '', '따옴표 없음',
+    "'‘섞임’' “'두 겹'” 「“낫표 안”」", "‘a’’b‘c", '""', "''",
+  ]
+  for (const s of samples) assert.equal(stripQuotedSpans(s), s.replace(OLD, ' '), JSON.stringify(s))
+})
+
+// Ruling 37f ④: 닫히지 않은 따옴표가 많아도 인용 구간 찾기가 선형이다(정규식은 따옴표마다 끝까지 다시 훑어 O(n²)였다).
+test('Market: 닫히지 않은 따옴표 4만 8천 자도 100ms 안에 검사한다', () => {
+  for (const unit of ['‘가', "'가", '"가', '“가', '「가', '『가']) {
+    const text = unit.repeat(24_000)
+    const start = performance.now()
+    findHardAdvice(text)
+    findSoftAdvice(text)
+    const ms = performance.now() - start
+    assert.ok(ms < 100, `${unit}: ${ms.toFixed(1)}ms`)
+  }
 })
 
 test('Market: 10만 자 글도 선형으로 빠르게 검사한다', () => {
