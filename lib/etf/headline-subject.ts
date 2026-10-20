@@ -11,7 +11,7 @@
 // 이 모듈: 프롬프트에 줄 주제 이름·같은 뜻 단어(subjectNameOf·subjectAliasesOf)와, 제목이 그 자산군을 다루는지 보는
 // 순수 함수(headlineCoversSlot). 프롬프트에 보여 주는 단어는 검사도 전부 인정한다(headline-subject.test.ts).
 //
-// 판정: 슬롯별 단어 패턴 중 하나라도 제목에 있으면 다룬 것. 국내 자산군(kr-*)은 그 단어 바로 앞(· 목록 포함)에
+// 판정: 슬롯별 단어 패턴 중 하나라도 제목에 있으면 다룬 것. 국내 자산군(kr-*)은 그 단어 바로 앞(·, 쉼표, 와/과, 및, 그리고 목록 포함 — Ruling 41)에
 // 해외 시장 표시(미·미국·美·중국·일본·유럽·글로벌 등)가 붙은 경우를 국내 주제로 치지 않는다 — "미 반도체"는 국내
 // 반도체가 아니다(프롬프트의 '시장 특정' 규칙: 해외 섹터에는 시장을 붙인다 → 시장 표시 없는 섹터 이름은 국내).
 // 알려진 한계: 시장 표시 없이 해외 섹터를 쓴 제목(10/20처럼)은 같은 이름의 국내 주제로 읽힌다 — 프롬프트가 막는다.
@@ -140,11 +140,22 @@ export function subjectAliasesOf(slot: SubjectSlot): string[] {
 // ('재미'의 '미'를 잡지 않게). '중' 단독은 넣지 않는다("장 중 반도체").
 const FOREIGN_MARKET_BEFORE =
   /(?:^|[^가-힣A-Za-z])(?:미국|미·중|미중|미|美|중국|中|일본|日|유럽|대만|홍콩|해외|글로벌|뉴욕|월가)(?:의)?\s*$/
-// "미 바이오·반도체"의 '반도체'처럼 · 목록 안의 단어는 목록 앞의 시장 표시를 함께 받는다 — 목록 앞부분을 걷어 내고 본다.
-const LIST_HEAD = /(?:[^\s·,]+·\s*)+$/
+// "미 바이오·반도체"의 '반도체'처럼 목록 안의 단어는 목록 앞의 시장 표시를 함께 받는다 — 목록 앞 항목을 하나씩 걷어 내고 본다.
+// Ruling 41 (2026-10-20): 목록 이음은 '·'·','·'，'(앞뒤 공백 허용), 조사 '와·과'(뒤에 공백 — "효과 "·"인상과" 같은 낱말 안을
+// 자르지 않게 항목은 한 낱말만), '및'·'그리고'(앞뒤 공백). 항목은 한 낱말뿐이라 "미 반도체 4% 급락, IT는"처럼 여러 낱말로 된
+// 앞 절은 목록이 아니다. 걷어 낸 항목에 국내 표시가 있으면("미 바이오, 코스닥·IT") 해외 표시가 거기서 끊긴다.
+const LIST_ITEM_TAIL = /([^\s·,，]+?)(?:\s*[·,，]\s*|(?:와|과)\s+|\s+(?:및|그리고)\s+)$/
+const DOMESTIC_MARKER = /국내|한국|코스피|코스닥|KOSPI|KOSDAQ/
 
 function isForeignQualified(text: string, index: number): boolean {
-  return FOREIGN_MARKET_BEFORE.test(text.slice(0, index).replace(LIST_HEAD, ''))
+  let head = text.slice(0, index)
+  for (;;) {
+    // 단어 바로 앞(국내 표시가 바로 앞이면 여기서 걸리지 않는다 — "미 반도체와 국내 IT").
+    if (FOREIGN_MARKET_BEFORE.test(head)) return true
+    const item = LIST_ITEM_TAIL.exec(head)
+    if (!item || DOMESTIC_MARKER.test(item[1])) return false
+    head = head.slice(0, item.index)
+  }
 }
 
 function stripTags(text: string): string {
