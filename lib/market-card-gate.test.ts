@@ -533,7 +533,11 @@ test('권유 관문: 본문 모든 칸의 매수·매도 권유를 칸 이름과
   const v = validateMarketAdvice(JSON.parse(withAdvice(FITTING_HEADLINE)))
   assert.equal(v.length, 1)
   assert.match(v[0], /^투자 권유성 표현\(summary\.myAssets\): "매수하세요"/)
-  const cases: Array<[string, (o: Record<string, any>) => void]> = [
+  type Editable = {
+    cover: { headline: string; subline: string }; summary: { yesterday: string; today: string }; cardLine: { text: string }
+    bigStory: { content: Array<{ type: string; text: string }> }; watchPoints: unknown; soWhat: unknown; calendar: unknown; closingMessage: string
+  }
+  const cases: Array<[string, (o: Editable) => void]> = [
     ['cover.headline', (o) => { o.cover.headline = '반도체 <strong>지금 사세요</strong>' }],
     ['cover.subline', (o) => { o.cover.subline = '반도체 비중 확대 구간' }],
     ['summary.yesterday', (o) => { o.summary.yesterday = '무조건 오르는 장이었습니다.' }],
