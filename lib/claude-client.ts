@@ -622,15 +622,22 @@ function marketProseFields(content: unknown): Array<[string, unknown]> {
   return fields;
 }
 
+// 보이지 않는 글자: 소프트 하이픈(U+00AD), 폭 없는 공백·방향 표시(U+200B–U+200F), 단어 결합자 등(U+2060–U+2064), BOM(U+FEFF).
+const INVISIBLE_CHARS = new RegExp("[\\u00ad\\u200b-\\u200f\\u2060-\\u2064\\ufeff]", "g");
+
 /**
- * 권유 검사가 보는 글 — 화면에 보이는 글자(Ruling 37c). 태그를 벗기고 문자 참조를 한 번 풀고("매수&nbsp;하세요" → "매수 하세요"),
- * 보이지 않는 글자(소프트 하이픈·폭 없는 공백·BOM 등)를 지운 뒤 공백을 하나로 모은다.
+ * 권유 검사가 보는 글 — 화면에 보이는 글자(Ruling 37c·37d). 두 가지로 만들어 둘 다 본다:
+ *  ① 태그를 벗긴 뒤 문자 참조를 한 번 푼 글 — 인코딩된 부등호로 감싼 권유("금리 &lt; 5%면 매수하세요 &gt;")가 지워지지 않게.
+ *  ② 문자 참조를 한 번 푼 뒤 태그를 벗긴 글 — 렌더러(sanitizeInlineHtml)는 참조를 풀어 인코딩된 <strong>을 굵게 만들므로
+ *     "매수&lt;strong&gt;하세요"는 화면에 "매수하세요"로 보인다.
+ * 둘 다 보이지 않는 글자를 지우고 공백을 하나로 모은다("매수&nbsp;하세요" → "매수 하세요").
  */
-function adviceCheckText(value: unknown): string {
-  return decodeCharacterReferences(plainText(value))
-    .replace(/[­​-‏⁠-⁤﻿]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+function adviceCheckTexts(value: unknown): string[] {
+  if (typeof value !== "string") return [];
+  const tidy = (s: string) => s.replace(INVISIBLE_CHARS, "").replace(/\s+/g, " ").trim();
+  const stripThenDecode = tidy(decodeCharacterReferences(plainText(value)));
+  const decodeThenStrip = tidy(plainText(decodeCharacterReferences(value)));
+  return stripThenDecode === decodeThenStrip ? [stripThenDecode] : [stripThenDecode, decodeThenStrip];
 }
 
 /**
@@ -644,7 +651,7 @@ function adviceCheckText(value: unknown): string {
 export function validateMarketAdvice(content: unknown): string[] {
   const violations: string[] = [];
   for (const [path, value] of marketProseFields(content)) {
-    const found = findDirectiveAdvice(adviceCheckText(value));
+    const found = [...new Set(adviceCheckTexts(value).flatMap(findDirectiveAdvice))];
     if (found.length > 0) violations.push(`투자 권유성 표현(${path}): ${found.map((f) => `"${f}"`).join(", ")}`);
   }
   return violations;

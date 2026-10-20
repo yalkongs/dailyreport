@@ -33,8 +33,8 @@ export function decodeHtmlEntities(input: string): string {
 // 문자 참조 풀이용 이름 표 — 흔한 것만. 모르는 이름은 그대로 둔다.
 const NAMED_REFERENCES: Record<string, string> = {
   amp: "&", lt: "<", gt: ">", quot: '"', apos: "'",
-  nbsp: " ", ensp: " ", emsp: " ", thinsp: " ", shy: "­",
-  zwsp: "​", ZeroWidthSpace: "​", zwnj: "‌", zwj: "‍", NewLine: "\n", Tab: "\t",
+  nbsp: "\u00a0", ensp: "\u2002", emsp: "\u2003", thinsp: "\u2009", shy: "\u00ad",
+  zwsp: "\u200b", ZeroWidthSpace: "\u200b", zwnj: "\u200c", zwj: "\u200d", NewLine: "\n", Tab: "\t",
   hellip: "…", middot: "·", ndash: "–", mdash: "—", lsquo: "‘", rsquo: "’", ldquo: "“", rdquo: "”",
 };
 

@@ -590,7 +590,10 @@ test('권유 관문(Market 목록): 해설·인용 문장은 어느 칸에 있�
 
 // Ruling 37c ③: 문자 참조·보이지 않는 글자로 띄운 권유("매수&nbsp;하세요")도 화면에 보이는 글자로 풀어 검사한다.
 test('권유 관문: 문자 참조(&nbsp;·&#32;·&#x20;)·보이지 않는 글자로 띄운 권유도 막는다', () => {
-  for (const text of ['KODEX 200을 매수&nbsp;하세요.', '매수&#32;하세요.', '매수&#x20;하세요.', '매수&#8203;하세요.', '매수​하세요.', '지금이 매수&nbsp;적기입니다.']) {
+  // Ruling 37d: 렌더러가 참조를 풀어 인코딩된 <strong>을 굵게 만들므로("매수&lt;strong&gt;하세요" → 화면 "매수하세요") 풀린 뒤 태그를 벗긴 글도 본다.
+  // 인코딩된 부등호로 감싼 권유("&lt; … &gt;")는 태그를 벗긴 뒤 푼 글로 잡는다.
+  for (const text of ['KODEX 200을 매수&nbsp;하세요.', '매수&#32;하세요.', '매수&#x20;하세요.', '매수&#8203;하세요.', '매수\u200b하세요.', '지금이 매수&nbsp;적기입니다.',
+    '매수&lt;strong&gt;하세요.', '금리 &lt; 5%면 매수하세요 &gt;']) {
     const o = JSON.parse(reportJson(FITTING_HEADLINE))
     o.bigStory.content[0].text = text
     const v = validateMarketAdvice(o)

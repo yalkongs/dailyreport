@@ -15,7 +15,7 @@ import type {
   ReportContentBlock,
 } from "./types";
 import { buildSparklineMap } from "./chart-generator";
-import { stripEmphasisTags } from "./html-entities";
+import { decodeCharacterReferences, stripEmphasisTags } from "./html-entities";
 import { LEGAL_DISCLAIMER_ITEMS, LEGAL_DISCLAIMER_TITLE } from "./legal-disclaimer";
 import { renderStripesSvg } from "./preview/data-card";
 import { CARD_WIDTH, CARD_HEIGHT } from "./preview/card-size";
@@ -36,14 +36,14 @@ function escapeHtml(text: string): string {
 /**
  * 모델이 쓴 본문 글(강조 태그 허용 칸)을 HTML에 넣기 전 정리 — Ruling 43 (2026-10-20).
  * 뉴스 제목·요약이 모델 출력으로 흘러 들어가므로 끼어든 태그(<script>·<img onerror> 등)가 공개 페이지에 그대로 나가면 안 된다.
- * 전부 escape한 뒤, 프롬프트가 쓰라고 한 강조 태그(속성 없는 <strong>·</strong>)만 되살린다. 속성이 붙은 태그는 글자로 남는다.
- * Ruling 37c: 모델이 쓴 문자 참조(&nbsp; &#32; 등)도 escape해 글자로 보인다 — 숨은 공백으로 풀려 권유 검사("매수하세요")를
- * 비켜 가지 못하게. 모델이 쓴 "&lt;strong&gt;"도 태그로 되살아나지 않는다(escape 뒤 "&amp;lt;…"이 된다).
- * 문자열이 아니면 빈 문자열.
+ * 순서(Ruling 37d): ① 문자 참조를 한 번 푼다(decodeCharacterReferences — "S&amp;P"·"S&P" 모두 "S&P", "&nbsp;"는 줄바꿈 없는 공백)
+ * ② 전부 escape ③ 프롬프트가 쓰라고 한 강조 태그(속성 없는 <strong>·</strong>)만 되살린다. 속성이 붙은 태그는 글자로 남는다.
+ * escape가 풀이 뒤에 오므로 인코딩된 태그("&lt;script&gt;")는 글자 "<script>"로 보일 뿐 태그가 되지 않는다.
+ * 화면 글자 = 권유 검사가 보는 풀린 글자(claude-client adviceCheckTexts). 문자열이 아니면 빈 문자열.
  */
 export function sanitizeInlineHtml(text: unknown): string {
   if (typeof text !== "string") return "";
-  return escapeHtml(text).replace(/&lt;(\/?)strong&gt;/gi, "<$1strong>");
+  return escapeHtml(decodeCharacterReferences(text)).replace(/&lt;(\/?)strong&gt;/gi, "<$1strong>");
 }
 
 /** 변동률 절대값 → 히트맵 강도 등급 (1~5) */

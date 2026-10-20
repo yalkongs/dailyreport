@@ -46,10 +46,10 @@ test("stripEmphasisTags: 강조 태그 외 stray 부등호는 보존 (escape는 
 
 // Ruling 37c: 권유 검사는 화면에 보이는 글자로 본다 — 이름·10진·16진 문자 참조를 한 번만 푼다.
 test("decodeCharacterReferences: 이름·10진·16진 참조를 한 번만 풀고, 모르는 이름·잘못된 코드는 그대로", () => {
-  assert.equal(decodeCharacterReferences("매수&nbsp;하세요"), "매수 하세요");
+  assert.equal(decodeCharacterReferences("매수&nbsp;하세요"), "매수\u00a0하세요");
   assert.equal(decodeCharacterReferences("매수&#32;하세요"), "매수 하세요");
   assert.equal(decodeCharacterReferences("매수&#x20;하세요 &#X41;"), "매수 하세요 A");
-  assert.equal(decodeCharacterReferences("매수&#8203;하세요"), "매수​하세요");
+  assert.equal(decodeCharacterReferences("매수&#8203;하세요"), "매수\u200b하세요");
   assert.equal(decodeCharacterReferences("S&amp;P &lt;b&gt; &quot;x&quot; &apos;y&apos; &hellip;"), "S&P <b> \"x\" 'y' …");
   assert.equal(decodeCharacterReferences("&amp;nbsp; &amp;#32;"), "&nbsp; &#32;"); // 한 번만
   assert.equal(decodeCharacterReferences("&foo; &#0; &#99999999; &#xD800; & 홀로"), "&foo; &#0; &#99999999; &#xD800; & 홀로");

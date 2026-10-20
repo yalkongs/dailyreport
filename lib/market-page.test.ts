@@ -212,7 +212,7 @@ test('오늘 볼 것·의미는 각각 최대 3개, 법적 고지가 맨 끝(그
 const SCRIPT = '<script>alert(1)</script>'
 const IMG = '<img src=x onerror=alert(1)>'
 
-test('sanitizeInlineHtml: <strong>/</strong>만 살리고 나머지는 escape, 모델이 쓴 문자 참조도 글자로 보인다', () => {
+test('sanitizeInlineHtml: 문자 참조를 한 번 풀고 → 전부 escape → <strong>/</strong>만 되살린다', () => {
   assert.equal(sanitizeInlineHtml('코스피 <strong>-7.57%</strong> 급락'), '코스피 <strong>-7.57%</strong> 급락')
   assert.equal(sanitizeInlineHtml(SCRIPT), '&lt;script&gt;alert(1)&lt;/script&gt;')
   assert.equal(sanitizeInlineHtml(IMG), '&lt;img src=x onerror=alert(1)&gt;')
@@ -221,12 +221,18 @@ test('sanitizeInlineHtml: <strong>/</strong>만 살리고 나머지는 escape, �
   // 프롬프트가 쓰라고 한 태그는 <strong>뿐 — 다른 태그는 글자로
   assert.equal(sanitizeInlineHtml('<em>기울임</em><br><b>굵게</b>'), '&lt;em&gt;기울임&lt;/em&gt;&lt;br&gt;&lt;b&gt;굵게&lt;/b&gt;')
   assert.equal(sanitizeInlineHtml('<STRONG>대문자</STRONG>'), '<strong>대문자</strong>')
-  // &·부등호는 escape. Ruling 37c: 모델이 쓴 문자 참조(&nbsp; &#32; 등)도 escape해 글자로 보인다 — 숨은 공백으로 풀려
-  // 권유 검사("매수하세요")를 비켜 가지 못하게. 모델이 쓴 &lt;strong&gt; 은 태그로 되살리지 않는다.
+  // Ruling 37d: 참조를 먼저 한 번 풀어 화면 글자 = 권유 검사가 보는 글자. "S&amp;P"와 "S&P"는 둘 다 "S&P"로 보인다.
   assert.equal(sanitizeInlineHtml('S&P 500 > 7,000'), 'S&amp;P 500 &gt; 7,000')
-  assert.equal(sanitizeInlineHtml('매수&nbsp;하세요 &#32; &#x20;'), '매수&amp;nbsp;하세요 &amp;#32; &amp;#x20;')
-  assert.equal(sanitizeInlineHtml('&lt;script&gt;'), '&amp;lt;script&amp;gt;')
-  assert.equal(sanitizeInlineHtml('&lt;strong&gt;굵게&lt;/strong&gt;'), '&amp;lt;strong&amp;gt;굵게&amp;lt;/strong&amp;gt;')
+  assert.equal(sanitizeInlineHtml('S&amp;P 500'), 'S&amp;P 500')
+  assert.equal(sanitizeInlineHtml('매수&nbsp;하세요 &#32;끝 &#x41;'), '매수\u00a0하세요  끝 A')
+  // 인코딩된 태그는 풀린 뒤 escape되므로 글자 "<script>"로 보일 뿐 태그가 되지 않는다
+  assert.equal(sanitizeInlineHtml('&lt;script&gt;alert(1)&lt;/script&gt;'), '&lt;script&gt;alert(1)&lt;/script&gt;')
+  assert.equal(sanitizeInlineHtml('&lt;img src=x onerror=alert(1)&gt;'), '&lt;img src=x onerror=alert(1)&gt;')
+  assert.equal(sanitizeInlineHtml('&lt;strong onclick=&quot;x&quot;&gt;굵게'), '&lt;strong onclick=&quot;x&quot;&gt;굵게')
+  // 한 번만 푼다 — 두 겹 인코딩은 한 겹이 글자로 남는다
+  assert.equal(sanitizeInlineHtml('&amp;lt;script&amp;gt;'), '&amp;lt;script&amp;gt;')
+  // 인코딩된 속성 없는 <strong>은 허용 태그라 굵게가 된다(검사도 풀어서 본다 — market-card-gate)
+  assert.equal(sanitizeInlineHtml('&lt;strong&gt;굵게&lt;/strong&gt;'), '<strong>굵게</strong>')
   assert.equal(sanitizeInlineHtml(undefined), '')
   assert.equal(sanitizeInlineHtml(42 as never), '')
 })
@@ -250,13 +256,15 @@ test('렌더: 본문 문단·인용·오늘 볼 것 설명·의미 본문의 스
   assert.match(body, /<p>의미 &lt;img src=x onerror=alert\(1\)&gt; <strong>굵게<\/strong><\/p>/)
 })
 
-test('렌더: 모델 글의 "&nbsp;"는 숨은 공백이 아니라 글자 그대로 보인다(Ruling 37c)', () => {
+test('렌더: 모델 글의 문자 참조는 풀린 글자로 보인다 — S&amp;P는 S&P, &nbsp;는 줄바꿈 없는 공백, 인코딩된 <script>는 글자(Ruling 37d)', () => {
   const html = render({
-    bigStory: { content: [{ type: 'paragraph', text: '가격&nbsp;상승' }] },
+    bigStory: { content: [{ type: 'paragraph', text: '가격&nbsp;상승, S&amp;P 500' }, { type: 'pullQuote', text: '&lt;script&gt;alert(1)&lt;/script&gt;' }] },
     watchPoints: [{ badge: '09:00', title: '개장', description: '설명&#32;끝' }],
   })
   const body = html.slice(html.indexOf('<body'))
-  assert.match(body, /<p>가격&amp;nbsp;상승<\/p>/)
-  assert.match(body, /<div class="watch-desc">설명&amp;#32;끝<\/div>/)
-  assert.doesNotMatch(body, /가격&nbsp;상승/)
+  assert.match(body, /<p>가격\u00a0상승, S&amp;P 500<\/p>/)
+  assert.doesNotMatch(body, /&amp;amp;|&amp;nbsp;/)
+  assert.match(body, /<div class="watch-desc">설명 끝<\/div>/)
+  assert.match(body, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/)
+  assert.doesNotMatch(body, /<script/)
 })
