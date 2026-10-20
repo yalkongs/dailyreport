@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-10-21",
+      "type": "morning",
+      "headline": "방산, 10% 무너지는 사이 미 바이오가 달렸다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-21",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-10-20T21:41:48.627Z"
+    },
+    {
       "date": "2026-10-20",
       "type": "morning",
       "headline": "바이오·반도체 오르고 유틸리티·부동산 밀렸다",
