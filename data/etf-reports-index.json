@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-10-22",
+      "type": "morning",
+      "headline": "국내 반도체 4%대 급등, 한은 금리 동결이 변수다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-22",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-10-21T21:41:46.508Z"
+    },
+    {
       "date": "2026-10-21",
       "type": "morning",
       "headline": "방산, 10% 무너지는 사이 미 바이오가 달렸다",
