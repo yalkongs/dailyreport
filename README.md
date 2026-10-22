@@ -187,6 +187,7 @@ Vercel Web Analytics를 사이트 전체에 적용했다(`@vercel/analytics`, `s
 │   ├── run-etf.ts                        # ETF 파이프라인 진입점
 │   ├── delivery-state.ts                 # 발송 판정·상태 기록(resolve·status·mark·classify)
 │   ├── check-delivery.ts                 # 도착 감시 판정
+│   ├── check-published.ts                # 발행물 정확성 검사(공개 페이지 ↔ 원천 시세)
 │   └── collect-data.ts                   # 데이터 수집 단독 실행
 ├── lib/                                  # Market 리포트 코드 (테스트는 각 모듈 옆 *.test.ts)
 │   ├── claude-client.ts                  # Claude API + 프롬프트 + 검증·재생성(최대 3회)
@@ -358,6 +359,11 @@ main의 병합 커밋을 되돌리고 옛 launchd 트리거를 다시 설치한�
 - 발송 결과가 불명(pending/error 잔존)이면 발송 job의 `resolve market`·`resolve etf` step(해당 종류)이 실패한다(이전엔 경고만 남기고 녹색).
   자동 재발송은 하지 않는다 — 구독자 채널을 확인한 뒤 필요하면 `resend_telegram_only=true`(+`only=<종류>`)로 수동 재발송.
 - 발송 직전에 텔레그램이 가져갈 프리뷰 PNG(200 + `image/png`)와 본문(200)을 확인하고, 아니면 보내지 않는다.
+- **발행물 정확성 검사(2026-10-23)** — 같은 job의 다음 step(`if: always()`)이 공개 페이지를 Yahoo 원천 시세와 대조한다:
+  `npx tsx scripts/check-published.ts [--date YYYY-MM-DD] [--base URL] [--kind market|etf|all]`(판정 `lib/published-check.ts`).
+  Market: 코스피 줄무늬 맨 끝 날짜(M1)·등락(M2), 핵심 지표(M3), 제목·카드·요약 지수 수치(M4), og 메타·PNG(M5).
+  ETF: 예시 ETF(E1), 모자이크(E2), 제목·요약 지수 수치(E3), og 메타·PNG(E4). FAIL이 하나라도 있으면 실패 메일.
+  한국 장이 열린 뒤 실행되면 한국 시세 대조만 SKIP(장중), 과거 날짜는 시세 대조를 SKIP하고 M1·M5·E4만 판정한다.
 
 **⚠️ Timezone 규약.** launchd 시각은 맥미니 로컬(KST) 기준이다. GitHub `schedule`
 3순위 백업은 반대로 항상 UTC(`30 22 * * 0-4`) — 자정 UTC를 넘기면 요일 매핑이 깨진다.

@@ -5,6 +5,11 @@ name: Delivery Monitor
 # 한국 휴장일은 통과(파이프라인 silent skip과 같은 기준). 판정은 scripts/check-delivery.ts.
 # 읽기 전용 — 발송·재발송·status 기록을 하지 않는다(중복 발송 방지 정책은 daily-report.yml 쪽 그대로).
 #
+# 발행물 정확성 검사(2026-10-23): 발송 확인 다음에 공개 페이지(코스피 줄무늬·핵심 지표·제목 수치·예시 ETF·모자이크·
+# 미리보기 메타)를 Yahoo 원천 시세와 대조한다(scripts/check-published.ts). 발송 확인이 실패해도 돈다(if: always()) —
+# 틀린 내용이 나간 날도, 안 나간 날도 같은 실패 메일로 알린다. 한국 장이 열린 뒤(schedule 지연 실행)에는
+# 한국 시세 대조만 SKIP("장중 — 직전 거래일 시세 아님"), 미국 대조와 시세 무관 검사는 그대로.
+#
 # 트리거(2026-10-19 개편 — 두 리포트가 08:00 전에 함께 발송되므로 감시도 하나로 합쳤다):
 #   - 정시 감시: 맥미니 launchd(ops/macmini/monitor.sh)가 07:45 KST에 kind=all로 dispatch.
 #   - schedule: 늦은 백업. GitHub schedule은 만성 지연(관측상 수 시간)이라 정시 보장이 아니다 —
@@ -54,3 +59,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KIND: ${{ github.event_name == 'schedule' && 'all' || inputs.kind }}
         run: npx tsx scripts/check-delivery.ts "$KIND"
+
+      - name: Check published content (공개 페이지 수치·날짜가 원천 시세와 다르면 실패)
+        if: always()
+        env:
+          KIND: ${{ github.event_name == 'schedule' && 'all' || inputs.kind }}
+        run: npx tsx scripts/check-published.ts --kind "$KIND"
