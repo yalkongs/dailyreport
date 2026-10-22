@@ -15,7 +15,7 @@ interface Entity {
 
 interface Mention { start: number; end: number; entity: Entity }
 
-interface Claim {
+export interface NumericClaim {
   start: number
   end: number
   value: number
@@ -23,6 +23,21 @@ interface Claim {
   decimals: number // 표기된 소수 자릿수 — 허용오차를 정한다
   mode: 'exact' | 'band' | 'atLeast' | 'atMost' | 'approx'
 }
+type Claim = NumericClaim
+
+/** 대상(ETF·지수)과 짝지어진 등락률 주장 하나. actual = 대상의 실측(없으면 null). */
+export interface PairedClaim {
+  label: string
+  actual: number | null
+  quoted: string
+  claim: NumericClaim
+}
+
+/** 'exact' 모드 허용오차(표기 소수 자릿수 → %p). */
+export type ExactTolerance = (decimals: number) => number
+
+// 파이프라인 게이트 기본값 — 오탐이 재생성·축소판 발송으로 이어지므로 넉넉하다.
+const PIPELINE_TOLERANCE: ExactTolerance = d => (d >= 2 ? 0.03 : d === 1 ? 0.1 : 0.6)
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
@@ -104,7 +119,11 @@ function findClaims(sentence: string): Claim[] {
   return claims
 }
 
-function claimMatches(c: Claim, actual: number): boolean {
+/**
+ * 주장이 실측과 맞는가. 방향어·부호가 있으면 방향도 본다. exactTolerance는 'exact' 모드에만 쓴다
+ * (기본 = 파이프라인 게이트 값, 발행물 검사는 표기 반올림만 허용하는 더 엄격한 값을 넘긴다).
+ */
+export function claimMatches(c: NumericClaim, actual: number, exactTolerance: ExactTolerance = PIPELINE_TOLERANCE): boolean {
   // 보합 근처(±0.05% 미만)의 부호 차이는 반올림 소음으로 본다.
   if (c.sign !== 0 && Math.abs(actual) >= 0.05 && Math.sign(actual) !== c.sign) return false
   const a = Math.abs(actual)
@@ -114,7 +133,7 @@ function claimMatches(c: Claim, actual: number): boolean {
     case 'atMost': return a <= c.value
     case 'approx': return Math.abs(a - c.value) <= 1.0
     // 표기 자릿수만큼의 반올림·내림을 허용한다(7.57%를 '7.5%'로 쓴 정도는 재생성 사유가 아니다).
-    default: return Math.abs(a - c.value) <= (c.decimals >= 2 ? 0.03 : c.decimals === 1 ? 0.1 : 0.6)
+    default: return Math.abs(a - c.value) <= exactTolerance(c.decimals)
   }
 }
 
@@ -132,9 +151,13 @@ function introducesOtherSubject(gap: string): boolean {
   return /[가-힣·]{2,}(?:은|는|이|가)\s/.test(rest)
 }
 
-export function findNumericClaimMismatches(text: string, quotes: EtfQuote[], indices: IndexQuote[] | undefined): string[] {
+/**
+ * 문장마다 대상(ETF 이름·티커, 지수명)과 바로 뒤 등락률 수치를 짝짓는다 — 판정은 하지 않는다.
+ * 다른 지표 문맥·가정문·다른 주어가 끼면 짝을 만들지 않는다(보수적).
+ */
+export function extractNumericClaims(text: string, quotes: EtfQuote[], indices: IndexQuote[] | undefined): PairedClaim[] {
   const entities = buildEntities(quotes, indices)
-  const mismatches: string[] = []
+  const out: PairedClaim[] = []
   for (const sentence of splitSentences(text)) {
     const mentions = findMentions(sentence, entities)
     if (mentions.length === 0) continue
@@ -170,13 +193,20 @@ export function findNumericClaimMismatches(text: string, quotes: EtfQuote[], ind
       }
 
       for (const [m, c] of pairs) {
-        const quoted = sentence.slice(c.start, c.end).trim()
-        if (m.entity.value === null) {
-          mismatches.push(`${m.entity.label} ${quoted} — 지수 실측 없음`)
-        } else if (!claimMatches(c, m.entity.value)) {
-          mismatches.push(`${m.entity.label} ${quoted} — 실제 ${m.entity.value >= 0 ? '+' : ''}${m.entity.value.toFixed(2)}%`)
-        }
+        out.push({ label: m.entity.label, actual: m.entity.value, quoted: sentence.slice(c.start, c.end).trim(), claim: c })
       }
+    }
+  }
+  return out
+}
+
+export function findNumericClaimMismatches(text: string, quotes: EtfQuote[], indices: IndexQuote[] | undefined): string[] {
+  const mismatches: string[] = []
+  for (const p of extractNumericClaims(text, quotes, indices)) {
+    if (p.actual === null) {
+      mismatches.push(`${p.label} ${p.quoted} — 지수 실측 없음`)
+    } else if (!claimMatches(p.claim, p.actual)) {
+      mismatches.push(`${p.label} ${p.quoted} — 실제 ${p.actual >= 0 ? '+' : ''}${p.actual.toFixed(2)}%`)
     }
   }
   return [...new Set(mismatches)]

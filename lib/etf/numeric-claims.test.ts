@@ -3,7 +3,7 @@
 // 사례는 실제 발행물에서 확인된 오류(ETF14·ETF16)와 같은 형태다.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { findNumericClaimMismatches } from './numeric-claims'
+import { claimMatches, extractNumericClaims, findNumericClaimMismatches } from './numeric-claims'
 import type { EtfQuote, IndexQuote } from './types'
 
 function q(ticker: string, name: string, changePercent: number): EtfQuote {
@@ -134,4 +134,23 @@ test('허용오차는 표기 자릿수 기준: 7.57%를 7.5%·7.6%로 쓴 것은
   assert.deepEqual(check('전 거래일 코스피가 7.6% 급락했습니다.', idx), [])
   assert.equal(check('전 거래일 코스피가 7.4% 급락했습니다.', idx).length, 1)
   assert.equal(check('전 거래일 코스피가 -7.62% 밀렸습니다.', idx).length, 1) // 두 자리는 복사값이어야
+})
+
+// 발행물 정확성 검사(lib/published-check.ts)는 같은 짝짓기를 쓰고 판정만 더 엄격하게 한다(표기 자릿수 반올림만 허용).
+test('발행물 검사용: 대상·수치 짝을 꺼내고, 정확 모드 허용오차만 바꿀 수 있다(파이프라인 기본값은 그대로)', () => {
+  const kospi: IndexQuote = { symbol: '^KS11', nameKo: '코스피', price: 5533.77, changePercent: -3.519911, asOf: null }
+  const pairs = extractNumericClaims('기술주 팔고 국채 산 밤, 코스피는 3.5% 밀렸다', [], [kospi])
+  assert.equal(pairs.length, 1)
+  assert.equal(pairs[0].label, '코스피')
+  assert.equal(pairs[0].quoted, '3.5%')
+  assert.equal(pairs[0].actual, -3.519911)
+  assert.equal(pairs[0].claim.sign, -1)
+  assert.equal(pairs[0].claim.decimals, 1)
+  const strict = (decimals: number) => 0.6 * 10 ** -decimals
+  assert.equal(claimMatches(pairs[0].claim, -3.52, strict), true)
+  assert.equal(claimMatches(pairs[0].claim, -3.58, strict), false) // 0.08 > 0.06
+  assert.equal(claimMatches(pairs[0].claim, -3.58), true) // 파이프라인 기본(±0.1)
+  assert.equal(claimMatches(pairs[0].claim, 3.52, strict), false) // 방향(밀렸다)이 반대
+  // 실측이 없는 지수도 짝은 돌려준다(actual null) — 판정은 호출 쪽이 한다.
+  assert.equal(extractNumericClaims('간밤 나스닥은 2.1% 올랐다', [], [])[0].actual, null)
 })
