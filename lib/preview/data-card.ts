@@ -76,6 +76,14 @@ function baselineInBox(top: number, size: number, lineHeight: number): number {
   return top + lineHeight / 2 + (ASCENT_EM - DESCENT_EM) / 2 * size
 }
 
+/**
+ * 기계가 읽는 등락 속성(소수 둘째 자리) — 발행물 정확성 검사(lib/published-check.ts)가 색 대신 숫자로 대조한다.
+ * 그림에는 영향이 없다(SVG·PNG 모두 data-* 속성을 무시). 숫자가 아니면 속성을 뺀다.
+ */
+function pctAttr(pct: number): string {
+  return Number.isFinite(pct) ? ` data-pct="${pct.toFixed(2)}"` : ''
+}
+
 /** 'YYYY-MM-DD' → '10.16 금' */
 export function cardDateLabel(date: string): string {
   return `${date.slice(5, 7)}.${date.slice(8, 10)} ${koreanWeekday(date)}`
@@ -101,7 +109,7 @@ export function renderStripesSvg(
     const x = i * w
     // 마지막 줄만 폭을 보정해 정확히 width에서 끝낸다(반올림 오차로 생기는 틈·넘침 방지).
     const rw = i === n - 1 ? width - x : w
-    return `<rect data-session="${escapeXml(s.date)}" x="${num(x)}" y="0" width="${num(rw)}" height="${num(height)}" fill="${diverging(s.pct)}"/>`
+    return `<rect data-session="${escapeXml(s.date)}"${pctAttr(s.pct)} x="${num(x)}" y="0" width="${num(rw)}" height="${num(height)}" fill="${diverging(s.pct)}"/>`
   })
   let marker = ''
   if (opts?.marker) {
@@ -166,10 +174,10 @@ function renderMosaicSide(tiles: MosaicTile[], x0: number): string {
       // 시안의 box-shadow(타일 바깥 5px 링)와 같게: 중심선이 반 두께만큼 바깥에 오도록 키워서 그린다.
       const h = FEATURE_RING / 2
       featured.push(
-        `<rect data-featured="1" data-ticker="${escapeXml(t.ticker)}" x="${num(x - h)}" y="${num(y - h)}" width="${num(TILE_W + FEATURE_RING)}" height="${num(TILE_H + FEATURE_RING)}" rx="${6 + h}" fill="${fill}" stroke="#111827" stroke-width="${FEATURE_RING}"/>`,
+        `<rect data-featured="1" data-ticker="${escapeXml(t.ticker)}"${pctAttr(t.pct)} x="${num(x - h)}" y="${num(y - h)}" width="${num(TILE_W + FEATURE_RING)}" height="${num(TILE_H + FEATURE_RING)}" rx="${6 + h}" fill="${fill}" stroke="#111827" stroke-width="${FEATURE_RING}"/>`,
       )
     } else {
-      normal.push(`<rect x="${num(x)}" y="${num(y)}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${fill}"/>`)
+      normal.push(`<rect data-ticker="${escapeXml(t.ticker)}"${pctAttr(t.pct)} x="${num(x)}" y="${num(y)}" width="${TILE_W}" height="${TILE_H}" rx="6" fill="${fill}"/>`)
     }
   })
   // 강조 타일은 이웃 타일 위에 그려 링이 가려지지 않게 한다.

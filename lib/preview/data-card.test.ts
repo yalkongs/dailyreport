@@ -41,6 +41,29 @@ test('모자이크 타일: 레버리지·인버스 제외, 자산군 순서 후 
   assert.equal(none.filter(t => t.featured).length, 0)
 })
 
+// 발행물 정확성 검사(scripts/check-published.ts)가 색 대신 숫자로 대조하도록 기계가 읽는 속성을 단다 — 그림은 그대로.
+test('스트라이프·모자이크: data-pct(소수 둘째 자리)·data-ticker 속성, 그림(좌표·색)은 그대로', () => {
+  const s = renderStripesSvg([{ date: '2026-10-21', pct: 1.5 }, { date: '2026-10-22', pct: -3.519911 }], 680, 120, { marker: true })
+  assert.match(s, /<rect data-session="2026-10-21" data-pct="1\.50" x="0" y="0" width="340" height="120" fill="#[0-9A-F]{6}"\/>/)
+  assert.match(s, /<rect data-session="2026-10-22" data-pct="-3\.52" x="340"/)
+  // 숫자가 아니면 속성을 빼고(색은 보합 회색) 그린다.
+  assert.match(renderStripesSvg([{ date: '2026-10-22', pct: Number.NaN }], 680, 120), /<rect data-session="2026-10-22" x="0"[^>]*fill="#E7EAEE"\/>/)
+
+  const tiles = [
+    { ticker: '069500.KS', market: 'KR' as const, category: '지수', pct: -8.2, featured: false },
+    { ticker: '091160.KS', market: 'KR' as const, category: '섹터', pct: -11.94, featured: true },
+    { ticker: 'SPY', market: 'US' as const, category: '해외지수', pct: 0.3, featured: false },
+  ]
+  const svg = renderMosaicSvg(tiles, 1080, 600)
+  assert.match(svg, /<rect data-ticker="069500\.KS" data-pct="-8\.20" x="72" y="128" width="40\.3" height="78" rx="6" fill="#[0-9A-F]{6}"\/>/)
+  assert.match(svg, /<rect data-featured="1" data-ticker="091160\.KS" data-pct="-11\.94" x="116\.8"/)
+  assert.match(svg, /<rect data-ticker="SPY" data-pct="0\.30" x="574" y="128"/)
+  // 속성만 늘었다: 속성을 지우면 이전 그림과 같은 모양(타일 3개, 강조 1개)이다.
+  const bare = svg.replace(/ data-(?:ticker|pct)="[^"]*"/g, '')
+  assert.equal((bare.match(/<rect x="[\d.]+" y="[\d.]+" width="40\.3" height="78" rx="6" fill="#[0-9A-F]{6}"\/>/g) ?? []).length, 2)
+  assert.equal((bare.match(/<rect data-featured="1" x=/g) ?? []).length, 1)
+})
+
 test('fitText: 넘치면 글자를 줄이고, 최소 크기에서도 넘치면 overflow', () => {
   const ok = fitText('코스피 급락 다음 날, 미 증시는 숨 고르기', [94, 80, 72], 3, 936)
   assert.equal(ok.overflow, false); assert.ok(ok.lines.length <= 3); assert.equal(ok.size, 94)
