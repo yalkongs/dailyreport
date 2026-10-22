@@ -1,5 +1,5 @@
 import YahooFinance from "yahoo-finance2";
-import { koreanWeekday } from "./market-calendar";
+import { getPrevTradingDay, koreanWeekday } from "./market-calendar";
 import { pickCloseOnOrBefore, weekStartKst } from "./historical-baseline";
 import { sessionDate } from "./etf/market-context";
 import type { StripeSession } from "./preview/data-card";
@@ -325,21 +325,91 @@ export function dailyReturnsFromCloses(
 }
 
 /**
- * 코스피 최근 n거래일 일간 등락(카드 스트라이프용, 기본 20). 오늘(KST) 세션 값은 제외한다 —
- * 장중·장 마감 뒤 수동 재실행에도 '어제까지'로 고정. 실패하면 [] (카드 배경만 비고 리포트는 계속 간다).
+ * 일봉 종가를 실시간 시세로 채운다(2026-10-23). 야후 코스피 일봉은 최근 칸이 비어 있곤 한다 — 10/23 06:53 실측으로
+ * 10/21 은 전부 null, 10/22 는 0/null(하루 늦게 채워지는 게 아니라 빈 채로 남는 날도 있다). 실시간 시세는 직전 거래일
+ * 종가(price)와 그 전 거래일 종가(previousClose)를 둘 다 정확히 준다:
+ * - 시세 날짜(latest.date) 칸 = price (시세가 기준이라 있어도 덮는다)
+ * - 한국 거래일 달력의 그 전 거래일 칸 = previousClose (일봉이 없거나 종가가 무효할 때만 — 유효한 과거 종가는 그대로)
+ * 오늘(장중·장 마감 뒤) 세션이거나 값이 무효하면 그대로 돌려준다.
+ */
+export function fillClosesFromQuote(
+  quotes: ReadonlyArray<{ date: Date; close: number | null | undefined }>,
+  latest: { date: string; price: number; previousClose: number } | null,
+  todayKst: string,
+): Array<{ date: Date; close: number | null | undefined }> {
+  const valid = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v) && v > 0;
+  if (!latest || !(latest.date < todayKst) || !valid(latest.price)) return [...quotes];
+  const byDate = new Map<string, { date: Date; close: number | null | undefined }>();
+  for (const q of quotes) {
+    const day = sessionDate(q.date, "Asia/Seoul");
+    if (!day) continue;
+    const prev = byDate.get(day);
+    if (!prev || valid(q.close) || !valid(prev.close)) byDate.set(day, q);
+  }
+  const at = (day: string) => new Date(`${day}T00:00:00Z`); // 09:00 KST — sessionDate 가 같은 날로 읽는다
+  byDate.set(latest.date, { date: at(latest.date), close: latest.price });
+  const prevDay = getPrevTradingDay(latest.date, "kr");
+  if (valid(latest.previousClose) && !valid(byDate.get(prevDay)?.close)) {
+    byDate.set(prevDay, { date: at(prevDay), close: latest.previousClose });
+  }
+  return [...byDate.values()].sort((a, b) => a.date.getTime() - b.date.getTime());
+}
+
+/**
+ * 직전 거래일 칸을 실시간 시세로 맞춘다(2026-10-23). 야후 코스피 일봉은 직전 거래일 종가를 하루쯤 늦게 채워서
+ * 06:40엔 그 칸이 비어 있다(null) — 화~금 카드의 맨 오른쪽이 그저께가 됐다. 실시간 시세(regularMarket)는 06:40에도
+ * 직전 거래일 마감 값을 정확히 갖고 있고 핵심 지표도 그 값을 쓰므로, 시세의 거래일·등락을 맨 끝 칸의 기준으로 삼는다.
+ * - 시세 날짜가 오늘 이전이고 일봉 끝보다 늦으면 붙이고, 같은 날이면 시세 값으로 바꾼다(카드·지표가 같은 숫자).
+ * - 오늘 세션(장중·장 마감 뒤 재실행)·잘못된 값·일봉 끝보다 오래된 시세는 무시한다. 최근 n개만 돌려준다.
+ */
+export function withLatestSession(
+  sessions: ReadonlyArray<StripeSession>,
+  latest: StripeSession | null,
+  todayKst: string,
+  n: number,
+): StripeSession[] {
+  const out = [...sessions];
+  if (!latest || !latest.date || !(latest.date < todayKst) || !Number.isFinite(latest.pct)) return out.slice(-n);
+  const last = out.at(-1);
+  if (last && last.date === latest.date) out[out.length - 1] = { date: latest.date, pct: latest.pct };
+  else if (!last || latest.date > last.date) out.push({ date: latest.date, pct: latest.pct });
+  return out.slice(-n);
+}
+
+/**
+ * 코스피 최근 n거래일 일간 등락(카드 스트라이프용, 기본 20). 오늘(KST, dry-run은 TEST_DATE) 세션 값은 제외한다 —
+ * 장중·장 마감 뒤 수동 재실행에도 '어제까지'로 고정. 맨 끝(직전 거래일)은 실시간 시세로 맞춘다(withLatestSession).
+ * 일봉을 못 받으면 [] (카드 배경만 비고 리포트는 계속 간다).
  */
 export async function collectKospiSessions(n = 20): Promise<StripeSession[]> {
   try {
-    const todayKst = sessionDate(new Date(), "Asia/Seoul") as string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const history: any = await yahooFinance.chart("^KS11", {
-      period1: new Date(Date.now() - 45 * 86400000),
-      interval: "1d",
-    });
+    const todayKst = getEffectiveDate().dateStr;
+    const [history, quote] = await Promise.all([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      yahooFinance.chart("^KS11", { period1: new Date(Date.now() - 45 * 86400000), interval: "1d" }) as Promise<any>,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (yahooFinance.quote("^KS11", {}, { validateResult: false }) as Promise<any>).catch(() => null),
+    ]);
     const quotes: Array<{ date: Date; close: number | null | undefined }> = (history?.quotes ?? []).filter(
       (q: { date: Date }) => (sessionDate(q.date, "Asia/Seoul") ?? "") < todayKst,
     );
-    return dailyReturnsFromCloses(quotes, n);
+    const rawSessions = dailyReturnsFromCloses(quotes, n);
+    if (rawSessions.length === 0) return [];
+    const latestDate = sessionDate(quote?.regularMarketTime, "Asia/Seoul");
+    const num = (v: unknown) => (typeof v === "number" ? v : Number.NaN);
+    const filledCloses = fillClosesFromQuote(
+      quotes,
+      latestDate ? { date: latestDate, price: num(quote?.regularMarketPrice), previousClose: num(quote?.regularMarketPreviousClose) } : null,
+      todayKst,
+    );
+    const latestPct = num(quote?.regularMarketChangePercent);
+    const sessions = withLatestSession(dailyReturnsFromCloses(filledCloses, n), latestDate ? { date: latestDate, pct: latestPct } : null, todayKst, n);
+    const end = sessions.at(-1);
+    const rawDates = new Set(rawSessions.map((s) => s.date));
+    const added = sessions.filter((s) => !rawDates.has(s.date)).map((s) => s.date);
+    const note = added.length > 0 ? ` — 일봉에 없던 ${added.join("·")}을 실시간 시세로 채움` : "";
+    if (end) console.log(`  📊 코스피 일봉 ${sessions.length}개, 맨 끝 ${end.date} ${end.pct >= 0 ? "+" : ""}${end.pct.toFixed(2)}%${note}`);
+    return sessions;
   } catch (err) {
     console.log(`  ⚠️ 코스피 일봉 수집 실패: ${(err as Error).message}`);
     return [];
