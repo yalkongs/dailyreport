@@ -201,9 +201,9 @@ const EVALS: Record<string, QuoteEval> = {
 }
 const claim = (text: string, evals = EVALS) => checkIndexClaims('M4', 'market', [{ source: 'h1', text }], evals)
 
-test('M4 반올림: 소수 한 자리 ±0.06, 두 자리 ±0.006, 정수+대·넘게·이상은 내림·하한', () => {
-  const pass = ['코스피는 3.5% 밀렸다', '나스닥이 2.14% 밀렸다', '코스피 3.52% 하락', '코스피가 3% 넘게 빠졌다', '코스피 3%대 급락', '코스피 3% 이상 하락했다', 'S&P 500이 1.2% 내렸다', '코스닥 2.3% 하락']
-  const fail = ['코스피는 3.6% 밀렸다', '코스피 3.53% 하락', '나스닥이 2.15% 밀렸다', '코스피가 4% 넘게 빠졌다', '코스피 2%대 하락', '코스닥 2.4% 하락']
+test('M4 반올림: 소수 한 자리 ±0.06, 두 자리 ±0.02(야후 사후 보정 여유), 정수+대·넘게·이상은 내림·하한', () => {
+  const pass = ['코스피는 3.5% 밀렸다', '나스닥이 2.14% 밀렸다', '코스피 3.52% 하락', '코스피 3.53% 하락', '나스닥이 2.15% 밀렸다', '코스피가 3% 넘게 빠졌다', '코스피 3%대 급락', '코스피 3% 이상 하락했다', 'S&P 500이 1.2% 내렸다']
+  const fail = ['코스피는 3.6% 밀렸다', '코스피 3.55% 하락', '나스닥이 2.17% 밀렸다', '코스피가 4% 넘게 빠졌다', '코스피 2%대 하락', '코스피 2.52% 하락']
   for (const t of pass) assert.equal(claim(t).status, 'PASS', `${t}: ${JSON.stringify(claim(t))}`)
   for (const t of fail) assert.equal(claim(t).status, 'FAIL', `${t}: ${JSON.stringify(claim(t))}`)
 })
@@ -227,12 +227,21 @@ test('M4: 주장이 없으면 SKIP, 장중 KR 지수 주장은 SKIP(미국은 �
   assert.equal(checkIndexClaims('M4', 'market', [{ source: 'h1', text: '나스닥 2.14% 하락' }], missing).status, 'FAIL')
 })
 
-test('불일치 메모에 시세의 이전 종가를 적는다 — 야후 시세 쪽이 틀린 날을 메일만 보고 가려내게(10/23 ^KQ11 실측)', () => {
+test('코스닥 수치는 대조하지 않는다 — 야후 ^KQ11 시세가 틀린 날 맞는 페이지에 실패 메일이 가지 않게(10/23 실측)', () => {
   // 10/22 코스닥 실제 -3.62%(764.10 ÷ 10/21 792.76). 07:52 야후 시세는 이전 종가를 10/20 종가 781.97로 들고 -2.29%였다.
   const kq: QuoteEval = { state: 'ok', symbol: '^KQ11', session: '2026-10-22', price: 764.1, changePercent: -2.2852533, previousClose: 781.97 }
   const r = checkIndexClaims('E3', 'etf', [{ source: '요약', text: '코스닥이 3.62% 하락했습니다.' }], { ...EVALS, 코스닥: kq })
+  assert.equal(r.status, 'SKIP')
+  assert.match(r.note ?? '', /\^KQ11 시세 신뢰 낮음/)
+  const mixed = checkIndexClaims('E3', 'etf', [{ source: '요약', text: '코스피 3.5% 하락, 코스닥 3.62% 하락' }], { ...EVALS, 코스닥: kq })
+  assert.equal(mixed.status, 'PASS') // 코스피는 그대로 대조
+})
+
+test('불일치 메모에 시세의 이전 종가를 적는다 — 야후 시세 쪽이 틀린 날을 메일만 보고 가려내게', () => {
+  const ks: QuoteEval = { state: 'ok', symbol: '^KS11', session: '2026-10-22', price: 5533.77, changePercent: -3.519911, previousClose: 5735.66 }
+  const r = checkIndexClaims('M4', 'market', [{ source: 'h1', text: '코스피가 1.2% 하락했다' }], { ...EVALS, 코스피: ks })
   assert.equal(r.status, 'FAIL')
-  assert.match(r.actual ?? '', /이전 종가 781\.97/)
+  assert.match(r.actual ?? '', /이전 종가 5,735\.66/)
   assert.doesNotMatch(claim('코스피 3.5% 하락').actual ?? '', /이전 종가/) // 일치하면 적지 않는다
 })
 

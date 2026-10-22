@@ -72,8 +72,17 @@ const PCT_TOLERANCE = 0.05 // %p — data-pct·예시 ETF·모자이크·핵심 
 const PRICE_TOLERANCE = 0.001 // 0.1% — 핵심 지표 가격
 const NEUTRAL_FILL = '#E7EAEE' // lib/preview/data-card.ts diverging()의 보합 색(|등락|<0.1)
 const NEUTRAL_BAND = 0.1
-/** 발행물 수치 주장: 표기 자릿수 반올림만 허용(소수 한 자리 ±0.06, 두 자리 ±0.006, 정수 ±0.6). */
-const PUBLISHED_TOLERANCE: ExactTolerance = (decimals) => 0.6 * 10 ** -decimals
+/**
+ * 발행물 수치 주장: 표기 자릿수 반올림 허용(소수 한 자리 ±0.06, 정수 ±0.6). 두 자리 이상은 ±0.02 — 06:40 수집 뒤
+ * 야후가 0.01%p 단위로 고치는 일이 있어 반올림 폭(±0.006)만으로는 맞는 페이지가 오경보가 난다(10/23 결정).
+ * 날짜가 밀리는 진짜 오류는 차이가 %p 단위라 이 폭으로도 잡힌다.
+ */
+const PUBLISHED_TOLERANCE: ExactTolerance = (decimals) => (decimals >= 2 ? 0.02 : 0.6 * 10 ** -decimals)
+/**
+ * 시세 신뢰가 낮아 수치 대조에서 빼는 지수. 10/23 07:52 야후 ^KQ11 시세는 이전 종가가 하루 밀려(10/20 종가) -2.29%였고,
+ * 실제(네이버 일별) -3.62%는 페이지가 맞았다 — 맞는 페이지에 실패 메일이 가지 않게 SKIP하고 사유를 남긴다.
+ */
+const UNRELIABLE_CLAIM_INDEXES: Record<string, string> = { 코스닥: '야후 ^KQ11 시세 신뢰 낮음(이전 종가가 하루 밀린 날 있음) — 대조 생략' }
 const MAX_LISTED = 10
 
 // ── 공용 ────────────────────────────────────────────────────────────────
@@ -413,7 +422,9 @@ export function checkIndexClaims(
     for (const p of extractNumericClaims(text, [], [])) {
       const where = `${source}: ${p.label} ${p.quoted}`
       const ev = evals[p.label]
-      if (!ev) {
+      if (UNRELIABLE_CLAIM_INDEXES[p.label]) {
+        skipped.push(`${where}(${UNRELIABLE_CLAIM_INDEXES[p.label]})`)
+      } else if (!ev) {
         skipped.push(`${where}(대조 시세 없음)`)
       } else if (ev.state === 'skip') {
         skipped.push(`${where}(${ev.note})`)
@@ -435,7 +446,7 @@ export function checkIndexClaims(
     kind,
     title: '제목·카드·요약의 지수 등락 수치',
     status,
-    expected: '지수 시세와 표기 반올림 이내(1자리 ±0.06·2자리 ±0.006·N%대/넘게 하한), 방향어 일치',
+    expected: '지수 시세와 표기 반올림 이내(1자리 ±0.06·2자리 ±0.02·N%대/넘게 하한), 방향어 일치',
     actual: failed.length ? failed.join('; ') : passed.join('; ') || '-',
     note: allNotes.length ? allNotes.join(' · ') : undefined,
   }
