@@ -1,6 +1,23 @@
 {
   "entries": [
     {
+      "date": "2026-10-23",
+      "narrativeAngle": "generation_wallet",
+      "headline": "기술주 팔고 국채 산 밤, 코스피는 3.5% 밀렸다",
+      "bigStoryTopic": "간밤 나스닥이 <strong>-2.6%</strong> 급락하며 미 10년물 국채 금리가 ",
+      "walletTopics": [
+        "미 국채 금리 하락이 이어진다면 — 세대별로 다른 온도",
+        "한은 금통위가 추가 인상을 시사했다면",
+        "WTI 100달러 재진입 여부"
+      ],
+      "metaphors": [
+        "국채",
+        "안전자산",
+        "이탈"
+      ],
+      "lookingAhead": "코스피·코스닥 개장 방향"
+    },
+    {
       "date": "2026-10-22",
       "narrativeAngle": "data_anatomy",
       "headline": "코스피 3.3% 반등, 금통위가 오전 10시에 답한다",
@@ -540,25 +557,6 @@
         "세대별 온도차"
       ],
       "lookingAhead": "7,000선 첫 시험대"
-    },
-    {
-      "date": "2026-09-07",
-      "narrativeAngle": "global_domino",
-      "headline": "HBM 전선에 CXMT 등장, 삼성은 뛰고 마이크론은 멈췄다",
-      "bigStoryTopic": "중국 메모리 업체 CXMT의 HBM 시장 진입 소식이 전해지며 반도체 판도 변화 우려가 부",
-      "walletTopics": [
-        "반도체 보유자 — CXMT 진입 선언, 지금 어떻게 읽어야 하나",
-        "미국 휴장일 — 오늘 한국 장의 독자 주행",
-        "원화 강세 — 수출 기업과 외국인 자금, 동시에 작동하는 두 방향",
-        "지금 각 자산은 어디에 서 있나",
-        "3.63% 기준금리 환경, 예금의 위치를 다시 확인합니다"
-      ],
-      "metaphors": [
-        "HBM 전선",
-        "도미노",
-        "엇갈림"
-      ],
-      "lookingAhead": "미국 레이버 데이 휴장 — 서울 장의 자율 주행"
     }
   ]
 }
