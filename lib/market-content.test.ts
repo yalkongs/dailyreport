@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { dailyReturnsFromCloses } from './market-data'
+import { dailyReturnsFromCloses, withLatestSession, fillClosesFromQuote } from './market-data'
 import { validateMarketSummary, fillMarketSummaryDefaults, buildReportPrompt } from './claude-client'
 import { summarySentence } from './market-summary'
 
@@ -195,4 +195,65 @@ test('프롬프트: summary·cardLine 스키마와 규칙이 있고 compass 는 
     assert.doesNotMatch(prompt, /32자 이내/)
     assert.match(prompt, /장 마감 후 → 다음 거래일 반영/)
   }
+})
+
+const kday = (d: string, close: number | null | undefined) => ({ date: new Date(`${d}T00:00:00Z`), close })
+
+// 2026-10-23: 야후 코스피 일봉은 직전 거래일 종가를 하루쯤 늦게 채운다(06:40엔 null) — 화~금 카드의 맨 오른쪽 줄무늬가
+// 그저께였다. 실시간 시세(regularMarket)의 직전 거래일 등락으로 마지막 칸을 채운다(요일 무관).
+test('withLatestSession: 일봉에 어제가 비어 있으면 실시간 시세의 어제 등락을 맨 끝에 붙인다(10/23 아침 재현)', () => {
+  const sessions = dailyReturnsFromCloses([kday('2026-10-16', 5668.05), kday('2026-10-19', 5768.01), kday('2026-10-20', 5552.74), kday('2026-10-21', 5735.66), kday('2026-10-22', null)], 20)
+  assert.equal(sessions.at(-1)?.date, '2026-10-21')
+  const r = withLatestSession(sessions, { date: '2026-10-22', pct: -3.52 }, '2026-10-23', 20)
+  assert.deepEqual(r.at(-1), { date: '2026-10-22', pct: -3.52 })
+  assert.equal(r.at(-2)?.date, '2026-10-21')
+})
+
+test('withLatestSession: 일봉에 어제가 있어도 실시간 시세 값을 쓴다(카드·지표가 같은 숫자)', () => {
+  const r = withLatestSession([{ date: '2026-10-15', pct: -7.6 }, { date: '2026-10-16', pct: 2.0 }], { date: '2026-10-16', pct: 2.05 }, '2026-10-19', 20)
+  assert.deepEqual(r, [{ date: '2026-10-15', pct: -7.6 }, { date: '2026-10-16', pct: 2.05 }])
+})
+
+test('withLatestSession: 오늘 세션·잘못된 값·없는 시세는 건드리지 않는다, n개로 자른다', () => {
+  const base = [{ date: '2026-10-20', pct: -3.7 }, { date: '2026-10-21', pct: 3.3 }]
+  assert.deepEqual(withLatestSession(base, { date: '2026-10-23', pct: 1 }, '2026-10-23', 20), base) // 오늘(장중·장 마감 뒤) 세션은 줄무늬 밖
+  assert.deepEqual(withLatestSession(base, { date: '2026-10-22', pct: Number.NaN }, '2026-10-23', 20), base)
+  assert.deepEqual(withLatestSession(base, null, '2026-10-23', 20), base)
+  assert.deepEqual(withLatestSession(base, { date: '2026-10-19', pct: 9 }, '2026-10-23', 20), base) // 일봉 끝보다 오래된 시세는 무시
+  const twenty = Array.from({ length: 20 }, (_, i) => ({ date: `2026-09-${String(i + 1).padStart(2, '0')}`, pct: 0.5 }))
+  const r = withLatestSession(twenty, { date: '2026-10-22', pct: -1 }, '2026-10-23', 20)
+  assert.equal(r.length, 20); assert.deepEqual(r.at(-1), { date: '2026-10-22', pct: -1 }); assert.equal(r[0].date, '2026-09-02')
+})
+
+test('withLatestSession: 월요일·연휴 다음 날도 같은 규칙(직전 거래일 = 시세의 날짜)', () => {
+  const fri = [{ date: '2026-10-15', pct: -7.6 }]
+  assert.deepEqual(withLatestSession(fri, { date: '2026-10-16', pct: 2.05 }, '2026-10-19', 20).at(-1), { date: '2026-10-16', pct: 2.05 })
+  const beforeHoliday = [{ date: '2026-10-07', pct: 0.4 }]
+  assert.deepEqual(withLatestSession(beforeHoliday, { date: '2026-10-08', pct: -1.2 }, '2026-10-12', 20).at(-1), { date: '2026-10-08', pct: -1.2 })
+})
+
+// 2026-10-23 실측: 06:53 기준 야후 일봉 10/21 은 전부 null, 10/22 는 0/null — 하루 늦게가 아니라 비어 있는 채로 남는 날도 있다.
+// 실시간 시세는 직전 거래일 종가(price)와 그 전 거래일 종가(previousClose)를 둘 다 준다 → 두 칸을 채운다.
+test('fillClosesFromQuote: 일봉의 어제·그저께가 비어도 시세의 종가·전일 종가로 채워 두 칸 모두 맞는 등락이 된다(10/23 실측)', () => {
+  const rows = [kday('2026-10-16', 5668.05), kday('2026-10-19', 5768.01), kday('2026-10-20', 5552.74), kday('2026-10-21', null), kday('2026-10-22', null)]
+  const filled = fillClosesFromQuote(rows, { date: '2026-10-22', price: 5533.77, previousClose: 5735.66 }, '2026-10-23')
+  const s = dailyReturnsFromCloses(filled, 20)
+  assert.deepEqual(s.slice(-3).map(x => [x.date, Number(x.pct.toFixed(2))]), [['2026-10-20', -3.73], ['2026-10-21', 3.29], ['2026-10-22', -3.52]])
+})
+
+test('fillClosesFromQuote: 그저께 일봉이 아예 없어도 한국 거래일 달력으로 날짜를 찾는다, 유효한 과거 종가는 덮지 않는다', () => {
+  const noRow = fillClosesFromQuote([kday('2026-10-19', 5768.01), kday('2026-10-20', 5552.74)], { date: '2026-10-22', price: 5533.77, previousClose: 5735.66 }, '2026-10-23')
+  assert.deepEqual(dailyReturnsFromCloses(noRow, 20).map(x => x.date), ['2026-10-20', '2026-10-21', '2026-10-22'])
+  const valid = fillClosesFromQuote([kday('2026-10-20', 5552.74), kday('2026-10-21', 5735.66)], { date: '2026-10-22', price: 5533.77, previousClose: 9999 }, '2026-10-23')
+  assert.equal(valid.find(r => r.date.toISOString().startsWith('2026-10-21'))?.close, 5735.66)
+})
+
+test('fillClosesFromQuote: 오늘 세션·잘못된 시세는 그대로, 연휴 다음 날은 달력의 직전 거래일에 전일 종가', () => {
+  const rows = [kday('2026-10-20', 5552.74), kday('2026-10-21', null)]
+  assert.deepEqual(fillClosesFromQuote(rows, { date: '2026-10-23', price: 1, previousClose: 1 }, '2026-10-23'), rows)
+  assert.deepEqual(fillClosesFromQuote(rows, { date: '2026-10-22', price: Number.NaN, previousClose: 5735.66 }, '2026-10-23'), rows)
+  assert.deepEqual(fillClosesFromQuote(rows, null, '2026-10-23'), rows)
+  // 10/9(금) 한글날 휴장 → 10/12(월)의 직전 거래일은 10/8
+  const h = fillClosesFromQuote([kday('2026-10-07', 100)], { date: '2026-10-12', price: 99, previousClose: 101 }, '2026-10-13')
+  assert.deepEqual(dailyReturnsFromCloses(h, 20).map(x => x.date), ['2026-10-08', '2026-10-12'])
 })
