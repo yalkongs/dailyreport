@@ -80,7 +80,14 @@ test("FRED 캘린더: 일부 릴리스 조회가 실패해도 나머지로 진�
       if (url.includes("release_id=10&")) return { release_dates: [{ date: d(2) }] };
       throw new Error("timeout");
     }) as never;
-    const ev = await collectEconomicCalendar(fetcher);
+    // 수집 함수의 경고 줄(console.log)을 가로챈다 — 테스트 중 stdout 쓰기가 Node 테스트 실행기의 결과 메시지와
+    // 겹치면 'Unable to deserialize cloned data'로 이 파일이 실패로 잡혔다(CI 10/20·10/23, 테스트는 모두 통과).
+    const logs: string[] = [];
+    const origLog = console.log;
+    console.log = (...args: unknown[]) => { logs.push(args.map(String).join(" ")); };
+    let ev: Awaited<ReturnType<typeof collectEconomicCalendar>>;
+    try { ev = await collectEconomicCalendar(fetcher); } finally { console.log = origLog; }
+    assert.ok(logs.some((l) => /릴리스 \d+\/\d+건 조회 실패/.test(l)), "실패 건수 경고를 남긴다");
     assert.equal(ev.length, 1);
     assert.equal(ev[0].event, "Consumer Price Index");
     assert.match(ev[0].time ?? "", /^2[12]:30$/);

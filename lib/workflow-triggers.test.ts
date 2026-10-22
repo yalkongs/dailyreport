@@ -457,7 +457,9 @@ test("ci.yml: 모든 브랜치 push·PR에서 npm ci → test → typecheck, 봇
   );
   assert.equal(ignores.length, 2);
   for (const list of ignores) assert.deepEqual(list, ["public/**", "data/**", "docs/**"]);
-  const steps = ["run: npm ci", "run: npm test", "run: npm run typecheck"].map((s) => ciYml.indexOf(s));
+  const steps = ["run: npm ci", "if npm test 2>&1 | tee test-output.log", "run: npm run typecheck"].map((s) => ciYml.indexOf(s));
+  // 실행기 IPC 오류('Unable to deserialize cloned data')일 때만 한 번 재시도, 그 밖의 실패는 그대로 실패(10/23).
+  assert.match(ciYml, /if grep -q 'Unable to deserialize cloned data' test-output\.log; then\n[^\n]*::warning[^\n]*\n\s+npm test\n\s+else\n\s+exit 1\n\s+fi/);
   assert.ok(steps.every((i) => i >= 0), "npm ci/test/typecheck step 누락");
   assert.deepEqual([...steps].sort((a, b) => a - b), steps, "step 순서");
   assert.doesNotMatch(ciYml, /npm run lint/); // lint는 현재 실패 — 정리 후 추가
