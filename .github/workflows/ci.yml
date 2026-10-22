@@ -49,7 +49,18 @@ jobs:
         run: npm ci
 
       - name: Test
-        run: npm test
+        # Node 테스트 실행기는 자식 프로세스의 결과를 stdout으로 주고받는데, 가끔 결과 해석에 실패한다
+        # ('Unable to deserialize cloned data due to invalid or unsupported version' — 10/20·10/23 release-time.test,
+        # 그 파일의 8개 테스트는 모두 통과). 이 실행기 오류일 때만 한 번 다시 돌린다 — 진짜 실패는 다시 돌려도 실패한다.
+        run: |
+          set -o pipefail
+          if npm test 2>&1 | tee test-output.log; then exit 0; fi
+          if grep -q 'Unable to deserialize cloned data' test-output.log; then
+            echo "::warning title=테스트 실행기 오류::Unable to deserialize cloned data — 테스트 결과와 무관한 실행기 IPC 오류라 한 번 다시 돌립니다"
+            npm test
+          else
+            exit 1
+          fi
 
       - name: Typecheck
         run: npm run typecheck
