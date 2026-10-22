@@ -414,6 +414,23 @@ test("delivery-monitor: 읽기 전용 최소 권한, check-delivery를 env로 �
   assert.match(monitorYml, /node-version: '22'/);
 });
 
+test("delivery-monitor: 발송 확인 뒤 발행물 정확성 검사 — 발송 확인이 실패해도 돌고(always), 실패하면 job이 실패", () => {
+  const wf = yaml.load(monitorYml) as Wf;
+  const steps = wf.jobs.check.steps;
+  const delivery = steps.findIndex((s) => (s.run ?? "").includes("scripts/check-delivery.ts"));
+  const published = steps.findIndex((s) => (s.run ?? "").includes("scripts/check-published.ts"));
+  assert.ok(delivery >= 0, "check-delivery step 없음");
+  assert.ok(published > delivery, "check-published step은 check-delivery 다음");
+  const step = steps[published] as WfStep & { "continue-on-error"?: unknown };
+  assert.equal(step.if, "always()");
+  assert.equal(step["continue-on-error"], undefined); // 실패가 job 실패(=GitHub 실패 메일)로 이어져야 한다
+  assert.match(step.run ?? "", /^npx tsx scripts\/check-published\.ts --kind "\$KIND"$/);
+  // 감시 대상은 발송 확인과 같은 식(schedule=all, dispatch=입력값). 비밀은 쓰지 않는다(공개 페이지·시세만 읽음).
+  const kind = (s: WfStep) => (s.env as Record<string, string> | undefined)?.KIND;
+  assert.equal(kind(step), kind(steps[delivery]));
+  assert.doesNotMatch(JSON.stringify(step), /secrets\./);
+});
+
 // ── ci.yml: 변경을 막는 자동 검증(감사 F11) ────────────────────────────────────────────
 const ciPath = path.join(WF_DIR, "ci.yml");
 const ciYml = fs.existsSync(ciPath) ? fs.readFileSync(ciPath, "utf8") : "";
