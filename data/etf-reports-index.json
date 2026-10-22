@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-10-23",
+      "type": "morning",
+      "headline": "2차전지·반도체 동반 급락, 미 수출규제가 눌렀다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-23",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-10-22T21:43:30.686Z"
+    },
+    {
       "date": "2026-10-22",
       "type": "morning",
       "headline": "국내 반도체 4%대 급등, 한은 금리 동결이 변수다",
