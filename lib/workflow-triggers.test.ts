@@ -142,6 +142,10 @@ test("텔레그램 링크에 utm_source=telegram, 글꼴 단계는 Pretendard도
     assert.doesNotMatch(s, /::warning::Pretendard/, job);
     assert.match(s, /fc-match 'Pretendard:weight=800' \|\| true/, job);
     assert.match(s, /fc-match 'Pretendard:weight=600' \|\| true/, job);
+    // 2026-10-24: 보조 글꼴 apt가 멈춰도 job이 죽지 않게 step은 continue-on-error, Pretendard 등록이 apt보다 먼저.
+    assert.match(s, /\n        continue-on-error: true\n/, job);
+    assert.ok(s.indexOf("cp assets/fonts/Pretendard-") < s.indexOf("apt-get update"), job);
+    assert.doesNotMatch(s, /fonts-noto-cjk 설치 3회 실패[^\n]*\n\s+exit 1/, job);
   }
   for (const kind of ["market", "etf"]) {
     const s = stepBlock(jobBlock(wf, "deliver"), `send ${kind}`);

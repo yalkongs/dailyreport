@@ -91,8 +91,30 @@ function findMentions(sentence: string, entities: Entity[]): Mention[] {
 }
 
 const CLAIM_RE = /([+\-−])?\s?(\d+(?:\.\d+)?)\s?%(?!\s?p)(\s*대)?(\s*(?:넘게|이상|가까이|안팎|남짓|이하|미만))?/g
-const NEG_AFTER = /^.{0,12}?(하락|내려|내린|내렸|밀려|밀린|밀리|밀렸|급락|빠져|빠진|떨어|낙폭|약세|주저앉|내려앉)/
-const POS_AFTER = /^.{0,12}?(상승|올라|오른|올랐|급등|반등|강세|뛰)/
+// 방향어(수치 뒤 12자 안). 2026-10-24: 가장 가까운 방향어로 판정한다 — 예전엔 하락어를 먼저 찾아 'TLT 1.87% 상승은 …
+// 금리 하락'처럼 뒤따르는 다른 대상의 하락어를 집었다(10/23 거짓 위반). 활용형(오르며·내리며 등)도 더했다.
+const NEG_WORD = /하락|내려|내린|내렸|내리|밀려|밀린|밀리|밀렸|급락|빠져|빠진|빠지|떨어|낙폭|약세|주저앉|내려앉|후퇴|꺾/
+const POS_WORD = /상승|올라|오른|올랐|오르|급등|반등|강세|뛰/
+const DIRECTION_WINDOW = 12
+
+// 방향어 바로 앞이 다른 지표("금리 하락", "환율이 올라")면 그 방향어는 이 수치의 것이 아니다.
+const OTHER_SUBJECT_BEFORE = /(?:금리|환율|달러|원화|엔화|유가|국채|수익률|물가)\s*(?:이|가|은|는|의|도)?\s*$/
+
+/** 수치 바로 뒤(12자 안)에서 가장 먼저 나오는 이 수치의 방향어 부호. 다른 지표에 붙은 방향어는 건너뛴다. 없으면 0. */
+function directionAfter(after: string): -1 | 1 | 0 {
+  const head = after.slice(0, DIRECTION_WINDOW + 4)
+  const hits: Array<{ at: number; sign: -1 | 1 }> = []
+  for (const [re, sign] of [[NEG_WORD, -1], [POS_WORD, 1]] as const) {
+    for (const m of head.matchAll(new RegExp(re.source, 'g'))) {
+      const at = m.index ?? 0
+      if (at > DIRECTION_WINDOW) continue
+      if (OTHER_SUBJECT_BEFORE.test(head.slice(0, at))) continue
+      hits.push({ at, sign })
+    }
+  }
+  hits.sort((a, b) => a.at - b.at)
+  return hits[0]?.sign ?? 0
+}
 // 등락률이 아닌 다른 지표 문맥 — 대상과 수치 사이에 있으면 대조하지 않는다.
 // 가정·조건·미래 관찰("3% 이상 반등하면", "2% 넘게 밀릴 경우", "반등할지")은 사실 주장이 아니다.
 const CONDITIONAL_AFTER = /^.{0,16}?(하면|되면|이면|다면|라면|으면|면서도|할\s*경우|될\s*경우|일\s*경우|할\s*때|일\s*때|할지|될지|인지|넘어서면|벌어지면|좁혀지면|돌파|이내라면|시\s)/
@@ -106,7 +128,7 @@ function findClaims(sentence: string): Claim[] {
     const value = Number(m[2])
     const after = sentence.slice(end)
     let sign: -1 | 1 | 0 = m[1] ? (m[1] === '+' ? 1 : -1) : 0
-    if (sign === 0) sign = NEG_AFTER.test(after) ? -1 : POS_AFTER.test(after) ? 1 : 0
+    if (sign === 0) sign = directionAfter(after)
     const suffix = (m[4] ?? '').trim()
     const approxBefore = /약\s*$/.test(sentence.slice(Math.max(0, start - 3), start))
     const mode: Claim['mode'] = m[3] ? 'band'

@@ -760,6 +760,17 @@ for (const job of ["market", "etf"] as const) {
       assert.match(r.out, /FCMATCH\[Pretendard:weight=600\]/);
     });
 
+    // 2026-10-24: 10/23 07:20 백업에서 apt가 느려 이 step이 5분 상한에 걸려 market job이 실패했다 — 보조 글꼴(Noto CJK)
+    // 설치가 3회 실패해도 step은 성공하고, Pretendard는 apt보다 먼저 등록돼 있어야 한다.
+    test(`${job} 글꼴 [bash ${mode}]: apt가 3회 실패해도 step은 성공, Pretendard는 apt보다 먼저 등록`, () => {
+      const r = runStep(script, { ...fontStubs, sudo: "exit 1" }, {}, flags, (w) => write(path.join(w, "assets", "fonts", "Pretendard-Bold.otf"), "otf"));
+      assert.equal(r.status, 0, r.out);
+      assert.match(r.out, /::error::fonts-noto-cjk 설치 3회 실패/);
+      assert.match(r.out, /Pretendard 설치 완료/);
+      assert.ok(r.out.indexOf("Pretendard 설치 완료") < r.out.indexOf("::warning::apt-get"), r.out);
+      assert.ok(fs.existsSync(path.join(r.dir, ".local", "share", "fonts", "Pretendard-Bold.otf")), r.out);
+    });
+
     test(`${job} 글꼴 [bash ${mode}]: fc-match가 실패해도 step은 성공한다`, () => {
       const r = runStep(script, { ...fontStubs, "fc-match": "exit 1" }, {}, flags, (w) => write(path.join(w, "assets", "fonts", "Pretendard-Bold.otf"), "otf"));
       assert.equal(r.status, 0, r.out);
