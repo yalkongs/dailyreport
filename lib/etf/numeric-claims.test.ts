@@ -154,3 +154,22 @@ test('발행물 검사용: 대상·수치 짝을 꺼내고, 정확 모드 허용
   // 실측이 없는 지수도 짝은 돌려준다(actual null) — 판정은 호출 쪽이 한다.
   assert.equal(extractNumericClaims('간밤 나스닥은 2.1% 올랐다', [], [])[0].actual, null)
 })
+
+// 2026-10-24 주간 점검: 방향은 '수치 뒤 12자 안에 하락어가 있으면 하락'으로 먼저 판정해, 바로 붙은 상승어보다
+// 뒤의 '금리 하락'을 집었다 — 10/23 ETF 1회차가 "TLT 1.87% — 실제 +1.87%"로 거짓 위반. 가장 가까운 방향어로 판정한다.
+test('방향어: 수치에 가장 가까운 방향어로 판정 — 뒤따르는 다른 대상의 하락어에 끌려가지 않는다(10/23 TLT 거짓 위반)', () => {
+  const q = [{ ticker: 'TLT', name: 'iShares 20+ Year Treasury Bond ETF', market: 'US', changePercent: 1.87, price: 90 }] as never
+  for (const t of [
+    'TLT가 1.87% 오르며 금리 하락을 반영했습니다.',
+    'TLT 1.87% 상승은 장기 금리 하락 기대를 보여 줍니다.',
+    '미 장기채 TLT가 1.87% 오른 반면 금리는 하락했습니다.',
+    'TLT는 1.87%로 금리 하락 폭만큼 올랐습니다.',
+    'TLT가 1.87% 뛰어 금리 하락 압력이 확인됩니다.',
+    'TLT 1.87% 강세로 채권 금리가 내렸습니다.',
+    'TLT가 1.87% 오르고 금리는 내렸습니다.',
+  ]) assert.deepEqual(findNumericClaimMismatches(t, q, []), [], t)
+  // 진짜 방향 오류는 그대로 잡는다
+  for (const t of ['TLT가 1.87% 하락했습니다.', 'TLT 1.87% 내리며 금리가 올랐습니다.', 'TLT가 1.87% 밀렸다.']) {
+    assert.equal(findNumericClaimMismatches(t, q, []).length, 1, t)
+  }
+})
