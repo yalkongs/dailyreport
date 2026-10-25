@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-10-26",
+      "type": "morning",
+      "headline": "2차전지 4% 밀린 사이, 원유·채권이 받쳤다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-26",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-10-25T21:41:37.383Z"
+    },
+    {
       "date": "2026-10-23",
       "type": "morning",
       "headline": "2차전지·반도체 동반 급락, 미 수출규제가 눌렀다",
