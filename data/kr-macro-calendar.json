@@ -1,99 +1,46 @@
 {
-  "generatedAt": "2026-10-18T17:10:18.416Z",
-  "weekRangeStart": "2026-10-19",
-  "weekRangeEnd": "2026-11-02",
+  "generatedAt": "2026-10-25T17:30:37.140Z",
+  "weekRangeStart": "2026-10-26",
+  "weekRangeEnd": "2026-11-09",
   "events": [
     {
-      "date": "2026-10-21",
-      "category": "other",
-      "name": "한국은행 2026년 9월 생산자물가지수(잠정) 발표",
-      "importance": 2,
-      "description": "한국은행 월간통계 공표일정에 따른 9월 PPI 발표",
-      "source": "bok.or.kr",
-      "confirmed": true
-    },
-    {
-      "date": "2026-10-22",
-      "category": "bok_mpb",
-      "name": "한국은행 금융통화위원회 통화정책방향 결정회의",
+      "date": "2026-11-02",
+      "category": "cpi",
+      "name": "한국 소비자물가지수(CPI) 발표 — 2026년 10월",
       "importance": 5,
-      "description": "2026년 10월 기준금리 결정 회의. 총재 기자설명회 및 경제상황 평가 동시 배포 예정. 통상 오전 발표(10:00 KST 전후).",
-      "source": "bok.or.kr",
+      "description": "국가데이터처(구 통계청)가 매월 초 발표하는 소비자물가동향. investing.com 및 e-나라지표 입력예정일 모두 11월 2일로 표시. 발표 시각은 통상 KST 08:00 전후이나 investing.com은 23:00(KST) 표기(UTC+9 변환 오차 가능성 있음).",
+      "source": "kostat.go.kr / investing.com",
       "confirmed": true,
-      "time": "10:00"
+      "time": "08:00"
     },
     {
-      "date": "2026-10-22",
-      "category": "other",
-      "name": "한국은행 경제상황 평가(2026년 10월) 발표",
+      "date": "2026-11-02",
+      "category": "trade",
+      "name": "수출입 동향 발표 — 2026년 10월",
       "importance": 3,
-      "description": "금통위 통화정책방향 결정회의 당일 함께 배포되는 경제상황 평가 보고서",
-      "source": "newspim.com / bok.or.kr",
+      "description": "산업통상자원부·국가데이터처 수출입 실적 발표. e-나라지표 수출입동향 입력예정일 2026-11-02로 명시. 매 익월 초 발표 관례와 일치.",
+      "source": "index.go.kr (e-나라지표)",
       "confirmed": true
     },
     {
-      "date": "2026-10-27",
+      "date": "2026-11-06",
       "category": "other",
-      "name": "한국은행 2026년 10월 소비자동향조사 결과 발표",
-      "importance": 2,
-      "description": "한국은행 월간통계 공표일정 기준. 소비자심리지수(CCSI) 포함.",
-      "source": "bok.or.kr",
-      "confirmed": true
-    },
-    {
-      "date": "2026-10-27",
-      "category": "gdp",
-      "name": "한국은행 2026년 3/4분기 실질 GDP 속보 발표",
-      "importance": 4,
-      "description": "한국은행 월간통계 공표일정에 따른 3분기 실질 국내총생산 속보치 발표",
-      "source": "bok.or.kr",
-      "confirmed": true
-    },
-    {
-      "date": "2026-10-29",
-      "category": "other",
-      "name": "한국은행 2026년 10월 기업경기조사 결과 및 경제심리지수(ESI) 발표",
-      "importance": 2,
-      "description": "한국은행 월간통계 공표일정 기준. BSI 및 ESI 포함.",
-      "source": "bok.or.kr",
-      "confirmed": true
+      "name": "미국 고용보고서(비농업 고용·실업률) 발표",
+      "importance": 3,
+      "description": "미국 노동통계국(BLS)이 매월 첫째 금요일 발표. 달러·원 환율 및 국내 채권·주식시장에 간접 영향. therighttrader.com에서 다음 발표 2026년 11월 6일 금요일로 확인.",
+      "source": "therighttrader.com / bls.gov",
+      "confirmed": true,
+      "time": "22:30"
     },
     {
       "date": "2026-11-11",
       "category": "employment",
-      "name": "통계청 2026년 10월 고용동향 발표",
+      "name": "고용동향 발표 — 2026년 10월",
       "importance": 4,
-      "description": "통계청 2026년도 보도계획(mods.go.kr)에 따른 10월 고용동향 발표일. 취업자 수·실업률 등 포함.",
-      "source": "mods.go.kr",
-      "confirmed": true
-    },
-    {
-      "date": "2026-11-12",
-      "category": "futures_expiry",
-      "name": "KOSPI200 선물·옵션 11월 만기일",
-      "importance": 2,
-      "description": "코스피200 선물·옵션 결제월의 두 번째 목요일 기준 월물 만기일. 비분기월(옵션 월 만기).",
-      "source": "estockpost.com / indexflowpro.com",
-      "confirmed": true
-    },
-    {
-      "date": "2026-11-26",
-      "category": "bok_mpb",
-      "name": "한국은행 금융통화위원회 통화정책방향 결정회의",
-      "importance": 5,
-      "description": "2026년 11월 기준금리 결정 회의. 총재 기자설명회 예정. 경제전망보고서(11월) 동시 발표 가능성 높음(패턴 기반 추정).",
-      "source": "bok.or.kr / tossbank.com",
+      "description": "국가데이터처(구 통계청) 경제활동인구조사 기반 월간 고용동향. 공식 보도계획 PDF(mods.go.kr)에 '2026년 10월 고용동향 11.11.(수) 고용통계과'로 명시.",
+      "source": "mods.go.kr (국가데이터처 공식 보도계획)",
       "confirmed": true,
-      "time": "09:00"
-    },
-    {
-      "date": "2026-11-26",
-      "category": "bok_outlook",
-      "name": "한국은행 경제전망보고서(2026년 11월) 발표",
-      "importance": 4,
-      "description": "한국은행 경제전망보고서는 2월·5월·8월·11월 금통위 당일 발표 패턴. 11월 26일 금통위에 맞춰 발표 예상되나 공식 일정 미확인 — 관례 추정.",
-      "source": "bok.or.kr",
-      "confirmed": false
+      "time": "08:00"
     }
   ]
 }
