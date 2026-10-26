@@ -339,6 +339,29 @@ function checkStripeDate(stripes: Stripe[], date: string): CheckResult {
   return { ...base, status: last.session === expected ? 'PASS' : 'FAIL', actual: last.session }
 }
 
+/** 카드 줄무늬 칸 수 — lib/market-data.ts collectKospiSessions(20)와 같다. */
+const STRIPE_SESSIONS = 20
+
+/**
+ * M1b(2026-10-26): 줄무늬 20칸 = 직전 한국 거래일까지 연속한 20 거래일(한국 거래일 달력). 매일 정확히 한 칸씩 밀려야 한다 —
+ * 10/23 공개본은 10/22가 빠져(9/18~10/21) 다음 영업일 카드와 두 칸 차이가 났다. 빠진 날·남는 날을 적는다.
+ */
+export function checkStripeContinuity(stripes: Stripe[], date: string): CheckResult {
+  const expected: string[] = []
+  let d = getPrevTradingDay(date, 'kr')
+  for (let i = 0; i < STRIPE_SESSIONS; i++) { expected.unshift(d); d = getPrevTradingDay(d, 'kr') }
+  const actual = stripes.map((s) => s.session)
+  const base = { id: 'M1b', kind: 'market' as const, title: `줄무늬 ${STRIPE_SESSIONS}칸 = 직전 거래일까지 연속한 한국 거래일`, expected: `${expected[0]} ~ ${expected.at(-1)} (${STRIPE_SESSIONS}칸)` }
+  if (actual.length === 0) return { ...base, status: 'FAIL', actual: '없음', note: '코스피 줄무늬(data-session)를 찾지 못함' }
+  const missing = expected.filter((x) => !actual.includes(x))
+  const extra = actual.filter((x) => !expected.includes(x))
+  const ok = missing.length === 0 && extra.length === 0 && actual.length === STRIPE_SESSIONS
+  const parts = [`${actual[0]} ~ ${actual.at(-1)} (${actual.length}칸)`]
+  if (missing.length) parts.push(`빠짐 ${missing.join('·')}`)
+  if (extra.length) parts.push(`남음 ${extra.join('·')}`)
+  return { ...base, status: ok ? 'PASS' : 'FAIL', actual: parts.join(' · ') }
+}
+
 function checkStripeValue(stripes: Stripe[], ev: QuoteEval): CheckResult {
   const base = { id: 'M2', kind: 'market' as const, title: '줄무늬 맨 끝 등락 = 코스피 직전 거래일 시세' }
   const last = stripes.at(-1)
@@ -663,6 +686,7 @@ export async function runPublishedChecks(opts: PublishedCheckOptions): Promise<C
     if (kind === 'market') {
       const stripes = parseStripes(html)
       results.push(checkStripeDate(stripes, date))
+      results.push(checkStripeContinuity(stripes, date))
       results.push(checkStripeValue(stripes, evalQuote(ctx, '^KS11')))
       results.push(...checkKeyIndicators(parseKeyIndicators(html), ctx))
       const card = opts.marketCardLine?.trim()

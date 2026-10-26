@@ -10,7 +10,7 @@ import { diverging, type StripeSession } from './preview/data-card'
 import type { CollectedData, EtfQuote, MorningReport } from './etf/types'
 import {
   runPublishedChecks, checkIndexClaims, colorSign, withRetry, parseCliArgs, formatLine, formatStepSummary, errorAnnotation,
-  kstToday, type CheckResult, type PageResponse, type QuoteSnapshot, type QuoteEval,
+  kstToday, checkStripeContinuity, type CheckResult, type PageResponse, type QuoteSnapshot, type QuoteEval,
 } from './published-check'
 
 const BASE = 'https://dailyreport-eta.vercel.app'
@@ -43,7 +43,10 @@ const marketData = {
   collectionErrors: [],
 } as never
 
-const GOOD_SESSIONS: StripeSession[] = [{ date: '2026-10-20', pct: -1.2 }, { date: '2026-10-21', pct: 1.8 }, { date: '2026-10-22', pct: -3.519911 }]
+// 10/23 카드의 올바른 20칸: 직전 거래일(10/22)까지 연속한 한국 거래일(9/21~10/22, 추석·개천절·한글날 휴장 제외).
+const GOOD_DATES = ['2026-09-21', '2026-09-22', '2026-09-23', '2026-09-28', '2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02', '2026-10-06', '2026-10-07',
+  '2026-10-08', '2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-19', '2026-10-20', '2026-10-21', '2026-10-22']
+const GOOD_SESSIONS: StripeSession[] = GOOD_DATES.map((date, i) => ({ date, pct: i === GOOD_DATES.length - 1 ? -3.519911 : i % 2 ? 1.8 : -1.2 }))
 // 10/20~10/23 실제 오류: 야후 일봉이 10/22를 비워 맨 끝이 10/21(빨강)로 남았다.
 const BUGGY_SESSIONS: StripeSession[] = [{ date: '2026-10-19', pct: 1.6 }, { date: '2026-10-20', pct: -1.2 }, { date: '2026-10-21', pct: 1.8 }]
 
@@ -424,4 +427,28 @@ test('출력: 한 줄에 상태·기대·실제, ::error:: 주석은 %·줄바�
   assert.match(md, /\| FAIL \| M1 \|/)
   assert.match(md, /\| PASS \| M5 \|/)
   assert.match(md, /2026-10-23/)
+})
+
+// 2026-10-26: 줄무늬는 매일 정확히 한 칸씩 밀려야 한다 — 20칸이 '직전 거래일까지 연속한 한국 거래일'과 같은지 본다.
+// (10/23 공개본은 10/22가 빠져 9/18~10/21 → 10/26 카드와 두 칸 차이로 보였다.)
+const TODAY_20 = ['2026-09-22', '2026-09-23', '2026-09-28', '2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02', '2026-10-06', '2026-10-07', '2026-10-08',
+  '2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-19', '2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23']
+const asStripes = (ds: string[]) => ds.map(d => ({ session: d, pct: 0.5, fill: '#EF6F65' }))
+test('M1b 연속: 10/26 공개 카드(9/22~10/23)는 직전 거래일까지 연속한 20 거래일과 같다', () => {
+  const r = checkStripeContinuity(asStripes(TODAY_20) as never, '2026-10-26')
+  assert.equal(r.status, 'PASS', JSON.stringify(r))
+})
+test('M1b 연속: 10/23 공개본(9/18~10/21, 10/22 빠짐)은 실패 — 빠진 날과 남는 날을 밝힌다', () => {
+  const published = ['2026-09-18', '2026-09-21', ...TODAY_20.slice(0, 18)] // 9/18 ~ 10/21
+  const r = checkStripeContinuity(asStripes(published) as never, '2026-10-23')
+  assert.equal(r.status, 'FAIL')
+  assert.match(r.actual ?? '', /빠짐 2026-10-22/)
+  assert.match(r.actual ?? '', /남음 2026-09-18/)
+})
+test('M1b 연속: 중간 거래일이 빠져도 실패, 칸 수가 모자라도 실패', () => {
+  const gap = TODAY_20.filter(d => d !== '2026-10-14')
+  const r = checkStripeContinuity(asStripes(['2026-09-21', ...gap]) as never, '2026-10-26')
+  assert.equal(r.status, 'FAIL'); assert.match(r.actual ?? '', /빠짐 2026-10-14/)
+  assert.equal(checkStripeContinuity(asStripes(TODAY_20.slice(5)) as never, '2026-10-26').status, 'FAIL')
+  assert.equal(checkStripeContinuity([] as never, '2026-10-26').status, 'FAIL')
 })
