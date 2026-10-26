@@ -1,71 +1,71 @@
 {
-  "date": "2026-10-26",
-  "dayOfWeek": "월",
-  "collectedAt": "2026-10-26T06:40:57+09:00",
+  "date": "2026-10-27",
+  "dayOfWeek": "화",
+  "collectedAt": "2026-10-27T06:41:59+09:00",
   "headline": "",
   "items": [
     {
       "name": "코스피",
-      "value": "5,550.3",
-      "change": "+0.30%",
-      "changePercent": 0.2987075,
-      "direction": "up"
+      "value": "5,469.47",
+      "change": "-1.46%",
+      "changePercent": -1.4563104,
+      "direction": "down"
     },
     {
       "name": "코스닥",
-      "value": "751.69",
-      "change": "-1.62%",
-      "changePercent": -1.6241295,
+      "value": "727.21",
+      "change": "-3.26%",
+      "changePercent": -3.256659,
       "direction": "down"
     },
     {
       "name": "S&P 500",
-      "value": "7,623.68",
-      "change": "-0.52%",
-      "changePercent": -0.5186972,
-      "direction": "down"
+      "value": "7,676.77",
+      "change": "+0.70%",
+      "changePercent": 0.6963808,
+      "direction": "up"
     },
     {
       "name": "나스닥",
-      "value": "25,955.34",
-      "change": "-0.21%",
-      "changePercent": -0.2059241,
-      "direction": "down"
+      "value": "26,169.38",
+      "change": "+0.82%",
+      "changePercent": 0.8246436,
+      "direction": "up"
     },
     {
       "name": "다우존스",
-      "value": "52,215.16",
-      "change": "-1.23%",
-      "changePercent": -1.2348487,
-      "direction": "down"
+      "value": "52,361.58",
+      "change": "+0.28%",
+      "changePercent": 0.28041276,
+      "direction": "up"
     },
     {
       "name": "원/달러",
-      "value": "1,323.63",
-      "change": "-0.13%",
-      "changePercent": -0.13354605,
-      "direction": "down"
+      "value": "1,325.17",
+      "change": "+0.11%",
+      "changePercent": 0.114078365,
+      "direction": "up"
     },
     {
       "name": "WTI 원유",
-      "value": "$103.27",
-      "change": "+3.82%",
-      "changePercent": 3.8202426,
-      "direction": "up"
-    },
-    {
-      "name": "금",
-      "value": "$4,007.9",
-      "change": "-1.29%",
-      "changePercent": -1.2929761,
+      "value": "$101.25",
+      "change": "-1.96%",
+      "changePercent": -1.9560344,
       "direction": "down"
     },
     {
-      "name": "비트코인",
-      "value": "$80,329",
-      "change": "+0.02%",
-      "changePercent": 0.024115592,
+      "name": "금",
+      "value": "$4,031",
+      "change": "+0.58%",
+      "changePercent": 0.57636416,
       "direction": "up"
+    },
+    {
+      "name": "비트코인",
+      "value": "$79,992",
+      "change": "-0.20%",
+      "changePercent": -0.20414445,
+      "direction": "down"
     }
   ]
 }
