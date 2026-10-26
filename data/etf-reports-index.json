@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-10-27",
+      "type": "morning",
+      "headline": "방산 5% 밀린 사이, 미 반도체가 달렸다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-27",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-10-26T21:42:41.121Z"
+    },
+    {
       "date": "2026-10-26",
       "type": "morning",
       "headline": "2차전지 4% 밀린 사이, 원유·채권이 받쳤다",
