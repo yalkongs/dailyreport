@@ -41,7 +41,7 @@ export const MARKET_HEADLINE_POOL: HeadlineExemplar[] = [
   { text: "S&P500 오르고 코스피 내려", style: "대비형", note: "두 시장의 엇갈림을 동사 대구로. 시장 이름을 모두 밝힌다." },
   { text: "나스닥 반등…코스피는 전날 먼저 올라", style: "대비형", note: "'이미 앞서갔다' 대신 언제 무엇이 올랐는지 그대로." },
   { text: "코스피 349포인트 급락", style: "수치 강조형", note: "숫자 자체가 뉴스인 날. 군더더기 없이 규모만." },
-  { text: "원·달러 환율 하루 새 20원 급락", style: "수치 강조형", note: "'원화가 되찾다' 같은 연어 대신 환율 숫자로 방향을 분명히." },
+  { text: "원·달러 환율 하루 새 20원 급락", style: "수치 강조형", note: "환율 숫자로 방향을 분명히 — 원화 강세·약세를 숫자로 보여 준다." },
   { text: "미 국채 10년물 금리 5.24%…코스피 191포인트 하락", style: "말줄임 이음", note: "어느 국채 금리인지 밝히고 두 사실을 말줄임표로 잇는다." },
   { text: "트럼프 수입차 관세 50% 예고…현대차 기대 흔들", style: "말줄임 이음", note: "사건(관세 예고)과 영향을 잇되 영향은 단정하지 않는 말로." },
   { text: "금통위 앞둔 코스피 숨 고르기", style: "명사형 종결", note: "관용 은유 '숨 고르기'를 명사형으로. 일정이 핵심인 날." },
@@ -109,7 +109,8 @@ function seededShuffle<T>(items: readonly T[], seed: string): T[] {
 /**
  * 오늘 보여 줄 제목 예시 4개(스펙 §2). recent: 같은 리포트의 최근 제목(최신순, 오늘 제외).
  * 직전 제목의 형태와 최근 3번 이상 쓴 형태는 빼고, 문형(style)이 서로 다르게 날짜 시드로 고른다.
- * 남는 예시가 4개보다 적으면 '우세' 제외부터, 그다음 '직전' 제외를 푼다. 같은 입력이면 같은 결과(dry-run 재현).
+ * 남는 예시의 문형이 4종보다 적으면 '우세' 제외부터, 그다음 '직전' 제외를 푼다(4개가 서로 다른 문형이어야 하므로 개수가 아니라 문형 수로 본다).
+ * 같은 입력이면 같은 결과(dry-run 재현).
  */
 export function pickHeadlineExemplars(target: VoiceTarget, recent: readonly string[], date: string): HeadlineExemplar[] {
   const pool = target === "etf" ? ETF_HEADLINE_POOL : MARKET_HEADLINE_POOL;
@@ -119,7 +120,7 @@ export function pickHeadlineExemplars(target: VoiceTarget, recent: readonly stri
   let allowed: HeadlineExemplar[] = pool;
   for (const excluded of tries) {
     allowed = pool.filter((e) => !excluded.includes(headlineForm(e.text)));
-    if (allowed.length >= n) break;
+    if (new Set(allowed.map((e) => e.style)).size >= n) break;
   }
   const shuffled = seededShuffle(allowed, `${target}:${date}`);
   const picked: HeadlineExemplar[] = [];
