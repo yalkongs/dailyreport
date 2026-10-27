@@ -477,3 +477,13 @@ test("ci.yml: 운영 workflow와 같은 Node 버전, 읽기 권한만, 비밀 �
   assert.match(ciYml, /\npermissions:\n  contents: read\n/);
   assert.doesNotMatch(ciYml, /secrets\./);
 });
+
+// ── 2026-10-27 제목 편집자 긴급 끄기: 저장소 변수 HEADLINE_SELECTION 이 두 생성 step 의 환경에 실려야 한다 ──
+
+for (const [job, step] of [["market", "Generate market report"], ["etf", "Run ETF pipeline"]] as const) {
+  test(`${job}: '${step}' step 환경에 HEADLINE_SELECTION 저장소 변수를 넘긴다(제목 편집자 끄기 스위치)`, () => {
+    const s = stepBlock(jobBlock(yml, job), step);
+    assert.match(s, /\n {10}HEADLINE_SELECTION: \$\{\{ vars\.HEADLINE_SELECTION \}\}\n/);
+    assert.ok(s.indexOf("env:") >= 0 && s.indexOf("env:") < s.indexOf("HEADLINE_SELECTION:") && s.indexOf("HEADLINE_SELECTION:") < s.indexOf("run: |"), "env 블록 안(run 앞)에 있어야 함");
+  });
+}
