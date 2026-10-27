@@ -9,7 +9,7 @@ import type {
   ReportContent,
   ReportSummary,
 } from "./types";
-import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS, MARKET_GENERATION_BUDGET_MS, makeDeadline } from "./claude-budget";
+import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS, MARKET_GENERATION_BUDGET_MS, REPORT_MODEL, makeDeadline } from "./claude-budget";
 import { EVIDENCE_RULES } from "./evidence-rules";
 import { formatEconomicEventLine } from "./economic-calendar";
 import { renderReport, sanitizeInlineHtml } from "./report-renderer";
@@ -805,7 +805,7 @@ export async function generateReport(
     let rawJson = "";
     try {
       const stream = await client.messages.stream({
-        model: "claude-sonnet-4-6",
+        model: REPORT_MODEL,
         max_tokens: 64000,
         messages: [
           {

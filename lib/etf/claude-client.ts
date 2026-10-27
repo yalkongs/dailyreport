@@ -15,7 +15,7 @@ import {
 import { QUOTABLE_SOURCES } from '../quotable-sources'
 import { buildMorningStrategyInput } from './morning-strategy'
 import { assessMorningReportQuality, formatMorningQualityError, validateMorningReportQuality } from './report-quality'
-import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS, ETF_GENERATION_BUDGET_MS, makeDeadline } from '../claude-budget'
+import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS, ETF_GENERATION_BUDGET_MS, REPORT_MODEL, makeDeadline } from '../claude-budget'
 import { EVIDENCE_RULES } from '../evidence-rules'
 import { normalizeMorningReportLanguage } from './report-language'
 import { describeAngle, ETF_NARRATIVE_ANGLES, type EtfNarrativeAngle } from './narrative-angle'
@@ -91,7 +91,7 @@ function extractJsonFromResponse(response: Anthropic.Message, reportType: string
 export async function generateMorningReportRaw(data: CollectedData): Promise<MorningReport> {
   const prompt = buildMorningPrompt(data)
   const response = await getClient().messages.create({
-    model: 'claude-sonnet-4-6',
+    model: REPORT_MODEL,
     // 출력 상한은 여유로 둔다(새 스키마 응답은 이보다 훨씬 짧다 — 잘림 방지용 안전 여유).
     max_tokens: 16384,
     system: SYSTEM_PROMPT,
