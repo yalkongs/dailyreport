@@ -193,7 +193,7 @@ test('프롬프트: summary·cardLine 스키마와 규칙이 있고 compass 는 
     assert.match(prompt, /60자 이내/)
     assert.match(prompt, /40자 이내/)
     assert.doesNotMatch(prompt, /32자 이내/)
-    assert.match(prompt, /장 마감 후 → 다음 거래일 반영/)
+    assert.match(prompt, /경제 캘린더 줄에 적힌 발표 시점과 국내 반영일을 그대로/) // 2026-10-28: 고정 문구 "장 마감 후 → 다음 거래일 반영" 대신
   }
 })
 

@@ -30,7 +30,7 @@ test("ETF 프롬프트: 미국 지표 일정을 한국시간·장 마감 후 표
     { date: "2026-10-14", time: "21:30", kstDate: "2026-10-14", country: "US", event: "Consumer Price Index", importance: 5 },
     { date: "2026-10-20", time: "21:30", kstDate: "2026-10-20", country: "US", event: "Housing Starts", importance: 3 },
   ], "2026-10-14");
-  assert.match(block, /\[US\] Consumer Price Index — 10\/14 21:30 KST · 한국 장 마감 후 발표 — 국내 반영은 다음 거래일/);
+  assert.match(block, /\[US\] Consumer Price Index — 10\/14 21:30 KST · 오늘 밤 발표\(한국 장 마감 후\) → 국내 반영은 10\/15\(목\)/); // 2026-10-28: 리포트 날짜 기준 시점·반영일
   assert.doesNotMatch(block, /Housing Starts/); // 오늘~+2일만
   assert.equal(buildUsEventsBlock([], "2026-10-14"), "");
 });
@@ -94,4 +94,46 @@ test("FRED 캘린더: 일부 릴리스 조회가 실패해도 나머지로 진�
   } finally {
     if (prev === undefined) delete process.env.FRED_API_KEY; else process.env.FRED_API_KEY = prev;
   }
+});
+
+// 2026-10-28: 10/29(목) 21:30 미 GDP를 ETF가 '오늘 밤 발표 → 국내 반영은 다음 거래일'로, Market이 '목요일 국내 시장'으로 썼다.
+// 프롬프트가 날짜와 상관없이 '오늘 밤'·'다음 거래일' 고정 문구를 줬다 — 일정 줄마다 리포트 날짜 기준 발표 시점과 국내 반영일을 코드가 붙인다.
+test("발표 시점·국내 반영일: 리포트 날짜 기준 오늘/내일/모레와 실제 반영 거래일", async () => {
+  const { describeEventTiming } = await import("./economic-calendar");
+  assert.equal(describeEventTiming("2026-10-29", "21:30", "2026-10-28"), "내일(10/29 목) 밤 발표(한국 장 마감 후) → 국내 반영은 10/30(금)");
+  assert.equal(describeEventTiming("2026-10-28", "21:30", "2026-10-28"), "오늘 밤 발표(한국 장 마감 후) → 국내 반영은 10/29(목)");
+  assert.equal(describeEventTiming("2026-10-29", "03:00", "2026-10-28"), "내일(10/29 목) 새벽 발표(한국 개장 전) → 국내 반영은 10/29(목)");
+  assert.equal(describeEventTiming("2026-10-28", "03:00", "2026-10-28"), "오늘 새벽 발표(한국 개장 전) → 국내 반영은 오늘");
+  assert.equal(describeEventTiming("2026-10-28", "10:00", "2026-10-28"), "오늘 한국 장중 발표");
+  // 금요일 밤 → 월요일 반영, 그 뒤 날짜는 날짜·요일로
+  assert.equal(describeEventTiming("2026-10-30", "21:30", "2026-10-28"), "모레(10/30 금) 밤 발표(한국 장 마감 후) → 국내 반영은 11/2(월)");
+  assert.equal(describeEventTiming("2026-11-03", "22:30", "2026-10-28"), "11/3(화) 밤 발표(한국 장 마감 후) → 국내 반영은 11/4(수)");
+  // 한국 휴장(성탄절)을 건너뛴다
+  assert.equal(describeEventTiming("2026-12-24", "22:30", "2026-12-24"), "오늘 밤 발표(한국 장 마감 후) → 국내 반영은 12/28(월)");
+});
+
+test("일정 한 줄: 리포트 날짜를 주면 발표 시점·반영일을, 안 주면 예전 표기를", async () => {
+  const { formatEconomicEventLine } = await import("./economic-calendar");
+  const gdp = { date: "2026-10-29", time: "21:30", kstDate: "2026-10-29", country: "US", event: "Gross Domestic Product", importance: 4 };
+  assert.equal(formatEconomicEventLine(gdp, "2026-10-28"), "[US] Gross Domestic Product — 10/29 21:30 KST · 내일(10/29 목) 밤 발표(한국 장 마감 후) → 국내 반영은 10/30(금)");
+  assert.equal(formatEconomicEventLine(gdp), "[US] Gross Domestic Product — 10/29 21:30 KST · 한국 장 마감 후 발표 — 국내 반영은 다음 거래일");
+});
+
+test("ETF·Market 프롬프트: 미국 일정에 '오늘 밤 → 다음 거래일' 고정 문구를 주지 않고 줄의 시점·반영일을 쓰게 한다", async () => {
+  const { buildUsEventsBlock, buildMorningPrompt } = await import("./etf/claude-client");
+  const { buildReportPrompt } = await import("./claude-client");
+  const gdp = { date: "2026-10-29", time: "21:30", kstDate: "2026-10-29", country: "US", event: "Gross Domestic Product", importance: 4 };
+  const block = buildUsEventsBlock([gdp], "2026-10-28");
+  assert.match(block, /\[US\] Gross Domestic Product — 10\/29 21:30 KST · 내일\(10\/29 목\) 밤 발표\(한국 장 마감 후\) → 국내 반영은 10\/30\(금\)/);
+  assert.match(block, /각 줄에 적힌 발표 시점과 국내 반영일을 그대로/);
+  const etf = buildMorningPrompt({ reportType: "morning", date: "2026-10-28", quotes: [], flows: [], investorFlows: [], news: [], analysisLens: "", narrativeAngle: "글로벌→국내_전이", usEvents: [gdp], macro: { usdKrw: null, dxy: null, vix: null, moveIndex: null, us10y: null, fearGreed: null, wti: null, gold: null } } as never);
+  for (const stale of ["\"오늘 밤 발표, 국내 반영은 다음 거래일\"", "\"오늘 밤 발표 → 국내 반영은 다음 거래일\""]) assert.ok(!etf.includes(stale), stale);
+  assert.match(etf, /국내 직전 장이 끝난 뒤 열린 간밤 미국 장의 움직임을 국내 자산군의 이유로 들지 마십시오/);
+  const ctx = { angle: { id: "a", name: "구조적 렌즈", description: "", promptGuide: "g" }, recentLog: [], sideways: { isSideways: false, avgAbsChange: 0, deepDiveTopic: null }, deepDiveTopic: null };
+  const data = { collectedAt: "2026-10-28T06:40:00+09:00", date: "2026-10-28", dayOfWeek: "수", koreaStocks: [], usStocks: [], europeStocks: [], japanStocks: [], chinaStocks: [], forex: [], commodities: [], bonds: [], crypto: [], collectionErrors: [] };
+  const context = { news: [], economicCalendar: [gdp], policyRates: { fed: null, bok: null }, fredIndicators: [], sentiment: {}, koreanBonds: [], historicalComparison: [] };
+  const market = buildReportPrompt(data as never, ctx as never, context as never);
+  assert.match(market, /Gross Domestic Product — 10\/29 21:30 KST · 내일\(10\/29 목\) 밤 발표\(한국 장 마감 후\) → 국내 반영은 10\/30\(금\)/);
+  assert.match(market, /경제 캘린더 줄에 적힌 발표 시점과 국내 반영일을 그대로/);
+  assert.ok(!market.includes("\"장 마감 후 → 다음 거래일 반영\"으로 표기"));
 });

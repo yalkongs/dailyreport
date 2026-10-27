@@ -134,6 +134,8 @@ test("buildHeadlineEditorPrompt: 리포트·근거·최근 제목·번호 붙은
   assert.match(p, /근거 상태\(tier\): thin/);
   assert.match(p, /오늘의 주제 자산군: 국내 반도체/);
   assert.match(p, /- 삼성전자 3분기 실적 발표/);
+  // 2026-10-28: 자동 추출 catalyst가 시황과 무관한 기사(꽃게 시세)였다 — 무관하면 무시하라고 알린다.
+  assert.match(p, /오늘의 핵심 근거\(자동 추출 — 후보와 무관하면 무시\):/);
   assert.match(p, /최근 제목\(최신순\):\n- A, B/);
   assert.match(p, /0\. 제목: H0\n {3}부제: S0\n1\. 제목: H1/);
   const noEvidence = buildHeadlineEditorPrompt({ target: "market", recent: [], candidates: [], evidence: [] });
@@ -241,6 +243,10 @@ test("callHeadlineEditor: 도구를 pick 으로 고정하고 모델·전체 시�
   assert.ok(options.signal instanceof AbortSignal);
   // F3: 스펙의 우선순위(명확성 → 자연스러움)가 시스템 프롬프트에 그대로 있어야 한다 — 루브릭 나열 순서에 끌려가지 않게.
   assert.match(params.system as string, /명확성 → 자연스러움/);
+  // 2026-10-28: 편집자가 실제 코스피 5,638을 '있을 수 없는 수치'로 감점했다 — 수치의 사실성은 코드가 이미 대조했다.
+  assert.match(params.system as string, /수치의 사실 여부는 판단하지 않는다 — 검증은 코드가 입력 데이터로 따로 한다/);
+  // 같은 날 "국내 반도체 ETF 급등, 에너지는 역행"(역행한 것은 미 에너지 ETF)을 골랐다 — 시장 표시 없는 해외 섹터는 명확성 감점.
+  assert.match(params.system as string, /시장 표시\(미·국내 등\)가 없어 국내로 읽힐 수 있으면 명확성 감점/);
 
   reply = { content: [{ type: "text", text: "도구 없이 쓴 글" }] };
   assert.equal(await callHeadlineEditor(input), null);
