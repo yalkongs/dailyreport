@@ -78,6 +78,15 @@ test("renderHeadlineStandard: 우선순위 넷·자연스러움 쌍·인과 기�
   assert.ok(!s.includes("[제목 작성 규칙]")); // 두 프롬프트의 블록 이름과 겹치지 않게
 });
 
+test("renderHeadlineStandard(F7): 공통 예시는 Market 에도 맞는 말이고(ETF 전용 표현 없음) 연결어미 종결('~내려')이 없다", () => {
+  const s = renderHeadlineStandard();
+  assert.doesNotMatch(s, /"[^"\n]*ETF[^"\n]*"/, "따옴표 안 예시에 ETF 가 들어 있지 않다");
+  assert.doesNotMatch(s, /오르고 코스피 내려|먼저 올라/);
+  assert.ok(s.includes('"S&P500 오르고 코스피는 하락"'));
+  assert.ok(s.includes('"방산주 5% 하락…미 반도체는 강세"'));
+  assert.ok(s.includes('"원유·채권은 강세"'));
+});
+
 test("renderRecentHeadlineLines: 최신순 제목에 형태를 붙이고 피할 형태를 알린다", () => {
   assert.equal(renderRecentHeadlineLines([]), "");
   const block = renderRecentHeadlineLines(["A, B", "C, D", "E, F", "G 급락"]);
