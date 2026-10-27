@@ -2166,6 +2166,10 @@ codex exec -C <위 worktree 경로> -s read-only -o /tmp/headline-codex-review.m
 1. 커밋 목록과 테스트 결과.
 2. 예시 풀 전체(`MARKET_HEADLINE_POOL`, `ETF_HEADLINE_POOL`, 리포트별 20여 개)와 확정 요청. 스펙 §2에 따라 사용자 확정 뒤 운영에 넣는다.
 3. 다음 단계 제안:
-   - (a) 브랜치 push → `gh workflow run 260067407 --ref feat/headline-editorial -f only=both -f dry_run=true -f force_regenerate=true -f test_date=<최근 평일>` 2회로 후보·선택 로그와 결과물 확인(비용 발생).
+   - (a) 브랜치 push → `gh workflow run 260067407 --ref feat/headline-editorial -f only=both -f dry_run=true -f force_regenerate=true -f test_date=<최근 평일>` 2회로 후보·선택 로그와 결과물 확인(비용 발생). 합격 기준은 셋이다.
+     - 두 리포트 로그에 모두 `🏷️ 제목 편집자 선택:`이 있어야 한다. `응답 없음·형식 오류`만 있으면 안 된다.
+     - 적어도 한 번은 `🏷️ 제목 후보` 줄에 생존 2개 이상이 나와야 한다.
+     - 편집자가 한 번도 고르지 못하면 `callHeadlineEditor`의 `tool_choice`를 `{ type: "tool", name: "pick" }`으로 바꿔 다시 본다. 예전 400 오류는 측정용 평가 모델에서 난 것이고, 파이프라인 모델은 아니다.
+     - 생존 후보가 매번 하나뿐이면 어느 검사가 후보를 지우는지 로그로 확인한다.
    - (b) `--no-ff` 병합과 push.
    - (c) 시행 후 10거래일이 지나면 `HEADLINE_JUDGE_MODEL=<기준선 평가 모델> npx tsx scripts/headline-quality.ts --judge --n <시행 후 건수> --out docs/quality/headline-YYYY-MM-DD`로 재측정하고 목표표와 비교.
