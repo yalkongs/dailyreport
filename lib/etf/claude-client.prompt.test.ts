@@ -63,7 +63,7 @@ test('최근 헤드라인이 없어도 제목 정책은 온전하다(깨진 블�
 })
 
 test('ETF 시스템 프롬프트: ETF 예시 세트 + 본문 규칙의 제목 예외 표기', () => {
-  assert.ok(SYSTEM_PROMPT.includes('원화, 하루 만에 20원 되찾다'))
+  assert.ok(!SYSTEM_PROMPT.includes('### 지향할 헤드라인 결'))
   assert.ok(!SYSTEM_PROMPT.includes('금리 올린 연준, 달러만 웃었다'))
   assert.match(SYSTEM_PROMPT, /격식체 사용 \("~입니다", "~습니다"\) \(cover\.headline 제외/)
   assert.match(SYSTEM_PROMPT, /도치를 허용합니다\. \(cover\.headline 제외/)

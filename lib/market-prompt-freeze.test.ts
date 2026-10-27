@@ -10,7 +10,7 @@ const frozen: Record<string, string> = JSON.parse(
   fs.readFileSync("lib/__fixtures__/market-prompt-freeze.json", "utf8"),
 );
 
-test("market 목표 보이스 블록은 묶음 3 이전과 바이트 단위로 같다", () => {
+test("market 목표 보이스 블록은 고정 스냅샷과 같다(2026-10-27 제목 예시를 순환 예시로 옮겨 의도적 갱신)", () => {
   assert.equal(renderVoiceExemplars(), frozen.voice);
   assert.equal(renderVoiceExemplars("market"), frozen.voice);
 });

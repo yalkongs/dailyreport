@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import {
   headlineForm, headlineScore, headlineCodeMetrics, recentFormStats, takeRecentHeadlines, cleanHeadline,
-  HEADLINE_JUDGE_SYSTEM,
+  HEADLINE_JUDGE_SYSTEM, renderHeadlineStandard, renderRecentHeadlineLines, NATURALNESS_PAIRS,
 } from "./headline-editorial";
 
 const fixture = JSON.parse(fs.readFileSync("lib/__fixtures__/headline-baseline-2026-10-27.json", "utf8")) as { ETF: string[]; Market: string[] };
@@ -64,4 +64,26 @@ test("평가 기준(측정용 시스템 문구)은 기준선을 잰 문구와 �
 - causalAssertion(true/false): 제목이 확인하기 어려운 인과(A가 B를 눌렀다·끌어올렸다 등)를 단정하는가.
 - issues: 어색하거나 문제가 있는 표현만. type은 "직역투" | "어색한 의인화" | "어울리지 않는 연어" | "과장" | "근거 없는 인과 단정" | "상투적 틀" | "모호함" | "기타" 중 하나. phrase는 문제 구절, why는 한 문장 이유, suggestion은 같은 사실을 자연스럽게 쓴 대안 제목.
 문제가 없으면 issues는 빈 배열. 결과는 report 도구로 낸다.`);
+});
+
+test("renderHeadlineStandard: 우선순위 넷·자연스러움 쌍·인과 기준·형태 목록·후보 세 개", () => {
+  const s = renderHeadlineStandard();
+  assert.match(s, /^\[제목 편집 기준 — Market·ETF 공통\]/);
+  assert.ok(s.indexOf("1. 명확성") < s.indexOf("2. 자연스러운 한국어"));
+  assert.ok(s.indexOf("2. 자연스러운 한국어") < s.indexOf("3. 인과는 입력에 근거가 있을 때만"));
+  assert.ok(s.indexOf("3. 인과는") < s.indexOf("4. 변주"));
+  for (const [a, b] of NATURALNESS_PAIRS) assert.ok(s.includes(`"${a}" → "${b}"`));
+  assert.match(s, /strong — .*\/ thin — .*\/ hollow — /);
+  assert.match(s, /cover\.headlineCandidates에 제목 후보 세 개/);
+  assert.ok(!s.includes("[제목 작성 규칙]")); // 두 프롬프트의 블록 이름과 겹치지 않게
+});
+
+test("renderRecentHeadlineLines: 최신순 제목에 형태를 붙이고 피할 형태를 알린다", () => {
+  assert.equal(renderRecentHeadlineLines([]), "");
+  const block = renderRecentHeadlineLines(["A, B", "C, D", "E, F", "G 급락"]);
+  const lines = block.split("\n");
+  assert.equal(lines[0], "- A, B 〔쉼표 두 토막〕");
+  assert.equal(lines[3], "- G 급락 〔단문〕");
+  assert.match(lines[4], /^오늘 제목은 이 형태를 피하십시오: 쉼표 두 토막 \(직전 제목의 형태, 최근 4건 중 3건이 쓴 형태\)\.$/);
+  assert.match(renderRecentHeadlineLines(["G 급락"]), /피하십시오: 단문 \(직전 제목의 형태\)\.$/);
 });

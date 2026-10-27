@@ -175,3 +175,57 @@ export const HEADLINE_JUDGE_SYSTEM = `${HEADLINE_DESK}
 ${HEADLINE_RUBRIC}
 ${JUDGE_ISSUES}
 문제가 없으면 issues는 빈 배열. 결과는 report 도구로 낸다.`;
+
+export type HeadlineTarget = "market" | "etf";
+
+/** 자연스러움 기준을 보여 주는 쌍 — 금지어가 아니다. 2026-10-27 기준선 평가의 대안 열에서 골랐다. */
+export const NATURALNESS_PAIRS: ReadonlyArray<readonly [string, string]> = [
+  ["미 반도체가 달렸다", "미 반도체 ETF 강세"],
+  ["원유·채권이 받쳤다", "원유·채권 ETF는 강세"],
+  ["연준 인상에 달러 올랐다", "연준 금리 인상에 달러 강세"],
+  ["재도전 앞에 서다", "7100선 재탈환 노린다"],
+  ["금통위가 내일 답한다", "내일 금통위 기준금리 결정 주목"],
+];
+
+const FORM_REPERTOIRE: readonly string[] = [
+  `단문 사실형 — "미 반도체 ETF 4.5% 급락"`,
+  `원인형(입력 근거가 있을 때만) — "삼성전자 깜짝 실적에 국내 반도체 ETF 강세"`,
+  `배경·동시형 — "미 수출규제 우려 속 2차전지 ETF 급락", "호실적에도 코스피 하락"`,
+  `대비형 — "S&P500 오르고 코스피 내려"`,
+  `수치 강조형 — "원·달러 환율 하루 새 20원 급락"`,
+  `명사형 종결 — "금통위 앞둔 코스피 숨 고르기"`,
+  `말줄임 이음 — "방산 ETF 5% 하락…미 반도체는 강세"`,
+  `쉼표 두 토막 — "반도체 빈자리, 통신·금융이 메웠다"`,
+  `예고형 — "다음 변수는 SK하이닉스 실적"`,
+];
+
+/** 두 리포트의 제목 규칙 칸 맨 앞에 넣는 공통 기준(스펙 §1). 순서가 곧 우선순위다. */
+export function renderHeadlineStandard(): string {
+  return `[제목 편집 기준 — Market·ETF 공통]
+제목은 개장 전 개인 고객이 가장 먼저 읽는 한 줄입니다. 아래 순서로 판단하고, 앞의 기준이 뒤의 기준보다 우선합니다.
+
+1. 명확성 — 제목만 읽어도 어느 시장의 무엇이 어느 방향으로 움직였는지 알아야 합니다. 주어는 실제로 움직인 자산·지수·종목입니다. 무엇을 가리키는지 흐린 줄임말은 풀어 씁니다(예: "연준 인상" → "연준 금리 인상").
+2. 자연스러운 한국어 — 경제신문 증권면 제목에서 실제로 쓰는 어휘와 낱말 짝으로 씁니다. 비유는 한국어 제목에서 자연스럽게 읽히면 씁니다(숨 고르기·훈풍·찬물·발목 같은 관용 표현). 영어를 옮긴 듯한 표현, 무엇을 했는지 대상이 없는 의인화, 어울리지 않는 낱말 짝은 피합니다. 같은 사실이 이렇게 읽힙니다:
+${NATURALNESS_PAIRS.map(([a, b]) => `   · "${a}" → "${b}"`).join("\n")}
+3. 인과는 입력에 근거가 있을 때만 — "…에", "…로" 같은 인과 연결은 입력(수치·기사)이 그 원인을 뒷받침할 때만 씁니다. 근거가 없으면 두 사실을 나란히 놓습니다("A 급락, B는 강세", "A 속 B"). 조사만 바꾼다고 근거가 생기지 않습니다. 근거 상태(tier)별로: strong — 입력 근거가 있는 인과 표현까지 / thin — 인과를 단정하지 말고 나란히 / hollow — 절제된 사실만.
+4. 변주 — 같은 형태를 연일 쓰지 않습니다. 쓸 수 있는 형태(할당량은 없습니다. 오늘 사실에 가장 잘 맞는 것을 고르되, 최근 제목에 많이 쓴 형태는 피합니다):
+${FORM_REPERTOIRE.map((f) => `   · ${f}`).join("\n")}
+
+후보 세 개: cover.headlineCandidates에 제목 후보 세 개를 { "headline", "subline" } 짝으로 씁니다.
+- 세 후보는 모두 같은 오늘의 주제를 다루고, 형태는 서로 다르게 씁니다.
+- subline은 그 제목이 뺀 사건명·수치를 받칩니다(후보마다 따로 씁니다).
+- 코드가 정확성 검사를 통과한 후보를 추리고, 편집자가 자연스러움·명확성으로 하나를 고릅니다. 세 후보 모두 아래 제목 규칙을 지켜야 합니다.`;
+}
+
+/** 프롬프트에 넣는 최근 제목 줄(최신순, 〔형태〕) + 피할 형태 안내. recent가 비면 ''. */
+export function renderRecentHeadlineLines(recent: readonly string[]): string {
+  if (recent.length === 0) return "";
+  const stats = recentFormStats(recent);
+  const lines = recent.map((h) => `- ${h} 〔${headlineForm(h)}〕`);
+  const avoid = [...new Set([stats.previous, stats.dominant].filter((f): f is HeadlineForm => f !== null))];
+  const why = stats.dominant
+    ? `직전 제목의 형태, 최근 ${recent.length}건 중 ${stats.counts.get(stats.dominant)}건이 쓴 형태`
+    : "직전 제목의 형태";
+  lines.push(`오늘 제목은 이 형태를 피하십시오: ${avoid.join(", ")} (${why}).`);
+  return lines.join("\n");
+}
