@@ -131,7 +131,9 @@ const EDITOR_SYSTEM = `${HEADLINE_DESK}
 아래 제목 후보 가운데 오늘 발행할 제목 하나를 고릅니다. 고르기만 하고 고쳐 쓰지 않습니다.
 기준 — 우선순위는 명확성 → 자연스러움 → 근거 없는 인과 단정 없음 순이다(아래 항목의 나열 순서가 아니다):
 ${HEADLINE_RUBRIC}
+- 해외 섹터·자산을 가리키는데 시장 표시(미·국내 등)가 없어 국내로 읽힐 수 있으면 명확성 감점(한국 독자는 시장 표시 없는 섹터를 국내로 읽는다 — 부제를 보고 판단).
 - 같은 점수면 최근 제목과 형태·끝 어절이 덜 겹치는 후보.
+지수 수준·등락률 같은 수치의 사실 여부는 판단하지 않는다 — 검증은 코드가 입력 데이터로 따로 한다. 수치가 학습 지식과 달라 낯설어도 감점하지 말고 표현만 평가한다.
 결과는 pick 도구로 한 번 낸다.`;
 
 export function buildHeadlineEditorPrompt(input: HeadlineEditorInput): string {
@@ -140,7 +142,7 @@ export function buildHeadlineEditorPrompt(input: HeadlineEditorInput): string {
     input.tier ? `근거 상태(tier): ${input.tier}` : "",
     input.subjectName ? `오늘의 주제 자산군: ${input.subjectName}` : "",
     input.evidence.length > 0
-      ? `오늘의 핵심 근거:\n${input.evidence.map((e) => `- ${e}`).join("\n")}`
+      ? `오늘의 핵심 근거(자동 추출 — 후보와 무관하면 무시):\n${input.evidence.map((e) => `- ${e}`).join("\n")}`
       : "오늘의 핵심 근거: 없음(입력 수치로 확인되지 않는 원인을 단정한 후보는 감점)",
     input.recent.length > 0 ? `최근 제목(최신순):\n${input.recent.map((h) => `- ${h}`).join("\n")}` : "",
     `후보:\n${input.candidates.map((c, i) => `${i}. 제목: ${c.headline}\n   부제: ${c.subline}`).join("\n")}`,

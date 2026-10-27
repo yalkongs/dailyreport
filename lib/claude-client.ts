@@ -193,7 +193,7 @@ function buildEvidenceBlock(ctx: AntiRepetitionContext): string {
 `;
 }
 
-function buildContextBlock(context: ContextData | null, ctx?: AntiRepetitionContext): string {
+function buildContextBlock(context: ContextData | null, ctx?: AntiRepetitionContext, reportDate?: string): string {
   if (!context) return renderPolicyRateBlock({ fed: null, bok: null });
 
   let block = `\n## 컨텍스트 데이터 (맥락 제공용)\n`;
@@ -238,7 +238,7 @@ function buildContextBlock(context: ContextData | null, ctx?: AntiRepetitionCont
     block += `⚠️ 한국 장 마감 후(15:30 이후) 발표되는 지표의 결과로 오늘 국내 장중 흐름을 설명하지 마십시오. 이미 발표된 지표는 실제 발표치가 입력에 있을 때만 수치를 씁니다.\n`;
     for (const e of context.economicCalendar) {
       const vals = [e.actual && `실제: ${e.actual}`, e.forecast && `예상: ${e.forecast}`, e.previous && `이전: ${e.previous}`].filter(Boolean).join(", ");
-      block += `- ${formatEconomicEventLine(e)} (중요도: ${e.importance}/5)${vals ? ` — ${vals}` : ""}\n`;
+      block += `- ${formatEconomicEventLine(e, reportDate)} (중요도: ${e.importance}/5)${vals ? ` — ${vals}` : ""}\n`;
     }
   }
 
@@ -307,7 +307,7 @@ export function buildReportPrompt(data: MarketDataCollection, ctx: AntiRepetitio
   const antiRepetition = buildAntiRepetitionBlock(ctx, data.date);
   const sidewaysBlock = buildSidewaysBlock(ctx);
   const evidenceBlock = buildEvidenceBlock(ctx);
-  const contextBlock = buildContextBlock(context, ctx);
+  const contextBlock = buildContextBlock(context, ctx, data.date);
   const headlineExemplars = renderHeadlineExemplars(pickHeadlineExemplars("market", marketRecentHeadlines(ctx, data.date), data.date));
 
   // Phase 1: 시장 분위기 모드별 분량·구성 가이드.
@@ -406,7 +406,7 @@ ${JSON.stringify(data, null, 2)}
   },
   "watchPoints": [
     {
-      "badge": string,       // 한국시간 기준 시각·시간대 ("09:00", "장중", "장 마감 후 → 다음 거래일 반영" 등)
+      "badge": string,       // 한국시간 기준 시각·시간대 ("09:00", "장중" 등. 미국 일정은 경제 캘린더 줄의 발표 시점·국내 반영일을 줄여 씀 — 예: "내일 밤 발표 → 반영일")
       "title": string,       // 제목 (이모지 금지)
       "description": string  // 2~3문장 설명
     }
@@ -442,7 +442,7 @@ ${JSON.stringify(data, null, 2)}
 
 ### watchPoints 작성 규칙 ("오늘 볼 것")
 - 최대 3개. **한국시간 순서**대로 배열하십시오.
-- 미국에서 발표되는 지표·이벤트는 "장 마감 후 → 다음 거래일 반영"으로 표기하고, 오늘 한국 장중 변수처럼 쓰지 마십시오.
+- 미국에서 발표되는 지표·이벤트는 경제 캘린더 줄에 적힌 발표 시점과 국내 반영일을 그대로 쓰십시오(오늘 밤인지 내일 밤인지, 국내 반영이 언제인지 — 요일·날짜를 따로 계산하지 마십시오). 한국 장 마감 후에 발표되는 일정은 오늘 한국 장중 변수처럼 쓰지 마십시오.
 
 ### soWhat 작성 규칙 ("한국 시장에 주는 의미")
 - 2~3개. 각 항목은 "~가 확인되면 …, 어긋나면 …" 형태의 **조건형**으로 쓰십시오.
