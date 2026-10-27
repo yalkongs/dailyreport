@@ -14,7 +14,7 @@ import {
 // R3 (2026-07-22): 본문에 이름 인용 가능한 매체 화이트리스트.
 import { QUOTABLE_SOURCES } from '../quotable-sources'
 import { buildMorningStrategyInput } from './morning-strategy'
-import { assessMorningReportQuality, formatMorningQualityError, headlineCandidateProblems, validateMorningReportQuality } from './report-quality'
+import { assessMorningReportQuality, formatMorningQualityError, headlineCandidateBlocking, headlineCandidateProblems, validateMorningReportQuality } from './report-quality'
 import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS, ETF_GENERATION_BUDGET_MS, REPORT_MODEL, makeDeadline } from '../claude-budget'
 import { EVIDENCE_RULES } from '../evidence-rules'
 import { normalizeMorningReportLanguage } from './report-language'
@@ -167,7 +167,7 @@ export async function generateMorningReportWithFallback(
   const recent = takeRecentHeadlines(data.recentHeadlines ?? [])
   const featured = pickFeaturedSlot(buildAssetClassSlots(data.quotes))
   const selectHeadline = (raw: MorningReport) =>
-    applyHeadlineSelection(raw, recent, c => headlineCandidateProblems(c, raw, data), { scoring: selectionOn })
+    applyHeadlineSelection(raw, recent, c => headlineCandidateProblems(c, raw, data), { scoring: selectionOn, isBlocking: headlineCandidateBlocking })
   const strictOk = (r: MorningReport) => assessMorningReportQuality(r, data, strategy).violations.length === 0
   const reducedOk = (r: MorningReport) => { validateMorningReport(r, data); return true }
   // 편집자가 다른 생존 후보를 고르면 원본(pristine)에 그 후보를 넣어 같은 검증(ok)으로 다시 본다 — 통과할 때만 그 결과로.

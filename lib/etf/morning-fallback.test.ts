@@ -6,7 +6,7 @@
 import { test, type TestContext } from 'node:test'
 import assert from 'node:assert/strict'
 import { generateMorningReportWithFallback } from './claude-client'
-import { assessMorningReportQuality } from './report-quality'
+import { assessMorningReportQuality, headlineCandidateBlocking } from './report-quality'
 import { buildMorningStrategyInput } from './morning-strategy'
 import { makeDeadline } from '../claude-budget'
 import type { HeadlineEditor } from '../headline-selection'
@@ -330,6 +330,37 @@ test('ETF 제목: 투자 권유가 한 후보의 부제에만 있으면 그 후�
   const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, headlineEditor: ed.editor })
   assert.equal(report.cover.headline, PROVISIONAL)
   assert.equal(ed.seen.length, 0) // 생존 후보 하나
+})
+
+test('ETF 제목(F1): 생존 후보가 없고 0번이 투자 권유여도, 차단되지 않는 후보로 경고와 함께 발송한다(막지 않는다)', async (t) => {
+  quiet(t)
+  const gen = fakeGenerator([withCandidates([['국내 반도체 매수하세요', SUB], [OFF_SUBJECT, SUB]])])
+  const ed = fakeEditor({ pick: 0, scores: [], reason: '' })
+  const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, headlineEditor: ed.editor })
+  assert.equal(gen.calls(), 3) // 1·2회차 엄격 검증(주제 위반) 재생성 → Tier 1 은 경고만
+  assert.equal(report.cover.headline, OFF_SUBJECT)
+  assert.equal(report.cover.headlineCandidates, undefined)
+  assert.equal(ed.seen.length, 0) // 생존 후보가 없으니 편집자를 부르지 않는다
+})
+
+test('ETF 제목(F1): 0번 후보의 부제가 문자열이 아니어도(필수 항목 누락) 다른 후보로 발송한다', async (t) => {
+  quiet(t)
+  const reply = { ...validReport(), cover: { headlineCandidates: [
+    { headline: '국내 반도체 급락', subline: 42 },
+    { headline: OFF_SUBJECT, subline: SUB },
+  ] } as unknown as MorningReport['cover'] }
+  const gen = fakeGenerator([reply])
+  const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, headlineEditor: fakeEditor({ pick: 0, scores: [], reason: '' }).editor })
+  assert.equal(report.cover.headline, OFF_SUBJECT)
+  assert.equal(report.cover.subline, SUB)
+})
+
+test('headlineCandidateBlocking: 투자 권유·빈 부제만 차단 — 주제 이탈·기간 비교 등은 경고로 발송할 수 있다', () => {
+  assert.equal(headlineCandidateBlocking({ headline: '국내 반도체 매수하세요', subline: SUB }), true)
+  assert.equal(headlineCandidateBlocking({ headline: PROVISIONAL, subline: '반등이 나오면 매수하세요.' }), true)
+  assert.equal(headlineCandidateBlocking({ headline: PROVISIONAL, subline: '  ' }), true)
+  assert.equal(headlineCandidateBlocking({ headline: OFF_SUBJECT, subline: SUB }), false)
+  assert.equal(headlineCandidateBlocking({ headline: PROVISIONAL, subline: SUB }), false)
 })
 
 test('ETF 제목: HEADLINE_SELECTION=off 면 편집자를 부르지 않는다', async (t) => {

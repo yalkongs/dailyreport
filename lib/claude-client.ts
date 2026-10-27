@@ -137,7 +137,8 @@ ${ctx.angle.promptGuide}\n`;
 
     const recentHeadlines = marketRecentHeadlines(ctx, date);
     if (recentHeadlines.length > 0) {
-      block += `- 헤드라인(최신순, 〔형태〕):\n${renderRecentHeadlineLines(recentHeadlines)}\n`;
+      const recentLines = renderRecentHeadlineLines(recentHeadlines).split("\n").map((l) => `  ${l}`).join("\n");
+      block += `- 헤드라인(최신순, 〔형태〕):\n${recentLines}\n`;
     }
 
     const usedTopics = ctx.recentLog.map((e) => e.bigStoryTopic).filter(Boolean);
@@ -711,6 +712,15 @@ export function marketHeadlineProblems(c: HeadlineCandidate, content: Pick<Repor
   return problems;
 }
 
+/**
+ * 제목 후보 하나가 발송을 막는가 — 제목·부제 화면 글자에 HARD 권유가 있으면 그 후보로는 보낼 수 없다(준법은 F02보다 앞선다).
+ * 그 밖의 위반(기간 비교·SOFT 단정·카드 넘침)은 마지막 시도에서 경고로 발송할 수 있다. 빈 부제는 막지 않는다 —
+ * normalizeMarketOptionalParts 가 채운다. 생존 후보가 없을 때 applyHeadlineSelection 이 막는 후보를 제쳐 두는 데 쓴다.
+ */
+export function marketHeadlineBlocking(c: HeadlineCandidate): boolean {
+  return findHardAdvice(marketAdviceText(c.headline, "title")).length > 0 || findHardAdvice(marketAdviceText(c.subline, "title")).length > 0;
+}
+
 interface MarketAssessment {
   content: ReportContent;   // 시점·출처 soft fix 를 반영한 결과
   requiredMissing: string[];
@@ -949,9 +959,10 @@ export async function generateReport(
     // 기록·경고 뒤 다음 시도로(마지막 시도면 루프 뒤 앞선 결과 발송 경로로).
     try {
       // 2026-10-27: 제목 후보 셋 → 제목 단위 검사로 거르고 최근 반복 감점으로 임시 제목(cover.headline·subline)을 정한다.
-      // 생존 후보가 없으면 첫 후보가 임시 제목이 되고, 그 위반을 아래 기존 검증이 보고한다(1~2번째 재생성, 마지막 경고).
+      // 생존 후보가 없으면 HARD 권유가 없는 후보 중 위반이 가장 적은 것이 임시 제목이 되고(전부 권유면 첫 후보),
+      // 그 위반을 아래 기존 검증이 보고한다(1~2번째 재생성, 마지막 경고) — 한 후보의 권유 때문에 발송이 막히지 않게(F1).
       const current = parsed;
-      const selection = applyHeadlineSelection(current, recentHeadlines, (c) => marketHeadlineProblems(c, current), { scoring: selectionOn });
+      const selection = applyHeadlineSelection(current, recentHeadlines, (c) => marketHeadlineProblems(c, current), { scoring: selectionOn, isBlocking: marketHeadlineBlocking });
       const assessed = assessMarketContent(parsed, data.date, todaySources);
       parsed = assessed.content;
       const { requiredMissing, base: baseViolations, card: cardViolations, advice: adviceViolations } = assessed;
@@ -1044,7 +1055,8 @@ export async function generateReport(
       }
     },
   });
-  if (swapped) ordered[0] = swapped;
+  // 고른 결과를 맨 앞에 끼운다(대체하지 않는다) — 그 마무리·렌더가 던지면 같은 회차의 임시 제목 결과가 다음 후보로 남는다.
+  if (swapped) ordered.unshift(swapped);
   // Ruling 38: 선호 순서대로 마무리·렌더한다 — 고른 결과가 던지면(모양이 깨진 응답) 다음 후보로. 모두 실패할 때만 실패한다.
   let finalizeErr: unknown = null;
   for (const [i, candidate] of ordered.entries()) {

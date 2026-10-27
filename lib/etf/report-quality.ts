@@ -579,6 +579,15 @@ export function headlineCandidateProblems(c: HeadlineCandidate, report: MorningR
   return problems
 }
 
+/**
+ * 제목 후보 하나가 발송을 막는가 — 투자 권유(준법)이거나 부제가 비었으면(필수 필드) 그 후보로는 보낼 수 없다.
+ * 주제 이탈·기간 비교·수치 불일치·카드 넘침 등은 마지막 시도(Tier 1)에서 경고로 발송할 수 있다(F02).
+ * 생존 후보가 없을 때 applyHeadlineSelection 이 막는 후보를 제쳐 두는 데 쓴다 — 한 후보 탓에 발송이 막히지 않게.
+ */
+export function headlineCandidateBlocking(c: HeadlineCandidate): boolean {
+  return findMatches(`${c.headline}\n${c.subline}`, INVESTMENT_ADVICE_PATTERNS).length > 0 || !isFilled(c.subline)
+}
+
 /** 위반을 던지지 않고 돌려준다(리포트는 soft fix·교정이 반영된 상태로 바뀐다). 던지는 API는 validateMorningReportQuality. */
 export function assessMorningReportQuality(
   report: MorningReport,

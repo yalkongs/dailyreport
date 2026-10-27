@@ -20,6 +20,7 @@ export interface ScoredHeadline extends HeadlineCandidate {
   score: number;          // headlineScore — 0이 가장 좋다
   scoreReasons: string[];
   problems: string[];     // 제목 단위 정확성 검사 위반(빈 배열 = 생존)
+  blocking: boolean;      // 이 후보를 쓰면 발송이 막힌다(파이프라인의 isBlocking — 투자 권유·필수 부제 누락 등)
 }
 
 export interface HeadlineSelection {
@@ -63,12 +64,15 @@ export function extractHeadlineCandidates(cover: unknown): HeadlineCandidate[] {
  * (렌더·인덱스·로그에 후보가 남지 않게). 후보가 없으면 null — 필수 항목 검사가 누락을 보고한다.
  * recent: 같은 리포트 종류의 최근 제목(최신순, 오늘 제외). problemsOf: 파이프라인의 제목 단위 검사.
  * scoring:false(HEADLINE_SELECTION=off)면 점수 대신 첫 생존 후보를 쓴다.
+ * 생존 후보가 없으면(F02: 선택 단계 때문에 발송이 막히면 안 된다) 발송을 막는 후보(isBlocking)는 제쳐 두고,
+ * 막지 않는 후보 가운데 위반이 가장 적은 것(같으면 점수, 그다음 앞 순서)을 임시 제목으로 쓴다 — 그 위반은 기존 검증이 경고로 남긴다.
+ * 모든 후보가 막는 후보면(또는 isBlocking 이 없으면) 첫 후보 — 필수 항목·준법 검사가 그대로 알린다.
  */
 export function applyHeadlineSelection(
   report: unknown,
   recent: readonly string[],
   problemsOf: (c: HeadlineCandidate) => string[],
-  options: { scoring?: boolean } = {},
+  options: { scoring?: boolean; isBlocking?: (c: HeadlineCandidate) => boolean } = {},
 ): HeadlineSelection | null {
   const cover = asRecord(asRecord(report)?.cover);
   if (!cover) return null;
@@ -77,16 +81,20 @@ export function applyHeadlineSelection(
   if (candidates.length === 0) return null;
   const scored: ScoredHeadline[] = candidates.map((c, index) => {
     const { score, reasons } = headlineScore(c.headline, recent);
-    return { ...c, index, form: headlineForm(c.headline), score, scoreReasons: reasons, problems: problemsOf(c) };
+    return { ...c, index, form: headlineForm(c.headline), score, scoreReasons: reasons, problems: problemsOf(c), blocking: options.isBlocking?.(c) ?? false };
   });
   const survivors = scored.filter((s) => s.problems.length === 0);
   const ranked = options.scoring === false ? survivors : [...survivors].sort((a, b) => b.score - a.score || a.index - b.index);
-  const chosen = ranked[0] ?? scored[0];
+  // 생존이 없을 때(isBlocking 을 받은 경우만): 발송을 막지 않는 후보 중 위반이 가장 적은 것 → 점수 → 순서. 전부 막는 후보면 scored[0].
+  const fallback = options.isBlocking
+    ? [...scored].filter((s) => !s.blocking).sort((a, b) => a.problems.length - b.problems.length || b.score - a.score || a.index - b.index)[0]
+    : undefined;
+  const chosen = ranked[0] ?? fallback ?? scored[0];
   cover.headline = chosen.headline;
   cover.subline = chosen.subline;
   console.log(`🏷️ 제목 후보 ${scored.length}개(생존 ${survivors.length}) — 임시 제목: "${chosen.headline}" 〔${chosen.form}, 점수 ${chosen.score}〕`);
   for (const s of scored) {
-    const why = [...s.problems.map((p) => `✗ ${p}`), ...s.scoreReasons].join(" / ");
+    const why = [...s.problems.map((p) => `✗${s.blocking ? "(차단) " : " "}${p}`), ...s.scoreReasons].join(" / ");
     console.log(`   ${s.index + 1}. "${s.headline}" 〔${s.form}, ${s.score}〕${why ? ` — ${why}` : ""}`);
   }
   return { scored, survivors, chosen };
@@ -121,7 +129,7 @@ export type HeadlineEditor = (input: HeadlineEditorInput) => Promise<HeadlineEdi
 
 const EDITOR_SYSTEM = `${HEADLINE_DESK}
 아래 제목 후보 가운데 오늘 발행할 제목 하나를 고릅니다. 고르기만 하고 고쳐 쓰지 않습니다.
-기준(앞의 것이 우선):
+기준 — 우선순위는 명확성 → 자연스러움 → 근거 없는 인과 단정 없음 순이다(아래 항목의 나열 순서가 아니다):
 ${HEADLINE_RUBRIC}
 - 같은 점수면 최근 제목과 형태·끝 어절이 덜 겹치는 후보.
 결과는 pick 도구로 한 번 낸다.`;
@@ -133,7 +141,7 @@ export function buildHeadlineEditorPrompt(input: HeadlineEditorInput): string {
     input.subjectName ? `오늘의 주제 자산군: ${input.subjectName}` : "",
     input.evidence.length > 0
       ? `오늘의 핵심 근거:\n${input.evidence.map((e) => `- ${e}`).join("\n")}`
-      : "오늘의 핵심 근거: 없음(인과를 단정한 후보는 감점)",
+      : "오늘의 핵심 근거: 없음(입력 수치로 확인되지 않는 원인을 단정한 후보는 감점)",
     input.recent.length > 0 ? `최근 제목(최신순):\n${input.recent.map((h) => `- ${h}`).join("\n")}` : "",
     `후보:\n${input.candidates.map((c, i) => `${i}. 제목: ${c.headline}\n   부제: ${c.subline}`).join("\n")}`,
     "후보마다 자연스러움·명확성을 1~5로 매기고, 가장 나은 후보의 번호(0부터)를 pick 도구로 내십시오.",
@@ -235,7 +243,8 @@ export async function chooseFinalHeadline<T>(o: FinalHeadlineOptions<T>): Promis
     console.log("🏷️ 제목 편집자 응답의 번호가 범위 밖 — 임시 제목 유지");
     return null;
   }
-  const scores = verdict.scores.map((s, i) => `${i}:${s.natural}/${s.clear}`).join(" ");
+  // 후보 번호는 위 후보별 로그와 같게 모델이 쓴 순서(1부터)로 센다 — verdict 가 scores 없이 주입돼도 던지지 않는다.
+  const scores = (verdict.scores ?? []).map((s, i) => `${(sel.survivors[i]?.index ?? i) + 1}:${s.natural}/${s.clear}`).join(" ");
   console.log(`🏷️ 제목 편집자 선택: "${picked.headline}" (자연/명확 ${scores || "-"}) — ${verdict.reason}`);
   if (picked.index === sel.chosen.index) return null;
   let swapped: T | null;

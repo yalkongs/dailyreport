@@ -3,7 +3,7 @@
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import Anthropic from '@anthropic-ai/sdk'
-import { generateReport, buildReportPrompt, marketHeadlineProblems } from './claude-client'
+import { generateReport, buildReportPrompt, marketHeadlineProblems, marketHeadlineBlocking } from './claude-client'
 
 const DATA = {
   collectedAt: '2026-10-16T07:00:00+09:00', date: '2026-10-16', dayOfWeek: '금',
@@ -82,6 +82,17 @@ test('Market 제목: 1회차 후보가 모두 검사에 걸리면 재생성하�
   assert.equal(content.cover.headline, GOOD_A)
 })
 
+test('Market 제목(F1): 생존 후보가 없고 0번이 HARD 권유여도, 권유 없는 후보로 3회차에 경고와 함께 발송한다(막지 않는다)', async (t) => {
+  t.after(() => mock.restoreAll())
+  const every = reply([['반도체 지금 매수하세요', '부제'], [BAD, '부제']])
+  const { stream, create } = fakeApis([every], { pick: 0, scores: [], reason: '' })
+  const { content } = await generateReport(DATA)
+  assert.equal(stream.mock.callCount(), 3) // 1~2회차는 후보의 기간 비교·최상급 위반으로 재생성, 마지막 회차는 경고 후 발송
+  assert.equal(create.mock.callCount(), 0) // 생존 후보가 없으니 편집자를 부르지 않는다
+  assert.equal(content.cover.headline, BAD)
+  assert.equal(content.cover.headlineCandidates, undefined)
+})
+
 test('Market 제목: 옛 응답(cover.headline 만)은 후보 하나 — 편집자를 부르지 않는다', async (t) => {
   t.after(() => mock.restoreAll())
   const { create } = fakeApis([body({ headline: GOOD_A, subline: '부제A' })], { pick: 0, scores: [], reason: '' })
@@ -109,6 +120,14 @@ test('marketHeadlineProblems: 부제의 HARD 권유·제목 최상급·빈 부�
   assert.deepEqual(marketHeadlineProblems({ headline: GOOD_A, subline: '부제' }, { cardLine: { kind: 'cause', text: '' } }), [])
 })
 
+test('marketHeadlineBlocking: 제목·부제의 HARD 권유만 차단 — 기간 비교·빈 부제·SOFT 단정은 경고로 발송할 수 있다', () => {
+  assert.equal(marketHeadlineBlocking({ headline: '반도체 지금 매수하세요', subline: '부제' }), true)
+  assert.equal(marketHeadlineBlocking({ headline: GOOD_A, subline: '지금 매수하세요' }), true)
+  assert.equal(marketHeadlineBlocking({ headline: BAD, subline: '부제' }), false)
+  assert.equal(marketHeadlineBlocking({ headline: GOOD_A, subline: '' }), false)
+  assert.equal(marketHeadlineBlocking({ headline: GOOD_A, subline: '부제' }), false)
+})
+
 test('프롬프트: 공통 기준·순환 예시·후보 스키마·최근 제목 형태(오늘 항목 제외), 옛 은유 지시 없음', () => {
   const entry = (date: string, headline: string) => ({ date, headline, bigStoryTopic: 't', narrativeAngle: 'a', walletTopics: [], metaphors: [], lookingAhead: '' })
   const ctx = {
@@ -121,6 +140,8 @@ test('프롬프트: 공통 기준·순환 예시·후보 스키마·최근 제�
   assert.match(p, /\[오늘 참고할 제목 예시/)
   assert.match(p, /"headlineCandidates": \[/)
   assert.match(p, /- CPI 예상 상회, 나스닥 1\.9% 밀렸다 〔쉼표 두 토막〕/)
+  assert.match(p, /- 헤드라인\(최신순, 〔형태〕\):\n {2}- CPI 예상 상회, 나스닥 1\.9% 밀렸다 〔쉼표 두 토막〕\n {2}- 코스피, 349포인트/) // F9: 최근 제목 줄은 항목 아래에 두 칸 들여써 중첩한다
+  assert.match(p, /\n {2}오늘 제목은 이 형태를 피하십시오: 쉼표 두 토막/)
   assert.match(p, /오늘 제목은 이 형태를 피하십시오: 쉼표 두 토막/)
   assert.ok(!p.includes('오늘 다시 만든 제목'), '오늘 날짜 항목은 최근 제목에서 뺀다')
   for (const gone of ['호기심의 방아쇠', '본문이 갚으십시오', '은유가 전면', '신선한 은유·관점을 적극 허용', '오늘 본문을 관통하는 호기심 유발 한 줄', '"…가 그린 …"']) {
