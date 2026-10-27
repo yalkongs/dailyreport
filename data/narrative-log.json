@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "date": "2026-10-28",
+      "narrativeAngle": "hidden_variable",
+      "headline": "코스피 3% 반등, 삼성 실적이 다음 관문",
+      "bigStoryTopic": "전 거래일 코스피 <strong>5,638</strong>선 마감. 간밤 뉴욕 칩 관련주 ",
+      "walletTopics": [
+        "삼성전자 세부 실적이 메모리 110조 추정치를 충족하면",
+        "WTI 100달러선이 계속 유지된다면",
+        "11월 2일 한국 CPI와 수출입 동향을 함께 보면"
+      ],
+      "metaphors": [
+        "검증",
+        "관문"
+      ],
+      "lookingAhead": "삼성전자·SK하이닉스 주가 흐름"
+    },
+    {
       "date": "2026-10-27",
       "narrativeAngle": "job_perspective",
       "headline": "트럼프 관세 50%, 현대차 '투자 면죄부' 공식 흔들리다",
@@ -534,25 +550,6 @@
         "4일 연속"
       ],
       "lookingAhead": "코스피200 옵션·선물 만기 결제 — 변동성 확인"
-    },
-    {
-      "date": "2026-09-10",
-      "narrativeAngle": "hidden_variable",
-      "headline": "SK하이닉스가 증명한 날, 뉴욕은 유가에 무릎 꿇었다",
-      "bigStoryTopic": "SK하이닉스 ADR이 상장 후 최고가를 경신하며 7% 급등했습니다. 같은 시각 뉴욕에서는 ",
-      "walletTopics": [
-        "SK하이닉스 보유자 — ADR 최고가, 국내 현물로 이어질까",
-        "정유주 보유자 — 브렌트 100달러, 수혜의 내용을 확인하십시오",
-        "금통위 금융안정회의 — 오늘 오전, 읽어야 할 신호",
-        "유가 급등·금리 상승 속 자산별 온도 점검",
-        "유가 상승이 바꾸는 실질금리의 계산"
-      ],
-      "metaphors": [
-        "ADR 최고가",
-        "유가 100달러",
-        "금리 압력"
-      ],
-      "lookingAhead": "한국은행 금통위 금융안정회의 — 신호 해석이 관건"
     }
   ]
 }
