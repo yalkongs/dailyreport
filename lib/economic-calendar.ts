@@ -7,7 +7,7 @@
 import { fetchWithTimeout } from "./fetch-utils";
 import type { EconomicEvent } from "./types";
 import { etToKst, describeKrSession } from "./release-time";
-import { getMarketCalendarInfo, getNextTradingDay, koreanWeekday } from "./market-calendar";
+import { getMarketCalendarInfo, getNextTradingDay, isYearCovered, koreanWeekday } from "./market-calendar";
 
 // 2026-10-16: 예전 구현은 전체 릴리스 일정(releases/dates)을 한 번에 받았는데, GitHub 러너에서 30초에도
 // 응답이 없어 매일 타임아웃으로 비었다(응답 필드도 release_dates가 아닌 releases를 읽었다). 또 ID 표의 절반이
@@ -85,12 +85,14 @@ function relativeDayLabel(date: string, reportDate: string): string {
  *  - 한국 개장 전(09:00 전): 그날이 한국 거래일이면 그날, 아니면 다음 거래일에 반영
  *  - 한국 장중: 그날 장중(휴장이면 다음 거래일)
  *  - 장 마감 후: 다음 한국 거래일
+ * 반영일이 휴장 일정이 등록되지 않은 해로 넘어가면 날짜를 지어내지 않고 "다음 거래일"로 쓴다(연말 → 신정).
  */
 export function describeEventTiming(kstDate: string, timeKst: string, reportDate: string): string {
   const [hh, mm] = timeKst.split(":").map(Number);
   const minutes = hh * 60 + mm;
   const day = relativeDayLabel(kstDate, reportDate);
-  const reflect = (date: string) => (date === reportDate ? "오늘" : monthDayWeekday(date));
+  const reflect = (date: string) =>
+    !isYearCovered(Number(date.slice(0, 4)), "kr") ? "다음 거래일" : date === reportDate ? "오늘" : monthDayWeekday(date);
   if (minutes < 9 * 60) {
     const on = isKrTradingDay(kstDate) ? kstDate : getNextTradingDay(kstDate, "kr");
     return `${day} 새벽 발표(한국 개장 전) → 국내 반영은 ${reflect(on)}`;
