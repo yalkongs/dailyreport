@@ -207,7 +207,8 @@ export interface MorningStrategyInput {
 // 숫자(대표 ETF 예시·등락률)는 렌더러가 자산군 슬롯(asset-classes.ts)에서 직접 그리고, 모델은 문장만 쓴다.
 // 산문 필드 전부가 수치 대조·주간·환율 방향 검증(report-quality.ts)을 거친다.
 export interface MorningReport {
-  cover: { headline: string; subline: string }
+  // 2026-10-27: headlineCandidates 는 모델이 쓰는 제목 후보 — 코드가 하나를 골라 headline·subline 에 쓰고 지운다.
+  cover: { headline: string; subline: string; headlineCandidates?: Array<{ headline: string; subline: string }> }
   // 세 줄 요약: 해외 신호 / 국내 상태 / 오늘 핵심 (각 60자 이내)
   summary: { overseas: string; domestic: string; focus: string }
   // 자산군별 판단 재료. key는 buildAssetClassSlots가 정한 슬롯만. reason은 입력 근거가 있을 때만.

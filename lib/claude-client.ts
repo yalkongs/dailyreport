@@ -9,7 +9,7 @@ import type {
   ReportContent,
   ReportSummary,
 } from "./types";
-import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS, MARKET_GENERATION_BUDGET_MS, makeDeadline } from "./claude-budget";
+import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS, MARKET_GENERATION_BUDGET_MS, REPORT_MODEL, makeDeadline } from "./claude-budget";
 import { EVIDENCE_RULES } from "./evidence-rules";
 import { formatEconomicEventLine } from "./economic-calendar";
 import { renderReport, sanitizeInlineHtml } from "./report-renderer";
@@ -17,7 +17,13 @@ import { cardTextFits } from "./preview/data-card";
 import { decodeCharacterReferences, stripEmphasisTags } from "./html-entities";
 import { plainText, cutAtSentence } from "./market-summary";
 import { BANNED_METAPHORS } from "./banned-metaphors";
-import { renderVoiceExemplars } from "./voice-exemplars";
+import { renderVoiceExemplars, pickHeadlineExemplars, renderHeadlineExemplars } from "./voice-exemplars";
+// 2026-10-27 제목 편집 기준: 공통 기준 문구·최근 제목 형태·후보 선택(스펙 docs/superpowers/specs/2026-10-27-headline-editorial-design.md).
+import { renderHeadlineStandard, renderRecentHeadlineLines, takeRecentHeadlines } from "./headline-editorial";
+import {
+  applyHeadlineSelection, chooseFinalHeadline, callHeadlineEditor, headlineSelectionEnabled, HEADLINE_EDITOR_ESTIMATE_MS,
+  type HeadlineCandidate, type HeadlineSelection,
+} from "./headline-selection";
 import { buildTemporalFramingBlock } from "./temporal-framing";
 // R2·R3 (2026-07-22): 시점·출처 정합 검사(파싱 직후 문자열 레벨 soft fix).
 import { checkAndFixTemporal } from "./temporal-consistency";
@@ -70,7 +76,7 @@ JSON 내의 텍스트에서 강조가 필요한 수치는 <strong> 태그로 감
 - **숫자를 먼저, 맥락을 바로 뒤에** 배치할 것.
 - 전문 용어는 풀어서 설명하되, 원어를 괄호 안에 병기할 것.
 - 핵심 수치는 <strong> 태그로 강조할 것.
-- **신선하고 구체적인 은유·관점**을 적극 사용할 것 (제목·본문 모두). 단 오늘의 데이터에서 길어올린 은유만 — "아무 날에나 붙일 수 있는 비유"는 쓰지 말 것.
+- 본문에는 **신선하고 구체적인 은유·관점**을 써도 좋다. 단 오늘의 데이터에서 길어올린 은유만 — "아무 날에나 붙일 수 있는 비유"는 쓰지 말 것. 제목은 사용자 메시지의 [제목 편집 기준]을 따를 것.
 
 ### 절대 하지 말 것
 - ❌ 구어체 금지: "~거든요", "~했어요", "~잖아요", "~하죠" 사용 금지
@@ -115,7 +121,12 @@ ${EVIDENCE_RULES}
 - 달러 강세 → 원화 약세 (대신: 구체적 수혜자/피해자)`;
 }
 
-function buildAntiRepetitionBlock(ctx: AntiRepetitionContext): string {
+/** Market 최근 제목(최신순, 오늘 날짜 제외 — 같은 날 강제 재생성하면 오늘 항목이 기록에 있다). */
+function marketRecentHeadlines(ctx: AntiRepetitionContext, date: string): string[] {
+  return takeRecentHeadlines(ctx.recentLog.filter((e) => e.date !== date).map((e) => e.headline));
+}
+
+function buildAntiRepetitionBlock(ctx: AntiRepetitionContext, date: string): string {
   let block = `\n## 내러티브 반복 방지\n`;
 
   block += `\n### 오늘의 관점: "${ctx.angle.name}"
@@ -124,9 +135,10 @@ ${ctx.angle.promptGuide}\n`;
   if (ctx.recentLog.length > 0) {
     block += `\n### 최근 리포트에서 사용된 요소 (반복 금지)\n`;
 
-    const usedHeadlines = ctx.recentLog.map((e) => e.headline).filter(Boolean);
-    if (usedHeadlines.length > 0) {
-      block += `- 헤드라인: ${usedHeadlines.join(" / ")}\n`;
+    const recentHeadlines = marketRecentHeadlines(ctx, date);
+    if (recentHeadlines.length > 0) {
+      const recentLines = renderRecentHeadlineLines(recentHeadlines).split("\n").map((l) => `  ${l}`).join("\n");
+      block += `- 헤드라인(최신순, 〔형태〕):\n${recentLines}\n`;
     }
 
     const usedTopics = ctx.recentLog.map((e) => e.bigStoryTopic).filter(Boolean);
@@ -144,7 +156,7 @@ ${ctx.angle.promptGuide}\n`;
       block += `- 비유/은유: ${usedMetaphors.join(", ")}\n`;
     }
 
-    block += `\n위 요소와 동일하거나 유사한 **단어**뿐 아니라, **구조·골격·이미지의 재사용**도 피하십시오. 특히 최근 헤드라인들의 공통 구문 틀(예: "…가 그린 …", "…한 자리에 …" 류)이 보이면 같은 문형을 반복하지 말고 다른 골격으로 쓰십시오.\n`;
+    block += `\n위 요소와 동일하거나 유사한 **단어**뿐 아니라 **구조·이미지의 재사용**도 피하십시오. 제목의 형태는 아래 [제목 작성 규칙]의 기준을 따릅니다.\n`;
   }
 
   return block;
@@ -177,7 +189,7 @@ function buildEvidenceBlock(ctx: AntiRepetitionContext): string {
 - 최상위 catalyst: ${cat}
 - 실패한 데이터 소스: ${failed}
 
-이 근거 상태는 아래 [제목 작성 규칙]의 tier 종속 동작을 결정합니다.
+이 근거 상태는 아래 [제목 작성 규칙]에서 인과 표현의 강도를 정합니다.
 `;
 }
 
@@ -292,10 +304,11 @@ export function buildHistoricalBlock(historical: HistoricalComparison[]): string
 }
 
 export function buildReportPrompt(data: MarketDataCollection, ctx: AntiRepetitionContext, context: ContextData | null = null): string {
-  const antiRepetition = buildAntiRepetitionBlock(ctx);
+  const antiRepetition = buildAntiRepetitionBlock(ctx, data.date);
   const sidewaysBlock = buildSidewaysBlock(ctx);
   const evidenceBlock = buildEvidenceBlock(ctx);
   const contextBlock = buildContextBlock(context, ctx);
+  const headlineExemplars = renderHeadlineExemplars(pickHeadlineExemplars("market", marketRecentHeadlines(ctx, data.date), data.date));
 
   // Phase 1: 시장 분위기 모드별 분량·구성 가이드.
   const modeBlock = ctx.marketMode
@@ -370,8 +383,9 @@ ${JSON.stringify(data, null, 2)}
 \`\`\`typescript
 {
   "cover": {
-    "headline": string,   // 오늘 본문을 관통하는 호기심 유발 한 줄. 작성 규칙은 아래 [제목 작성 규칙] 참조.
-    "subline": string,    // 헤드라인 보충 1~2문장. 제목에서 뺀 구체 사건명·핵심 수치를 여기서 받침.
+    "headlineCandidates": [   // 제목 후보 3개 — 아래 [제목 작성 규칙]의 [제목 편집 기준] 참조. 코드가 하나를 골라 제목·부제로 씁니다.
+      { "headline": string, "subline": string }   // subline: 그 제목에서 뺀 구체 사건명·핵심 수치를 받치는 1~2문장
+    ],
     "imageKeywords": string[],  // 제목/본문에서 사용한 핵심 이미지·은유 단어 1~3개. 사실 모드(은유 없음)면 빈 배열 []. (반복 회피 로그용)
   },
   "summary": {            // 페이지 맨 위 세 줄 요약. 작성 규칙은 아래 [summary·cardLine 작성 규칙] 참조. HTML 태그 금지.
@@ -449,22 +463,18 @@ summary는 페이지 맨 위 "세 줄 요약", cardLine은 링크 미리보기 �
 
 ### 제목 작성 규칙
 
-제목(headline)의 본질은 **독자가 읽고 싶게 만드는 호기심의 방아쇠**입니다. 배달 시점(미 마감 직후·한국 개장 전)에 한국 투자자가 관심 가질 토픽을, 그날 본문의 중심 긴장을 압축해 한 줄로 표현하십시오. 정보 요약이 아닙니다.
+${renderHeadlineStandard()}
+
+${headlineExemplars}
 
 - **표제어체로 쓰십시오 (문체 규칙 — 최우선).** 한국어 신문·리포트 제목의 어투는 **명사로 끝맺거나(권장)** 기사체 종결('~다')입니다. **존댓말 종결('~습니다')과 완결 서술문("…을 갈라놓았다", "…가 채웠습니다" 같은 산문 술어)은 제목에 쓰지 마십시오** — 그건 본문·칼럼의 어투이지 표제어가 아닙니다. 조사·어미를 덜어 압축하십시오. 은유는 그대로 살리되 종결형만 표제어체로. (예: "서울은 삼성과 SK를 두 방향으로 갈라놓았다" → "마이크론 쇼크에 엇갈린 삼성·SK")
-- **의인화 주어 주의.** "서울이/시장이 …했다"처럼 시장을 능동 행위자로 세워 인과를 뒤집지 마십시오. 엇갈리거나 움직인 실제 주체(종목·섹터·지수)를 주어로 삼으십시오.
-- **신선한 은유·관점을 적극 허용합니다.** 단 그 은유는 오늘의 지배적 서사(위 [오늘의 관점] 앵글 + 최상위 catalyst)에서 길어올린 것이어야 합니다. 아무 날에나 붙일 수 있는 은유면 실패입니다.
-- **진부한 클리셰는 피하십시오** — 위 [목표 보이스] 예시의 결을 따르고, 매번 어느 날에나 붙일 수 있는 비유면 실패입니다.
 - **수치 앵커**(코스피 +X%, 환율 N원 등)는 기본적으로 **부제(subline)** 가 받칩니다. 단 그 숫자 자체가 오늘의 후크(예: 코스피 3000 돌파, 환율 1,500 같은 심리적 분기점)라면 제목에 남길지 직접 판단하십시오.
 - **기간 비교·최상급 금지 (제목·cardLine 공통).** 제목·카드 문구에는 'N년치·N개월치', '역대·사상 최대/최고/최저', 'N년 만에 최고/최저', '연중 최고/최저', '이틀째·N일째·N거래일 연속·연일 급락', '두·세 자릿수' 같은 기간 비교·연속·최상급 표현을 쓰지 않는다 — 입력 데이터로 확인되는 수치와 사실만. (과거 기준점은 historicalComparison의 1주·1개월·3개월·1년뿐이라 이런 주장은 확인할 수 없습니다. 비교가 필요하면 부제·본문에서 그 기준점의 수치("1년 전 대비 N%" 등)로 쓰십시오.)
-- 길이는 압축 지향(대략 15~25자 권장). 은유가 살아있으면 약간 넘어도 됩니다 — 경직되지 마십시오.
-- **본문 연결**: bigStory 의 첫 문단 또는 pullQuote 하나가 제목의 이미지를 명시적으로 받아 전개해야 합니다. 제목이 던진 은유를 본문이 갚으십시오.
-- **반복 회피**: 같은 catalyst·이미지·**구문 틀**이 최근 3일 헤드라인에 등장했다면 (a) 사건의 국면·단계를 다르게 표현하거나 (b) catalyst를 부제로 내리고 제목은 새 각도로. 같은 문형("X가 그린 Y" 류)을 연일 반복하지 마십시오.
+- 길이는 압축 지향(대략 15~25자 권장). 명확성을 위해 필요하면 약간 넘어도 됩니다.
+- **본문과의 관계**: 세 후보 모두 bigStory 가 다루는 오늘의 중심 사건을 다룹니다. 어느 후보가 뽑혀도 본문과 맞아야 합니다.
+- **catalyst 반복 회피**: 같은 catalyst 가 최근 3일 헤드라인에 등장했다면 (a) 사건의 국면·단계를 다르게 표현하거나 (b) catalyst 를 부제로 내리고 제목은 새 각도로 쓰십시오.
 
-**근거 상태(tier)에 따른 동작 — 위 [오늘의 근거 상태] 참조:**
-- **strong**: 은유가 전면. 최상위 catalyst 에 단단히 근거한 이미지로.
-- **thin**: 은유 허용하되 신중. 가격·구조 서사 비중을 높이고 단정을 자제("~로 알려졌다" 수준).
-- **hollow**: **사실 모드.** 은유를 만들지 마십시오. 절제된 사실 프레이밍(예: "조용한 N일, 다음 변수는 X")을 쓰고, imageKeywords 는 빈 배열로 두십시오.
+**근거 상태(tier) — 위 [오늘의 근거 상태] 참조:** 인과 표현의 강도는 [제목 편집 기준] 3을 따릅니다. **hollow** 면 **사실 모드**입니다 — 은유를 만들지 말고 절제된 사실로 쓰고, imageKeywords 는 빈 배열로 두십시오.
 
 **JSON만 출력하십시오. \`\`\`json 마크다운 펜스도 사용하지 마십시오.**`;
 }
@@ -684,6 +694,79 @@ export function validateMarketSoftAdvice(content: unknown): string[] {
 }
 
 /**
+ * 제목 후보 하나의 제목 단위 검사(2026-10-27 스펙 §3) — 위반 목록(빈 배열 = 생존). 던지지 않는다.
+ * 기간 비교·최상급(Ruling 31), 제목·부제 화면 글자의 권유 HARD·SOFT(Ruling 37e), 빈 부제, 카드 제목 넘침.
+ * 후보마다 다른 것만 본다 — 카드 한 줄 자체의 문제는 모든 후보에 같으므로 기존 검증(validateMarketCardText 등)이 보고한다.
+ */
+export function marketHeadlineProblems(c: HeadlineCandidate, content: Pick<ReportContent, "cardLine">): string[] {
+  const headline = marketAdviceText(c.headline, "title");
+  const subline = marketAdviceText(c.subline, "title");
+  const problems = [
+    ...comparativeClaimViolations([["cover.headline", c.headline]]),
+    ...[...findHardAdvice(headline), ...findHardAdvice(subline)].map((f) => `투자 권유성 표현: "${f}"`),
+    ...[...findSoftAdvice(headline), ...findSoftAdvice(subline)].map((f) => `권유성 단정 표현: "${f}"`),
+  ];
+  if (!subline) problems.push("subline 누락");
+  const fit = cardTextFits("market", { headline: stripEmphasisTags(c.headline).trim(), line: plainText(content?.cardLine?.text) });
+  problems.push(...fit.reasons.filter((r) => r.startsWith("headline")).map((r) => `카드 ${r}`));
+  return problems;
+}
+
+/**
+ * 제목 후보 하나가 발송을 막는가 — 제목·부제 화면 글자에 HARD 권유가 있으면 그 후보로는 보낼 수 없다(준법은 F02보다 앞선다).
+ * 그 밖의 위반(기간 비교·SOFT 단정·카드 넘침)은 마지막 시도에서 경고로 발송할 수 있다. 빈 부제는 막지 않는다 —
+ * normalizeMarketOptionalParts 가 채운다. 생존 후보가 없을 때 applyHeadlineSelection 이 막는 후보를 제쳐 두는 데 쓴다.
+ */
+export function marketHeadlineBlocking(c: HeadlineCandidate): boolean {
+  return findHardAdvice(marketAdviceText(c.headline, "title")).length > 0 || findHardAdvice(marketAdviceText(c.subline, "title")).length > 0;
+}
+
+interface MarketAssessment {
+  content: ReportContent;   // 시점·출처 soft fix 를 반영한 결과
+  requiredMissing: string[];
+  base: string[];           // 일반 기준 위반(1~2번째 재생성, 마지막 경고)
+  card: string[];           // 카드 글자 맞춤
+  advice: string[];         // HARD 권유 — 모든 시도에서 위반
+}
+
+/**
+ * 한 결과의 soft fix·검증 — 매 시도와 제목 편집자 교체 뒤 재검증이 같은 함수를 쓴다.
+ * 형식이 깨진 응답이면 던질 수 있다 — 호출자가 파싱 실패처럼 다룬다(Ruling 28).
+ */
+function assessMarketContent(parsed: ReportContent, reportDate: string, todaySources: string[]): MarketAssessment {
+  let content = parsed;
+  const temporal = checkAndFixTemporal(JSON.stringify(content), reportDate);
+  const sourceFix = softFixUnquotableSources(temporal.fixed, todaySources);
+  const softFixes = [...temporal.softFixes, ...sourceFix.softFixes];
+  if (softFixes.length > 0) {
+    console.log(`🩹 정합성 soft fix ${softFixes.length}건: ${softFixes.join(", ")}`);
+    content = JSON.parse(sourceFix.fixed) as ReportContent;
+  }
+  if (sourceFix.warnings.length > 0) {
+    console.log(`⚠️ 비승인 출처 잔존: ${sourceFix.warnings.join(", ")}`);
+  }
+  const requiredMissing = validateMarketRequired(content);
+  // Ruling 31: 제목·카드 한 줄의 기간 비교·최상급은 일반 기준 위반(1~2번째 재생성, 마지막 시도 경고만).
+  // Ruling 37e: 권유성 단정(SOFT)도 일반 기준 위반 — 해설에 섞여 걸려도 재생성 한 번이 비용이고 마지막 시도는 경고만.
+  const base = [...temporal.violations, ...requiredMissing, ...validateMarketSummary(content), ...validateMarketComparativeClaims(content), ...validateMarketSoftAdvice(content)];
+  const citationCount = countCitationPhrases(sourceFix.fixed);
+  if (citationCount >= 8) {
+    base.push(`"에 따르면" 인용 ${citationCount}회 과다`);
+  } else if (citationCount >= 5) {
+    console.log(`⚠️ "에 따르면" 인용 ${citationCount}회 (허용 한도 이하)`);
+  }
+  // 카드 글자 맞춤: 1~2번째 시도에선 다시 쓰게 하는 사유, 마지막 시도에선 "위반 잔존" 경고로만 남는다.
+  // Ruling 37·37e: 매수·매도 권유 HARD(명령형) — 모든 시도에서 위반(마지막 시도도 경고로 넘기지 않는다).
+  return { content, requiredMissing, base, card: validateMarketCardText(content), advice: validateMarketAdvice(content) };
+}
+
+/** 편집자에게 줄 오늘의 핵심 근거 — 근거 상태의 최상위 catalyst 제목(없으면 빈 배열). */
+function marketEditorEvidence(ctx: AntiRepetitionContext): string[] {
+  const top = ctx.evidence?.topCatalyst?.title;
+  return top ? [top] : [];
+}
+
+/**
  * 선택 항목을 렌더·후속 로그가 던지지 않는 빈 값으로 맞춘다 — 발송하기로 한 content 에 한 번 적용한다.
  * 배열(watchPoints·soWhat·calendar·compass)이 없거나 배열이 아니면 [], 문자열(closingMessage·cover.subline)이 없으면 ''.
  * Ruling 38: 배열 안의 깨진 원소(객체가 아니거나 내용이 빈 것)는 걸러 내고, 렌더러·run.ts 가 읽는 칸은 문자열로,
@@ -785,7 +868,7 @@ export async function generateReport(
   //   마지막 시도 결과도 후보로 함께 겨룬다 — 앞선 결과가 카드 외 위반이 더 적을 때만 앞선 결과가 이긴다.
   // 재생성을 이어가지 못해도(예산 소진·후속 호출 실패·마지막 시도 파싱 실패·마지막 시도에 필수 항목 누락·권유) 후보가 있으면 보낸다.
   // Ruling 38: 고른 후보의 마무리·렌더가 던지면 다음 후보로 넘어간다. 후보가 한 번도 없거나 모두 렌더하지 못할 때만 실패한다.
-  type MarketCandidate = { content: ReportContent; base: string[]; card: string[]; attempt: number };
+  type MarketCandidate = { content: ReportContent; base: string[]; card: string[]; attempt: number; selection: HeadlineSelection | null };
   const candidates: MarketCandidate[] = [];
   const preferenceOrder = () => [...candidates].sort((a, b) => a.base.length - b.base.length || b.attempt - a.attempt);
   let settled = false; // 루프가 발송할 결과를 정하고 끝났다(위반 없는 결과 또는 마지막 시도 결과)
@@ -795,6 +878,10 @@ export async function generateReport(
   const remaining = (k: { base: string[]; card: string[] }) => [...k.base, ...k.card].join(", ");
 
   const deadline = makeDeadline(MARKET_GENERATION_BUDGET_MS);
+  // 2026-10-27 제목 편집 기준: 최근 제목(최신순, 오늘 제외)·출처 목록·선택 켬 여부는 시도마다 같다.
+  const recentHeadlines = marketRecentHeadlines(defaultCtx, data.date);
+  const todaySources = (context?.news ?? []).map((n) => n.source);
+  const selectionOn = headlineSelectionEnabled();
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     // F07: 생성 예산을 넘기면 새 호출을 시작하지 않는다(다음 트리거가 새 runner에서 재시도).
     if (attempt > 1 && !deadline.canStartCall()) {
@@ -805,7 +892,7 @@ export async function generateReport(
     let rawJson = "";
     try {
       const stream = await client.messages.stream({
-        model: "claude-sonnet-4-6",
+        model: REPORT_MODEL,
         max_tokens: 64000,
         messages: [
           {
@@ -867,45 +954,24 @@ export async function generateReport(
       continue; // 다음 attempt 에서 재생성
     }
 
-    // R2·R3 (2026-07-22): 파싱 성공 직후 정합성 검사. 파싱 검증 완료된 JSON 문자열에
-    // 시점·출처 soft fix 적용 후 re-parse. 교정 문자열은 JSON 메타문자 미포함이 보장됨.
+    // R2·R3 (2026-07-22): 파싱 성공 직후 정합성 검사 — 시점·출처 soft fix 후 검증(assessMarketContent).
     // Ruling 28: 형식이 깨진 응답 때문에 검증 중 예외가 나면 파싱 실패처럼 다룬다 — 함수 밖으로 던지지 않고
     // 기록·경고 뒤 다음 시도로(마지막 시도면 루프 뒤 앞선 결과 발송 경로로).
     try {
-      const reportDate = data.date;
-      const todaySources = (context?.news ?? []).map((n) => n.source);
-      const canonical = JSON.stringify(parsed);
-      const temporal = checkAndFixTemporal(canonical, reportDate);
-      const sourceFix = softFixUnquotableSources(temporal.fixed, todaySources);
-      const softFixes = [...temporal.softFixes, ...sourceFix.softFixes];
-      if (softFixes.length > 0) {
-        console.log(`🩹 정합성 soft fix ${softFixes.length}건: ${softFixes.join(", ")}`);
-        parsed = JSON.parse(sourceFix.fixed) as ReportContent;
-      }
-      if (sourceFix.warnings.length > 0) {
-        console.log(`⚠️ 비승인 출처 잔존: ${sourceFix.warnings.join(", ")}`);
-      }
-
-      const requiredMissing = validateMarketRequired(parsed);
+      // 2026-10-27: 제목 후보 셋 → 제목 단위 검사로 거르고 최근 반복 감점으로 임시 제목(cover.headline·subline)을 정한다.
+      // 생존 후보가 없으면 HARD 권유가 없는 후보 중 위반이 가장 적은 것이 임시 제목이 되고(전부 권유면 첫 후보),
+      // 그 위반을 아래 기존 검증이 보고한다(1~2번째 재생성, 마지막 경고) — 한 후보의 권유 때문에 발송이 막히지 않게(F1).
+      const current = parsed;
+      const selection = applyHeadlineSelection(current, recentHeadlines, (c) => marketHeadlineProblems(c, current), { scoring: selectionOn, isBlocking: marketHeadlineBlocking });
+      const assessed = assessMarketContent(parsed, data.date, todaySources);
+      parsed = assessed.content;
+      const { requiredMissing, base: baseViolations, card: cardViolations, advice: adviceViolations } = assessed;
       if (requiredMissing.length > 0) lastRequiredMissing = { attempt, fields: requiredMissing };
-      // Ruling 31: 제목·카드 한 줄의 기간 비교·최상급은 일반 기준 위반(1~2번째 재생성, 마지막 시도 경고만).
-      // Ruling 37e: 권유성 단정(SOFT)도 일반 기준 위반 — 해설에 섞여 걸려도 재생성 한 번이 비용이고 마지막 시도는 경고만.
-      const baseViolations = [...temporal.violations, ...requiredMissing, ...validateMarketSummary(parsed), ...validateMarketComparativeClaims(parsed), ...validateMarketSoftAdvice(parsed)];
-      const citationCount = countCitationPhrases(sourceFix.fixed);
-      if (citationCount >= 8) {
-        baseViolations.push(`"에 따르면" 인용 ${citationCount}회 과다`);
-      } else if (citationCount >= 5) {
-        console.log(`⚠️ "에 따르면" 인용 ${citationCount}회 (허용 한도 이하)`);
-      }
-      // 카드 글자 맞춤: 1~2번째 시도에선 다시 쓰게 하는 사유, 마지막 시도에선 아래 "위반 잔존" 경고로만 남는다.
-      const cardViolations = validateMarketCardText(parsed);
-      // Ruling 37·37e: 매수·매도 권유 HARD(명령형) — 모든 시도에서 위반(마지막 시도도 경고로 넘기지 않는다).
-      const adviceViolations = validateMarketAdvice(parsed);
       if (adviceViolations.length > 0) lastAdvice = { attempt, fields: adviceViolations };
       const hardViolations = [...baseViolations, ...adviceViolations, ...cardViolations];
       // 필수 항목이 빠진 결과·권유 표현이 남은 결과는 후보에서 뺀다 — 위반 수로 겨루면 발송할 수 있는 결과를 밀어낼 수 있다.
       if (requiredMissing.length === 0 && adviceViolations.length === 0) {
-        candidates.push({ content: parsed, base: baseViolations, card: cardViolations, attempt });
+        candidates.push({ content: parsed, base: baseViolations, card: cardViolations, attempt, selection });
       }
 
       if (hardViolations.length > 0 && attempt < maxRetries) {
@@ -966,8 +1032,32 @@ export async function generateReport(
     throw new Error(`Claude JSON 파싱 실패 (${maxRetries}회 시도): ${lastParseErr}`);
   }
 
-  // Ruling 38: 선호 순서대로 마무리·렌더한다 — 고른 결과가 던지면(모양이 깨진 응답) 다음 후보로. 모두 실패할 때만 실패한다.
+  // 2026-10-27: 발송할 결과가 정해졌다 — 제목 후보가 둘 이상 살아 있으면 편집자에게 한 번 묻는다(번호만).
+  // 바꾼 결과를 같은 검증으로 다시 보고, 권유·필수 누락이 생기거나 위반이 늘면 임시 제목을 그대로 쓴다. 어떤 실패도 발송을 막지 않는다.
   const ordered = preferenceOrder();
+  const top = ordered[0];
+  const swapped = await chooseFinalHeadline<MarketCandidate>({
+    selection: top.selection,
+    enabled: selectionOn,
+    canCall: () => deadline.canStartCall(HEADLINE_EDITOR_ESTIMATE_MS),
+    editor: callHeadlineEditor,
+    input: { target: "market", recent: recentHeadlines, tier: defaultCtx.evidence?.tier, evidence: marketEditorEvidence(defaultCtx) },
+    trySwap: (c) => {
+      try {
+        const next = structuredClone(top.content);
+        next.cover.headline = c.headline;
+        next.cover.subline = c.subline;
+        const a = assessMarketContent(next, data.date, todaySources);
+        const worse = a.requiredMissing.length > 0 || a.advice.length > 0 || a.base.length + a.card.length > top.base.length + top.card.length;
+        return worse ? null : { ...top, content: a.content, base: a.base, card: a.card };
+      } catch {
+        return null;
+      }
+    },
+  });
+  // 고른 결과를 맨 앞에 끼운다(대체하지 않는다) — 그 마무리·렌더가 던지면 같은 회차의 임시 제목 결과가 다음 후보로 남는다.
+  if (swapped) ordered.unshift(swapped);
+  // Ruling 38: 선호 순서대로 마무리·렌더한다 — 고른 결과가 던지면(모양이 깨진 응답) 다음 후보로. 모두 실패할 때만 실패한다.
   let finalizeErr: unknown = null;
   for (const [i, candidate] of ordered.entries()) {
     if (i > 0) console.log(`⚠️ 다음 후보로 발송 진행(${candidate.attempt}회차, 남은 위반: ${remaining(candidate)})`);

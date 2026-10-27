@@ -283,6 +283,8 @@ export interface ReportContent {
     headline: string;
     subline: string;
     imageKeywords?: string[]; // 제목/본문 핵심 이미지·은유 단어 (반복 회피 로그용). 사실 모드면 빈 배열.
+    // 2026-10-27: 모델이 쓰는 제목 후보 — 코드가 하나를 골라 headline·subline 에 쓰고 이 필드는 지운다(렌더·인덱스에 남지 않는다).
+    headlineCandidates?: Array<{ headline: string; subline: string }>;
   };
   summary: ReportSummary;
   cardLine: ReportCardLine;

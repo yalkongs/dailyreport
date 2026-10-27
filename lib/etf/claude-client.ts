@@ -14,12 +14,18 @@ import {
 // R3 (2026-07-22): 본문에 이름 인용 가능한 매체 화이트리스트.
 import { QUOTABLE_SOURCES } from '../quotable-sources'
 import { buildMorningStrategyInput } from './morning-strategy'
-import { assessMorningReportQuality, formatMorningQualityError, validateMorningReportQuality } from './report-quality'
-import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS, ETF_GENERATION_BUDGET_MS, makeDeadline } from '../claude-budget'
+import { assessMorningReportQuality, formatMorningQualityError, headlineCandidateBlocking, headlineCandidateProblems, validateMorningReportQuality } from './report-quality'
+import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS, ETF_GENERATION_BUDGET_MS, REPORT_MODEL, makeDeadline } from '../claude-budget'
 import { EVIDENCE_RULES } from '../evidence-rules'
 import { normalizeMorningReportLanguage } from './report-language'
 import { describeAngle, ETF_NARRATIVE_ANGLES, type EtfNarrativeAngle } from './narrative-angle'
-import { renderVoiceExemplars } from '../voice-exemplars'
+import { renderVoiceExemplars, pickHeadlineExemplars, renderHeadlineExemplars } from '../voice-exemplars'
+// 2026-10-27 제목 편집 기준: 공통 기준 문구·최근 제목 형태·후보 선택(스펙 docs/superpowers/specs/2026-10-27-headline-editorial-design.md).
+import { renderHeadlineStandard, renderRecentHeadlineLines, takeRecentHeadlines } from '../headline-editorial'
+import {
+  applyHeadlineSelection, chooseFinalHeadline, callHeadlineEditor, headlineSelectionEnabled, HEADLINE_EDITOR_ESTIMATE_MS,
+  type HeadlineEditor, type HeadlineSelection,
+} from '../headline-selection'
 import { buildTemporalFramingBlock } from '../temporal-framing'
 // Ruling 35: 오늘의 주제 자산군(카드 슬롯) 이름 — 제목 규칙과 검사(report-quality)가 같은 단어를 쓴다.
 import { subjectAliasesOf, subjectNameOf } from './headline-subject'
@@ -54,7 +60,7 @@ export const SYSTEM_PROMPT = `당신은 ETF 시장 분석 전문가입니다. �
 [금지 표현 — 흐린 표현·면피성 문구·AI 클리셰만 차단]
 - "~할 수 있습니다" 같은 추측성 완화 어미 — 무엇이 가능하다는 뜻인지 직접 쓰십시오.
 - "투자에 주의하시기 바랍니다" 같은 면피성 문구
-- 신선하고 구체적인 은유·관점은 권장합니다. 무엇이 진부한지는 아래 [목표 보이스] 예시로 익히고, "아무 날에나 붙일 수 있는 비유"·반복되는 구문 틀은 쓰지 마십시오. (하드 금지어 목록이 아니라 결을 따르는 것입니다.)
+- 은유·관점은 자연스러운 한국어로 읽힐 때 씁니다. 무엇이 진부한지는 아래 [목표 보이스] 예시로 익히고, "아무 날에나 붙일 수 있는 비유"·반복되는 구문 틀은 쓰지 마십시오. (하드 금지어 목록이 아니라 결을 따르는 것입니다.)
 - "확인이 필요합니다" 반복 금지. 대신 무엇을 확인할지(거래대금·NAV·USD/KRW 등) 직접 쓰십시오.
 - "가능성이 있습니다", "판단됩니다", "보입니다" 같은 흐린 문장 — 본 것을 본 그대로 쓰십시오.
 
@@ -91,7 +97,7 @@ function extractJsonFromResponse(response: Anthropic.Message, reportType: string
 export async function generateMorningReportRaw(data: CollectedData): Promise<MorningReport> {
   const prompt = buildMorningPrompt(data)
   const response = await getClient().messages.create({
-    model: 'claude-sonnet-4-6',
+    model: REPORT_MODEL,
     // 출력 상한은 여유로 둔다(새 스키마 응답은 이보다 훨씬 짧다 — 잘림 방지용 안전 여유).
     max_tokens: 16384,
     system: SYSTEM_PROMPT,
@@ -124,6 +130,8 @@ export interface MorningGenerationOptions {
   generateRaw?: (data: CollectedData) => Promise<MorningReport>
   deadline?: Deadline
   maxAttempts?: number
+  // 테스트용 주입. 기본: callHeadlineEditor(생성과 같은 모델에 한 번 묻는다).
+  headlineEditor?: HeadlineEditor
 }
 
 function errorMessage(e: unknown): string {
@@ -153,8 +161,39 @@ export async function generateMorningReportWithFallback(
   const deadline = options.deadline ?? makeDeadline(ETF_GENERATION_BUDGET_MS)
   const maxAttempts = options.maxAttempts ?? 2
   const strategy = buildMorningStrategyInput(data)
+  // 2026-10-27 제목 편집 기준: 후보를 제목 단위 검사로 거르고 임시 제목을 정한 뒤, 발송할 결과가 정해지면 편집자에게 한 번 묻는다.
+  const editor = options.headlineEditor ?? callHeadlineEditor
+  const selectionOn = headlineSelectionEnabled()
+  const recent = takeRecentHeadlines(data.recentHeadlines ?? [])
+  const featured = pickFeaturedSlot(buildAssetClassSlots(data.quotes))
+  const selectHeadline = (raw: MorningReport) =>
+    applyHeadlineSelection(raw, recent, c => headlineCandidateProblems(c, raw, data), { scoring: selectionOn, isBlocking: headlineCandidateBlocking })
+  const strictOk = (r: MorningReport) => assessMorningReportQuality(r, data, strategy).violations.length === 0
+  const reducedOk = (r: MorningReport) => { validateMorningReport(r, data); return true }
+  // 편집자가 다른 생존 후보를 고르면 원본(pristine)에 그 후보를 넣어 같은 검증(ok)으로 다시 본다 — 통과할 때만 그 결과로.
+  const finishHeadline = async (report: MorningReport, pristine: MorningReport, selection: HeadlineSelection | null, ok: (r: MorningReport) => boolean): Promise<MorningReport> => {
+    const swapped = await chooseFinalHeadline<MorningReport>({
+      selection,
+      enabled: selectionOn,
+      canCall: () => deadline.canStartCall(HEADLINE_EDITOR_ESTIMATE_MS),
+      editor,
+      input: {
+        target: 'etf',
+        recent,
+        tier: data.etfEvidence?.tier,
+        subjectName: featured ? subjectNameOf(featured) : undefined,
+        evidence: data.etfEvidence?.topCatalyst ? [data.etfEvidence.topCatalyst.title] : [],
+      },
+      trySwap: c => {
+        const next = structuredClone(pristine)
+        next.cover = { ...next.cover, headline: c.headline, subline: c.subline }
+        try { return ok(next) ? next : null } catch { return null }
+      },
+    })
+    return swapped ?? report
+  }
   // 엄격 검증에 걸린 결과 — report는 검증(soft fix·교정)이 손대기 전 원본, base는 카드 문구 외 위반 수.
-  const kept: Array<{ report: MorningReport; base: number; violations: string[]; attempt: number }> = []
+  const kept: Array<{ report: MorningReport; base: number; violations: string[]; attempt: number; selection: HeadlineSelection | null }> = []
   let lastError: unknown
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -173,9 +212,11 @@ export async function generateMorningReportWithFallback(
     // Ruling 28: 형식이 깨진 응답(객체 아님·검증 중 예외)은 파싱 실패처럼 다룬다 — 함수 밖으로 던지지 않고 다음 시도로
     // (2회차·Tier 1·앞선 결과 발송이 살아 있게). 객체가 아닌 응답은 앞선 결과 후보에도 넣지 않는다.
     let pristine: MorningReport
+    let selection: HeadlineSelection | null = null
     let quality: ReturnType<typeof assessMorningReportQuality>
     try {
       if (!isReportObject(raw)) throw new Error(`응답 최상위가 객체가 아님(${describeKind(raw)})`)
+      selection = selectHeadline(raw)
       pristine = structuredClone(raw)
       quality = assessMorningReportQuality(raw, data, strategy)
     } catch (e) {
@@ -185,10 +226,10 @@ export async function generateMorningReportWithFallback(
     }
     if (quality.violations.length === 0) {
       if (attempt > 1) console.log(`  ✓ ${attempt}회차에서 성공`)
-      return raw
+      return await finishHeadline(raw, pristine, selection, strictOk)
     }
     lastError = new Error(formatMorningQualityError(quality.violations))
-    kept.push({ report: pristine, base: quality.violations.length - quality.cardViolations.length, violations: quality.violations, attempt })
+    kept.push({ report: pristine, base: quality.violations.length - quality.cardViolations.length, violations: quality.violations, attempt, selection })
     console.warn(`[warn] ${attempt}/${maxAttempts}회 품질 검증 실패(위반 ${quality.violations.length}건, 그중 카드 문구 ${quality.cardViolations.length}건): ${quality.violations.join(' / ')}`)
   }
 
@@ -204,9 +245,11 @@ export async function generateMorningReportWithFallback(
     }
     if (raw) {
       try {
+        const tierSelection = isReportObject(raw) ? selectHeadline(raw) : null
+        const tierPristine = isReportObject(raw) ? structuredClone(raw) : null
         validateMorningReport(raw, data)
         console.log('  ✓ Tier 1 fallback 성공 — 경고([*-warn]·[struct-fix])가 있으면 로그를 확인하십시오')
-        return raw
+        return tierPristine ? await finishHeadline(raw, tierPristine, tierSelection, reducedOk) : raw
       } catch (e) {
         lastError = e
         console.warn('[warn] Tier 1 fallback 결과도 축소판 검증 실패:', errorMessage(e))
@@ -220,9 +263,10 @@ export async function generateMorningReportWithFallback(
   const ranked = [...kept].sort((a, b) => a.base - b.base || b.attempt - a.attempt)
   for (const candidate of ranked) {
     try {
+      const pristine = structuredClone(candidate.report)
       validateMorningReport(candidate.report, data)
       console.warn(`[warn] 마지막 생성을 쓰지 못해 앞선 ${candidate.attempt}회차 결과로 발송 진행(축소판 검증 통과 — 엄격 검증 위반: ${candidate.violations.join(' / ')})`)
-      return candidate.report
+      return await finishHeadline(candidate.report, pristine, candidate.selection, reducedOk)
     } catch (e) {
       lastError = e
       console.warn(`[warn] 앞선 ${candidate.attempt}회차 결과도 축소판 검증 실패:`, errorMessage(e))
@@ -341,7 +385,7 @@ function buildHeadlineSubjectRule(featured: AssetClassSlot): string {
     ? ' 국내 자산군이므로 "미 ○○"처럼 해외 시장을 붙인 표현은 국내 주제를 다룬 것으로 치지 않습니다.'
     : ''
   return `
-- 주제 자산군 (필수 — 아래 tier·catalyst·반복 회피 규칙보다 우선): 제목은 오늘의 주제 자산군(${name})의 움직임을 반드시 다루고, 제목에 그 자산군 이름(${wordList})을 넣습니다. 미리보기 카드("${featured.holdingLabel}")와 페이지 모자이크가 이 자산군을 보여 주므로, 제목이 다른 자산군만 다루면 카드와 제목이 서로 다른 이야기를 합니다. 해외 원인·다른 자산군과의 대비는 함께 써도 됩니다(예: "미 반도체 급락에도 국내 헬스케어가 받쳤다").${domesticNote}`
+- 주제 자산군 (필수 — 아래 tier·catalyst·반복 회피 규칙보다 우선): 제목은 오늘의 주제 자산군(${name})의 움직임을 반드시 다루고, 제목에 그 자산군 이름(${wordList})을 넣습니다. 미리보기 카드("${featured.holdingLabel}")와 페이지 모자이크가 이 자산군을 보여 주므로, 제목이 다른 자산군만 다루면 카드와 제목이 서로 다른 이야기를 합니다. 해외 원인·다른 자산군과의 대비는 함께 써도 됩니다(예: "미 반도체 급락에도 국내 헬스케어 ETF 강세"). 세 후보 모두에 적용됩니다.${domesticNote}`
 }
 
 // 국내 ETF 거래대금 상위 5 (원). KRX 거래대금(tradingValue)이 있으면 그 값을 쓴다.
@@ -378,6 +422,8 @@ export function buildMorningPrompt(data: CollectedData): string {
   const strategy = buildMorningStrategyInput(data)
   const slots = buildAssetClassSlots(data.quotes)
   const featured = pickFeaturedSlot(slots)
+  // 2026-10-27: 제목 비교·순환 예시·최근 제목 줄은 앞 5건만(data.recentHeadlines 7건은 catalyst 반복 감점에 그대로 쓴다).
+  const recentHeadlines = takeRecentHeadlines(data.recentHeadlines ?? [])
   const tacticalAlert = findTacticalAlert(data.quotes)
   const topUs = [...data.quotes]
     .filter(q => q.market === 'US' && q.changePercent !== null)
@@ -521,10 +567,10 @@ ${data.news.slice(0, 6).map(n => {
 - **[semiconductor]** 태그는 삼성·SK하이닉스 등 국내 반도체에 영향을 주는 국제 뉴스·리서치(NVIDIA·TSMC·Micron·HBM·메모리 가격·수출규제)입니다. 국내 ETF와의 연결고리를 짚어 활용하십시오.
 - **해외 뉴스·리서치 인용 규칙:** ① 해외 기관·매체發 주장·전망은 반드시 **출처(기관/매체명)를 문장에 드러내** 인용(출처 없는 전망·수치 날조 금지). ② 리서치·전망을 **특정 종목·ETF 매수·매도 권유로 번역 금지** — 사실·방향성만. ③ 제공된 제목·요약(↳)의 **사실만** 인용, 원문 문단 복제·창작 금지.
 - **본문에 매체명을 인용할 수 있는 것은 다음뿐**: ${QUOTABLE_SOURCES.join(', ')}. 그 외 매체(블로그·소형 외신 등) 기사는 내용은 쓰되 매체명 대신 '외신'으로 지칭하십시오.
-${data.recentHeadlines && data.recentHeadlines.length > 0 ? `
-[최근 ETF 리포트 헤드라인 — 절대 반복·유사 표현 금지]
-${data.recentHeadlines.map(h => `- ${h}`).join('\n')}
-위 문장들과 3어절 이상 겹치거나 같은 구문 틀("~가 ~로 이어지는지", "~신호를 ~로 확인" 등)을 재사용하지 마십시오. 최근 헤드라인에서 눈에 띄는 핵심 단어·동사도 반복하지 마십시오.${featured ? ` 단, 오늘의 주제 자산군 이름("${subjectNameOf(featured)}" 등)은 예외입니다 — 최근 헤드라인에 있어도 제목에 넣고, 각도·동사를 바꿉니다.` : ''}
+${recentHeadlines.length > 0 ? `
+[최근 ETF 리포트 헤드라인 — 같은 표현·같은 형태 반복 금지]
+${renderRecentHeadlineLines(recentHeadlines)}
+최근 제목과 3어절 이상 겹치거나 핵심 단어·동사를 되풀이하지 마십시오.${featured ? ` 단, 오늘의 주제 자산군 이름("${subjectNameOf(featured)}" 등)은 예외입니다 — 최근 헤드라인에 있어도 제목에 넣고, 각도·동사를 바꿉니다.` : ''}
 ` : ''}
 [필드별 독자 목적 — 이 목적을 충족하지 못하면 해당 필드는 실패]
 - 독자는 주식·금융상품 경험이 조금 있는 개인 금융 고객입니다. 페이지 위쪽만 읽고도 "어제 분위기 / 오늘 볼 것 / 내 자산군에 주는 의미"를 1~2분 안에 얻어야 합니다.
@@ -571,6 +617,10 @@ ${data.recentHeadlines.map(h => `- ${h}`).join('\n')}
 
 이 헤드라인은 개장 전 한국 개인투자자가 가장 먼저 만나는 한 줄이며, 페이지 제목이자 링크 미리보기 카드의 큰 제목입니다. 한국 신문 편집자가 쓰듯 씁니다.
 
+${renderHeadlineStandard()}
+
+${renderHeadlineExemplars(pickHeadlineExemplars('etf', recentHeadlines, data.date))}
+
 1. 형태 (모든 tier 공통)
 - 주어·핵심 사실을 앞세워 한 호흡으로 씁니다. 정확한 등락률·티커는 cover.subline 이 받칩니다.
 - 제목에는 티커·6자리 코드 대신 한국어 명칭을 씁니다 (예: SOXX → 미 반도체, GDX → 금광주, TLT → 미 장기채).
@@ -578,12 +628,11 @@ ${data.recentHeadlines.map(h => `- ${h}`).join('\n')}
 
 2. 종결
 - 기사체 '~다' 또는 서술성 명사(급등·반등·마감·경신·진입·본격화 등)로 끝냅니다.
-- '~다'는 짧은 기사체 술어로 씁니다(되찾다·버텼다·무너졌다). 목적어·부사가 늘어진 산문 문장은 표제어가 아닙니다.
+- '~다'는 짧은 기사체 술어로 씁니다. 목적어·부사가 늘어진 산문 문장은 표제어가 아닙니다.
 - 피할 형태: 시간명사 종결("~한 날", "~한 밤", "~한 하루", "~한 주말", "~한 금요일"), "~ 다음 날,"로 시작하는 틀, 존댓말 '~습니다', 체크리스트형 어미("확인", "점검", "~해야").
 
-3. tier 는 강도만 정합니다 (위 [오늘의 근거 상태] 참조 — 블록이 없으면 thin)
-- strong: 오늘의 지배적 서사(서사 앵글 + 최상위 catalyst)에서 길어올린 신선한 은유와 단정을 허용합니다.
-- thin: 형태는 같고, 은유는 절제하고 단정은 자제합니다.
+3. 근거 상태(tier) (위 [오늘의 근거 상태] 참조 — 블록이 없으면 thin)
+- 인과 표현의 강도는 [제목 편집 기준] 3을 따릅니다.
 - hollow: 사실 모드. 은유를 만들지 않고 절제된 사실로 씁니다. catalyst 반영 의무는 없습니다.
 
 4. 그 밖의 규칙
@@ -591,7 +640,7 @@ ${data.recentHeadlines.map(h => `- ${h}`).join('\n')}
 - 시장 특정: "지수/시장/증시" 단독 표기 금지. 어느 시장인지 명시합니다(S&P500·나스닥·코스피 등 구체 명칭, 또는 "미·국내·채권" 수식어). 해외 시장의 섹터·자산을 가리키는 단어(반도체·바이오·유틸리티·부동산·기술주 등)에는 반드시 그 시장(미·미국·중국 등)을 붙입니다 — 한국 독자는 시장 표시 없는 섹터 이름을 국내 섹터로 읽습니다(예: 미국 섹터 이야기라면 "바이오·반도체 올랐다"가 아니라 "미 바이오·반도체 올랐다").
 - 기간 비교·최상급 금지: 제목·카드 문구(cover.headline·card.line)에는 'N년치·N개월치', '역대·사상 최대/최고/최저', 'N년 만에 최고/최저', '연중 최고/최저', '이틀째·N일째·N거래일 연속·연일 급락', '두·세 자릿수' 같은 기간 비교·연속·최상급 표현을 쓰지 않습니다 — 입력 데이터로 확인되는 수치와 사실만 씁니다. (입력의 등락률은 직전 거래일 하루 기준이라 이런 주장은 확인할 수 없습니다.)
 - 길이: 14~26자 권장, 최대 28자. 프리뷰는 3줄까지만 깔끔히 렌더되므로 보조 수치·맥락은 subline 으로 넘깁니다.
-- 본문 payoff: summary 세 줄이 헤드라인의 이미지를 받아 전개하되, 헤드라인 문장을 그대로 되풀이하지 않습니다.
+- summary와의 관계: summary 세 줄은 제목과 같은 주제를 다루되 제목 문장을 되풀이하지 않습니다. 어느 후보가 뽑혀도 맞도록 씁니다.
 
 - cover.subline은 결론과 제약 조건을 함께 담습니다. 반드시 서술어가 있는 완결문으로 씁니다.
 
@@ -620,7 +669,7 @@ ${EVIDENCE_RULES}
 
 아래 JSON 형식으로만 응답하십시오:
 {
-  "cover": { "headline": "...", "subline": "..." },
+  "cover": { "headlineCandidates": [ { "headline": "...", "subline": "..." }, { "headline": "...", "subline": "..." }, { "headline": "...", "subline": "..." } ] },
   "summary": { "overseas": "해외 신호 — 60자 이내", "domestic": "국내 상태 — 60자 이내", "focus": "오늘 핵심 — 60자 이내" },
   "assetCards": [
 ${assetCardsSchema}

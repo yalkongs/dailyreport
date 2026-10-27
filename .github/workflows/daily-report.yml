@@ -135,6 +135,8 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
+          # 제목 편집자 긴급 끄기 — 저장소 변수 HEADLINE_SELECTION=off. 비어 있으면 켜짐
+          HEADLINE_SELECTION: ${{ vars.HEADLINE_SELECTION }}
           DISABLE_CONTEXT: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && 'false' || 'false' }}
           FORCE_REGENERATE: ${{ inputs.force_regenerate == true && 'true' || 'false' }}
           # dry_run 전용 날짜 지정 — 휴장 판정·리포트 날짜가 이 날짜로 돈다(주말 dry-run). 운영 실행은 항상 빈 값.
@@ -275,6 +277,8 @@ jobs:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           KRX_AUTH_KEY: ${{ secrets.KRX_AUTH_KEY }}
           ETF_PUBLIC_BASE_URL: https://dailyreport-eta.vercel.app
+          # 제목 편집자 긴급 끄기 — 저장소 변수 HEADLINE_SELECTION=off. 비어 있으면 켜짐
+          HEADLINE_SELECTION: ${{ vars.HEADLINE_SELECTION }}
           FORCE_REGENERATE: ${{ inputs.force_regenerate == true && 'true' || 'false' }}
           # dry_run 전용 날짜 지정 — 휴장 판정·리포트 날짜·파일명이 이 날짜로 돈다. 운영 실행은 항상 빈 값.
           ETF_REPORT_DATE: ${{ (inputs.dry_run == true || inputs.dry_run == 'true') && inputs.test_date || '' }}

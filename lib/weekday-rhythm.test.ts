@@ -29,8 +29,13 @@ test("etf 월·금 리듬에는 헤드라인 지시가 없다(묶음 3) — 본�
   assert.doesNotMatch(mon + fri, /bigPicture|closingLine/);
 });
 
-test("market 금요일 리듬은 헤드라인 톤 지시를 유지한다", () => {
-  assert.match(describeWeekdayRhythm("friday_recap", "market"), /한 주를 닫는/);
+test("market 금요일 리듬에도 헤드라인 톤 지시가 없다(2026-10-27 — 공통 제목 기준이 단일 소스) — 본문 지시는 유지", () => {
+  const fri = describeWeekdayRhythm("friday_recap", "market");
+  assert.doesNotMatch(fri, /한 주를 닫는/);
+  assert.doesNotMatch(fri, /헤드라인/);
+  assert.doesNotMatch(fri, /X요일/);
+  assert.match(fri, /winner\/loser/);
+  assert.match(fri, /soWhat 또는 calendar/);
 });
 
 // 2026-10-08: 금요일 휴장 뒤 월요일(예: 10-12, KR 직전 거래일=10-08 목)에 "지난 금요일 종가" 고정 문구가

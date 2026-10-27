@@ -18,3 +18,6 @@ export function makeDeadline(budgetMs: number, now: () => number = Date.now) {
     canStartCall: (estimateMs: number = TYPICAL_CALL_MS) => now() - start + estimateMs <= budgetMs,
   }
 }
+
+// 두 리포트 생성과 제목 편집자(headline-selection)가 함께 쓰는 모델 — 2026-10-27 따로 적혀 있던 문자열을 한곳으로.
+export const REPORT_MODEL = "claude-sonnet-4-6"

@@ -38,6 +38,15 @@ export function normalizeMorningReportLanguage(report: MorningReport): MorningRe
     normalized.cover = {
       headline: neutralizeOptional(report.cover.headline),
       subline: neutralizeOptional(report.cover.subline),
+      // 2026-10-27: 제목 후보도 같은 규칙을 거친다(후보로 금지 어휘가 우회되지 않게).
+      ...(Array.isArray(report.cover.headlineCandidates)
+        ? {
+            headlineCandidates: report.cover.headlineCandidates.map(c => (isObject(c) ? {
+              headline: neutralizeOptional(c.headline),
+              subline: neutralizeOptional(c.subline),
+            } : c)),
+          }
+        : {}),
     }
   }
   if (isObject(report.summary)) {

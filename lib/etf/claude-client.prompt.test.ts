@@ -44,7 +44,7 @@ test('ETF 사용자 프롬프트(월요일·최근 헤드라인 있음): 새 제
   assert.match(p, /\[cover\.headline 작성 규칙\]/)
   assert.match(p, /등락률·티커를 제목 맨 앞 앵커로 두지 마십시오/)
   assert.match(p, /시간명사 종결/)
-  assert.match(p, /tier 는 강도만 정합니다/)
+  assert.match(p, /3\. 근거 상태\(tier\)/)
   assert.match(p, /\[최근 ETF 리포트 헤드라인/)
   for (const s of REMOVED) assert.ok(!p.includes(s), s)
 })
@@ -57,13 +57,14 @@ test('ETF 사용자 프롬프트(금요일): 요일 리듬에 헤드라인 지�
 
 test('최근 헤드라인이 없어도 제목 정책은 온전하다(깨진 블록 참조 없음)', () => {
   const p = buildMorningPrompt(makeData('2026-09-30', []))
-  assert.doesNotMatch(p, /\[최근 ETF 리포트 헤드라인 — 절대/)
+  assert.doesNotMatch(p, /\[최근 ETF 리포트 헤드라인 — 같은/)
   assert.match(p, /\[cover\.headline 작성 규칙\]/)
   assert.match(p, /최근 ETF 리포트 헤드라인\]에 이미 등장했으면/) // 조건부 참조 문구는 "있을 때" 규칙으로 유지
 })
 
-test('ETF 시스템 프롬프트: ETF 예시 세트 + 본문 규칙의 제목 예외 표기', () => {
-  assert.ok(SYSTEM_PROMPT.includes('원화, 하루 만에 20원 되찾다'))
+test('ETF 시스템 프롬프트: 제목 예시는 사용자 프롬프트로(순환) + 본문 규칙의 제목 예외 표기', () => {
+  assert.ok(!SYSTEM_PROMPT.includes('### 지향할 헤드라인 결'))
+  assert.match(buildMorningPrompt(makeData('2026-09-28', [])), /\[오늘 참고할 제목 예시/)
   assert.ok(!SYSTEM_PROMPT.includes('금리 올린 연준, 달러만 웃었다'))
   assert.match(SYSTEM_PROMPT, /격식체 사용 \("~입니다", "~습니다"\) \(cover\.headline 제외/)
   assert.match(SYSTEM_PROMPT, /도치를 허용합니다\. \(cover\.headline 제외/)
@@ -243,7 +244,7 @@ test('Ruling 35: 제목 규칙 1번에 주제 자산군 필수 규칙(이름 포
   assert.match(s1, /주제 자산군 \(필수 — 아래 tier·catalyst·반복 회피 규칙보다 우선\)/)
   assert.match(s1, /제목은 오늘의 주제 자산군\(국내 반도체\)의 움직임을 반드시 다루고, 제목에 그 자산군 이름\("국내 반도체" 또는 "반도체"·"IT"/)
   assert.match(s1, /"반도체를 갖고 있다면"/)
-  assert.match(s1, /해외 원인·다른 자산군과의 대비는 함께 써도 됩니다\(예: "미 반도체 급락에도 국내 헬스케어가 받쳤다"\)/)
+  assert.match(s1, /해외 원인·다른 자산군과의 대비는 함께 써도 됩니다\(예: "미 반도체 급락에도 국내 헬스케어 ETF 강세"\)\. 세 후보 모두에 적용됩니다\./)
   assert.match(s1, /"미 ○○"처럼 해외 시장을 붙인 표현은 국내 주제를 다룬 것으로 치지 않습니다/)
 })
 
@@ -258,8 +259,8 @@ test('Ruling 35: 국내 섹터가 주제인 날(10/20 모양)은 theme 이름(2�
 
 test('Ruling 35: 최근 헤드라인 반복 금지는 주제 자산군 이름을 막지 않는다(예외 명시)', () => {
   const p = buildMorningPrompt({ ...withQuotes('2026-10-20', OCT20_QUOTES), recentHeadlines: ['2차전지 반등, 원화는 강세'] })
-  const block = p.slice(p.indexOf('[최근 ETF 리포트 헤드라인 — 절대'))
-  assert.match(block.split('\n').slice(0, 4).join('\n'), /단, 오늘의 주제 자산군 이름\("2차전지" 등\)은 예외입니다 — 최근 헤드라인에 있어도 제목에 넣고, 각도·동사를 바꿉니다/)
+  const block = p.slice(p.indexOf('[최근 ETF 리포트 헤드라인 — 같은'))
+  assert.match(block.split('\n').slice(0, 5).join('\n'), /단, 오늘의 주제 자산군 이름\("2차전지" 등\)은 예외입니다 — 최근 헤드라인에 있어도 제목에 넣고, 각도·동사를 바꿉니다/)
 })
 
 test('Ruling 35: 시장 특정 규칙 — 해외 시장의 섹터·자산 단어에는 시장(미·미국·중국 등)을 붙인다', () => {
@@ -274,4 +275,19 @@ test('Ruling 35: 자산군 슬롯이 없는 날은 주제 규칙을 넣지 않�
   assert.doesNotMatch(p, /오늘의 주제 자산군/)
   assert.doesNotMatch(p, /undefined/)
   assert.match(p, /\[cover\.headline 작성 규칙\]/)
+})
+
+test('2026-10-27 제목 편집 기준: 공통 기준·순환 예시·후보 스키마, 옛 은유·예시 동사 지시 없음', () => {
+  const p = buildMorningPrompt(withQuotes('2026-10-16', SLOT_QUOTES))
+  assert.match(p, /\[제목 편집 기준 — Market·ETF 공통\]/)
+  assert.match(p, /\[오늘 참고할 제목 예시/)
+  assert.match(p, /"headlineCandidates": \[/)
+  assert.match(p, /summary와의 관계: summary 세 줄은 제목과 같은 주제를 다루되/)
+  for (const gone of ['(되찾다·버텼다·무너졌다)', '헬스케어가 받쳤다', '이미지를 받아 전개', '신선한 은유와 단정을 허용', 'tier 는 강도만 정합니다']) {
+    assert.ok(!p.includes(gone), gone)
+  }
+  assert.ok(!SYSTEM_PROMPT.includes('신선하고 구체적인 은유·관점은 권장'))
+  const withRecent = buildMorningPrompt({ ...withQuotes('2026-10-16', SLOT_QUOTES), recentHeadlines: ['A, B', 'C, D', 'E, F', 'G', 'H', 'I', 'J'] })
+  assert.match(withRecent, /- A, B 〔쉼표 두 토막〕/)
+  assert.ok(!withRecent.includes('- I 〔'), '최근 제목은 앞 5건만')
 })
