@@ -178,14 +178,18 @@ function getEditorClient(): Anthropic {
 
 /** 기본 편집자 — 생성과 같은 모델에 한 번 묻는다. 도구 결과가 없거나 틀리면 null(호출자가 임시 제목을 쓴다). */
 export const callHeadlineEditor: HeadlineEditor = async (input) => {
-  const res = await getEditorClient().messages.create({
-    model: REPORT_MODEL,
-    max_tokens: 1024,
-    system: EDITOR_SYSTEM,
-    tools: [{ name: "pick", description: "고른 후보 번호와 후보별 점수를 낸다(반드시 이 도구로 한 번)", input_schema: PICK_SCHEMA as never }],
-    tool_choice: { type: "auto" },
-    messages: [{ role: "user", content: buildHeadlineEditorPrompt(input) }],
-  });
+  // SDK timeout 은 응답 헤더까지만 막는다 — 본문이 멈추는 경우까지 호출 전체 시간을 AbortSignal 로 묶는다.
+  const res = await getEditorClient().messages.create(
+    {
+      model: REPORT_MODEL,
+      max_tokens: 1024,
+      system: EDITOR_SYSTEM,
+      tools: [{ name: "pick", description: "고른 후보 번호와 후보별 점수를 낸다(반드시 이 도구로 한 번)", input_schema: PICK_SCHEMA as never }],
+      tool_choice: { type: "tool", name: "pick" },
+      messages: [{ role: "user", content: buildHeadlineEditorPrompt(input) }],
+    },
+    { signal: AbortSignal.timeout(HEADLINE_EDITOR_TIMEOUT_MS) },
+  );
   const call = res.content.find((c) => c.type === "tool_use") as { input?: unknown } | undefined;
   return parseHeadlineEditorVerdict(call?.input, input.candidates.length);
 };
@@ -227,10 +231,20 @@ export async function chooseFinalHeadline<T>(o: FinalHeadlineOptions<T>): Promis
     return null;
   }
   const picked = sel.survivors[verdict.pick];
+  if (!picked) {
+    console.log("🏷️ 제목 편집자 응답의 번호가 범위 밖 — 임시 제목 유지");
+    return null;
+  }
   const scores = verdict.scores.map((s, i) => `${i}:${s.natural}/${s.clear}`).join(" ");
   console.log(`🏷️ 제목 편집자 선택: "${picked.headline}" (자연/명확 ${scores || "-"}) — ${verdict.reason}`);
-  if (picked === sel.chosen) return null;
-  const swapped = o.trySwap(picked);
+  if (picked.index === sel.chosen.index) return null;
+  let swapped: T | null;
+  try {
+    swapped = o.trySwap(picked);
+  } catch (e) {
+    console.log(`🏷️ 고른 후보로 바꾸다 오류 — 임시 제목 유지: ${e instanceof Error ? e.message : String(e)}`);
+    return null;
+  }
   if (swapped === null) console.log("🏷️ 고른 후보로 바꾸면 검증이 나빠져 임시 제목 유지");
   return swapped;
 }

@@ -1,9 +1,11 @@
 import { test, type TestContext } from "node:test";
 import assert from "node:assert/strict";
+import Anthropic from "@anthropic-ai/sdk";
 import {
   extractHeadlineCandidates, applyHeadlineSelection, headlineSelectionEnabled, parseHeadlineEditorVerdict,
-  buildHeadlineEditorPrompt, chooseFinalHeadline, type HeadlineEditor, type HeadlineSelection,
+  buildHeadlineEditorPrompt, chooseFinalHeadline, callHeadlineEditor, type HeadlineEditor, type HeadlineSelection,
 } from "./headline-selection";
+import { REPORT_MODEL } from "./claude-budget";
 
 function quiet(t: TestContext) {
   t.mock.method(console, "log", () => {});
@@ -140,4 +142,40 @@ test("chooseFinalHeadline: 편집자에게는 생존 후보의 제목·부제만
   sel.survivors = [sel.scored[0], sel.scored[2]];
   await chooseFinalHeadline({ ...base, selection: sel, editor, trySwap: () => null });
   assert.deepEqual(seen, [{ headline: "H0", subline: "S0" }, { headline: "H2", subline: "S2" }]);
+});
+
+test("chooseFinalHeadline: 편집자 번호가 범위 밖이면 null — 바꾸기를 부르지 않고 던지지 않는다", async (t) => {
+  quiet(t);
+  let swapCalls = 0;
+  const e = editorReturning({ pick: 5, scores: [], reason: "" });
+  const trySwap = () => { swapCalls++; return "x"; };
+  assert.equal(await chooseFinalHeadline({ ...base, selection: selectionOf(2), editor: e.editor, trySwap }), null);
+  assert.equal(swapCalls, 0);
+});
+
+test("chooseFinalHeadline: 바꾸기(trySwap)가 던지면 null — 던지지 않는다", async (t) => {
+  quiet(t);
+  const e = editorReturning({ pick: 1, scores: [], reason: "" });
+  assert.equal(await chooseFinalHeadline({ ...base, selection: selectionOf(2), editor: e.editor, trySwap: () => { throw new Error("boom"); } }), null);
+});
+
+test("callHeadlineEditor: 도구를 pick 으로 고정하고 모델·전체 시간 제한을 넘기며, 도구 결과가 없으면 null", async (t) => {
+  quiet(t);
+  const calls: Array<{ params: Record<string, unknown>; options: { signal?: unknown } }> = [];
+  let reply: unknown = { content: [{ type: "tool_use", id: "t", name: "pick", input: { pick: 1, scores: [{ natural: 4, clear: 4 }, { natural: 5, clear: 5 }], reason: "r" } }] };
+  t.mock.method(Anthropic.Messages.prototype, "create", async (params: Record<string, unknown>, options: { signal?: unknown }) => {
+    calls.push({ params, options });
+    return reply;
+  });
+  const input = { target: "market" as const, candidates: [{ headline: "A", subline: "a" }, { headline: "B", subline: "b" }], recent: [], evidence: [] };
+  assert.deepEqual(await callHeadlineEditor(input), { pick: 1, scores: [{ natural: 4, clear: 4 }, { natural: 5, clear: 5 }], reason: "r" });
+  assert.equal(calls.length, 1);
+  const { params, options } = calls[0];
+  assert.equal(params.model, REPORT_MODEL);
+  assert.deepEqual(params.tool_choice, { type: "tool", name: "pick" });
+  assert.equal((params.tools as Array<{ name: string }>)[0].name, "pick");
+  assert.ok(options.signal instanceof AbortSignal);
+
+  reply = { content: [{ type: "text", text: "도구 없이 쓴 글" }] };
+  assert.equal(await callHeadlineEditor(input), null);
 });
