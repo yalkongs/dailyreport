@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-10-28",
+      "type": "morning",
+      "headline": "국내 반도체 ETF 급등, 에너지는 역행",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-28",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-10-27T21:41:53.667Z"
+    },
+    {
       "date": "2026-10-27",
       "type": "morning",
       "headline": "방산 5% 밀린 사이, 미 반도체가 달렸다",
