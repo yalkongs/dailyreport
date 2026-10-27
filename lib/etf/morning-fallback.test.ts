@@ -9,6 +9,8 @@ import { generateMorningReportWithFallback } from './claude-client'
 import { assessMorningReportQuality } from './report-quality'
 import { buildMorningStrategyInput } from './morning-strategy'
 import { makeDeadline } from '../claude-budget'
+import type { HeadlineEditor } from '../headline-selection'
+import { normalizeMorningReportLanguage } from './report-language'
 import type { CollectedData, EtfQuote, IndexQuote, MorningReport } from './types'
 
 const q = (ticker: string, name: string, pct: number): EtfQuote => ({
@@ -276,4 +278,114 @@ test('Ruling 35: 마지막 축소판까지 주제를 벗어나도 경고만 남�
   assert.equal(report.cover.headline, OFF_SUBJECT_HEADLINE)
   assert.ok(logs.some(l => /Tier 1 fallback 성공/.test(l)))
   assert.ok(logs.some(l => /\[subject-warn\][\s\S]*제목이 오늘의 주제 자산군\(국내 반도체\)을 다루지 않음/.test(l)))
+})
+
+// ─── 2026-10-27 제목 편집 기준: 후보 셋 → 제목 단위 검사 → 임시 제목 → 발송 직전 편집자 한 번 ───
+const SUB = validReport().cover.subline
+function withCandidates(cands: Array<[string, string]>): MorningReport {
+  return { ...validReport(), cover: { headlineCandidates: cands.map(([headline, subline]) => ({ headline, subline })) } as unknown as MorningReport['cover'] }
+}
+function fakeEditor(verdict: Awaited<ReturnType<HeadlineEditor>> | Error) {
+  const seen: unknown[] = []
+  const editor: HeadlineEditor = async (input) => { seen.push(input); if (verdict instanceof Error) throw verdict; return verdict }
+  return { editor, seen }
+}
+const OFF_SUBJECT = '미 증시 소폭 상승, 금은 강세'      // 주제 자산군(반도체) 없음 — Ruling 35로 빠진다
+const PROVISIONAL = '국내 반도체 급락, 미 증시는 버텼다'
+const ALT = '국내 반도체 ETF 낙폭 확대'
+
+test('ETF 제목: 주제 없는 후보는 빼고, 편집자가 고른 생존 후보로 발송한다(편집자는 생존 후보만 본다)', async (t) => {
+  quiet(t)
+  const gen = fakeGenerator([withCandidates([[OFF_SUBJECT, SUB], [PROVISIONAL, SUB], [ALT, SUB]])])
+  const ed = fakeEditor({ pick: 1, scores: [], reason: 'r' })
+  const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, headlineEditor: ed.editor })
+  assert.equal(report.cover.headline, ALT)
+  assert.equal(report.cover.headlineCandidates, undefined)
+  assert.equal(ed.seen.length, 1)
+  assert.deepEqual((ed.seen[0] as { candidates: Array<{ headline: string }> }).candidates.map(c => c.headline), [PROVISIONAL, ALT])
+  assert.equal((ed.seen[0] as { subjectName?: string }).subjectName, '국내 반도체')
+})
+
+test('ETF 제목: 편집자가 실패하면 임시 제목(코드 점수 1위·앞 순서)으로 발송한다', async (t) => {
+  quiet(t)
+  const gen = fakeGenerator([withCandidates([[OFF_SUBJECT, SUB], [PROVISIONAL, SUB], [ALT, SUB]])])
+  const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, headlineEditor: fakeEditor(new Error('timeout')).editor })
+  assert.equal(report.cover.headline, PROVISIONAL)
+})
+
+test('ETF 제목: 1회차 후보가 모두 주제를 놓치면 재생성하고 2회차 결과로', async (t) => {
+  quiet(t)
+  const gen = fakeGenerator([withCandidates([[OFF_SUBJECT, SUB], ['미 증시 혼조, 달러는 약세', SUB]]), validReport(ALT)])
+  const ed = fakeEditor({ pick: 0, scores: [], reason: '' })
+  const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, headlineEditor: ed.editor })
+  assert.equal(gen.calls(), 2)
+  assert.equal(report.cover.headline, ALT)
+  assert.equal(ed.seen.length, 0) // 2회차는 옛 형식(후보 하나)
+})
+
+test('ETF 제목: 투자 권유가 한 후보의 부제에만 있으면 그 후보만 빠진다', async (t) => {
+  quiet(t)
+  const gen = fakeGenerator([withCandidates([[ALT, '반등이 나오면 매수하세요.'], [PROVISIONAL, SUB]])])
+  const ed = fakeEditor({ pick: 0, scores: [], reason: '' })
+  const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, headlineEditor: ed.editor })
+  assert.equal(report.cover.headline, PROVISIONAL)
+  assert.equal(ed.seen.length, 0) // 생존 후보 하나
+})
+
+test('ETF 제목: HEADLINE_SELECTION=off 면 편집자를 부르지 않는다', async (t) => {
+  quiet(t)
+  process.env.HEADLINE_SELECTION = 'off'
+  t.after(() => { delete process.env.HEADLINE_SELECTION })
+  const gen = fakeGenerator([withCandidates([[OFF_SUBJECT, SUB], [PROVISIONAL, SUB], [ALT, SUB]])])
+  const ed = fakeEditor({ pick: 1, scores: [], reason: '' })
+  const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, headlineEditor: ed.editor })
+  assert.equal(ed.seen.length, 0)
+  assert.equal(report.cover.headline, PROVISIONAL)
+})
+
+// 편집자 단계는 엄격 통과뿐 아니라 Tier 1·앞선 결과로 발송하는 경로에서도 같은 방식으로 돈다(전송 > 침묵 — 막지 않고 고르기만).
+function factWithCandidates(cands: Array<[string, string]>): MorningReport {
+  const r = factReport(PROVISIONAL)
+  r.cover = withCandidates(cands).cover
+  return r
+}
+
+test('ETF 제목: Tier 1 결과로 발송할 때도 편집자가 생존 후보 중에서 고른다', async (t) => {
+  quiet(t)
+  const reply = factWithCandidates([[PROVISIONAL, SUB], [ALT, SUB]]) // 사실 위반 — 1·2회차는 재생성, Tier 1(축소판)은 경고만
+  const gen = fakeGenerator([reply, reply, reply])
+  const ed = fakeEditor({ pick: 1, scores: [], reason: '' })
+  const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, headlineEditor: ed.editor })
+  assert.equal(gen.calls(), 3)
+  assert.equal(ed.seen.length, 1) // 엄격 시도 중에는 묻지 않고, 발송할 Tier 1 결과가 정해진 뒤 한 번
+  assert.equal(report.cover.headline, ALT)
+  assert.equal(report.cover.headlineCandidates, undefined)
+})
+
+test('ETF 제목: 앞선 회차 결과로 발송할 때도 그 결과의 생존 후보 중에서 편집자가 고른다', async (t) => {
+  quiet(t)
+  const reply = factWithCandidates([[PROVISIONAL, SUB], [ALT, SUB]])
+  const gen = fakeGenerator([reply, reply, new Error('Tier 1 호출 실패')])
+  const ed = fakeEditor({ pick: 1, scores: [], reason: '' })
+  const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, headlineEditor: ed.editor })
+  assert.equal(gen.calls(), 3)
+  assert.equal(ed.seen.length, 1)
+  assert.equal(report.cover.headline, ALT)
+  assert.equal(report.cover.headlineCandidates, undefined)
+})
+
+test('ETF 제목: 편집자가 고른 후보로 바꾸면 같은 검증이 나빠질 때는 임시 제목으로 발송한다', async (t) => {
+  quiet(t)
+  // ALT 의 부제가 summary.focus 와 같은 문장 — 후보 단위 검사는 통과하지만 리포트 전체의 중복 문장 검증에 걸린다.
+  const gen = fakeGenerator([withCandidates([[PROVISIONAL, SUB], [ALT, validReport().summary.focus]])])
+  const ed = fakeEditor({ pick: 1, scores: [], reason: '' })
+  const report = await generateMorningReportWithFallback(DATA, { generateRaw: gen.generateRaw, headlineEditor: ed.editor })
+  assert.equal(ed.seen.length, 1)
+  assert.equal(report.cover.headline, PROVISIONAL)
+  assert.equal(report.cover.subline, SUB)
+})
+
+test('언어 정규화는 제목 후보도 거친다(후보로 금지 어휘가 우회되지 않게)', () => {
+  const r = normalizeMorningReportLanguage({ ...validReport(), cover: { headline: 'h', subline: 's', headlineCandidates: [{ headline: '반도체 매수 검토 구간', subline: '신규 진입은 보류' }] } })
+  assert.deepEqual(r.cover.headlineCandidates, [{ headline: '반도체 거래 전 점검 구간', subline: '추가 편입 판단은 보류' }])
 })

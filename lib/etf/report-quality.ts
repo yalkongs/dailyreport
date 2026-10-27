@@ -29,6 +29,8 @@ import { KR_ETF_UNIVERSE } from './universe'
 import { comparativeClaimViolations } from '../comparative-claims'
 // Ruling 35: 제목이 오늘의 주제 자산군(카드 슬롯)을 다루는지.
 import { headlineCoversSlot, subjectAliasesOf, subjectNameOf } from './headline-subject'
+// 2026-10-27 제목 편집 기준: 제목 후보 하나의 제목 단위 검사에 쓰는 후보 타입.
+import type { HeadlineCandidate } from '../headline-selection'
 
 // ─── Hard patterns: 진짜 투자 권유 ─────────────────────────────────────
 // Ruling 37 (2026-10-20): 목록은 Market과 공용 모듈(lib/compliance.ts)로 옮겼다 — 내용·판정은 그대로.
@@ -549,6 +551,32 @@ export interface MorningQualityResult {
   violations: string[]
   // 그중 미리보기 카드 문구(카드 맞춤·card.line 길이·질문형) 위반. 앞선 결과 선택에서 가장 가벼운 위반으로 본다(I2).
   cardViolations: string[]
+}
+
+/**
+ * 제목 후보 하나의 제목 단위 검사(2026-10-27 스펙 §3) — 위반 목록(빈 배열 = 생존). 던지지 않는다.
+ * 기간 비교·최상급(Ruling 31), 주제 자산군(Ruling 35), 시장 미특정 '지수/증시/시장', 수치 대조, 투자 권유, 빈 부제, 카드 제목 넘침.
+ * 주제 슬롯은 기존 검사와 같은 계산(cardSlot — card.key, 없으면 주제 슬롯)이다. 카드 한 줄 자체의 문제는 기존 검증이 본다.
+ */
+export function headlineCandidateProblems(c: HeadlineCandidate, report: MorningReport, data: CollectedData): string[] {
+  const problems: string[] = [...comparativeClaimViolations([['cover.headline', c.headline]])]
+  const card = isObjectValue(report.card) ? report.card : undefined
+  const slot = cardSlot(buildAssetClassSlots(data.quotes), card?.key)
+  if (slot && !headlineCoversSlot(c.headline, slot)) problems.push(`주제 자산군(${subjectNameOf(slot)})을 다루지 않음`)
+  const ambiguous = [...findUnqualifiedAmbiguousWords(c.headline), ...findUnqualifiedAmbiguousWords(c.subline)]
+  if (ambiguous.length > 0) problems.push(`시장이 특정되지 않은 표현: ${ambiguous.slice(0, AMBIGUOUS_SAMPLE_LIMIT).join(' | ')}`)
+  const both = `${c.headline}\n${c.subline}`
+  const numeric = findNumericClaimMismatches(both, data.quotes, data.indices)
+  if (numeric.length > 0) problems.push(`수치가 입력 데이터와 다름: ${numeric.slice(0, 2).join(' / ')}`)
+  const advice = findMatches(both, INVESTMENT_ADVICE_PATTERNS)
+  if (advice.length > 0) problems.push(`투자 권유성 표현: ${advice.join(', ')}`)
+  if (!isFilled(c.subline)) problems.push('subline 누락')
+  const line = typeof card?.line === 'string' ? card.line : ''
+  if (isFilled(line)) {
+    const fit = cardTextFits('etf', { headline: c.headline, line, holdingLabel: slot?.holdingLabel ?? '' })
+    problems.push(...fit.reasons.filter(r => r.startsWith('headline')).map(r => `카드 ${r}`))
+  }
+  return problems
 }
 
 /** 위반을 던지지 않고 돌려준다(리포트는 soft fix·교정이 반영된 상태로 바뀐다). 던지는 API는 validateMorningReportQuality. */
