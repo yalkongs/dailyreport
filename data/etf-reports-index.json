@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-10-29",
+      "type": "morning",
+      "headline": "SK하이닉스 영업익 83조에 국내 반도체 ETF 급등",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-29",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-10-28T21:44:18.647Z"
+    },
+    {
       "date": "2026-10-28",
       "type": "morning",
       "headline": "국내 반도체 ETF 급등, 에너지는 역행",
