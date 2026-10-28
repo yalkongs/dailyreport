@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "date": "2026-10-29",
+      "narrativeAngle": "structural_lens",
+      "headline": "코스피 6000선 탈환, 다음 변수는 미국 GDP",
+      "bigStoryTopic": "SK하이닉스 실적 서프라이즈가 전 거래일 코스피를 <strong>+6.63%</strong",
+      "walletTopics": [
+        "SK하이닉스 실적이 구조적 반등을 뒷받침하는가",
+        "미 금리 5% 유지와 한국 인상 국면의 교차 압력",
+        "WTI 100달러대와 원화 약세의 복합 효과"
+      ],
+      "metaphors": [
+        "고점론",
+        "실적 돌파"
+      ],
+      "lookingAhead": "코스피 6,000선 안착 여부"
+    },
+    {
       "date": "2026-10-28",
       "narrativeAngle": "hidden_variable",
       "headline": "코스피 3% 반등, 삼성 실적이 다음 관문",
@@ -531,25 +547,6 @@
         "엇박자"
       ],
       "lookingAhead": "코스피·코스닥 개장 첫 반응 — 뉴욕 상승분 얼마나 반영되나"
-    },
-    {
-      "date": "2026-09-11",
-      "narrativeAngle": "job_perspective",
-      "headline": "유가 8% 폭등에 채권이 흔들렸다, 증시는 4일째 밀렸다",
-      "bigStoryTopic": "WTI가 하루 만에 <strong>8.2%</strong> 치솟아 배럴당 <strong>1",
-      "walletTopics": [
-        "수출 중소기업 — 유가와 환율, 두 변수가 동시에 움직인다",
-        "항공·물류업 종사자 — 배럴당 104달러의 원가 부담",
-        "반도체 업종 — HBM 가격 인상 신호, 국내 기업에 호재",
-        "유가·금리 동반 상승, 자산별 체감 온도",
-        "4.9%대 미 국채와 3.93% 한국 국고채 — 예금의 자리"
-      ],
-      "metaphors": [
-        "유가 폭등",
-        "채권 금리",
-        "4일 연속"
-      ],
-      "lookingAhead": "코스피200 옵션·선물 만기 결제 — 변동성 확인"
     }
   ]
 }
