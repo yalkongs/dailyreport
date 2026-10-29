@@ -1,18 +1,5 @@
 [
   {
-    "date": "2026-07-31",
-    "tier": "strong",
-    "mode": "event",
-    "newsCount": 8,
-    "freshCount": 5,
-    "topCatalystScore": 12,
-    "anomalyCount": 13,
-    "anomalyBreakdown": {
-      "premiumDiscount": 13
-    },
-    "failedSources": []
-  },
-  {
     "date": "2026-08-03",
     "tier": "thin",
     "mode": "quiet",
@@ -803,6 +790,19 @@
     "anomalyBreakdown": {},
     "failedSources": [],
     "krxBasDd": "20261027",
+    "krxSession": "stale"
+  },
+  {
+    "date": "2026-10-30",
+    "tier": "strong",
+    "mode": "normal",
+    "newsCount": 8,
+    "freshCount": 3,
+    "topCatalystScore": 9,
+    "anomalyCount": 0,
+    "anomalyBreakdown": {},
+    "failedSources": [],
+    "krxBasDd": "20261028",
     "krxSession": "stale"
   }
 ]

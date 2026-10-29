@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-10-30",
+      "type": "morning",
+      "headline": "미 나스닥 약세 속 국내 원자력 ETF 급락",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-10-30",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-10-29T21:43:02.895Z"
+    },
+    {
       "date": "2026-10-29",
       "type": "morning",
       "headline": "SK하이닉스 영업익 83조에 국내 반도체 ETF 급등",
