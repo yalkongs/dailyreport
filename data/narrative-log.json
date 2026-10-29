@@ -1,6 +1,19 @@
 {
   "entries": [
     {
+      "date": "2026-10-30",
+      "narrativeAngle": "historical_deja_vu",
+      "headline": "빅테크 실적 실망, 나스닥 하락…코스피도 동반 약세",
+      "bigStoryTopic": "알파벳·아마존이 나란히 실망스러운 실적을 내놓으며 나스닥이 <strong>-1.38%</s",
+      "walletTopics": [
+        "AWS 성장세가 AI 수요 유지를 확인해 준다면",
+        "11월 2일 CPI가 물가 둔화를 보여 준다면",
+        "이번 주 winner·loser 한 줄 정리"
+      ],
+      "metaphors": [],
+      "lookingAhead": "외국인 수급 방향과 반도체주 동향"
+    },
+    {
       "date": "2026-10-29",
       "narrativeAngle": "structural_lens",
       "headline": "코스피 6000선 탈환, 다음 변수는 미국 GDP",
@@ -528,25 +541,6 @@
         "체인"
       ],
       "lookingAhead": "SK하이닉스·반도체 업종 추가 낙폭 여부"
-    },
-    {
-      "date": "2026-09-14",
-      "narrativeAngle": "time_travel",
-      "headline": "현대차 수출 질주, 코스피는 제동 걸렸다",
-      "bigStoryTopic": "지난 금요일(2026-09-11) 코스피가 <strong>-1.76%</strong>로 밀",
-      "walletTopics": [
-        "현대차·기아 수출 성장을 보유 중이라면 — 70%와 45%의 의미",
-        "HBM과 SK하이닉스 — 시장 전체가 내려도 다른 논리가 작동하는 구간",
-        "WTI 100달러와 1년 전 63달러 — 에너지 비용이 바꾼 기업 원가",
-        "유가 100달러·금리 5% 환경에서 각 자산의 현재 위치",
-        "4% 국고채·4% 예금 — 지금 예금의 자리"
-      ],
-      "metaphors": [
-        "제동",
-        "질주",
-        "엇박자"
-      ],
-      "lookingAhead": "코스피·코스닥 개장 첫 반응 — 뉴욕 상승분 얼마나 반영되나"
     }
   ]
 }
