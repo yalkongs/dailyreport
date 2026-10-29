@@ -544,8 +544,9 @@ function renderTacticalWarning(report: MorningReport, quotes: EtfQuote[]): strin
 }
 
 // ── 7 펼쳐 보기: 국내·미국 ETF 표 ─────────────────────────────────────
+// 거래량 0은 '거래 없음'이 아니라 장 시작 전 Yahoo가 새 세션으로 넘긴 값이다 — 0원 대신 '-'로 둔다.
 function estimatedTradingValue(q: EtfQuote): number | null {
-  if (q.price === null || q.volume === null || !Number.isFinite(q.price) || !Number.isFinite(q.volume)) return null
+  if (q.price === null || q.volume === null || !Number.isFinite(q.price) || !Number.isFinite(q.volume) || q.volume <= 0) return null
   return q.price * q.volume
 }
 

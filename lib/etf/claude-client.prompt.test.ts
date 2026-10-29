@@ -212,6 +212,21 @@ test('거래대금 상위: KRX 거래대금이 있으면 실제 값을 그대로
   assert.match(line, /^거래대금 상위: KODEX 반도체 \(091160\) 152,000,000,000원 \/ KODEX 200 \(069500\) 41,000,000,000원$/)
 })
 
+test('거래대금 상위: 거래량 0(장 시작 전 Yahoo 값)은 추정에서 뺀다 — 전부 0이면 N/A, 0원을 순위로 주지 않는다', () => {
+  const allZero = buildMorningPrompt(withQuotes('2026-10-29', [
+    vq('069500.KS', 'KODEX 200', 40000, 0),
+    vq('091160.KS', 'KODEX 반도체', 50000, 0),
+  ])).split('\n').find(l => l.includes('거래대금 상위'))
+  assert.equal(allZero, '거래대금 상위: N/A')
+  const mixed = buildMorningPrompt(withQuotes('2026-10-29', [
+    vq('069500.KS', 'KODEX 200', 40000, 0),
+    vq('091160.KS', 'KODEX 반도체', 50000, 3_000_000),
+  ])).split('\n').find(l => l.includes('거래대금 상위'))
+  assert.ok(mixed)
+  assert.match(mixed, /KODEX 반도체 \(091160\) 150,000,000,000원$/)
+  assert.doesNotMatch(mixed, /KODEX 200|(^|[^0-9,])0원/)
+})
+
 test('06:40 근거 상태: 실패한 데이터 소스에 krx-nav가 없다(KRX 미게시는 실패가 아님)', () => {
   const p = buildMorningPrompt(makeData('2026-10-19', [], { tier: 'thin' }))
   assert.match(p, /실패한 데이터 소스: 없음/)

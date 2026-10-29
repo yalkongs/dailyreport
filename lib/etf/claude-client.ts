@@ -402,7 +402,7 @@ function buildKrTradingValueLine(krQuotes: EtfQuote[]): string {
     .map(q => ({ q, value: q.tradingValue as number }))
   if (actual.length > 0) return `거래대금 상위: ${top(actual)}`
   const estimated = krQuotes
-    .filter(q => typeof q.price === 'number' && typeof q.volume === 'number' && Number.isFinite(q.price) && Number.isFinite(q.volume))
+    .filter(q => typeof q.price === 'number' && typeof q.volume === 'number' && Number.isFinite(q.price) && Number.isFinite(q.volume) && q.volume > 0)
     .map(q => ({ q, value: (q.price as number) * (q.volume as number) }))
   if (estimated.length === 0) return '거래대금 상위: N/A'
   return `거래대금 상위(추정 — 종가×거래량 참고값, KRX 거래대금 미게시): ${top(estimated)}`
