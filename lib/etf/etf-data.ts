@@ -6,6 +6,8 @@ import { ALL_ETF_UNIVERSE, US_ETF_UNIVERSE, getEtfByTicker } from './universe'
 import { isTacticalEtf } from './story-characters'
 import { fetchJson } from './fetcher'
 import { resolveKrxSession, expectedKrxBasDd, krxRequestOrder, type KrxSession } from './krx-session'
+import { getPrevTradingDay } from '../market-calendar'
+import { sessionDate } from './market-context'
 
 interface KrxEtfDailyTradeRow {
   BAS_DD: string
@@ -122,8 +124,46 @@ export async function collectKrxOpenApiEtfDailyTrades(
   return { map, basDd: null }
 }
 
+// 06:40 실행(장 시작 전)에는 Yahoo quote의 국내 ETF 거래량이 새 세션 기준 0으로 온다(2026-10-19~ 매일 확인).
+// 가격은 직전 거래일 종가이므로, 거래량도 같은 날 일봉에서 채워 추정 거래대금(종가×거래량)이 0원이 되지 않게 한다.
+export function needsSessionVolume(market: EtfQuote['market'], volume: number | null): boolean {
+  return market === 'KR' && !(typeof volume === 'number' && Number.isFinite(volume) && volume > 0)
+}
+
+// 일봉 중 KST 날짜가 sessionKst인 봉의 거래량. 없거나 0·null이면 null — 다른 날 값으로 대신하지 않는다.
+// 그 봉의 종가가 quote 가격과 어긋나면(가격이 다른 세션 값) 날짜가 섞이므로 역시 null.
+const SESSION_CLOSE_TOLERANCE = 0.005
+export function sessionVolumeFromBars(
+  bars: ReadonlyArray<{ date: Date; close?: number | null; volume: number | null | undefined }>,
+  sessionKst: string,
+  price: number | null,
+): number | null {
+  const hit = bars.find(b => sessionDate(b.date, 'Asia/Seoul') === sessionKst)
+  const v = hit?.volume
+  if (!(typeof v === 'number' && Number.isFinite(v) && v > 0)) return null
+  const close = hit?.close
+  if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) return null
+  if (typeof close !== 'number' || !Number.isFinite(close) || Math.abs(close - price) / price > SESSION_CLOSE_TOLERANCE) return null
+  return v
+}
+
+async function fetchSessionVolume(ticker: string, sessionKst: string, price: number | null): Promise<number | null> {
+  try {
+    const at = new Date(`${sessionKst}T00:00:00+09:00`).getTime()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const history: any = await yahooFinance.chart(ticker, { period1: new Date(at - 7 * 86400000), period2: new Date(at + 2 * 86400000), interval: '1d' })
+    return sessionVolumeFromBars(history?.quotes ?? [], sessionKst, price)
+  } catch (e) {
+    console.error(`[etf-data] Yahoo 일봉 거래량 수집 실패: ${ticker}`, e)
+    return null
+  }
+}
+
 // Yahoo Finance로 ETF 시세 수집 (10개씩 배치)
-export async function collectYahooQuotes(): Promise<EtfQuote[]> {
+export async function collectYahooQuotes(
+  reportDate: string = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' }),
+): Promise<EtfQuote[]> {
+  const krSession = getPrevTradingDay(reportDate, 'kr')
   const universeMap = new Map(ALL_ETF_UNIVERSE.map(e => [e.ticker, e]))
   const tickers = ALL_ETF_UNIVERSE.map(e => e.ticker)
   const results: EtfQuote[] = []
@@ -139,6 +179,8 @@ export async function collectYahooQuotes(): Promise<EtfQuote[]> {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const quote = await yahooFinance.quote(ticker, {}, { validateResult: false }) as any
           if (!quote) return null
+          let volume: number | null = quote.regularMarketVolume ?? null
+          if (needsSessionVolume(etfDef.market, volume)) volume = await fetchSessionVolume(ticker, krSession, quote.regularMarketPrice ?? null)
           return {
             ticker,
             name: etfDef.name,
@@ -146,7 +188,7 @@ export async function collectYahooQuotes(): Promise<EtfQuote[]> {
             price: quote.regularMarketPrice ?? null,
             change: quote.regularMarketChange ?? null,
             changePercent: quote.regularMarketChangePercent ?? null,
-            volume: quote.regularMarketVolume ?? null,
+            volume,
             aum: quote.totalAssets ?? null,
             nav: null,
             premiumDiscount: null,
@@ -317,7 +359,7 @@ export async function collectAllEtfData(
   krx: { basDd: string | null; session: KrxSession }
 }> {
   const [quotesResult, krxOpenApiResult, investorFlowsResult, flowsResult] = await Promise.allSettled([
-    collectYahooQuotes(),
+    collectYahooQuotes(reportDate),
     collectKrxOpenApiEtfDailyTrades(reportDate),
     collectKrxInvestorFlows(),
     collectUsEtfFlows(),

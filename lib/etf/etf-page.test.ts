@@ -93,6 +93,15 @@ test('펼쳐 보기 표: 국내·미국 ETF 등락과 추정 거래대금(가격
   assert.match(details, /\$100,000/) // $100 × 1,000주
 })
 
+test('펼쳐 보기 표: 거래량 0(장 시작 전 Yahoo 값)은 0원이 아니라 "-"로 보인다', () => {
+  const zeroData = { ...data, quotes: data.quotes.map(x => ({ ...x, volume: 0 })) }
+  const html = renderMorningHtml(report, zeroData)
+  const details = html.slice(html.indexOf('data-section="details"'), html.indexOf('</details>'))
+  assert.doesNotMatch(details, />0원</)
+  assert.doesNotMatch(details, />\$0</)
+  assert.match(details, /<td class="num">-<\/td>/)
+})
+
 test('데이터 기준: 전일 종가, NAV·괴리율은 주문 전 장중 iNAV 확인', () => {
   const html = renderMorningHtml(report, data)
   assert.match(html, /전일 종가 기준/)
