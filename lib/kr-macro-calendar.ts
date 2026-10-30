@@ -48,6 +48,94 @@ export function isEstimatedKrMacroEvent(e: KrMacroEvent): boolean {
   return /추정|잠정|관례|예상일|전후/.test(e.description ?? "");
 }
 
+// 국가데이터처 「2026년 물가, 고용, 산업활동동향 보도계획」(https://sri.kostat.go.kr/ansk/file/schedule_2026.pdf).
+// 웹 검색은 이 세 지표의 날짜를 틀리게 가져온 적이 있다(10월 CPI: 공식 11/3인데 캐시 11/2, confirmed:true).
+// 표가 덮는 연도에서는 이 표가 유일한 출처다. 새해 보도계획이 나오면 행을 추가할 것.
+const KOSTAT_SOURCE = "mods.go.kr (국가데이터처 공식 보도계획)";
+const KOSTAT_PLAN: Array<[date: string, category: "cpi" | "employment" | "industrial", refMonth: string]> = [
+  ["2026-01-14", "employment", "2025년 12월 및 연간"],
+  ["2026-01-30", "industrial", "2025년 12월 및 연간"],
+  ["2026-02-03", "cpi", "2026년 1월"],
+  ["2026-02-11", "employment", "2026년 1월"],
+  ["2026-03-04", "industrial", "2026년 1월"],
+  ["2026-03-06", "cpi", "2026년 2월"],
+  ["2026-03-18", "employment", "2026년 2월"],
+  ["2026-03-31", "industrial", "2026년 2월"],
+  ["2026-04-02", "cpi", "2026년 3월"],
+  ["2026-04-15", "employment", "2026년 3월"],
+  ["2026-04-30", "industrial", "2026년 3월"],
+  ["2026-05-06", "cpi", "2026년 4월"],
+  ["2026-05-13", "employment", "2026년 4월"],
+  ["2026-05-29", "industrial", "2026년 4월"],
+  ["2026-06-02", "cpi", "2026년 5월"],
+  ["2026-06-11", "employment", "2026년 5월"],
+  ["2026-06-30", "industrial", "2026년 5월"],
+  ["2026-07-02", "cpi", "2026년 6월"],
+  ["2026-07-15", "employment", "2026년 6월"],
+  ["2026-07-31", "industrial", "2026년 6월"],
+  ["2026-08-04", "cpi", "2026년 7월"],
+  ["2026-08-12", "employment", "2026년 7월"],
+  ["2026-08-31", "industrial", "2026년 7월"],
+  ["2026-09-02", "cpi", "2026년 8월"],
+  ["2026-09-09", "employment", "2026년 8월"],
+  ["2026-09-30", "industrial", "2026년 8월"],
+  ["2026-10-02", "cpi", "2026년 9월"],
+  ["2026-10-16", "employment", "2026년 9월"],
+  ["2026-10-30", "industrial", "2026년 9월"],
+  ["2026-11-03", "cpi", "2026년 10월"],
+  ["2026-11-11", "employment", "2026년 10월"],
+  ["2026-11-30", "industrial", "2026년 10월"],
+  ["2026-12-02", "cpi", "2026년 11월"],
+  ["2026-12-16", "employment", "2026년 11월"],
+  ["2026-12-30", "industrial", "2026년 11월"],
+  ["2026-12-31", "cpi", "2026년 12월 및 연간"],
+];
+const KOSTAT_TITLE = { cpi: "소비자물가동향", employment: "고용동향", industrial: "산업활동동향" } as const;
+const KOSTAT_IMPORTANCE = { cpi: 5, employment: 4, industrial: 3 } as const;
+const KOSTAT_YEARS = new Set(KOSTAT_PLAN.map(([d]) => d.slice(0, 4)));
+const KOSTAT_REF_MONTHS = new Set(KOSTAT_PLAN.map(([, category, refMonth]) => `${category}:${refMonth.match(/^\d{4}년 \d{1,2}월/)![0]}`));
+// 같은 캐시에 미국 CPI·고용보고서도 들어온다(category가 cpi·employment일 수 있음) — 카테고리가 아니라 이름으로 시리즈를 가린다.
+const FOREIGN_RE = /미국|美|\bUS\b|중국|일본|유로|ECB|BLS/i;
+
+function kostatSeries(name: string): "cpi" | "employment" | "industrial" | null {
+  if (FOREIGN_RE.test(name)) return null;
+  if (/소비자물가|CPI/i.test(name)) return "cpi";
+  if (/고용동향/.test(name)) return "employment";
+  if (/산업활동|산업생산/.test(name)) return "industrial";
+  return null;
+}
+
+/** 공식표가 이 검색 결과를 덮는가 — 이름의 대상 월이 표에 있거나, 대상 월이 없으면 발표 연도가 표에 있을 때. */
+function coveredByKostatPlan(e: KrMacroEvent): boolean {
+  const series = kostatSeries(e.name);
+  if (!series) return false;
+  const ref = e.name.match(/(\d{4})년\s*(\d{1,2})월/);
+  if (ref) return KOSTAT_REF_MONTHS.has(`${series}:${ref[1]}년 ${Number(ref[2])}월`);
+  return KOSTAT_YEARS.has(e.date.slice(0, 4));
+}
+
+/**
+ * 웹 검색 결과에서 국가데이터처 3대 지표(CPI·고용·산업활동)를 공식 보도계획으로 교체한다.
+ * 공식표가 덮는 검색 결과는 버리고 [start, end] 안의 공식 일정을 넣는다.
+ * 덮지 않는 대상 월(새해 계획 미등록)은 검색 결과를 그대로 둔다.
+ */
+export function applyKostatOfficialPlan(events: KrMacroEvent[], start: string, end: string): KrMacroEvent[] {
+  const kept = events.filter((e) => !coveredByKostatPlan(e));
+  const official: KrMacroEvent[] = KOSTAT_PLAN
+    .filter(([date]) => date >= start && date <= end)
+    .map(([date, category, refMonth]) => ({
+      date,
+      category,
+      name: `${KOSTAT_TITLE[category]} 발표 — ${refMonth}`,
+      importance: KOSTAT_IMPORTANCE[category],
+      description: "국가데이터처 공식 보도계획에 명시된 공표일.",
+      source: KOSTAT_SOURCE,
+      confirmed: true,
+      time: "08:00",
+    }));
+  return [...kept, ...official].sort((a, b) => a.date.localeCompare(b.date));
+}
+
 export interface KrMacroCalendarCache {
   generatedAt: string;     // ISO 8601, refresh 시각
   weekRangeStart: string;  // YYYY-MM-DD
