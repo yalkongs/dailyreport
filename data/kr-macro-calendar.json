@@ -5,22 +5,22 @@
   "events": [
     {
       "date": "2026-11-02",
-      "category": "cpi",
-      "name": "한국 소비자물가지수(CPI) 발표 — 2026년 10월",
-      "importance": 5,
-      "description": "국가데이터처(구 통계청)가 매월 초 발표하는 소비자물가동향. investing.com 및 e-나라지표 입력예정일 모두 11월 2일로 표시. 발표 시각은 통상 KST 08:00 전후이나 investing.com은 23:00(KST) 표기(UTC+9 변환 오차 가능성 있음).",
-      "source": "kostat.go.kr / investing.com",
-      "confirmed": true,
-      "time": "08:00"
-    },
-    {
-      "date": "2026-11-02",
       "category": "trade",
       "name": "수출입 동향 발표 — 2026년 10월",
       "importance": 3,
       "description": "산업통상자원부·국가데이터처 수출입 실적 발표. e-나라지표 수출입동향 입력예정일 2026-11-02로 명시. 매 익월 초 발표 관례와 일치.",
       "source": "index.go.kr (e-나라지표)",
-      "confirmed": true
+      "confirmed": false
+    },
+    {
+      "date": "2026-11-03",
+      "category": "cpi",
+      "name": "소비자물가동향 발표 — 2026년 10월",
+      "importance": 5,
+      "description": "국가데이터처 공식 보도계획에 명시된 공표일.",
+      "source": "mods.go.kr (국가데이터처 공식 보도계획)",
+      "confirmed": true,
+      "time": "08:00"
     },
     {
       "date": "2026-11-06",

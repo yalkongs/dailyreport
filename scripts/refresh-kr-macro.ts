@@ -15,6 +15,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import Anthropic from "@anthropic-ai/sdk";
+import { applyKostatOfficialPlan } from "../lib/kr-macro-calendar";
 import type { KrMacroCalendarCache, KrMacroEvent, KrMacroCategory } from "../lib/kr-macro-calendar";
 
 const VALID_CATEGORIES: KrMacroCategory[] = [
@@ -192,17 +193,18 @@ async function main() {
     if (v) validated.push(v);
     else console.warn("  ⚠️ 잘못된 형식의 이벤트 skip:", JSON.stringify(raw).slice(0, 120));
   }
-  validated.sort((a, b) => a.date.localeCompare(b.date));
+  // CPI·고용·산업활동은 검색 결과 대신 국가데이터처 공식 보도계획 날짜를 쓴다.
+  const events = applyKostatOfficialPlan(validated, start, end);
 
   const cache: KrMacroCalendarCache = {
     generatedAt: new Date().toISOString(),
     weekRangeStart: start,
     weekRangeEnd: end,
-    events: validated,
+    events,
   };
 
-  console.log(`\n✅ 검증 통과: ${validated.length}개 이벤트`);
-  validated.forEach((e) => {
+  console.log(`\n✅ 검증 통과: ${events.length}개 이벤트`);
+  events.forEach((e) => {
     const stars = "★".repeat(e.importance);
     console.log(`  ${e.date} ${stars} [${e.category}] ${e.name}${e.description ? " — " + e.description : ""}${e.source ? "  (src: " + e.source + ")" : ""}`);
   });
