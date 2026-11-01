@@ -1,6 +1,19 @@
 {
   "entries": [
     {
+      "date": "2026-11-02",
+      "narrativeAngle": "supply_chain",
+      "headline": "코스피 3.5% 급락, 이번 주 CPI가 분수령",
+      "bigStoryTopic": "지난 금요일 코스피 <strong>-3.48%</strong>, S&P500 <strong",
+      "walletTopics": [
+        "내일 한국 CPI가 물가 둔화를 보여 주면",
+        "WTI 104달러선이 이번 주 내내 유지된다면",
+        "미 고용보고서와 연준 인상 국면의 교차점"
+      ],
+      "metaphors": [],
+      "lookingAhead": "한국 10월 소비자물가 발표"
+    },
+    {
       "date": "2026-10-30",
       "narrativeAngle": "historical_deja_vu",
       "headline": "빅테크 실적 실망, 나스닥 하락…코스피도 동반 약세",
@@ -522,25 +535,6 @@
         "채권 탈출"
       ],
       "lookingAhead": "원/달러 1,360원대 초반 — 추가 상승 압력 점검"
-    },
-    {
-      "date": "2026-09-15",
-      "narrativeAngle": "supply_chain",
-      "headline": "AI 경계령에 SK하이닉스 7.6% 무너졌다, 코스피 -3.26%",
-      "bigStoryTopic": "글로벌 AI 거물들의 속도 조절 발언이 반도체 수요 전망을 흔들었습니다. 전 거래일(202",
-      "walletTopics": [
-        "SK하이닉스 보유자 — HBM 체인의 어느 고리가 흔들렸나",
-        "반도체 장비·소재주 보유자 — 낙폭 전이 범위 확인",
-        "항공·물류 관련 보유자 — 유가 100달러가 원가에 놓이는 방식",
-        "AI 우려 + 유가 + 금리, 자산별 현재 온도",
-        "4%대 국고채 환경, 예금의 실질 매력 재점검"
-      ],
-      "metaphors": [
-        "경계령",
-        "패닉셀",
-        "체인"
-      ],
-      "lookingAhead": "SK하이닉스·반도체 업종 추가 낙폭 여부"
     }
   ]
 }
