@@ -1,6 +1,19 @@
 {
   "entries": [
     {
+      "date": "2026-11-03",
+      "narrativeAngle": "time_travel",
+      "headline": "유가 급락·코스피 반등…뉴욕 기술주는 반대로",
+      "bigStoryTopic": "WTI 배럴당 <strong>96달러</strong>로 하루 새 <strong>7.7%</",
+      "walletTopics": [
+        "한국 CPI 둔화가 확인되면 인상 속도 기대 변화",
+        "WTI 90달러대 유지 여부 — 에너지 비용과 물가의 연결",
+        "뉴욕 기술주 매도와 한국 반도체주의 거리"
+      ],
+      "metaphors": [],
+      "lookingAhead": "한국 10월 소비자물가(CPI) 발표"
+    },
+    {
       "date": "2026-11-02",
       "narrativeAngle": "supply_chain",
       "headline": "코스피 3.5% 급락, 이번 주 CPI가 분수령",
@@ -516,25 +529,6 @@
         "원화 약세"
       ],
       "lookingAhead": "코스피200 위클리옵션 만기 — 장중 수급 변동 주의"
-    },
-    {
-      "date": "2026-09-16",
-      "narrativeAngle": "structural_lens",
-      "headline": "미 국채 5% 벽, 원화가 먼저 무너졌다",
-      "bigStoryTopic": "간밤(2026-09-15 현지 마감) 미국 10년물 국채 금리가 <strong>4.996%",
-      "walletTopics": [
-        "수출 중심 제조업체 — 환율 수혜, 그러나 원가도 함께 올랐다",
-        "반도체 업종 — TSMC·삼성 HBM 협력 보도, 확인 전 신중하게",
-        "항공·물류·해운업 — 유가 105달러의 비용 부담",
-        "금리 5% 문턱, 자산별 체감 온도",
-        "한국 국고채 4.3%, 예금 4%대 — 지금 예금의 자리"
-      ],
-      "metaphors": [
-        "5% 벽",
-        "원화 붕괴",
-        "채권 탈출"
-      ],
-      "lookingAhead": "원/달러 1,360원대 초반 — 추가 상승 압력 점검"
     }
   ]
 }
