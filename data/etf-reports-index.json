@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-11-04",
+      "type": "morning",
+      "headline": "코스피 급락에 반도체 ETF 직격, 미 반도체는 역행 강세",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-11-04",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-11-03T21:43:55.234Z"
+    },
+    {
       "date": "2026-11-03",
       "type": "morning",
       "headline": "미 반도체 3% 급락…국내 조선주는 역행 강세",
