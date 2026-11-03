@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "date": "2026-11-04",
+      "narrativeAngle": "global_domino",
+      "headline": "SK하이닉스 뉴욕공장 무산 위기에 코스피 3.6% 급락",
+      "bigStoryTopic": "전 거래일 코스피 <strong>5,648</strong>로 마감. 코스닥도 <strong",
+      "walletTopics": [
+        "SK하이닉스 공장 계획의 향방",
+        "뉴욕 반도체 반등과 서울의 간격",
+        "11월 6일 미 고용보고서와 금리 경로"
+      ],
+      "metaphors": [
+        "도미노",
+        "온도차"
+      ],
+      "lookingAhead": "국내 반도체주, 간밤 뉴욕 반등 얼마나 받아내나"
+    },
+    {
       "date": "2026-11-03",
       "narrativeAngle": "time_travel",
       "headline": "유가 급락·코스피 반등…뉴욕 기술주는 반대로",
@@ -510,25 +526,6 @@
         "되돌림"
       ],
       "lookingAhead": "한국은행 소비자심리지수(CCSI) 발표"
-    },
-    {
-      "date": "2026-09-17",
-      "narrativeAngle": "generation_wallet",
-      "headline": "연준 인상에 달러 올랐다, 원화는 1,377원",
-      "bigStoryTopic": "연준이 기준금리를 <strong>3.75~4.00%</strong>로 0.25%p 올리고 ",
-      "walletTopics": [
-        "20~30대: 해외 ETF·주식 보유자라면 환율 점검을",
-        "40~50대: 변동금리 주담대, 추가 인상 여지 확인 시점",
-        "60대 이상: 원유 102달러, 에너지·식품 물가 체감 지속",
-        "연준 인상 이후, 자산별 현재 위치",
-        "미 금리 4% 시대, 한국 예금의 실질 위치"
-      ],
-      "metaphors": [
-        "달러 상승",
-        "금리 인상",
-        "원화 약세"
-      ],
-      "lookingAhead": "코스피200 위클리옵션 만기 — 장중 수급 변동 주의"
     }
   ]
 }
