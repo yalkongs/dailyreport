@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-11-06",
+      "type": "morning",
+      "headline": "반도체만 추락, 소프트웨어·콘텐츠는 역행 강세",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-11-06",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-11-05T21:48:36.575Z"
+    },
+    {
       "date": "2026-11-05",
       "type": "morning",
       "headline": "미 반도체 급락 속 국내 2차전지만 역행 급등",
