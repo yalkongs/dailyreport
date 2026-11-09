@@ -1,6 +1,19 @@
 {
   "entries": [
     {
+      "date": "2026-11-10",
+      "narrativeAngle": "job_perspective",
+      "headline": "뉴욕 기술주 급반등, 환율은 하루 새 23원 내려",
+      "bigStoryTopic": "다우존스 <strong>1,100포인트</strong> 상승, S&P 500은 <stron",
+      "walletTopics": [
+        "CPI가 예상 범위를 벗어나면 — 연준 경로와 환율 재조정",
+        "원유 추가 하락 여부 — 에너지 업종과 물가 경로",
+        "내일 한국 고용동향 — 한은 긴축 속도의 가늠자"
+      ],
+      "metaphors": [],
+      "lookingAhead": "코스피 반도체주 — 엔비디아 하락 여파"
+    },
+    {
       "date": "2026-11-09",
       "narrativeAngle": "structural_lens",
       "headline": "코스피 6% 밀렸는데 나스닥은 오른 금요일",
@@ -489,25 +502,6 @@
         "통계 주간"
       ],
       "lookingAhead": "삼성전자 배당 기준일 마감 — 수급 집중 여부 주목"
-    },
-    {
-      "date": "2026-09-23",
-      "narrativeAngle": "supply_chain",
-      "headline": "원화, 하루 만에 20원 되찾다",
-      "bigStoryTopic": "원/달러 환율이 <strong>1,355.66원</strong>으로 <strong>-1.4",
-      "walletTopics": [
-        "수출 대형주 보유자 — 원화 강세의 실적 환산 효과를 재계산하십시오",
-        "HBM·반도체 소부장 — 중국 AI 수요가 단가 협상력을 바꾸고 있습니다",
-        "석유화학·포장재 업체 — 납사 하락의 수혜, 단 제품가 동반 하락에 주의",
-        "원화 강세·유가 하락 국면, 자산별 현재 위치",
-        "4%대 국고채 환경, 예금의 실질 위치는"
-      ],
-      "metaphors": [
-        "원화 강세",
-        "산업 체인",
-        "체력 회복"
-      ],
-      "lookingAhead": "한국은행 소비자동향조사 발표"
     }
   ]
 }
