@@ -1,18 +1,5 @@
 [
   {
-    "date": "2026-08-11",
-    "tier": "thin",
-    "mode": "normal",
-    "newsCount": 8,
-    "freshCount": 6,
-    "topCatalystScore": 7,
-    "anomalyCount": 0,
-    "anomalyBreakdown": {},
-    "failedSources": [
-      "krx-nav"
-    ]
-  },
-  {
     "date": "2026-08-12",
     "tier": "strong",
     "mode": "normal",
@@ -803,6 +790,19 @@
     "anomalyBreakdown": {},
     "failedSources": [],
     "krxBasDd": "20261105",
+    "krxSession": "stale"
+  },
+  {
+    "date": "2026-11-10",
+    "tier": "strong",
+    "mode": "event",
+    "newsCount": 8,
+    "freshCount": 4,
+    "topCatalystScore": 7,
+    "anomalyCount": 0,
+    "anomalyBreakdown": {},
+    "failedSources": [],
+    "krxBasDd": "20261108",
     "krxSession": "stale"
   }
 ]

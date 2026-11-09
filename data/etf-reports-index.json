@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-11-10",
+      "type": "morning",
+      "headline": "미 반도체 강세 속 국내 2차전지만 역주행",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-11-10",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-11-09T21:44:32.269Z"
+    },
+    {
       "date": "2026-11-09",
       "type": "morning",
       "headline": "미 반도체 강세에도 국내 반도체 ETF는 급락",
