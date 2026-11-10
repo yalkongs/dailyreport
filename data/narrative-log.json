@@ -1,6 +1,19 @@
 {
   "entries": [
     {
+      "date": "2026-11-11",
+      "narrativeAngle": "historical_deja_vu",
+      "headline": "코스피 4.4% 반등, 뉴욕은 CPI 충격에 하락",
+      "bigStoryTopic": "전 거래일 코스피 <strong>5,239</strong>로 마감. 간밤 미 10년물 금리",
+      "walletTopics": [
+        "고용동향이 긴축 경로를 다시 가늠합니다",
+        "미 CPI 충격이 반도체 수급에 겹쳤을 때",
+        "유가 하락이 물가 경로의 완충재가 되려면"
+      ],
+      "metaphors": [],
+      "lookingAhead": "10월 고용동향 발표 (국가데이터처)"
+    },
+    {
       "date": "2026-11-10",
       "narrativeAngle": "job_perspective",
       "headline": "뉴욕 기술주 급반등, 환율은 하루 새 23원 내려",
@@ -483,25 +496,6 @@
         "ADR 선반영"
       ],
       "lookingAhead": "SK하이닉스·삼성전자 개장 초반 동향"
-    },
-    {
-      "date": "2026-09-28",
-      "narrativeAngle": "historical_deja_vu",
-      "headline": "삼성 배당 마지막 날, 주가는 3개월 전 고점에서 얼마나 멀리 있나",
-      "bigStoryTopic": "오늘(9/28)이 삼성전자 주당 <strong>4,600원</strong> 배당의 주주명부",
-      "walletTopics": [
-        "삼성전자 보유자 — 배당 기준일과 배당락, 오늘의 타이밍",
-        "반도체 관련 종목 보유자 — HBM 수주 집중의 양면을 분리하십시오",
-        "현대차·기아 보유자 — 미국 판매 볼륨과 환율의 역방향 구조",
-        "지금 각 자산의 위치",
-        "4%대 국고채 환경, 예금의 자리는"
-      ],
-      "metaphors": [
-        "배당 막차",
-        "고점 거리",
-        "통계 주간"
-      ],
-      "lookingAhead": "삼성전자 배당 기준일 마감 — 수급 집중 여부 주목"
     }
   ]
 }
