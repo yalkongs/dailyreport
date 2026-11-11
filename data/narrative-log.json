@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "date": "2026-11-12",
+      "narrativeAngle": "supply_chain",
+      "headline": "코스닥 5.6%·코스피 2.6% 반등…AI 체인 전반 강세",
+      "bigStoryTopic": "코어위브 호실적 발표가 반도체·AI 관련주 전반에 매수세를 불러왔습니다. 오늘은 KOSPI",
+      "walletTopics": [
+        "AI 반도체 수요 체인이 살아 있다면",
+        "미 10년물 금리 5% 돌파 여부",
+        "오늘 옵션 만기와 외국인 수급 방향"
+      ],
+      "metaphors": [
+        "훈풍",
+        "AI 체인"
+      ],
+      "lookingAhead": "KOSPI200 선물·옵션 11월 월물 만기일"
+    },
+    {
       "date": "2026-11-11",
       "narrativeAngle": "historical_deja_vu",
       "headline": "코스피 4.4% 반등, 뉴욕은 CPI 충격에 하락",
@@ -478,24 +494,6 @@
         "부동산"
       ],
       "lookingAhead": "8월 산업활동동향 발표"
-    },
-    {
-      "date": "2026-09-29",
-      "narrativeAngle": "structural_lens",
-      "headline": "미 국채 5.24%, 코스피 191포인트 내렸다",
-      "bigStoryTopic": "간밤(2026-09-28 현지 마감) 미국 10년물 국채 금리가 <strong>5.24%<",
-      "walletTopics": [
-        "반도체 보유자 — ADR 하락이 오늘 가격에 어떻게 반영되나",
-        "수출 대형주 보유자 — 원화 강세와 유가 상승의 교차",
-        "채권·예금 보유자 — 금리 상승의 양면",
-        "지금 각 자산은 어디에 있나",
-        "4%대 국고채 환경, 예금의 자리는"
-      ],
-      "metaphors": [
-        "국채 금리 천장",
-        "ADR 선반영"
-      ],
-      "lookingAhead": "SK하이닉스·삼성전자 개장 초반 동향"
     }
   ]
 }
