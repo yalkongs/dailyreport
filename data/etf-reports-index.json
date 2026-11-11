@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-11-12",
+      "type": "morning",
+      "headline": "국내 반도체, 미 급등 훈풍 이어받을 수 있나",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-11-12",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-11-11T21:47:23.074Z"
+    },
+    {
       "date": "2026-11-11",
       "type": "morning",
       "headline": "국내 중공업 주도 급등…미 증시와 엇박자",
