@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-11-13",
+      "type": "morning",
+      "headline": "국내 미디어 ETF 도드라진 강세, 미 반도체는 약세",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-11-13",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-11-12T21:43:18.806Z"
+    },
+    {
       "date": "2026-11-12",
       "type": "morning",
       "headline": "국내 반도체, 미 급등 훈풍 이어받을 수 있나",
