@@ -8,7 +8,7 @@ import * as path from "path";
 import { stripEmphasisTags } from "../html-entities";
 import { escapeHtml } from "../etf/renderer";
 import { sanitizeInlineHtml } from "../report-renderer";
-import { renderWeeklyCardSvg, saveCardPng } from "../preview/data-card";
+import { renderTextCardSvg, saveCardPng } from "../preview/data-card";
 import { CARD_HEIGHT, CARD_WIDTH } from "../preview/card-size";
 import type { EvidenceRow, ViewContent, ViewFacts, ViewSentence } from "./types";
 
@@ -16,8 +16,8 @@ export const VIEW_PUBLIC_DIR = "economist-view";
 const SITE = "https://dailyreport-eta.vercel.app";
 const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
-// 예금·금리 해설용 고지문 — 초안(책임편집자·준법 확정 전). 투자상품용 LEGAL_DISCLAIMER_ITEMS는 이 판본에 맞지 않는다.
-export const VIEW_DISCLAIMER_DRAFT: readonly string[] = [
+// 예금·금리 해설용 고지문 — 책임편집자 확정(2026-11-13, 초안 문구 그대로). 투자상품용 LEGAL_DISCLAIMER_ITEMS는 이 판본에 맞지 않는다.
+export const VIEW_DISCLAIMER: readonly string[] = [
   "본 자료는 경제 통계에 대한 정보 제공을 목적으로 작성되었으며, 특정 금융상품의 가입이나 해지를 권유하기 위한 자료가 아닙니다.",
   "본 자료의 금리 통계는 한국은행 등 작성기관이 공표한 예금은행 전체의 가중평균 값으로, iM뱅크를 포함한 개별 은행·상품의 금리와 다를 수 있습니다.",
   "개별 상품의 금리, 만기 후 처리, 중도해지 조건 등은 해당 상품설명서와 약관을 확인하시기 바랍니다.",
@@ -37,7 +37,6 @@ const VIEW_CSS = `
 .report-embed .ev-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .report-embed .ev-table th, .report-embed .ev-table td { border-bottom: 1px solid #EEF2F7; padding: 6px 4px; text-align: left; vertical-align: top; word-break: keep-all; }
 .report-embed .ev-table td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.report-embed .ev-draft { display: inline-block; font-size: 11px; font-weight: 700; color: #B45309; border: 1px solid #F5C99A; border-radius: 6px; padding: 0 6px; margin-left: 6px; }
 `;
 
 function loadCSS(): string {
@@ -50,35 +49,41 @@ function dateLong(date: string): string {
   return `${y}년 ${m}월 ${d}일 ${DAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]}요일`;
 }
 
-/** 인용 순서대로 근거 번호(1부터). 수치·발췌 행만 번호를 단다(meta·next_release 제외). */
+/**
+ * 인용 순서대로 근거 번호(1부터). 각주는 관측 사실(fact) 문장에만 단다 — 해석·조건부 전망에 정의 발췌를 각주로 달면
+ * 정의가 그 해석을 뒷받침하는 것처럼 보인다(검증기는 해석 문장의 논리를 확인하지 않는다). meta·next_release는 번호 없음.
+ */
 export function referenceNumbers(c: ViewContent, rows: EvidenceRow[]): Map<string, number> {
   const known = new Set(rows.map((r) => r.id));
   const nums = new Map<string, number>();
   const all = [...c.lede, ...c.body.flatMap((b) => b.sentences), c.chartCaption, ...c.readerCheck, c.closing];
-  for (const s of all) for (const e of s.evidence) if (known.has(e) && !nums.has(e)) nums.set(e, nums.size + 1);
+  for (const s of all) {
+    if (s.type !== "fact") continue;
+    for (const e of s.evidence) if (known.has(e) && !nums.has(e)) nums.set(e, nums.size + 1);
+  }
   return nums;
 }
 
 function sentenceHtml(s: ViewSentence, refs: Map<string, number>): string {
-  const marks = s.evidence.filter((e) => refs.has(e)).map((e) => refs.get(e)!);
+  const marks = s.type !== "fact" ? [] : s.evidence.filter((e) => refs.has(e)).map((e) => refs.get(e)!);
   const uniq = Array.from(new Set(marks)).sort((a, b) => a - b);
   const sup = uniq.length ? `<a class="ev-ref" href="#evidence">[${uniq.join(",")}]</a>` : "";
   return `${sanitizeInlineHtml(s.text)}${sup}`;
 }
 
-/** 두 패널, 같은 눈금: 신규취급액 기준 저축성수신금리 / 잔액 기준 총수신금리. */
+/** 지시서 차트 계열을 나란히(2~3 패널), 모두 같은 눈금으로 그린다. */
 export function renderTwinChart(f: ViewFacts): string {
-  const a = f.evidence.chart["dep_new"] ?? [];
-  const b = f.evidence.chart["dep_bal"] ?? [];
-  if (a.length < 2 || b.length < 2) return "";
-  const W = 680, H = 230, padL = 40, padR = 12, gap = 24, top = 30, bottom = 30;
-  const panelW = (W - padL - padR - gap) / 2;
-  const vals = [...a, ...b].map((p) => p.value);
+  const panels = (f.chart_panels ?? []).filter((p) => p.points.length >= 2);
+  if (panels.length === 0) return "";
+  const W = 680, H = 230, padL = 40, padR = 12, gap = 20, top = 30, bottom = 30;
+  const panelW = (W - padL - padR - gap * (panels.length - 1)) / panels.length;
+  const vals = panels.flatMap((p) => p.points.map((x) => x.value));
   const lo = Math.floor(Math.min(...vals) * 2) / 2, hi = Math.ceil(Math.max(...vals) * 2) / 2;
   const y = (v: number) => top + ((H - top - bottom) * (hi - v)) / (hi - lo || 1);
   const f1 = (v: number) => v.toFixed(1);
   const ticks: number[] = [];
   for (let t = lo; t <= hi + 1e-9; t += 0.5) ticks.push(Math.round(t * 10) / 10);
+  const colors = ["#0B6E61", "#1D4ED8", "#B45309"];
   const panel = (pts: { period: string; value: number }[], x0: number, title: string, color: string) => {
     const x = (i: number) => x0 + (panelW * i) / (pts.length - 1);
     const d = pts.map((p, i) => `${i ? "L" : "M"}${f1(x(i))},${f1(y(p.value))}`).join(" ");
@@ -90,9 +95,10 @@ export function renderTwinChart(f: ViewFacts): string {
       + `<circle cx="${f1(x(pts.length - 1))}" cy="${f1(y(last.value))}" r="3.5" fill="${color}"/>${xl}`;
   };
   const yl = ticks.map((t) => `<text x="${padL - 6}" y="${f1(y(t) + 4)}" text-anchor="end" font-size="11" fill="#9CA3AF">${t.toFixed(1)}</text>`).join("");
-  return `<svg class="ev-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="신규취급액 기준 저축성수신금리와 잔액 기준 총수신금리(같은 눈금, 연 %)">${yl}`
-    + panel(a, padL, "신규취급액 기준 저축성수신금리", "#0B6E61")
-    + panel(b, padL + panelW + gap, "잔액 기준 총수신금리", "#1D4ED8") + `</svg>`;
+  const label = panels.map((p) => p.title).join(", ");
+  return `<svg class="ev-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${escapeHtml(label)}(같은 눈금, ${escapeHtml(panels[0].unit)})">${yl}`
+    + panels.map((p, i) => panel(p.points, padL + (panelW + gap) * i, p.title.replace("(전년동월비)", ""), colors[i % colors.length])).join("")
+    + `</svg>`;
 }
 
 function evidenceTable(refs: Map<string, number>, rows: EvidenceRow[]): string {
@@ -120,8 +126,8 @@ export function renderViewReport(c: ViewContent, f: ViewFacts): string {
   const desc = escapeHtml(stripEmphasisTags(c.lede.map((s) => s.text).join(" "))).slice(0, 180);
   const img = `${SITE}/${VIEW_PUBLIC_DIR}/${f.issue_date}-preview.png`;
   const p = (ss: ViewSentence[]) => ss.map((s) => sentenceHtml(s, refs)).join(" ");
-  const nr = f.evidence.next_release;
-  const legal = VIEW_DISCLAIMER_DRAFT.map((i) => `<li>${escapeHtml(i)}</li>`).join("\n            ");
+  const nrs = Object.values(f.evidence.parts ?? {}).map((p) => p.next_release).filter((x): x is NonNullable<typeof x> => !!x);
+  const legal = VIEW_DISCLAIMER.map((i) => `<li>${escapeHtml(i)}</li>`).join("\n            ");
   return `<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -171,13 +177,13 @@ ${VIEW_CSS}
     </section>
     <section data-section="next">
         <p class="ev-next">${sentenceHtml(c.closing, refs)}</p>
-        ${nr ? `<p class="wk-note">다음 발표: ${escapeHtml(nr.title)} · ${escapeHtml(nr.label)} (${escapeHtml(nr.source)})</p>` : ""}
+        ${nrs.map((nr) => `<p class="wk-note">다음 발표: ${escapeHtml(nr.title)} · ${escapeHtml(nr.label)} (${escapeHtml(nr.source)})</p>`).join("\n        ")}
     </section>
     ${evidenceTable(refs, f.evidence.rows)}
     <footer class="report-footer" data-section="footer">
-        <div class="copyright">© iM뱅크 | Economist View | 자료: 한국은행 ECOS·보도자료·통계 공표 일정 | 발행 기준 ${escapeHtml(f.evidence.cutoff.slice(0, 16).replace("T", " "))}</div>
-        <div class="legal-notice" data-draft="true">
-            <div class="legal-title">유의사항<span class="ev-draft">초안</span></div>
+        <div class="copyright">© iM뱅크 | Economist View | 자료: ${escapeHtml(f.sources_line ?? "한국은행 ECOS")} | 자료 기준 ${escapeHtml(f.evidence.cutoff.slice(0, 16).replace("T", " "))}</div>
+        <div class="legal-notice">
+            <div class="legal-title">유의사항</div>
             <ul class="legal-list">
             ${legal}
             </ul>
@@ -190,7 +196,7 @@ ${VIEW_CSS}
 }
 
 export function viewCardSvg(c: ViewContent, f: ViewFacts): string {
-  return renderWeeklyCardSvg({
+  return renderTextCardSvg({
     date: f.issue_date, headline: stripEmphasisTags(c.title), line: stripEmphasisTags(c.cardLine), stats: f.card_stats,
     brandName: "Economist View", kicker: "iM뱅크 경제 리포트",
   });
