@@ -6,14 +6,13 @@ import * as fs from "fs";
 import * as path from "path";
 import { findHardAdvice, findInvestmentAdvice, findSoftAdvice } from "../lib/compliance";
 import { stripEmphasisTags } from "../lib/html-entities";
-import { renderViewReport, saveViewPreview, VIEW_PUBLIC_DIR } from "../lib/view/renderer";
+import { allSentences, renderViewReport, saveViewPreview, VIEW_PUBLIC_DIR } from "../lib/view/renderer";
 import type { ViewContent, ViewFacts, ViewReportMeta, ViewReportsIndex } from "../lib/view/types";
 
 const readJson = <T,>(p: string): T => JSON.parse(fs.readFileSync(p, "utf-8")) as T;
 
 export function viewTexts(c: ViewContent): string[] {
-  return [c.title, c.cardLine, ...c.lede, ...c.body.flatMap((b) => b.sentences), c.chartCaption, ...c.readerCheck, c.closing]
-    .map((s) => stripEmphasisTags(typeof s === "string" ? s : s.text));
+  return [c.title, c.cardLine, ...allSentences(c).map((s) => s.text)].map((t) => stripEmphasisTags(t));
 }
 
 export function checkViewCompliance(c: ViewContent): { hard: string[]; soft: string[]; etf: string[] } {

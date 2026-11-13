@@ -10,7 +10,7 @@ import { escapeHtml } from "../etf/renderer";
 import { sanitizeInlineHtml } from "../report-renderer";
 import { renderTextCardSvg, saveCardPng } from "../preview/data-card";
 import { CARD_HEIGHT, CARD_WIDTH } from "../preview/card-size";
-import type { EvidenceRow, ViewContent, ViewFacts, ViewSentence } from "./types";
+import type { EvidenceRow, ViewContent, ViewFacts, ViewSentence, ViewStance } from "./types";
 
 export const VIEW_PUBLIC_DIR = "economist-view";
 const SITE = "https://dailyreport-eta.vercel.app";
@@ -36,6 +36,16 @@ const VIEW_CSS = `
 .report-embed .ev-next { font-size: 14px; line-height: 1.6; margin: 10px 0 0; color: var(--text); }
 .report-embed .ev-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .report-embed .ev-table th, .report-embed .ev-table td { border-bottom: 1px solid #EEF2F7; padding: 6px 4px; text-align: left; vertical-align: top; word-break: keep-all; }
+.report-embed .ev-view { border: 1px solid #E5E7EB; border-radius: 14px; padding: 12px 14px; margin: 10px 0; }
+.report-embed .ev-view-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.report-embed .ev-view-name { font-size: 14px; font-weight: 700; color: var(--text); }
+.report-embed .ev-badge { font-size: 11px; font-weight: 700; border-radius: 6px; padding: 1px 7px; }
+.report-embed .ev-badge.s-유지 { color: #374151; background: #F3F4F6; }
+.report-embed .ev-badge.s-수정 { color: #B45309; background: #FEF3C7; }
+.report-embed .ev-badge.s-신규 { color: #0B6E61; background: #E6F6F2; }
+.report-embed .ev-view p { font-size: 14.5px; line-height: 1.7; margin: 2px 0; word-break: keep-all; }
+.report-embed .ev-view .lbl { display: block; font-size: 12px; font-weight: 700; color: #6B7280; margin-top: 6px; }
+.report-embed .ev-agenda li { font-size: 14px; line-height: 1.7; list-style: none; word-break: keep-all; }
 .report-embed .ev-table td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 `;
 
@@ -49,6 +59,11 @@ function dateLong(date: string): string {
   return `${y}년 ${m}월 ${d}일 ${DAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]}요일`;
 }
 
+export function allSentences(c: ViewContent): ViewSentence[] {
+  return [...c.lede, ...(c.recap ?? []), ...c.body.flatMap((b) => b.sentences),
+    ...(c.view ?? []).flatMap((v) => [v.stance, v.reason, v.trigger]), c.chartCaption, ...c.readerCheck, c.closing];
+}
+
 /**
  * 인용 순서대로 근거 번호(1부터). 각주는 관측 사실(fact) 문장에만 단다 — 해석·조건부 전망에 정의 발췌를 각주로 달면
  * 정의가 그 해석을 뒷받침하는 것처럼 보인다(검증기는 해석 문장의 논리를 확인하지 않는다). meta·next_release는 번호 없음.
@@ -56,7 +71,7 @@ function dateLong(date: string): string {
 export function referenceNumbers(c: ViewContent, rows: EvidenceRow[]): Map<string, number> {
   const known = new Set(rows.map((r) => r.id));
   const nums = new Map<string, number>();
-  const all = [...c.lede, ...c.body.flatMap((b) => b.sentences), c.chartCaption, ...c.readerCheck, c.closing];
+  const all = allSentences(c);
   for (const s of all) {
     if (s.type !== "fact") continue;
     for (const e of s.evidence) if (known.has(e) && !nums.has(e)) nums.set(e, nums.size + 1);
@@ -120,6 +135,32 @@ function evidenceTable(refs: Map<string, number>, rows: EvidenceRow[]): string {
     </details>`;
 }
 
+function renderView(view: ViewStance[], f: ViewFacts, refs: Map<string, number>): string {
+  if (view.length === 0) return "";
+  const names = f.view_keys ?? { kr_policy: "한국은행 기준금리", inflation: "물가", growth: "경기", markets: "시장금리·환율" };
+  const order = ["kr_policy", "inflation", "growth", "markets"];
+  const cards = [...view].sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key)).map((v) => `
+        <div class="ev-view">
+            <div class="ev-view-head"><span class="ev-view-name">${escapeHtml(names[v.key] ?? v.key)}</span><span class="ev-badge s-${escapeHtml(v.status)}">${escapeHtml(v.status)}</span></div>
+            <p>${sentenceHtml(v.stance, refs)}</p>
+            <p><span class="lbl">근거</span>${sentenceHtml(v.reason, refs)}</p>
+            <p><span class="lbl">판단을 바꿀 조건</span>${sentenceHtml(v.trigger, refs)}</p>
+        </div>`).join("");
+  return `<section class="section" data-section="view">
+        <h2 class="section-title">이코노미스트의 판단</h2>${cards}
+    </section>`;
+}
+
+function renderAgenda(f: ViewFacts): string {
+  const items = f.agenda ?? [];
+  if (items.length === 0) return "";
+  const li = items.map((a) => `<li><strong>${escapeHtml(a.label)}</strong> · ${escapeHtml(a.title)} <span class="wk-sub">(${escapeHtml(a.source)})</span></li>`).join("");
+  return `<section class="section" data-section="agenda">
+        <h2 class="section-title">이번 주 일정</h2>
+        <ul class="ev-agenda">${li}</ul>
+    </section>`;
+}
+
 export function renderViewReport(c: ViewContent, f: ViewFacts): string {
   const refs = referenceNumbers(c, f.evidence.rows);
   const title = escapeHtml(stripEmphasisTags(c.title));
@@ -164,6 +205,10 @@ ${VIEW_CSS}
         <h1 class="cover-headline">${title}</h1>
     </section>
     <section class="ev-lede" data-section="lede"><p>${p(c.lede)}</p></section>
+    ${(c.recap ?? []).length ? `<section class="section" data-section="recap">
+        <h2 class="section-title">지난주 무엇이 있었나</h2>
+        <p class="ev-p">${p(c.recap ?? [])}</p>
+    </section>` : ""}
     <section class="section" data-section="chart">
         ${renderTwinChart(f)}
         <p class="ev-caption">${sentenceHtml(c.chartCaption, refs)}</p>
@@ -171,6 +216,8 @@ ${VIEW_CSS}
     <section class="section" data-section="body">
         ${c.body.map((b) => `<p class="ev-p">${p(b.sentences)}</p>`).join("\n        ")}
     </section>
+    ${renderView(c.view ?? [], f, refs)}
+    ${renderAgenda(f)}
     <section class="ev-check" data-section="reader-check">
         <div class="ev-check-title">내 계약에서 확인할 것</div>
         <p class="ev-p" style="margin:0">${p(c.readerCheck)}</p>
