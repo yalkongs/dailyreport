@@ -43,12 +43,14 @@ export interface ViewFacts {
   issue_date: string;
   evidence: {
     cutoff: string;
-    latest_period: string;
-    latest_label: string;
     rows: EvidenceRow[];
-    next_release: { title: string; date: string; time: string; label: string; source: string } | null;
+    parts: Record<string, { latest_label: string; next_release: { title: string; date: string; time: string; label: string; source: string } | null }>;
     chart: Record<string, { period: string; value: number }[]>;
   };
+  /** 차트 패널(지시서의 chart 계열 순서, 같은 단위·같은 눈금). */
+  chart_panels: { key: string; title: string; unit: string; points: { period: string; value: number }[] }[];
+  /** 꼬리말 출처(이번 호가 인용한 기관). */
+  sources_line: string;
   card_stats: { label: string; value: string; caption: string; tone: "up" | "down" | "flat" | "neutral" }[];
   cited: string[];
 }
