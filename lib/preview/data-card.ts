@@ -15,7 +15,8 @@ import { CARD_WIDTH, CARD_HEIGHT } from './card-size'
 
 export interface StripeSession { date: string; pct: number }          // date YYYY-MM-DD(KST 거래일)
 export interface MosaicTile { ticker: string; market: 'KR' | 'US'; category: string; pct: number; featured: boolean }
-export interface MarketCardInput { date: string; headline: string; line: string; sessions: StripeSession[] }
+// brandName: 카드 머리 줄 이름. 기본 'Daily Market', 주간 전망은 'Weekly Outlook'(lib/weekly/renderer.ts).
+export interface MarketCardInput { date: string; headline: string; line: string; sessions: StripeSession[]; brandName?: string }
 export interface EtfCardInput { date: string; headline: string; holdingLabel: string; line: string; tiles: MosaicTile[] }
 
 // 카드 크기는 import 없는 card-size.ts에 둔다(Next 페이지가 sharp 없이 og:image 크기를 쓰도록).
@@ -479,7 +480,7 @@ function wrapCard(body: string): string {
 export function renderMarketCardSvg(input: MarketCardInput): string {
   const rules = CARD_TEXT_RULES.market
   const stripes = renderStripesSvg(input.sessions, CARD_W, 560, { marker: true })
-  const head = renderBrandRow(620, 'Daily Market', cardDateLabel(input.date))
+  const head = renderBrandRow(620, input.brandName ?? 'Daily Market', cardDateLabel(input.date))
   const title = fitForRender('headline', input.headline, rules.title, 'title')
   const titleBlock = renderTextBlock('headline', title.lines, title.size, 752, 1.2, 'title', '#111827')
   const sub = fitForRender('line', input.line, rules.line, 'line')

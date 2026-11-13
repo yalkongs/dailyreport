@@ -1,0 +1,107 @@
+name: Weekly Outlook Telegram
+# iM AI Economist 주간 전망 텔레그램 발송.
+# 생성·렌더·커밋은 맥미니의 econo 파이프라인(~/dev/econo, PUBLISH_MODE=live일 때만)이 한다.
+# 이 workflow는 main에 주간 인덱스가 바뀌어 push되면, Vercel 배포가 끝나 공개 자산(본문·프리뷰 PNG)이
+# 실제로 열리는 것을 확인한 뒤 텔레그램으로 한 번 보낸다.
+# 중복 방지: 그 날짜 HTML을 처음 추가한 커밋에 commit status `telegram/weekly`를 기록한다.
+#   같은 호를 다시 렌더해 커밋해도(파일 수정) 추가 커밋은 같으므로 재발송하지 않는다.
+#   상태가 pending으로 남으면(결과 불명) 자동 재발송하지 않는다 — 구독 채널 확인 후 수동 처리.
+# 러너는 다른 workflow와 같이 ubuntu-24.04 고정.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data/weekly-reports-index.json'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '보낼 호 날짜 YYYY-MM-DD (비우면 인덱스의 최신 호)'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: weekly-telegram
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: send weekly
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          INPUT_DATE: ${{ inputs.date }}
+        run: |
+          set -euo pipefail
+          SITE="https://dailyreport-eta.vercel.app"
+          DATE="${INPUT_DATE:-}"
+          if [ -z "$DATE" ]; then
+            DATE=$(jq -r '.reports[0].date // empty' data/weekly-reports-index.json)
+          fi
+          if ! printf '%s' "$DATE" | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'; then
+            echo "보낼 주간 호가 없습니다(date='${DATE}')."; exit 0
+          fi
+          HTML="public/weekly-reports/${DATE}.html"
+          [ -f "$HTML" ] || { echo "::error::${HTML} 없음"; exit 1; }
+
+          ADD_SHA=$(git log --diff-filter=A --format=%H -1 -- "$HTML")
+          [ -n "$ADD_SHA" ] || { echo "::error::${HTML}을 추가한 커밋을 찾지 못했습니다"; exit 1; }
+          PREV=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${ADD_SHA}/statuses" \
+                   --jq '[.[] | select(.context=="telegram/weekly")][0].state // ""')
+          case "$PREV" in
+            success|pending) echo "이미 처리된 호(${DATE}, status=${PREV}) — 보내지 않습니다."; exit 0 ;;
+          esac  # failure·없음 → 발송 시도
+
+          HEADLINE=$(jq -r --arg d "$DATE" '.reports[] | select(.date==$d) | .headline' data/weekly-reports-index.json)
+          [ -n "$HEADLINE" ] || { echo "::error::인덱스에 ${DATE} 항목 없음"; exit 1; }
+          REPORT_URL="${SITE}/weekly-reports/${DATE}?utm_source=telegram"
+          PNG_URL="${SITE}/weekly-reports/${DATE}-preview.png"
+
+          # Vercel 배포·CDN 전파 대기: 프리뷰는 200 image/png, 본문은 200 이어야 한다(최대 약 10분).
+          OK=""
+          for i in $(seq 1 30); do
+            P=$(curl -sS -o /dev/null --max-time 10 -w '%{http_code} %{content_type}' "$PNG_URL" || true)
+            H=$(curl -sS -o /dev/null --max-time 10 -w '%{http_code}' "$REPORT_URL" || true)
+            echo "  [${i}/30] PNG: ${P} · 본문: ${H}"
+            case "$P" in "200 image/png"*) [ "$H" = "200" ] && { OK=1; break; } ;; esac
+            sleep 20
+          done
+          [ -n "$OK" ] || { echo "::error::공개 자산 확인 실패 — 보내지 않았습니다(status 미기록, 다시 실행하면 발송)."; exit 1; }
+
+          mark() {
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/statuses/${ADD_SHA}" \
+              -f state="$1" -f context="telegram/weekly" -f description="$2" >/dev/null
+          }
+          mark pending "Telegram 발송 시도 중 (${DATE})"
+
+          Y=${DATE:0:4}; M=$((10#${DATE:5:2})); D=$((10#${DATE:8:2}))
+          HEADLINE_HTML=$(printf '%s' "$HEADLINE" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+          MESSAGE=$(printf '<b>iM AI Economist 주간 전망</b>\n\n<b>%s</b>\n\n%s년 %s월 %s일\n\n<a href="%s">보고서 보기</a>' "$HEADLINE_HTML" "$Y" "$M" "$D" "$REPORT_URL")
+
+          RESPONSE=$(curl -s --max-time 30 -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto" \
+            --form-string "chat_id=${TELEGRAM_CHAT_ID}" \
+            --form-string "photo=${PNG_URL}" \
+            --form-string "caption=${MESSAGE}" \
+            --form-string "parse_mode=HTML" || true)
+          if [ "$(printf '%s' "$RESPONSE" | jq -r '.ok // false' 2>/dev/null)" = "true" ]; then
+            mark success "Telegram 발송 완료 (${DATE})"
+            echo "발송 완료: ${DATE}"
+          else
+            DESC=$(printf '%s' "$RESPONSE" | jq -r '.description // "응답 없음"' 2>/dev/null | cut -c1-120)
+            mark failure "Telegram 실패: ${DESC}"
+            echo "::error::Telegram 발송 실패 — ${DESC}"
+            exit 1
+          fi

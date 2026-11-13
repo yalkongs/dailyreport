@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import type { ReportsIndex } from "../../../lib/types";
+import type { WeeklyReportsIndex } from "../../../lib/weekly/types";
 
 interface EtfReportMeta {
   date: string;
@@ -31,6 +32,14 @@ function getEtfReports(): EtfReportsIndex {
   return JSON.parse(fs.readFileSync(indexPath, "utf-8"));
 }
 
+function getWeeklyReports(): WeeklyReportsIndex {
+  const indexPath = path.join(process.cwd(), "data", "weekly-reports-index.json");
+  if (!fs.existsSync(indexPath)) {
+    return { reports: [], lastUpdated: "" };
+  }
+  return JSON.parse(fs.readFileSync(indexPath, "utf-8"));
+}
+
 function formatDate(dateStr: string): string {
   const [year, month, day] = dateStr.split("-");
   const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
@@ -53,6 +62,7 @@ function groupByMonth<T extends { date: string }>(reports: T[]): Map<string, T[]
 export default function ArchivePage() {
   const marketIndex = getMarketReports();
   const etfIndex = getEtfReports();
+  const weeklyIndex = getWeeklyReports();
 
   const marketGrouped = groupByMonth(marketIndex.reports);
   const etfGrouped = groupByMonth(etfIndex.reports);
@@ -62,6 +72,42 @@ export default function ArchivePage() {
       <h1 className="text-xl font-bold mb-6 text-[var(--text)]">
         리포트 아카이브
       </h1>
+
+      {/* 주간 전망 섹션(iM AI Economist) — 발행된 호가 있을 때만 */}
+      {weeklyIndex.reports.length > 0 && (
+        <section id="weekly" className="mb-12">
+          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[var(--border)]">
+            <span className="text-base">🧭</span>
+            <h2 className="text-base font-semibold text-[var(--text)]">
+              주간 전망
+            </h2>
+            <span className="text-xs text-[var(--text-sub)] ml-1">
+              ({weeklyIndex.reports.length}건)
+            </span>
+          </div>
+          <div className="grid gap-2">
+            {weeklyIndex.reports.map((report) => (
+              <a
+                key={report.date}
+                href={`/weekly-reports/${report.date}`}
+                className="flex items-center justify-between bg-[var(--card)] rounded-xl px-4 py-3 border border-[var(--border)] hover:border-[var(--teal)] transition-colors"
+              >
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-medium text-[var(--text)]">
+                    {formatDate(report.date)}
+                  </span>
+                  <span className="text-xs text-[var(--text-sub)] truncate">
+                    {report.headline}
+                  </span>
+                </div>
+                <span className="text-xs text-[var(--teal)] font-medium shrink-0 ml-3">
+                  보기 →
+                </span>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 시장 리포트 섹션 */}
       <section className="mb-12">

@@ -60,7 +60,7 @@ test("생성 job은 텔레그램을 보내지 않고, deliver job이 market → 
 });
 
 test("모든 workflow는 ubuntu-24.04 고정", () => {
-  for (const f of ["daily-report.yml", "delivery-monitor.yml", "refresh-kr-macro.yml", "ci.yml"]) {
+  for (const f of ["daily-report.yml", "delivery-monitor.yml", "refresh-kr-macro.yml", "ci.yml", "weekly-telegram.yml"]) {
     const s = fs.readFileSync(path.join(WF_DIR, f), "utf8");
     assert.ok(!s.includes("ubuntu-latest"), f);
     assert.match(s, /runs-on: ubuntu-24\.04/, f);
@@ -172,8 +172,8 @@ interface Wf {
   jobs: Record<string, WfJob>;
 }
 
-test("네 workflow 모두 YAML로 파싱되고, 모든 job은 ubuntu-24.04", () => {
-  for (const f of ["daily-report.yml", "delivery-monitor.yml", "refresh-kr-macro.yml", "ci.yml"]) {
+test("모든 workflow가 YAML로 파싱되고, 모든 job은 ubuntu-24.04", () => {
+  for (const f of ["daily-report.yml", "delivery-monitor.yml", "refresh-kr-macro.yml", "ci.yml", "weekly-telegram.yml"]) {
     const wf = yaml.load(fs.readFileSync(path.join(WF_DIR, f), "utf8")) as Wf;
     const jobs = Object.entries(wf.jobs);
     assert.ok(jobs.length > 0, f);
@@ -441,7 +441,7 @@ const ciYml = fs.existsSync(ciPath) ? fs.readFileSync(ciPath, "utf8") : "";
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8")) as { scripts: Record<string, string> };
 
 test("package.json: npm test·typecheck가 한 명령으로 전체 테스트(카드 lib/preview 포함)·타입 검사를 돈다", () => {
-  assert.equal(pkg.scripts.test, "tsx --test lib/*.test.ts lib/etf/*.test.ts lib/preview/*.test.ts");
+  assert.equal(pkg.scripts.test, "tsx --test lib/*.test.ts lib/etf/*.test.ts lib/preview/*.test.ts lib/weekly/*.test.ts");
   // 테스트 파일이 있는 lib 하위 폴더는 모두 npm test(=CI)에 들어가야 한다 — 빠진 폴더는 CI가 영영 돌리지 않는다.
   const libDir = path.join(__dirname);
   const dirsWithTests = fs.readdirSync(libDir, { withFileTypes: true })
@@ -487,3 +487,16 @@ for (const [job, step] of [["market", "Generate market report"], ["etf", "Run ET
     assert.ok(s.indexOf("env:") >= 0 && s.indexOf("env:") < s.indexOf("HEADLINE_SELECTION:") && s.indexOf("HEADLINE_SELECTION:") < s.indexOf("run: |"), "env 블록 안(run 앞)에 있어야 함");
   });
 }
+
+// ── weekly-telegram.yml: 주간 전망 발송(iM AI Economist) ─────────────────────────────
+test("weekly-telegram: main의 주간 인덱스 push와 수동 실행에만 반응, 공개 자산 확인 후 발송, 중복 방지 status", () => {
+  const raw = fs.readFileSync(path.join(WF_DIR, "weekly-telegram.yml"), "utf8");
+  const wf = yaml.load(raw) as { on: { push?: { branches?: string[]; paths?: string[] }; workflow_dispatch?: unknown } };
+  assert.deepEqual(wf.on.push?.branches, ["main"]);
+  assert.deepEqual(wf.on.push?.paths, ["data/weekly-reports-index.json"]);
+  assert.ok(wf.on.workflow_dispatch);
+  assert.ok(raw.indexOf("200 image/png") < raw.indexOf("sendPhoto"), "자산 확인이 발송보다 먼저");
+  assert.ok(raw.indexOf("mark pending") < raw.indexOf("sendPhoto"), "pending 기록이 발송보다 먼저");
+  assert.match(raw, /context="telegram\/weekly"/);
+  assert.match(raw, /success\|pending\) echo "이미 처리된 호/);
+});
