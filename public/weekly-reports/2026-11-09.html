@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>코스피 11.7% 급락, 금리·유가 동반 하락 - iM AI Economist Weekly</title>
+<meta property="og:title" content="코스피 11.7% 급락, 금리·유가 동반 하락">
+<meta property="og:description" content="11월 2일(월)~11월 6일(금) 국내 주가가 10% 넘게 내리는 동안 국고채 금리와 유가는 내리고 원/달러 환율과 금값은 올랐습니다. 11월 10일(화) 미국 소비자물가와 11월 11일(수) 국내 고용동향이 금리와 환율의 방향을 가늠할 주요 일정입니다.">
+<meta property="og:site_name" content="iM뱅크">
+<meta property="og:type" content="article">
+<meta property="og:image" content="https://dailyreport-eta.vercel.app/weekly-reports/2026-11-09-preview.png">
+<meta property="og:image:width" content="1080">
+<meta property="og:image:height" content="1350">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="코스피 11.7% 급락, 금리·유가 동반 하락">
+<meta name="twitter:description" content="11월 2일(월)~11월 6일(금) 국내 주가가 10% 넘게 내리는 동안 국고채 금리와 유가는 내리고 원/달러 환율과 금값은 올랐습니다. 11월 10일(화) 미국 소비자물가와 11월 11일(수) 국내 고용동향이 금리와 환율의 방향을 가늠할 주요 일정입니다.">
+<meta name="twitter:image" content="https://dailyreport-eta.vercel.app/weekly-reports/2026-11-09-preview.png">
+<style>
+/* iM AI Market Report — Standardized Template CSS */
+/* 이 파일은 Claude가 생성한 HTML에 자동 주입됩니다. Claude의 인라인 <style>은 제거됩니다. */
+
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
+:root {
+  /* iM금융 CI 리프레시 (2026-07-01): 민트+라임. 레이아웃 무변경, 색만.
+     값은 ETF 렌더러(etf/renderer.ts)의 기존 iM 팔레트에 정확히 정렬 — 두 리포트 팔레트 통일.
+     --navy = 다크 잉크(제목·강조 텍스트·다크 배경), --teal = iM 민트(장식 액센트). */
+  --navy: #161B1D;        /* ETF --ink 정렬 — 제목/강조 텍스트, 캘린더 헤더 배경 */
+  --teal: #00BFA5;        /* ETF --im-teal — iM 민트, 밑줄/보더/채움 액센트 */
+  --mint-deep: #008F7F;   /* ETF --im-teal-deep — 헤더 그라데이션 끝·소형 액센트 텍스트 */
+  --lime: #84D96B;        /* ETF --im-mint — 라이트 그린 포인트 */
+  --slate: #8B9DAF;
+  --bg: #F5F7F3;          /* ETF --paper — 페이퍼 오프화이트 */
+  --card-bg: #FFFFFF;
+  --text: #1A2421;        /* ETF 본문 톤 near-black */
+  --text-sub: #5A6577;
+  --border: #E2E8F0;
+  --up: #D32F2F;          /* 상승 빨강 (한국식·기능색 유지) */
+  --down: #1565C0;        /* 하락 파랑 (유지) */
+  --up-bg: rgba(211, 47, 47, 0.06);
+  --down-bg: rgba(21, 101, 192, 0.06);
+}
+
+
+.report-embed * { margin: 0; padding: 0; box-sizing: border-box; }
+
+.report-embed {
+  font-family: 'Pretendard Variable', 'Pretendard', -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  font-size: 16px;
+  line-height: 1.8;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.report-container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ===== 1. MASTHEAD · 제목 · 세 줄 요약 ===== */
+/* 읽기 폭: .report-container 가 680px(좌우 20px 여백)이라 본문 칸은 640px. 스트라이프는 여백 없이 680px 전폭. */
+.masthead {
+  margin: 0 -20px 20px;
+  padding: 16px 20px 0;
+  border-top: 4px solid transparent;
+  border-image: linear-gradient(90deg, #00BFA5, #8BE08F) 1;
+}
+.mast-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding-bottom: 12px;
+}
+.mast-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.mast-logo { display: block; flex: none; }
+.mast-sep { flex: none; width: 2px; height: 28px; background: #D1D5DB; }
+.mast-titles { display: flex; flex-direction: column; line-height: 1.25; }
+.mast-label { font-size: 11px; font-weight: 600; color: var(--slate); letter-spacing: 0.02em; }
+.mast-name { font-size: 18px; font-weight: 700; color: #0B6E61; letter-spacing: -0.01em; }
+.mast-date { font-size: 13px; font-weight: 600; color: #6B7280; }
+.mast-stripes-svg { display: block; width: calc(100% + 40px); height: auto; margin: 0 -20px; }  /* 머리글 좌우 여백을 뚫고 680px 전폭 */
+.mast-caption {
+  font-size: 12px;
+  color: var(--text-sub);
+  line-height: 1.5;
+  margin: 2px 0 0;
+}
+
+.title-block { margin: 0 0 20px; }
+.cover-headline {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  color: #111827;
+  margin-bottom: 8px;
+  text-wrap: balance;
+}
+.cover-subline {
+  font-size: 15px;
+  color: var(--text-sub);
+  line-height: 1.6;
+}
+
+.summary-box {
+  background: #EEFAF7;
+  border: 1px solid #BFE9DF;
+  border-radius: 10px;
+  padding: 8px 16px;
+  margin-bottom: 36px;
+}
+.summary-list { list-style: none; }
+.summary-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 0;
+}
+.summary-row + .summary-row { border-top: 1px solid #D3EEE7; }
+.summary-label {
+  flex: none;
+  width: 66px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mint-deep);
+}
+.summary-text { font-size: 15px; line-height: 1.65; color: var(--text); min-width: 0; word-break: keep-all; overflow-wrap: break-word; }
+.summary-link { text-decoration: none; }
+.summary-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.summary-arrow { color: var(--mint-deep); font-weight: 700; }
+
+/* ===== 2. SECTION COMMON ===== */
+.section {
+  margin-bottom: 40px;
+}
+.section-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  position: relative;
+}
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--teal), var(--lime));
+  border-radius: 2px;
+}
+
+/* ===== 3. MARKET PULSE (히트맵) ===== */
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+/* 핵심 지표 6개 — 모바일에서도 3열 유지 */
+.key-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.pulse-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  transition: transform 0.15s;
+}
+.pulse-card:hover { transform: translateY(-1px); }
+.pulse-card .label {
+  font-size: 13px;
+  color: var(--slate);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+.pulse-card .value {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  text-align: right;
+}
+.pulse-card .change {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+  text-align: right;
+}
+.pulse-card .change.up { color: var(--up); }
+.pulse-card .change.down { color: var(--down); }
+.pulse-card .change.flat { color: var(--slate); }
+
+/* 히트맵 배경 강도 */
+.pulse-card.heat-up-1 { background: rgba(211,47,47,0.04); }
+.pulse-card.heat-up-2 { background: rgba(211,47,47,0.08); }
+.pulse-card.heat-up-3 { background: rgba(211,47,47,0.15); }
+.pulse-card.heat-up-4 { background: rgba(211,47,47,0.25); }
+.pulse-card.heat-up-5 { background: rgba(211,47,47,0.35); }
+.pulse-card.heat-down-1 { background: rgba(21,101,192,0.04); }
+.pulse-card.heat-down-2 { background: rgba(21,101,192,0.08); }
+.pulse-card.heat-down-3 { background: rgba(21,101,192,0.15); }
+.pulse-card.heat-down-4 { background: rgba(21,101,192,0.25); }
+.pulse-card.heat-down-5 { background: rgba(21,101,192,0.35); }
+
+/* ===== HISTORICAL CHART ===== */
+.chart-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  margin-top: 16px;
+}
+.chart-card .chart-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.chart-card svg { width: 100%; }
+
+/* ===== NARRATIVE ===== */
+.narrative { max-width: 640px; }
+.narrative p {
+  margin-bottom: 20px;
+  text-align: left;
+  word-break: keep-all;          /* 왼쪽 정렬에서 낱말 중간이 끊기지 않게(한국어는 띄어쓰기에서만 줄바꿈) */
+  overflow-wrap: break-word;
+}
+.narrative strong {
+  color: var(--navy);
+  font-weight: 700;
+}
+
+.pull-quote {
+  border-left: 4px solid var(--teal);
+  padding: 20px 24px;
+  margin: 32px 0;
+  background: rgba(0,191,165,0.05);
+  border-radius: 0 12px 12px 0;
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.data-card {
+  background: var(--card-bg);
+  border: 1px solid rgba(10,61,51,0.14);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin: 28px 0;
+}
+.data-card .data-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 12px;
+}
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.data-row:last-child { border-bottom: none; }
+.data-row .data-label { color: var(--text-sub); }
+.data-row .data-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== WATCH POINTS (관찰 포인트) ===== */
+.watch-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 12px;
+}
+.watch-card .watch-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(0,191,165,0.12);
+  color: var(--mint-deep);
+  margin-bottom: 8px;
+}
+.watch-card .watch-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.watch-card .watch-desc {
+  font-size: 14px;
+  color: var(--text-sub);
+  line-height: 1.7;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* ===== SO WHAT ===== */
+.sowhat-card {
+  background: var(--card-bg);
+  border: 1px solid rgba(0,191,165,0.18);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 12px;
+}
+.sowhat-card:first-child {
+  border-left: 4px solid var(--teal);
+  background: rgba(0,191,165,0.04);
+}
+.sowhat-card .sowhat-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 8px;
+}
+.sowhat-card p {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* ===== 펼쳐 보기 (details) ===== */
+.more {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 40px;
+}
+.more-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--navy);
+}
+.more-summary::-webkit-details-marker { display: none; }
+.more-summary::after {
+  content: "펼치기";
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mint-deep);
+}
+.more[open] > .more-summary { border-bottom: 1px solid var(--border); }
+.more[open] > .more-summary::after { content: "접기"; }
+.more-body { padding: 4px 16px 18px; }
+.more-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+  margin: 18px 0 10px;
+}
+
+/* ===== CALENDAR TABLE ===== */
+.calendar-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.calendar-table th {
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--navy);
+  color: #FFFFFF;
+  font-weight: 600;
+  font-size: 13px;
+}
+.calendar-table th:first-child { border-radius: 10px 0 0 0; }
+.calendar-table th:last-child { border-radius: 0 10px 0 0; }
+.calendar-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.calendar-table tr:nth-child(even) td {
+  background: rgba(10,61,51,0.025);
+}
+.calendar-table .stars { color: #F59E0B; }
+
+/* ===== FOOTER ===== */
+.source-note {
+  font-size: 12px;
+  color: var(--slate);
+  margin: 0 0 8px;
+}
+.data-basis { margin: 0 0 8px; }
+.data-basis .source-note { margin: 0; line-height: 1.6; word-break: keep-all; overflow-wrap: break-word; }
+.data-basis strong { font-weight: 700; color: var(--text-sub); }
+.source-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.source-list a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.source-meta { color: var(--slate); font-size: 12px; }
+.pulse-note {
+  font-size: 11px;
+  color: var(--slate);
+  margin: 10px 0 0;
+  line-height: 1.5;
+}
+.report-footer {
+  text-align: center;
+  padding: 40px 0 32px;
+  border-top: 2px solid var(--navy);
+  margin-top: 48px;
+}
+.report-footer .closing {
+  font-size: 16px;
+  color: var(--text);
+  margin-bottom: 20px;
+  line-height: 1.7;
+}
+.report-footer .legal-notice {
+  text-align: left;
+  border: 1px solid var(--slate);
+  border-radius: 6px;
+  padding: 16px 18px;
+  margin: 0;
+}
+.report-footer .legal-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--navy);
+  letter-spacing: 0.2px;
+  margin-bottom: 8px;
+}
+.report-footer .legal-list {
+  margin: 0;
+  padding-left: 16px;
+  list-style: disc;
+}
+.report-footer .legal-list li {
+  font-size: 11px;
+  color: var(--slate);
+  line-height: 1.65;
+  margin-bottom: 5px;
+  word-break: keep-all;
+}
+.report-footer .legal-list li:last-child { margin-bottom: 0; }
+.report-footer .copyright {
+  font-size: 11px;
+  color: var(--slate);
+  opacity: 0.7;
+  margin-bottom: 12px;
+}
+
+/* ===== DIVIDER ===== */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--slate), transparent);
+  margin: 40px 0;
+  border: none;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 640px) {
+  .cover-headline { font-size: 22px; }
+  .summary-label { width: 62px; }
+  .market-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .key-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .pulse-card {
+    padding: 10px;
+    overflow: hidden;
+  }
+  .pulse-card .label {
+    font-size: 11px;
+    margin-bottom: 2px;
+  }
+  .pulse-card .value {
+    font-size: 16px;
+  }
+  .pulse-card .change {
+    font-size: 11px;
+  }
+  .pulse-card svg {
+    width: 56px;
+    height: 22px;
+  }
+  .pull-quote {
+    margin-left: -20px;
+    margin-right: -20px;
+    border-radius: 0;
+    padding: 20px;
+  }
+  .section { margin-bottom: 32px; }
+  .more-body { padding: 4px 12px 16px; }
+}
+
+
+.report-embed .wk-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 4px; }
+.report-embed .wk-table th { text-align: left; font-weight: 600; color: var(--slate); font-size: 12px; padding: 6px 4px; border-bottom: 1px solid var(--border, #E5E7EB); }
+.report-embed .wk-table td { padding: 8px 4px; border-bottom: 1px solid #F1F5F9; vertical-align: top; word-break: keep-all; }
+.report-embed .wk-table td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.report-embed .wk-sub { font-size: 12px; color: #6B7280; }
+.report-embed .wk-fan { display: block; width: 100%; height: auto; margin: 12px 0 4px; }
+.report-embed .wk-note { font-size: 13px; line-height: 1.6; color: #6B7280; margin-top: 10px; word-break: keep-all; }
+.report-embed .wk-h3 { font-size: 15px; font-weight: 700; margin: 22px 0 8px; color: var(--text); }
+.report-embed .wk-risk-row { font-size: 14px; line-height: 1.6; margin-top: 6px; word-break: keep-all; }
+.report-embed .wk-risk-label { display: inline-block; font-size: 12px; font-weight: 700; color: #0B6E61; margin-right: 6px; }
+
+</style>
+</head>
+<body>
+<div class="report-embed">
+<div class="report-container">
+    <header class="masthead" data-section="masthead">
+        <div class="mast-top">
+            <div class="mast-brand">
+                <svg class="mast-logo" role="img" aria-label="iM뱅크" viewBox="65 231 871 564" width="52.5" height="34"><image href="/im-bank-logo.png" width="1000" height="1000"/></svg>
+                <span class="mast-sep" aria-hidden="true"></span>
+                <span class="mast-titles"><span class="mast-label">iM AI Economist</span><span class="mast-name">Weekly Outlook</span></span>
+            </div>
+            <div class="mast-date">2026년 11월 9일 월요일</div>
+        </div>
+    </header>
+
+    <section class="title-block" data-section="title">
+        <h1 class="cover-headline">코스피 11.7% 급락, 금리·유가 동반 하락</h1>
+        <p class="cover-subline">지난주 코스피와 코스닥이 각각 11.7%, 11.1% 내렸습니다. 같은 기간 국고채 금리와 브렌트유도 크게 내렸고, 원/달러 환율과 금값은 올랐습니다.</p>
+    </section>
+
+    <section class="summary-box" data-section="summary" aria-label="세 줄 요약">
+        <ul class="summary-list">
+            <li class="summary-row"><span class="summary-label">지난주</span><span class="summary-text">11월 2일(월)~11월 6일(금) 국내 주가가 10% 넘게 내리는 동안 국고채 금리와 유가는 내리고 원/달러 환율과 금값은 올랐습니다.</span></li>
+            <li class="summary-row"><span class="summary-label">이번 주</span><span class="summary-text">11월 10일(화) 미국 소비자물가와 11월 11일(수) 국내 고용동향이 금리와 환율의 방향을 가늠할 주요 일정입니다.</span></li>
+            <li class="summary-row"><span class="summary-label">전망</span><span class="summary-text">모형 전망으로는 국내 소비자물가 상승률이 2026년 11월에 중앙값 2.8%(68% 구간 2.4~3.2%)로, 지금과 비슷한 수준이 이어질 것으로 보입니다.</span></li>
+        </ul>
+    </section>
+
+    <section class="section" data-section="last-week">
+        <h2 class="section-title">지난주 시장 (11월 2일(월)~11월 6일(금))</h2>
+        <div class="key-grid">
+                <div class="pulse-card heat-down-5">
+                    <div class="label">코스피</div>
+                    <div class="value">5,059.69</div>
+                    <div class="change down">-11.7%</div>
+                </div>
+                <div class="pulse-card heat-down-5">
+                    <div class="label">코스닥</div>
+                    <div class="value">644.27</div>
+                    <div class="change down">-11.1%</div>
+                </div>
+                <div class="pulse-card heat-down-3">
+                    <div class="label">S&amp;P 500</div>
+                    <div class="value">7,376.86</div>
+                    <div class="change down">-2.7%</div>
+                </div>
+                <div class="pulse-card heat-down-4">
+                    <div class="label">나스닥</div>
+                    <div class="value">24,579.43</div>
+                    <div class="change down">-3.4%</div>
+                </div>
+                <div class="pulse-card heat-up-2">
+                    <div class="label">원/달러 환율</div>
+                    <div class="value">1,356.3원</div>
+                    <div class="change up">+1.4%</div>
+                </div>
+                <div class="pulse-card heat-up-1">
+                    <div class="label">달러인덱스</div>
+                    <div class="value">102.30</div>
+                    <div class="change up">+0.4%</div>
+                </div>
+                <div class="pulse-card heat-down-2">
+                    <div class="label">미국 국채 10년</div>
+                    <div class="value">4.86%</div>
+                    <div class="change down">-7bp</div>
+                </div>
+                <div class="pulse-card heat-down-5">
+                    <div class="label">브렌트유</div>
+                    <div class="value">98.32달러</div>
+                    <div class="change down">-16.4%</div>
+                </div>
+                <div class="pulse-card heat-up-4">
+                    <div class="label">금</div>
+                    <div class="value">4,074.9달러</div>
+                    <div class="change up">+4.5%</div>
+                </div>
+                <div class="pulse-card heat-down-2">
+                    <div class="label">국고채 3년</div>
+                    <div class="value">3.61%</div>
+                    <div class="change down">-10bp</div>
+                </div>
+                <div class="pulse-card heat-down-3">
+                    <div class="label">국고채 10년</div>
+                    <div class="value">3.85%</div>
+                    <div class="change down">-15bp</div>
+                </div>
+        </div>
+        <p class="wk-note">종가 기준, 직전 주 마지막 거래일 대비. 금리는 bp(0.01%p) 단위 변화입니다.</p>
+        <div class="narrative">
+                <p>지난주 국내 주식시장은 크게 내렸습니다. 코스피는 11.7% 하락한 5,059.69, 코스닥은 11.1% 하락한 644.27로 한 주를 마쳤습니다. 미국 시장도 내렸지만 폭은 작았습니다. S&amp;P 500은 2.7% 내린 7,376.86, 나스닥은 3.4% 내린 24,579.43이었습니다. 국내 주가의 낙폭이 미국보다 훨씬 컸다는 점이 이번 주의 특징입니다.</p>
+                <p>주가가 내리는 동안 채권 금리도 함께 내렸습니다. 국고채 3년 금리는 10bp 내린 3.61%, 국고채 10년 금리는 15bp 내린 3.85%였습니다. bp(베이시스포인트)는 금리 변화를 재는 단위로, 1bp는 0.01%p입니다. 미국 국채 10년 금리도 7bp 내린 4.86%였습니다. 같은 기간 금값은 4.5% 오른 4,074.9달러였습니다. 주가가 내리고 국채 금리가 내리며 금값이 오르는 조합은, 시장이 위험을 줄이는 쪽으로 움직일 때 흔히 나타나는 모습과 닮았습니다.</p>
+                <p>원자재와 환율은 엇갈렸습니다. 브렌트유는 16.4% 내린 98.32달러로 큰 폭 하락했습니다. 반면 원/달러 환율은 1.4% 오른 1,356.3원, 달러인덱스(주요 통화 대비 달러 가치)는 0.4% 오른 102.30이었습니다. 달러 강세보다 원화 약세 폭이 더 컸습니다. 유가 하락은 물가 부담을 덜어 주는 방향이지만, 원화 약세는 수입 가격을 높이는 방향이어서 두 흐름이 서로 일부를 상쇄하는 구도입니다.</p>
+                <p>최근 발표된 지표를 보면 국내 경기는 생산과 수출 쪽에서 힘이 붙었습니다. 2026년 3분기 실질 GDP 성장률(전기비)은 1.0%로 2분기 0.6%보다 높았고, 2026년 9월 산업생산 증가율은 5.0%로 8월 3.1%에서 올라갔습니다. 2026년 10월 수출금액지수 증가율은 107.6%였습니다. 다만 앞으로의 경기를 미리 보여 주는 선행지수 순환변동치는 2026년 9월 104.1로 8월 104.2에서 소폭 내렸습니다. 물가는 2026년 10월 소비자물가 상승률(전년동월비, 1년 전 같은 달과 비교한 변화율)이 2.8%로 9월 2.9%보다 낮아졌습니다. 한국은행 기준금리는 3.00%로 그대로였습니다. 반면 미국은 2026년 10월 소비자물가 상승률이 3.9%로 9월 3.7%보다 높아졌고, 정책금리(실효, 월평균)도 3.88%로 9월 3.75%보다 올랐습니다.</p>
+        </div>
+    </section>
+
+    <section class="section" data-section="macro">
+        <h2 class="section-title">최근 경제지표</h2>
+        <table class="wk-table">
+            <thead><tr><th>지표</th><th style="text-align:right">최근</th><th style="text-align:right">직전</th></tr></thead>
+            <tbody>
+                <tr><td>소비자물가 상승률(전년동월비)<div class="wk-sub">2026년 10월</div></td>
+                    <td class="num"><strong>2.8%</strong></td>
+                    <td class="num">2.9%<div class="wk-sub">2026년 9월</div></td></tr>
+                <tr><td>산업생산 증가율(전년동월비)<div class="wk-sub">2026년 9월</div></td>
+                    <td class="num"><strong>5.0%</strong></td>
+                    <td class="num">3.1%<div class="wk-sub">2026년 8월</div></td></tr>
+                <tr><td>수출금액지수 증가율(전년동월비)<div class="wk-sub">2026년 10월</div></td>
+                    <td class="num"><strong>107.6%</strong></td>
+                    <td class="num">89.4%<div class="wk-sub">2026년 9월</div></td></tr>
+                <tr><td>선행지수 순환변동치<div class="wk-sub">2026년 9월</div></td>
+                    <td class="num"><strong>104.1</strong></td>
+                    <td class="num">104.2<div class="wk-sub">2026년 8월</div></td></tr>
+                <tr><td>한국은행 기준금리<div class="wk-sub">2026년 10월</div></td>
+                    <td class="num"><strong>3.00%</strong></td>
+                    <td class="num">3.00%<div class="wk-sub">2026년 9월</div></td></tr>
+                <tr><td>미국 정책금리(실효, 월평균)<div class="wk-sub">2026년 10월</div></td>
+                    <td class="num"><strong>3.88%</strong></td>
+                    <td class="num">3.75%<div class="wk-sub">2026년 9월</div></td></tr>
+                <tr><td>미국 소비자물가 상승률(전년동월비)<div class="wk-sub">2026년 10월</div></td>
+                    <td class="num"><strong>3.9%</strong></td>
+                    <td class="num">3.7%<div class="wk-sub">2026년 9월</div></td></tr>
+                <tr><td>실질 GDP 성장률(전기비, 계절조정)<div class="wk-sub">2026년 3분기</div></td>
+                    <td class="num"><strong>1.0%</strong></td>
+                    <td class="num">0.6%<div class="wk-sub">2026년 2분기</div></td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="section" data-section="this-week">
+        <h2 class="section-title">이번 주 볼 것 (11월 9일(월)~11월 13일(금))</h2>
+            <div class="watch-card">
+                <div class="watch-badge">11월 10일(화) 22:30</div>
+                <div class="watch-title">미국 소비자물가(CPI)</div>
+                <div class="watch-desc">한국시간 22:30 발표입니다. 최근 확인된 미국 물가 상승률은 2026년 10월 3.9%로 9월 3.7%보다 높아졌는데, 이번 발표가 이 오름세를 이어가는지에 따라 지난주 내린 미국과 한국의 금리 흐름이 달라질 수 있습니다.</div>
+            </div>
+            <div class="watch-card">
+                <div class="watch-badge">11월 11일(수) 08:00</div>
+                <div class="watch-title">국내 고용동향(2026년 10월)</div>
+                <div class="watch-desc">한국시간 08:00 발표입니다. 생산과 GDP 지표는 개선됐지만 선행지수는 소폭 내렸는데, 고용이 어느 쪽 흐름에 가까운지 확인해 볼 만합니다.</div>
+            </div>
+            <div class="watch-card">
+                <div class="watch-badge">11월 13일(금) 06:00</div>
+                <div class="watch-title">국내 수출입물가지수(2026년 10월)</div>
+                <div class="watch-desc">한국시간 06:00 발표입니다. 수입물가는 소비자물가에 앞서 움직이는 경향이 있어, 유가 하락과 원화 약세 가운데 어느 쪽이 더 크게 반영됐는지 살펴볼 수 있습니다.</div>
+            </div>
+            <div class="watch-card">
+                <div class="watch-badge">11월 13일(금) 06:00</div>
+                <div class="watch-title">미국 생산자물가(PPI)</div>
+                <div class="watch-desc">한국시간 22:30 발표입니다. 기업이 받는 가격 흐름을 보여 주는 지표로, 11월 10일(화) 소비자물가와 같은 방향인지 함께 비교해 보면 미국 물가의 흐름을 더 분명히 읽을 수 있습니다.</div>
+            </div>
+    </section>
+    <details class="more" data-section="calendar">
+        <summary class="more-summary">이번 주 전체 일정</summary>
+        <div class="more-body">
+        <table class="wk-table">
+            <thead><tr><th>날짜(한국시간)</th><th>국가</th><th>일정</th></tr></thead>
+            <tbody>
+                <tr><td>11월 10일(화)<div class="wk-sub">22:30</div></td><td>미국</td><td>미국 소비자물가(CPI)</td></tr>
+                <tr><td>11월 11일(수)<div class="wk-sub">08:00</div></td><td>한국</td><td>고용동향 발표 — 2026년 10월</td></tr>
+                <tr><td>11월 12일(목)</td><td>한국</td><td>KOSPI200 선물·옵션 11월 월물 만기일</td></tr>
+                <tr><td>11월 13일(금)<div class="wk-sub">06:00</div></td><td>한국</td><td>한국은행 2026년 10월 수출입물가지수 및 무역지수(잠정) 발표</td></tr>
+                <tr><td>11월 13일(금)<div class="wk-sub">12:00</div></td><td>한국</td><td>한국은행 2026년 9월 통화 및 유동성 발표</td></tr>
+                <tr><td>11월 13일(금)<div class="wk-sub">22:30</div></td><td>미국</td><td>미국 생산자물가(PPI)</td></tr>
+            </tbody>
+        </table>
+        </div>
+    </details>
+
+    <section class="section" data-section="outlook">
+        <h2 class="section-title">AI Economist 전망</h2>
+        <div class="narrative">
+            <p>iM뱅크 AI Economist의 모형 전망으로 국내 소비자물가 상승률은 2026년 11월 중앙값 2.8%(68% 구간 2.4~3.2%), 2026년 12월 2.8%(68% 구간 2.2~3.4%), 2027년 1월 2.8%(68% 구간 2.0~3.5%)입니다. 68% 구간은 모형상 실제 값이 들어갈 가능성이 68%인 범위로, 먼 달일수록 구간이 넓어집니다. 이 모형은 과거 검증에서 직전 값을 그대로 쓰는 단순 예측보다 평균 오차가 10% 작았습니다.</p></div>
+        <h3 class="wk-h3">소비자물가 상승률(전년동월비)</h3>
+        <svg class="wk-fan" viewBox="0 0 680 250" role="img" aria-label="소비자물가 상승률(전년동월비) 실적과 모형 전망(중앙값, 68%·90% 구간)">
+<line x1="44" x2="664" y1="191.0" y2="191.0" stroke="#EEF2F7"/><text x="38" y="195.0" text-anchor="end" font-size="11" fill="#9CA3AF">1.7</text><line x1="44" x2="664" y1="141.0" y2="141.0" stroke="#EEF2F7"/><text x="38" y="145.0" text-anchor="end" font-size="11" fill="#9CA3AF">2.4</text><line x1="44" x2="664" y1="91.0" y2="91.0" stroke="#EEF2F7"/><text x="38" y="95.0" text-anchor="end" font-size="11" fill="#9CA3AF">3.1</text><line x1="44" x2="664" y1="41.0" y2="41.0" stroke="#EEF2F7"/><text x="38" y="45.0" text-anchor="end" font-size="11" fill="#9CA3AF">3.9</text>
+<polygon points="531.1,113.8 575.4,71.1 619.7,49.9 664.0,35.4 664.0,196.6 619.7,183.4 575.4,158.6" fill="#00BFA5" fill-opacity="0.12"/>
+<polygon points="531.1,113.8 575.4,88.3 619.7,76.4 664.0,66.6 664.0,168.7 619.7,156.6 575.4,141.2" fill="#00BFA5" fill-opacity="0.25"/>
+<path d="M44.0,139.8 L88.3,149.1 L132.6,170.7 L176.9,171.2 L221.1,160.0 L265.4,131.3 L309.7,91.4 L354.0,89.7 L398.3,115.9 L442.6,94.8 L486.9,109.6 L531.1,113.8" fill="none" stroke="#111827" stroke-width="2.2"/>
+<path d="M531.1,113.8 L575.4,114.2 L619.7,115.7 L664.0,116.2" fill="none" stroke="#0B6E61" stroke-width="2.2" stroke-dasharray="6 4"/>
+<line x1="531.1" x2="531.1" y1="16" y2="216" stroke="#D1D5DB" stroke-dasharray="2 3"/>
+<text x="44.0" y="238" text-anchor="middle" font-size="11" fill="#6B7280">25.11</text><text x="176.9" y="238" text-anchor="middle" font-size="11" fill="#6B7280">26.02</text><text x="309.7" y="238" text-anchor="middle" font-size="11" fill="#6B7280">26.05</text><text x="442.6" y="238" text-anchor="middle" font-size="11" fill="#6B7280">26.08</text><text x="575.4" y="238" text-anchor="middle" font-size="11" fill="#6B7280">26.11</text><text x="664.0" y="238" text-anchor="middle" font-size="11" fill="#6B7280">27.01</text>
+</svg>
+        <p class="wk-note">검은 선: 실적(최근 2026년 10월 2.8%) · 초록 점선: 모형 전망 중앙값 · 음영: 68%·90% 구간</p>
+        <table class="wk-table">
+            <thead><tr><th>시점</th><th style="text-align:right">중앙값</th><th style="text-align:right">68% 구간</th><th style="text-align:right">90% 구간</th></tr></thead>
+            <tbody>
+                <tr><td>2026년 11월</td><td class="num"><strong>2.8%</strong></td><td class="num">2.4~3.2%</td><td class="num">2.2~3.4%</td></tr>
+                <tr><td>2026년 12월</td><td class="num"><strong>2.8%</strong></td><td class="num">2.2~3.4%</td><td class="num">1.8~3.7%</td></tr>
+                <tr><td>2027년 1월</td><td class="num"><strong>2.8%</strong></td><td class="num">2.0~3.5%</td><td class="num">1.6~3.9%</td></tr>
+            </tbody>
+        </table>
+        <h3 class="wk-h3">시나리오: 유가 ±20%</h3>
+        <div class="narrative">
+            <p>유가가 기준 경로보다 20% 높거나 낮은 상태가 6개월 이어진다고 가정한 시나리오에서, 2027년 5월 소비자물가 상승률은 유가 +20%일 때 +0.3%p, 유가 -20%일 때 -0.3%p 달라지는 것으로 나왔습니다. 지난주 브렌트유가 16.4% 내린 만큼, 이 하락이 이어진다면 물가를 낮추는 방향으로 작용할 수 있다는 점을 참고할 만합니다.</p></div>
+        <h3 class="wk-h3">미국 정책금리 0.25%p 인상의 과거 평균적 파급</h3>
+        <div class="narrative">
+            <p>과거 평균적 관계에 따르면 미국 정책금리 0.25%p 인상 뒤 6개월 시점에 국고채 3년 금리는 중앙값 +12bp(68% 구간 7~19bp), 한국은행 기준금리는 중앙값 +26bp(68% 구간 22~31bp) 움직였습니다. 이는 과거 평균에서 나온 관계일 뿐, 이번에도 같은 결과가 나온다는 뜻은 아닙니다.</p></div>
+        <table class="wk-table">
+            <thead><tr><th>변수</th><th style="text-align:right">중앙값</th><th style="text-align:right">68% 구간</th></tr></thead>
+            <tbody>
+                <tr><td>국고채 3년 금리<div class="wk-sub">6개월 뒤</div></td><td class="num"><strong>+12bp</strong></td><td class="num">7~19bp</td></tr>
+                <tr><td>한국은행 기준금리<div class="wk-sub">6개월 뒤</div></td><td class="num"><strong>+26bp</strong></td><td class="num">22~31bp</td></tr>
+            </tbody>
+        </table>
+        <p class="wk-note">모형 전망은 과거 데이터의 관계를 바탕으로 하므로 예상치 못한 사건은 반영하지 못합니다. 산업생산 증가율, 국고채 3년 금리(월평균), 원/달러 환율(월평균)은 과거 검증에서 단순 예측(직전 값 유지)보다 정확하지 않아 전망치를 싣지 않았습니다. 미국 금리 충격의 파급에서 원/달러 환율은 추정된 반응의 방향이 경제적 예상과 반대이거나 불확실해(타당성 점검 탈락) 결과를 싣지 않았습니다.</p>
+    </section>
+
+    <section class="section" data-section="risks">
+        <h2 class="section-title">이번 주 리스크 점검</h2>
+            <div class="sowhat-card">
+                <div class="sowhat-title">미국 물가 오름세가 이어지는 경우</div>
+                <p class="wk-risk-row"><span class="wk-risk-label">확인되면</span>11월 10일(화) 미국 소비자물가가 2026년 10월 3.9%보다 더 높게 나온다면, 지난주 내렸던 미국과 한국의 국채 금리가 다시 오를 수 있는지 살펴볼 필요가 있습니다. 대출 금리를 생각하고 계시다면 금리 흐름을 한 번 더 확인해 볼 만합니다.</p>
+                <p class="wk-risk-row"><span class="wk-risk-label">어긋나면</span>물가 오름세가 멈춘다면 지난주 이어진 금리 하락 흐름이 유지되는지, 원/달러 환율이 안정되는지를 함께 확인해 볼 만합니다.</p>
+            </div>
+            <div class="sowhat-card">
+                <div class="sowhat-title">유가 하락이 이어지는 경우</div>
+                <p class="wk-risk-row"><span class="wk-risk-label">확인되면</span>브렌트유 약세가 이어진다면, 모형 시나리오상 유가 하락은 국내 소비자물가를 낮추는 방향이어서 물가가 모형 전망 구간의 아래쪽에 가까워질 수 있습니다.</p>
+                <p class="wk-risk-row"><span class="wk-risk-label">어긋나면</span>유가가 다시 오른다면 물가 부담이 커지는 쪽으로 바뀔 수 있어, 11월 13일(금) 수출입물가지수에서 수입물가 흐름을 확인해 볼 만합니다.</p>
+            </div>
+            <div class="sowhat-card">
+                <div class="sowhat-title">원화 약세가 이어지는 경우</div>
+                <p class="wk-risk-row"><span class="wk-risk-label">확인되면</span>원/달러 환율이 1,356.3원보다 더 오른다면 유가 하락에 따른 수입물가 하락 효과가 줄어들 수 있습니다.</p>
+                <p class="wk-risk-row"><span class="wk-risk-label">어긋나면</span>원화가 안정된다면 유가 하락이 물가 부담을 덜어 주는 효과가 더 분명하게 나타날 수 있습니다.</p>
+            </div>
+    </section>
+
+    <section class="data-basis" data-section="method">
+        <p class="source-note"><strong>작성 방법</strong> 시장 수치는 각 시장의 종가, 경제지표는 공식 발표값입니다. 전망은 2004년 이후 국내외 월간 지표로 추정한 베이지안 벡터자기회귀(BVAR) 모형의 결과이며, 과거 검증에서 단순 예측보다 정확했던 지표만 싣습니다. 문장은 AI가 이 수치들만 인용해 작성했습니다. 데이터는 2026-11-13 11:57(UTC)에 수집했습니다.</p>
+    </section>
+
+    <footer class="report-footer" data-section="footer">
+        <div class="closing">이번 주에는 하루하루의 등락보다 미국과 한국의 물가 숫자가 지난주 금리 흐름을 이어 줄지를 차분히 확인해 보시기 바랍니다.</div>
+        <div class="copyright">© iM뱅크 | Powered by iM AI Economist | 데이터 출처: 한국은행 ECOS, FRED, Yahoo Finance, 미 연준</div>
+        <div class="legal-notice">
+            <div class="legal-title">투자 유의사항 및 법적 고지</div>
+            <ul class="legal-list">
+            <li>본 자료는 정보제공을 목적으로 작성되었으며, 「자본시장과 금융투자업에 관한 법률」에 따른 투자권유·투자자문 또는 특정 금융투자상품의 매매를 유인하기 위한 자료가 아닙니다.</li>
+            <li>본 자료는 「금융소비자 보호에 관한 법률」상 금융상품의 계약체결을 권유할 목적으로 제공되지 않으며, 개별 고객의 투자성향·투자목적·재산상황을 반영한 적합성·적정성 판단이나 설명의무 이행을 대체하지 않습니다.</li>
+            <li>본 자료는 AI가 자동 생성한 것으로 오류나 누락이 있을 수 있습니다. 신뢰할 수 있다고 판단되는 자료와 정보에 근거했으나 그 정확성·완전성을 보장하지 않으며, 내용은 사전 통지 없이 변경될 수 있습니다.</li>
+            <li>금융투자상품은 원금 손실이 발생할 수 있고 그 손실은 투자자 본인에게 귀속되며, 예금자보호법에 따른 보호를 받지 않습니다.</li>
+            <li>과거의 수익률이나 성과는 미래의 수익을 보장하지 않습니다.</li>
+            <li>투자 전 (간이)투자설명서와 상품설명서를 반드시 확인하시고, 상품별 보수·수수료·세금 등 비용을 함께 검토하시기 바랍니다.</li>
+            <li>최종 투자 판단과 그 결과에 대한 책임은 투자자 본인에게 있으며, 본 자료를 이용하여 발생한 결과에 대해 법적 책임을 지지 않습니다.</li>
+            </ul>
+        </div>
+    </footer>
+</div>
+</div>
+</body>
+</html>
