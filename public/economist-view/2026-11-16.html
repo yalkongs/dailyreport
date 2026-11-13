@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>예금금리가 올랐다는데 내 통장엔 언제 반영될까? - iM뱅크 Economist View</title>
+<meta property="og:title" content="예금금리가 올랐다는데 내 통장엔 언제 반영될까?">
+<meta property="og:description" content="고정금리로 맡긴 기존 정기예금은 약정 기간 중 금리가 바뀌지 않습니다. 그래서 최근의 예금금리 상승은 통상 만기 후 재예치하거나 새로 맡기는 시점에 내 통장에 반영됩니다. 2026년 9월중 예금은행의 신규취급액 기준 저축성수신금리는 3.45%로 전월보다 0.24%p 올랐습니다. 같은 시점인 2026년 9월말 잔액 기준 총">
+<meta property="og:site_name" content="iM뱅크">
+<meta property="og:type" content="article">
+<meta property="og:image" content="https://dailyreport-eta.vercel.app/economist-view/2026-11-16-preview.png">
+<meta property="og:image:width" content="1080">
+<meta property="og:image:height" content="1350">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+/* iM AI Market Report — Standardized Template CSS */
+/* 이 파일은 Claude가 생성한 HTML에 자동 주입됩니다. Claude의 인라인 <style>은 제거됩니다. */
+
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
+:root {
+  /* iM금융 CI 리프레시 (2026-07-01): 민트+라임. 레이아웃 무변경, 색만.
+     값은 ETF 렌더러(etf/renderer.ts)의 기존 iM 팔레트에 정확히 정렬 — 두 리포트 팔레트 통일.
+     --navy = 다크 잉크(제목·강조 텍스트·다크 배경), --teal = iM 민트(장식 액센트). */
+  --navy: #161B1D;        /* ETF --ink 정렬 — 제목/강조 텍스트, 캘린더 헤더 배경 */
+  --teal: #00BFA5;        /* ETF --im-teal — iM 민트, 밑줄/보더/채움 액센트 */
+  --mint-deep: #008F7F;   /* ETF --im-teal-deep — 헤더 그라데이션 끝·소형 액센트 텍스트 */
+  --lime: #84D96B;        /* ETF --im-mint — 라이트 그린 포인트 */
+  --slate: #8B9DAF;
+  --bg: #F5F7F3;          /* ETF --paper — 페이퍼 오프화이트 */
+  --card-bg: #FFFFFF;
+  --text: #1A2421;        /* ETF 본문 톤 near-black */
+  --text-sub: #5A6577;
+  --border: #E2E8F0;
+  --up: #D32F2F;          /* 상승 빨강 (한국식·기능색 유지) */
+  --down: #1565C0;        /* 하락 파랑 (유지) */
+  --up-bg: rgba(211, 47, 47, 0.06);
+  --down-bg: rgba(21, 101, 192, 0.06);
+}
+
+
+.report-embed * { margin: 0; padding: 0; box-sizing: border-box; }
+
+.report-embed {
+  font-family: 'Pretendard Variable', 'Pretendard', -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  font-size: 16px;
+  line-height: 1.8;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.report-container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ===== 1. MASTHEAD · 제목 · 세 줄 요약 ===== */
+/* 읽기 폭: .report-container 가 680px(좌우 20px 여백)이라 본문 칸은 640px. 스트라이프는 여백 없이 680px 전폭. */
+.masthead {
+  margin: 0 -20px 20px;
+  padding: 16px 20px 0;
+  border-top: 4px solid transparent;
+  border-image: linear-gradient(90deg, #00BFA5, #8BE08F) 1;
+}
+.mast-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding-bottom: 12px;
+}
+.mast-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.mast-logo { display: block; flex: none; }
+.mast-sep { flex: none; width: 2px; height: 28px; background: #D1D5DB; }
+.mast-titles { display: flex; flex-direction: column; line-height: 1.25; }
+.mast-label { font-size: 11px; font-weight: 600; color: var(--slate); letter-spacing: 0.02em; }
+.mast-name { font-size: 18px; font-weight: 700; color: #0B6E61; letter-spacing: -0.01em; }
+.mast-date { font-size: 13px; font-weight: 600; color: #6B7280; }
+.mast-stripes-svg { display: block; width: calc(100% + 40px); height: auto; margin: 0 -20px; }  /* 머리글 좌우 여백을 뚫고 680px 전폭 */
+.mast-caption {
+  font-size: 12px;
+  color: var(--text-sub);
+  line-height: 1.5;
+  margin: 2px 0 0;
+}
+
+.title-block { margin: 0 0 20px; }
+.cover-headline {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  color: #111827;
+  margin-bottom: 8px;
+  text-wrap: balance;
+}
+.cover-subline {
+  font-size: 15px;
+  color: var(--text-sub);
+  line-height: 1.6;
+}
+
+.summary-box {
+  background: #EEFAF7;
+  border: 1px solid #BFE9DF;
+  border-radius: 10px;
+  padding: 8px 16px;
+  margin-bottom: 36px;
+}
+.summary-list { list-style: none; }
+.summary-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 0;
+}
+.summary-row + .summary-row { border-top: 1px solid #D3EEE7; }
+.summary-label {
+  flex: none;
+  width: 66px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mint-deep);
+}
+.summary-text { font-size: 15px; line-height: 1.65; color: var(--text); min-width: 0; word-break: keep-all; overflow-wrap: break-word; }
+.summary-link { text-decoration: none; }
+.summary-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.summary-arrow { color: var(--mint-deep); font-weight: 700; }
+
+/* ===== 2. SECTION COMMON ===== */
+.section {
+  margin-bottom: 40px;
+}
+.section-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  position: relative;
+}
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--teal), var(--lime));
+  border-radius: 2px;
+}
+
+/* ===== 3. MARKET PULSE (히트맵) ===== */
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+/* 핵심 지표 6개 — 모바일에서도 3열 유지 */
+.key-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.pulse-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  transition: transform 0.15s;
+}
+.pulse-card:hover { transform: translateY(-1px); }
+.pulse-card .label {
+  font-size: 13px;
+  color: var(--slate);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+.pulse-card .value {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  text-align: right;
+}
+.pulse-card .change {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+  text-align: right;
+}
+.pulse-card .change.up { color: var(--up); }
+.pulse-card .change.down { color: var(--down); }
+.pulse-card .change.flat { color: var(--slate); }
+
+/* 히트맵 배경 강도 */
+.pulse-card.heat-up-1 { background: rgba(211,47,47,0.04); }
+.pulse-card.heat-up-2 { background: rgba(211,47,47,0.08); }
+.pulse-card.heat-up-3 { background: rgba(211,47,47,0.15); }
+.pulse-card.heat-up-4 { background: rgba(211,47,47,0.25); }
+.pulse-card.heat-up-5 { background: rgba(211,47,47,0.35); }
+.pulse-card.heat-down-1 { background: rgba(21,101,192,0.04); }
+.pulse-card.heat-down-2 { background: rgba(21,101,192,0.08); }
+.pulse-card.heat-down-3 { background: rgba(21,101,192,0.15); }
+.pulse-card.heat-down-4 { background: rgba(21,101,192,0.25); }
+.pulse-card.heat-down-5 { background: rgba(21,101,192,0.35); }
+
+/* ===== HISTORICAL CHART ===== */
+.chart-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  margin-top: 16px;
+}
+.chart-card .chart-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.chart-card svg { width: 100%; }
+
+/* ===== NARRATIVE ===== */
+.narrative { max-width: 640px; }
+.narrative p {
+  margin-bottom: 20px;
+  text-align: left;
+  word-break: keep-all;          /* 왼쪽 정렬에서 낱말 중간이 끊기지 않게(한국어는 띄어쓰기에서만 줄바꿈) */
+  overflow-wrap: break-word;
+}
+.narrative strong {
+  color: var(--navy);
+  font-weight: 700;
+}
+
+.pull-quote {
+  border-left: 4px solid var(--teal);
+  padding: 20px 24px;
+  margin: 32px 0;
+  background: rgba(0,191,165,0.05);
+  border-radius: 0 12px 12px 0;
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.data-card {
+  background: var(--card-bg);
+  border: 1px solid rgba(10,61,51,0.14);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin: 28px 0;
+}
+.data-card .data-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 12px;
+}
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.data-row:last-child { border-bottom: none; }
+.data-row .data-label { color: var(--text-sub); }
+.data-row .data-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== WATCH POINTS (관찰 포인트) ===== */
+.watch-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 12px;
+}
+.watch-card .watch-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(0,191,165,0.12);
+  color: var(--mint-deep);
+  margin-bottom: 8px;
+}
+.watch-card .watch-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.watch-card .watch-desc {
+  font-size: 14px;
+  color: var(--text-sub);
+  line-height: 1.7;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* ===== SO WHAT ===== */
+.sowhat-card {
+  background: var(--card-bg);
+  border: 1px solid rgba(0,191,165,0.18);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 12px;
+}
+.sowhat-card:first-child {
+  border-left: 4px solid var(--teal);
+  background: rgba(0,191,165,0.04);
+}
+.sowhat-card .sowhat-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 8px;
+}
+.sowhat-card p {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* ===== 펼쳐 보기 (details) ===== */
+.more {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 40px;
+}
+.more-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--navy);
+}
+.more-summary::-webkit-details-marker { display: none; }
+.more-summary::after {
+  content: "펼치기";
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mint-deep);
+}
+.more[open] > .more-summary { border-bottom: 1px solid var(--border); }
+.more[open] > .more-summary::after { content: "접기"; }
+.more-body { padding: 4px 16px 18px; }
+.more-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+  margin: 18px 0 10px;
+}
+
+/* ===== CALENDAR TABLE ===== */
+.calendar-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.calendar-table th {
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--navy);
+  color: #FFFFFF;
+  font-weight: 600;
+  font-size: 13px;
+}
+.calendar-table th:first-child { border-radius: 10px 0 0 0; }
+.calendar-table th:last-child { border-radius: 0 10px 0 0; }
+.calendar-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.calendar-table tr:nth-child(even) td {
+  background: rgba(10,61,51,0.025);
+}
+.calendar-table .stars { color: #F59E0B; }
+
+/* ===== FOOTER ===== */
+.source-note {
+  font-size: 12px;
+  color: var(--slate);
+  margin: 0 0 8px;
+}
+.data-basis { margin: 0 0 8px; }
+.data-basis .source-note { margin: 0; line-height: 1.6; word-break: keep-all; overflow-wrap: break-word; }
+.data-basis strong { font-weight: 700; color: var(--text-sub); }
+.source-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.source-list a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.source-meta { color: var(--slate); font-size: 12px; }
+.pulse-note {
+  font-size: 11px;
+  color: var(--slate);
+  margin: 10px 0 0;
+  line-height: 1.5;
+}
+.report-footer {
+  text-align: center;
+  padding: 40px 0 32px;
+  border-top: 2px solid var(--navy);
+  margin-top: 48px;
+}
+.report-footer .closing {
+  font-size: 16px;
+  color: var(--text);
+  margin-bottom: 20px;
+  line-height: 1.7;
+}
+.report-footer .legal-notice {
+  text-align: left;
+  border: 1px solid var(--slate);
+  border-radius: 6px;
+  padding: 16px 18px;
+  margin: 0;
+}
+.report-footer .legal-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--navy);
+  letter-spacing: 0.2px;
+  margin-bottom: 8px;
+}
+.report-footer .legal-list {
+  margin: 0;
+  padding-left: 16px;
+  list-style: disc;
+}
+.report-footer .legal-list li {
+  font-size: 11px;
+  color: var(--slate);
+  line-height: 1.65;
+  margin-bottom: 5px;
+  word-break: keep-all;
+}
+.report-footer .legal-list li:last-child { margin-bottom: 0; }
+.report-footer .copyright {
+  font-size: 11px;
+  color: var(--slate);
+  opacity: 0.7;
+  margin-bottom: 12px;
+}
+
+/* ===== DIVIDER ===== */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--slate), transparent);
+  margin: 40px 0;
+  border: none;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 640px) {
+  .cover-headline { font-size: 22px; }
+  .summary-label { width: 62px; }
+  .market-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .key-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .pulse-card {
+    padding: 10px;
+    overflow: hidden;
+  }
+  .pulse-card .label {
+    font-size: 11px;
+    margin-bottom: 2px;
+  }
+  .pulse-card .value {
+    font-size: 16px;
+  }
+  .pulse-card .change {
+    font-size: 11px;
+  }
+  .pulse-card svg {
+    width: 56px;
+    height: 22px;
+  }
+  .pull-quote {
+    margin-left: -20px;
+    margin-right: -20px;
+    border-radius: 0;
+    padding: 20px;
+  }
+  .section { margin-bottom: 32px; }
+  .more-body { padding: 4px 12px 16px; }
+}
+
+
+.report-embed .ev-lede { font-size: 17px; line-height: 1.75; color: var(--text); margin: 4px 0 18px; word-break: keep-all; }
+.report-embed .ev-lede p + p { margin-top: 8px; }
+.report-embed .ev-p { font-size: 15.5px; line-height: 1.8; margin: 0 0 14px; word-break: keep-all; }
+.report-embed .ev-ref { font-size: 11px; vertical-align: super; margin-left: 2px; color: #0B6E61; text-decoration: none; font-weight: 700; }
+.report-embed .ev-chart { display: block; width: 100%; height: auto; margin: 8px 0 4px; }
+.report-embed .ev-caption { font-size: 13px; line-height: 1.6; color: #4B5563; margin-bottom: 4px; word-break: keep-all; }
+.report-embed .ev-check { background: #F0FAF7; border: 1px solid #CDEDE4; border-radius: 14px; padding: 14px 16px; margin: 18px 0; }
+.report-embed .ev-check-title { font-size: 13px; font-weight: 700; color: #0B6E61; margin-bottom: 6px; }
+.report-embed .ev-next { font-size: 14px; line-height: 1.6; margin: 10px 0 0; color: var(--text); }
+.report-embed .ev-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.report-embed .ev-table th, .report-embed .ev-table td { border-bottom: 1px solid #EEF2F7; padding: 6px 4px; text-align: left; vertical-align: top; word-break: keep-all; }
+.report-embed .ev-table td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.report-embed .ev-draft { display: inline-block; font-size: 11px; font-weight: 700; color: #B45309; border: 1px solid #F5C99A; border-radius: 6px; padding: 0 6px; margin-left: 6px; }
+
+</style>
+</head>
+<body>
+<div class="report-embed">
+<div class="report-container">
+    <header class="masthead" data-section="masthead">
+        <div class="mast-top">
+            <div class="mast-brand">
+                <svg class="mast-logo" role="img" aria-label="iM뱅크" viewBox="65 231 871 564" width="52.5" height="34"><image href="/im-bank-logo.png" width="1000" height="1000"/></svg>
+                <span class="mast-sep" aria-hidden="true"></span>
+                <span class="mast-titles"><span class="mast-label">iM뱅크 경제 리포트</span><span class="mast-name">Economist View</span></span>
+            </div>
+            <div class="mast-date">2026년 11월 16일 월요일</div>
+        </div>
+    </header>
+    <section class="title-block" data-section="title">
+        <h1 class="cover-headline">예금금리가 올랐다는데 내 통장엔 언제 반영될까?</h1>
+    </section>
+    <section class="ev-lede" data-section="lede"><p>고정금리로 맡긴 기존 정기예금은 약정 기간 중 금리가 바뀌지 않습니다. 그래서 최근의 예금금리 상승은 <strong>통상 만기 후 재예치하거나 새로 맡기는 시점</strong>에 내 통장에 반영됩니다.<a class="ev-ref" href="#evidence">[1]</a> 2026년 9월중 예금은행의 신규취급액 기준 저축성수신금리는 3.45%로 전월보다 0.24%p 올랐습니다. 같은 시점인 2026년 9월말 잔액 기준 총수신금리는 2.27%로 전월말보다 0.07%p 올랐습니다.<a class="ev-ref" href="#evidence">[2,3,4,5]</a></p></section>
+    <section class="section" data-section="chart">
+        <svg class="ev-chart" viewBox="0 0 680 230" role="img" aria-label="신규취급액 기준 저축성수신금리와 잔액 기준 총수신금리(같은 눈금, 연 %)"><text x="34" y="204.0" text-anchor="end" font-size="11" fill="#9CA3AF">2.0</text><text x="34" y="147.3" text-anchor="end" font-size="11" fill="#9CA3AF">2.5</text><text x="34" y="90.7" text-anchor="end" font-size="11" fill="#9CA3AF">3.0</text><text x="34" y="34.0" text-anchor="end" font-size="11" fill="#9CA3AF">3.5</text><line x1="40.0" x2="342.0" y1="200.0" y2="200.0" stroke="#EEF2F7"/><line x1="40.0" x2="342.0" y1="143.3" y2="143.3" stroke="#EEF2F7"/><line x1="40.0" x2="342.0" y1="86.7" y2="86.7" stroke="#EEF2F7"/><line x1="40.0" x2="342.0" y1="30.0" y2="30.0" stroke="#EEF2F7"/><text x="40.0" y="16" font-size="12" font-weight="700" fill="#111827">신규취급액 기준 저축성수신금리</text><path d="M40.0,141.1 L65.2,135.4 L90.3,108.2 L115.5,98.0 L140.7,110.5 L165.8,105.9 L191.0,107.1 L216.2,95.7 L241.3,94.6 L266.5,77.6 L291.7,62.9 L316.8,62.9 L342.0,35.7" fill="none" stroke="#0B6E61" stroke-width="2.4"/><circle cx="342.0" cy="35.7" r="3.5" fill="#0B6E61"/><text x="40.0" y="220" text-anchor="start" font-size="11" fill="#6B7280">25.09</text><text x="342.0" y="220" text-anchor="end" font-size="11" fill="#6B7280">26.09</text><line x1="366.0" x2="668.0" y1="200.0" y2="200.0" stroke="#EEF2F7"/><line x1="366.0" x2="668.0" y1="143.3" y2="143.3" stroke="#EEF2F7"/><line x1="366.0" x2="668.0" y1="86.7" y2="86.7" stroke="#EEF2F7"/><line x1="366.0" x2="668.0" y1="30.0" y2="30.0" stroke="#EEF2F7"/><text x="366.0" y="16" font-size="12" font-weight="700" fill="#111827">잔액 기준 총수신금리</text><path d="M366.0,195.5 L391.2,196.6 L416.3,197.7 L441.5,200.0 L466.7,198.9 L491.8,198.9 L517.0,200.0 L542.2,197.7 L567.3,196.6 L592.5,192.1 L617.7,183.0 L642.8,177.3 L668.0,169.4" fill="none" stroke="#1D4ED8" stroke-width="2.4"/><circle cx="668.0" cy="169.4" r="3.5" fill="#1D4ED8"/><text x="366.0" y="220" text-anchor="start" font-size="11" fill="#6B7280">25.09</text><text x="668.0" y="220" text-anchor="end" font-size="11" fill="#6B7280">26.09</text></svg>
+        <p class="ev-caption">차트는 최근 12개월 동안 예금은행의 신규취급액 기준 저축성수신금리(그달 새로 거래한 자금)와 잔액 기준 총수신금리(기존 계약을 포함한 전체 잔액)를 같은 눈금으로 보여 주며, 마지막 관측은 각각 2026년 9월중과 2026년 9월말입니다.<a class="ev-ref" href="#evidence">[2,4]</a></p>
+    </section>
+    <section class="section" data-section="body">
+        <p class="ev-p">한국은행 기준금리는 2026년 8월 27일 2.75%에서 3.00%로 0.25%p 인상됐고, 2026년 11월 13일 현재 3.00%입니다.<a class="ev-ref" href="#evidence">[6]</a> 예금은행의 신규취급액 기준 저축성수신금리는 2025년 9월중 2.52%에서 2026년 9월중 3.45%로 높아졌습니다.<a class="ev-ref" href="#evidence">[2,7]</a> 같은 기간 예금은행의 잔액 기준 총수신금리는 2025년 9월말 2.04%에서 2026년 9월말 2.27%로 움직였습니다.<a class="ev-ref" href="#evidence">[4,8]</a></p>
+        <p class="ev-p">두 통계는 모두 금융기관이 취급한 상품의 금리를 금액비중으로 가중평균한 값입니다. 다만 평균을 내는 대상이 다릅니다.<a class="ev-ref" href="#evidence">[9]</a> <strong>신규취급액 기준</strong>은 그달 새로 거래한 자금의 금리만 모읍니다. 그래서 시장금리 변화가 일반적으로 비교적 빨리 나타납니다.<a class="ev-ref" href="#evidence">[9]</a> <strong>잔액 기준</strong>은 과거에 약정한 계약까지 포함한 전체 잔액의 금리입니다. 고정금리 예금은 약정 기간 중 금리가 변하지 않으므로, 만기가 돌아와 새 금리로 바뀌는 계약이 쌓여야 통상 천천히 따라 움직입니다.<a class="ev-ref" href="#evidence">[1,9]</a> 또 두 통계는 대상 범위가 '저축성수신'과 '총수신'으로 서로 다릅니다. 따라서 두 수치의 수준을 같은 잣대로 비교하지 않는 것이 좋습니다.<a class="ev-ref" href="#evidence">[2,4]</a></p>
+        <p class="ev-p">고정금리로 약정한 정기예금이라면 약정 기간 중에는 시장금리가 오르더라도 적용 금리가 변동하지 않습니다.<a class="ev-ref" href="#evidence">[1]</a> 만기나 재예치 시점까지 신규취급액 기준 금리의 오름세가 이어진다면, 그때 새로 적용받는 금리도 그 흐름을 따를 가능성이 있습니다. 그 사이 시장금리가 방향을 바꾼다면 이 판단도 달라질 수 있습니다.<a class="ev-ref" href="#evidence">[1,2]</a> 신규취급액 기준 금리는 여러 상품을 금액으로 가중한 평균입니다. 따라서 개인이 실제로 적용받는 금리는 기간과 조건에 따라 이와 다를 수 있습니다.<a class="ev-ref" href="#evidence">[9]</a></p>
+    </section>
+    <section class="ev-check" data-section="reader-check">
+        <div class="ev-check-title">내 계약에서 확인할 것</div>
+        <p class="ev-p" style="margin:0">내 예금의 금리가 약정 기간 동안 고정되는지, 만기일이 언제인지 계약 조건에서 확인해 보세요. 만기 후 자동 재예치가 되는지, 된다면 그때 어떤 기준의 금리가 적용되는지도 함께 살펴보세요.<a class="ev-ref" href="#evidence">[1]</a></p>
+    </section>
+    <section data-section="next">
+        <p class="ev-next">11월 25일 12:00 발표되는 2026년 10월 금융기관 가중평균금리에서는 신규취급액 기준 저축성수신금리의 흐름과, 잔액 기준 총수신금리가 이를 따라 움직이는 속도를 다시 확인하겠습니다.</p>
+        <p class="wk-note">다음 발표: 2026년 10월 금융기관 가중평균금리 · 11월 25일 12:00 (한국은행 통계 공표 일정)</p>
+    </section>
+    
+    <details class="more" id="evidence" data-section="evidence">
+        <summary class="more-summary">근거표</summary>
+        <div class="more-body">
+        <table class="ev-table"><thead><tr><th>#</th><th>항목</th><th style="text-align:right">값</th><th>출처</th></tr></thead><tbody><tr><td>[1]</td><td>용어 정의: 고정금리</td><td class="num">“고정금리는 예금을 하거나 대출을 받을 때 약정 기간 중 금리를 일정 수준으로 고정, 시장금리가 오르거나 내리더라도 적용 금리가 변동하지 않음”</td><td><a href="https://ecos.bok.or.kr/#/SearchStat" target="_blank" rel="noopener noreferrer">한국은행 ECOS 통계용어</a></td></tr><tr><td>[2]</td><td>예금은행 저축성수신금리(신규취급액 기준) · 2026년 9월중</td><td class="num">3.45%</td><td><a href="https://ecos.bok.or.kr/#/SearchStat" target="_blank" rel="noopener noreferrer">한국은행</a><div class="wk-sub">공표 10월 29일 12:00</div></td></tr><tr><td>[3]</td><td>예금은행 저축성수신금리(신규취급액 기준) · 2026년 9월중 <span class="wk-sub">(당월 − 전월(공표 소수 둘째 자리 기준))</span></td><td class="num">+0.24%p</td><td>한국은행(파생)<div class="wk-sub">공표 10월 29일 12:00</div></td></tr><tr><td>[4]</td><td>예금은행 총수신금리(잔액 기준) · 2026년 9월말</td><td class="num">2.27%</td><td><a href="https://ecos.bok.or.kr/#/SearchStat" target="_blank" rel="noopener noreferrer">한국은행</a><div class="wk-sub">공표 10월 29일 12:00</div></td></tr><tr><td>[5]</td><td>예금은행 총수신금리(잔액 기준) · 2026년 9월말 <span class="wk-sub">(당월 − 전월(공표 소수 둘째 자리 기준))</span></td><td class="num">+0.07%p</td><td>한국은행(파생)<div class="wk-sub">공표 10월 29일 12:00</div></td></tr><tr><td>[6]</td><td>한국은행 기준금리 · 2026년 11월 13일 현재</td><td class="num">3.00%</td><td><a href="https://ecos.bok.or.kr/#/SearchStat" target="_blank" rel="noopener noreferrer">한국은행</a><div class="wk-sub">공표 일별</div></td></tr><tr><td>[7]</td><td>예금은행 저축성수신금리(신규취급액 기준) · 2025년 9월중</td><td class="num">2.52%</td><td><a href="https://ecos.bok.or.kr/#/SearchStat" target="_blank" rel="noopener noreferrer">한국은행</a></td></tr><tr><td>[8]</td><td>예금은행 총수신금리(잔액 기준) · 2025년 9월말</td><td class="num">2.04%</td><td><a href="https://ecos.bok.or.kr/#/SearchStat" target="_blank" rel="noopener noreferrer">한국은행</a></td></tr><tr><td>[9]</td><td>용어 정의: 금융기관 가중평균금리</td><td class="num">“한국은행이 1996년부터 매월 편제하여 발표하는 통계치로, 금융기관에서 취급하는 금융상품의 금리를 금액비중으로 가중치를 두어 평균한 금리”</td><td><a href="https://ecos.bok.or.kr/#/SearchStat" target="_blank" rel="noopener noreferrer">한국은행 ECOS 통계용어</a></td></tr></tbody></table>
+        </div>
+    </details>
+    <footer class="report-footer" data-section="footer">
+        <div class="copyright">© iM뱅크 | Economist View | 자료: 한국은행 ECOS·보도자료·통계 공표 일정 | 발행 기준 2026-11-16 06:00</div>
+        <div class="legal-notice" data-draft="true">
+            <div class="legal-title">유의사항<span class="ev-draft">초안</span></div>
+            <ul class="legal-list">
+            <li>본 자료는 경제 통계에 대한 정보 제공을 목적으로 작성되었으며, 특정 금융상품의 가입이나 해지를 권유하기 위한 자료가 아닙니다.</li>
+            <li>본 자료의 금리 통계는 한국은행 등 작성기관이 공표한 예금은행 전체의 가중평균 값으로, iM뱅크를 포함한 개별 은행·상품의 금리와 다를 수 있습니다.</li>
+            <li>개별 상품의 금리, 만기 후 처리, 중도해지 조건 등은 해당 상품설명서와 약관을 확인하시기 바랍니다.</li>
+            <li>본 자료는 공표 통계를 바탕으로 AI가 초안을 작성하고 책임편집자가 검토하였습니다. 오류가 확인되면 같은 주소에 정정 사유와 시각을 함께 게시합니다.</li>
+            </ul>
+        </div>
+    </footer>
+</div>
+</div>
+</body>
+</html>
