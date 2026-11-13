@@ -7,7 +7,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { stripEmphasisTags } from "../html-entities";
 import { LEGAL_DISCLAIMER_ITEMS, LEGAL_DISCLAIMER_TITLE } from "../legal-disclaimer";
-import { renderMarketCardSvg, renderStripesSvg, saveCardPng } from "../preview/data-card";
+import { renderWeeklyCardSvg, saveCardPng } from "../preview/data-card";
 import { CARD_HEIGHT, CARD_WIDTH } from "../preview/card-size";
 import { escapeHtml } from "../etf/renderer";
 import { sanitizeInlineHtml } from "../report-renderer";
@@ -79,12 +79,8 @@ ${WEEKLY_CSS}
 </head>`;
 }
 
+/** 머리글 — 일간 리포트의 스트라이프 없이 로고·이름·날짜만(주간은 글자 중심). */
 function renderMasthead(f: WeeklyFacts): string {
-  const stripes = f.stripes.length === 0 ? "" : `
-        <div class="mast-stripes">
-            <svg class="mast-stripes-svg" viewBox="0 0 680 140" role="img" aria-label="최근 20주 코스피 주간 등락을 색으로 나타낸 띠">${renderStripesSvg(f.stripes, 680, 120, { marker: true })}</svg>
-            <p class="mast-caption">최근 20주 코스피 주간 등락(색이 짙을수록 큰 움직임)</p>
-        </div>`;
   return `<body>
 <div class="report-embed">
 <div class="report-container">
@@ -96,7 +92,7 @@ function renderMasthead(f: WeeklyFacts): string {
                 <span class="mast-titles"><span class="mast-label">iM AI Economist</span><span class="mast-name">Weekly Outlook</span></span>
             </div>
             <div class="mast-date">${escapeHtml(dateLong(f.issue_date))}</div>
-        </div>${stripes}
+        </div>
     </header>`;
 }
 
@@ -327,12 +323,11 @@ export function renderWeeklyReport(c: WeeklyContent, f: WeeklyFacts): string {
 }
 
 export function weeklyCardSvg(c: WeeklyContent, f: WeeklyFacts): string {
-  return renderMarketCardSvg({
+  return renderWeeklyCardSvg({
     date: f.issue_date,
     headline: stripEmphasisTags(c.headline),
     line: stripEmphasisTags(c.cardLine),
-    sessions: f.stripes,
-    brandName: "Weekly Outlook",
+    stats: f.card_stats,
   });
 }
 

@@ -10,7 +10,7 @@ const facts: WeeklyFacts = {
   review_week: { start: "2026-11-02", end: "2026-11-06", label: "11월 2일(월)~11월 6일(금)" },
   outlook_week: { start: "2026-11-09", end: "2026-11-13", label: "11월 9일(월)~11월 13일(금)" },
   market: [{ key: "kospi", name: "코스피", kind: "pct", change: -11.7, close_display: "5,059.69", change_display: "-11.7%", close_date: "2026-11-06", direction: "down" }],
-  stripes: [{ date: "2026-10-30", pct: 3.2 }, { date: "2026-11-06", pct: -11.7 }],
+  card_stats: [{ label: "코스피", value: "-11.7%", caption: "지난주", tone: "down" }, { label: "원/달러", value: "+1.4%", caption: "지난주", tone: "up" }, { label: "소비자물가", value: "2.8%", caption: "11월 전망", tone: "neutral" }],
   macro: [{ key: "kr_cpi_yoy", name: "소비자물가 상승률", period_label: "2026년 10월", value_display: "2.8%", prev_period_label: "2026년 9월", prev_display: "2.9%", change_display: "-0.1%p" }],
   model: {
     published: [{
@@ -50,8 +50,16 @@ test("팬 차트: 전망이 없으면 빈 문자열, 있으면 svg", () => {
   assert.match(renderFanChart(facts.model.published[0]), /^<svg class="wk-fan"/);
 });
 
-test("카드: 머리 줄 이름이 Weekly Outlook", () => {
-  assert.match(weeklyCardSvg(content, facts), /Weekly Outlook/);
+test("카드: 글자 중심 — Weekly Outlook 머리 줄, 핵심 숫자 3칸, 스트라이프 없음", () => {
+  const svg = weeklyCardSvg(content, facts);
+  assert.match(svg, /Weekly Outlook/);
+  assert.equal((svg.match(/data-role="stat"/g) ?? []).length, 3);
+  assert.ok(svg.includes("-11.7%") && svg.includes("11월 전망"));
+  assert.ok(!svg.includes("data-pct"), "스트라이프 띠가 없어야 한다");
+});
+
+test("머리글에 스트라이프가 없다", () => {
+  assert.ok(!renderWeeklyReport(content, facts).includes(`class="mast-stripes"`));
 });
 
 test("준법 검사: 권유 명령형을 잡는다", () => {

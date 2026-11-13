@@ -76,7 +76,7 @@ export interface WeeklyFacts {
   review_week: { start: string; end: string; label: string };
   outlook_week: { start: string; end: string; label: string };
   market: WeeklyMarketRow[];
-  stripes: { date: string; pct: number }[];
+  card_stats: { label: string; value: string; caption: string; tone: "up" | "down" | "flat" | "neutral" }[];
   macro: WeeklyMacroRow[];
   model: {
     published: WeeklyPublishedTarget[];
