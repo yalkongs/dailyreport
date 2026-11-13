@@ -8,7 +8,7 @@ import * as path from "path";
 import { stripEmphasisTags } from "../html-entities";
 import { escapeHtml } from "../etf/renderer";
 import { sanitizeInlineHtml } from "../report-renderer";
-import { renderWeeklyCardSvg, saveCardPng } from "../preview/data-card";
+import { renderTextCardSvg, saveCardPng } from "../preview/data-card";
 import { CARD_HEIGHT, CARD_WIDTH } from "../preview/card-size";
 import type { EvidenceRow, ViewContent, ViewFacts, ViewSentence } from "./types";
 
@@ -50,17 +50,23 @@ function dateLong(date: string): string {
   return `${y}년 ${m}월 ${d}일 ${DAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]}요일`;
 }
 
-/** 인용 순서대로 근거 번호(1부터). 수치·발췌 행만 번호를 단다(meta·next_release 제외). */
+/**
+ * 인용 순서대로 근거 번호(1부터). 각주는 관측 사실(fact) 문장에만 단다 — 해석·조건부 전망에 정의 발췌를 각주로 달면
+ * 정의가 그 해석을 뒷받침하는 것처럼 보인다(검증기는 해석 문장의 논리를 확인하지 않는다). meta·next_release는 번호 없음.
+ */
 export function referenceNumbers(c: ViewContent, rows: EvidenceRow[]): Map<string, number> {
   const known = new Set(rows.map((r) => r.id));
   const nums = new Map<string, number>();
   const all = [...c.lede, ...c.body.flatMap((b) => b.sentences), c.chartCaption, ...c.readerCheck, c.closing];
-  for (const s of all) for (const e of s.evidence) if (known.has(e) && !nums.has(e)) nums.set(e, nums.size + 1);
+  for (const s of all) {
+    if (s.type !== "fact") continue;
+    for (const e of s.evidence) if (known.has(e) && !nums.has(e)) nums.set(e, nums.size + 1);
+  }
   return nums;
 }
 
 function sentenceHtml(s: ViewSentence, refs: Map<string, number>): string {
-  const marks = s.evidence.filter((e) => refs.has(e)).map((e) => refs.get(e)!);
+  const marks = s.type !== "fact" ? [] : s.evidence.filter((e) => refs.has(e)).map((e) => refs.get(e)!);
   const uniq = Array.from(new Set(marks)).sort((a, b) => a - b);
   const sup = uniq.length ? `<a class="ev-ref" href="#evidence">[${uniq.join(",")}]</a>` : "";
   return `${sanitizeInlineHtml(s.text)}${sup}`;
@@ -190,7 +196,7 @@ ${VIEW_CSS}
 }
 
 export function viewCardSvg(c: ViewContent, f: ViewFacts): string {
-  return renderWeeklyCardSvg({
+  return renderTextCardSvg({
     date: f.issue_date, headline: stripEmphasisTags(c.title), line: stripEmphasisTags(c.cardLine), stats: f.card_stats,
     brandName: "Economist View", kicker: "iM뱅크 경제 리포트",
   });

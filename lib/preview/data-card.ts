@@ -16,11 +16,11 @@ import { CARD_WIDTH, CARD_HEIGHT } from './card-size'
 export interface StripeSession { date: string; pct: number }          // date YYYY-MM-DD(KST 거래일)
 export interface MosaicTile { ticker: string; market: 'KR' | 'US'; category: string; pct: number; featured: boolean }
 export interface MarketCardInput { date: string; headline: string; line: string; sessions: StripeSession[] }
-// 주간 전망(Weekly Outlook) 카드: 그림 없이 제목·한 줄·핵심 숫자 3개(lib/weekly/renderer.ts).
+// 글자 중심 카드(Economist View): 그림 없이 제목·한 줄·핵심 숫자 칸(lib/view/renderer.ts).
 // tone: 'up'·'down'은 등락 색(빨강·파랑), 'neutral'은 전망 등 방향 없는 값(진한 민트).
-export interface WeeklyCardStat { label: string; value: string; caption: string; tone: 'up' | 'down' | 'flat' | 'neutral' }
-// brandName·kicker 기본값은 주간 전망. Economist View는 'Economist View'·'iM뱅크 경제 리포트'.
-export interface WeeklyCardInput { date: string; headline: string; line: string; stats: WeeklyCardStat[]; brandName?: string; kicker?: string }
+export interface TextCardStat { label: string; value: string; caption: string; tone: 'up' | 'down' | 'flat' | 'neutral' }
+// brandName·kicker 기본값은 Economist View.
+export interface TextCardInput { date: string; headline: string; line: string; stats: TextCardStat[]; brandName?: string; kicker?: string }
 export interface EtfCardInput { date: string; headline: string; holdingLabel: string; line: string; tiles: MosaicTile[] }
 
 // 카드 크기는 import 없는 card-size.ts에 둔다(Next 페이지가 sharp 없이 og:image 크기를 쓰도록).
@@ -514,7 +514,7 @@ export function renderEtfCardSvg(input: EtfCardInput): string {
   return wrapCard(mosaic + head + titleBlock.svg + label + subBlock.svg)
 }
 
-const STAT_TONE: Record<WeeklyCardStat['tone'], string> = { up: '#C62828', down: '#1565C0', flat: '#4B5563', neutral: '#0B6E61' }
+const STAT_TONE: Record<TextCardStat['tone'], string> = { up: '#C62828', down: '#1565C0', flat: '#4B5563', neutral: '#0B6E61' }
 
 /** 텍스트 한 줄을 폭 안에 맞춘다(넘치면 '…'). */
 function fitLine(text: string, size: number, style: TextStyleName, maxW: number): string {
@@ -522,13 +522,13 @@ function fitLine(text: string, size: number, style: TextStyleName, maxW: number)
 }
 
 /**
- * Weekly Outlook 카드 — 일간 리포트의 스트라이프·모자이크 대신 글자 중심.
+ * 글자 중심 카드 — 일간 리포트의 스트라이프·모자이크 대신 제목·한 줄·핵심 숫자.
  * 머리 줄(로고·이름·날짜) → 부제 라벨 → 큰 제목 → 한 줄 → 구분선 → 핵심 숫자 3칸(라벨·값·설명).
  */
-export function renderWeeklyCardSvg(input: WeeklyCardInput): string {
+export function renderTextCardSvg(input: TextCardInput): string {
   const rules = CARD_TEXT_RULES.market
-  const head = renderBrandRow(84, input.brandName ?? 'Weekly Outlook', cardDateLabel(input.date))
-  const kicker = `<text data-role="kicker" x="${CONTENT_X}" y="${num(250 + ASCENT_EM * 44)}" ${FONT_ATTR} font-size="44" font-weight="700" fill="#0B6E61">${escapeXml(input.kicker ?? 'iM AI Economist 주간 경제 전망')}</text>`
+  const head = renderBrandRow(84, input.brandName ?? 'Economist View', cardDateLabel(input.date))
+  const kicker = `<text data-role="kicker" x="${CONTENT_X}" y="${num(250 + ASCENT_EM * 44)}" ${FONT_ATTR} font-size="44" font-weight="700" fill="#0B6E61">${escapeXml(input.kicker ?? 'iM뱅크 경제 리포트')}</text>`
   const title = fitForRender('headline', input.headline, rules.title, 'title')
   const titleBlock = renderTextBlock('headline', title.lines, title.size, 340, 1.2, 'title', '#111827')
   const sub = fitForRender('line', input.line, rules.line, 'line')

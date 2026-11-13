@@ -29,16 +29,16 @@ const content: ViewContent = {
   closing: s("11월 25일 12:00 발표를 봅니다.", ["next_release"], "interpretation"),
 };
 
-test("근거 번호는 인용 순서대로, meta·next_release는 번호 없음", () => {
+test("근거 번호는 관측 사실 문장에만, 인용 순서대로(해석 문장의 정의 인용·meta·next_release는 번호 없음)", () => {
   const refs = referenceNumbers(content, facts.evidence.rows);
-  assert.deepEqual(Array.from(refs.entries()), [["def:고정금리", 1], ["dep_new@2026-09", 2], ["dep_new@2026-09:mom", 3]]);
+  assert.deepEqual(Array.from(refs.entries()), [["dep_new@2026-09", 1], ["dep_new@2026-09:mom", 2]]);
 });
 
 test("HTML: 섹션 순서, 각주·근거표, 스크립트 이스케이프, 고지문 초안 표시", () => {
   const html = renderViewReport(content, facts);
   const order = ["masthead", "title", "lede", "chart", "body", "reader-check", "next", "evidence", "footer"].map((k) => html.indexOf(`data-section="${k}"`));
   assert.ok(order.every((i, k) => i > 0 && (k === 0 || i > order[k - 1])), `순서 ${order}`);
-  assert.ok(html.includes('[2,3]</a>'));
+  assert.ok(html.includes('[1,2]</a>'));
   assert.ok(!html.includes("<script>x"));
   assert.ok(html.includes(VIEW_DISCLAIMER_DRAFT[0]) && html.includes('data-draft="true"'));
   assert.ok(html.includes("11월 25일 12:00"));
