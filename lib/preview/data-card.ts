@@ -19,7 +19,8 @@ export interface MarketCardInput { date: string; headline: string; line: string;
 // 주간 전망(Weekly Outlook) 카드: 그림 없이 제목·한 줄·핵심 숫자 3개(lib/weekly/renderer.ts).
 // tone: 'up'·'down'은 등락 색(빨강·파랑), 'neutral'은 전망 등 방향 없는 값(진한 민트).
 export interface WeeklyCardStat { label: string; value: string; caption: string; tone: 'up' | 'down' | 'flat' | 'neutral' }
-export interface WeeklyCardInput { date: string; headline: string; line: string; stats: WeeklyCardStat[] }
+// brandName·kicker 기본값은 주간 전망. Economist View는 'Economist View'·'iM뱅크 경제 리포트'.
+export interface WeeklyCardInput { date: string; headline: string; line: string; stats: WeeklyCardStat[]; brandName?: string; kicker?: string }
 export interface EtfCardInput { date: string; headline: string; holdingLabel: string; line: string; tiles: MosaicTile[] }
 
 // 카드 크기는 import 없는 card-size.ts에 둔다(Next 페이지가 sharp 없이 og:image 크기를 쓰도록).
@@ -526,8 +527,8 @@ function fitLine(text: string, size: number, style: TextStyleName, maxW: number)
  */
 export function renderWeeklyCardSvg(input: WeeklyCardInput): string {
   const rules = CARD_TEXT_RULES.market
-  const head = renderBrandRow(84, 'Weekly Outlook', cardDateLabel(input.date))
-  const kicker = `<text data-role="kicker" x="${CONTENT_X}" y="${num(250 + ASCENT_EM * 44)}" ${FONT_ATTR} font-size="44" font-weight="700" fill="#0B6E61">iM AI Economist 주간 경제 전망</text>`
+  const head = renderBrandRow(84, input.brandName ?? 'Weekly Outlook', cardDateLabel(input.date))
+  const kicker = `<text data-role="kicker" x="${CONTENT_X}" y="${num(250 + ASCENT_EM * 44)}" ${FONT_ATTR} font-size="44" font-weight="700" fill="#0B6E61">${escapeXml(input.kicker ?? 'iM AI Economist 주간 경제 전망')}</text>`
   const title = fitForRender('headline', input.headline, rules.title, 'title')
   const titleBlock = renderTextBlock('headline', title.lines, title.size, 340, 1.2, 'title', '#111827')
   const sub = fitForRender('line', input.line, rules.line, 'line')

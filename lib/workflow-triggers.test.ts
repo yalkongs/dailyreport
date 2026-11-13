@@ -441,7 +441,7 @@ const ciYml = fs.existsSync(ciPath) ? fs.readFileSync(ciPath, "utf8") : "";
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8")) as { scripts: Record<string, string> };
 
 test("package.json: npm test·typecheck가 한 명령으로 전체 테스트(카드 lib/preview 포함)·타입 검사를 돈다", () => {
-  assert.equal(pkg.scripts.test, "tsx --test lib/*.test.ts lib/etf/*.test.ts lib/preview/*.test.ts lib/weekly/*.test.ts");
+  assert.equal(pkg.scripts.test, "tsx --test lib/*.test.ts lib/etf/*.test.ts lib/preview/*.test.ts lib/weekly/*.test.ts lib/view/*.test.ts");
   // 테스트 파일이 있는 lib 하위 폴더는 모두 npm test(=CI)에 들어가야 한다 — 빠진 폴더는 CI가 영영 돌리지 않는다.
   const libDir = path.join(__dirname);
   const dirsWithTests = fs.readdirSync(libDir, { withFileTypes: true })
