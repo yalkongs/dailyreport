@@ -28,6 +28,10 @@ const s = (text: string, evidence: string[] = [], type: "fact" | "interpretation
 const content: ViewContent = {
   title: "예금금리가 올랐다는데 내 통장엔 언제 반영될까?", cardLine: "새 거래부터, 기존 예금은 만기 때",
   lede: [s("고정금리 예금은 <script>x</script> 만기 때 반영됩니다.", ["def:고정금리"], "interpretation")],
+  recap: [s("지난주 국고채 금리가 올랐습니다.", [], "interpretation")],
+  view: (["kr_policy", "inflation", "growth", "markets"] as const).map((key) => ({
+    key, status: "신규" as const, stance: s("판단", [], "interpretation"), reason: s("근거", [], "interpretation"), trigger: s("~라면 바꿉니다", [], "conditional"),
+  })),
   body: [{ sentences: [s("신규취급액 기준 저축성수신금리는 3.45%로 0.24%p 올랐습니다.", ["dep_new@2026-09", "dep_new@2026-09:mom"])] }],
   chartCaption: s("최근 12개월 두 금리입니다.", ["meta:chart_window"], "interpretation"),
   readerCheck: [s("만기일을 확인해 보세요.", [], "interpretation")],
@@ -41,7 +45,7 @@ test("근거 번호는 관측 사실 문장에만, 인용 순서대로(해석 �
 
 test("HTML: 섹션 순서, 각주·근거표, 스크립트 이스케이프, 고지문 초안 표시", () => {
   const html = renderViewReport(content, facts);
-  const order = ["masthead", "title", "lede", "chart", "body", "reader-check", "next", "evidence", "footer"].map((k) => html.indexOf(`data-section="${k}"`));
+  const order = ["masthead", "title", "lede", "recap", "chart", "body", "view", "reader-check", "next", "evidence", "footer"].map((k) => html.indexOf(`data-section="${k}"`));
   assert.ok(order.every((i, k) => i > 0 && (k === 0 || i > order[k - 1])), `순서 ${order}`);
   assert.ok(html.includes('[1,2]</a>'));
   assert.ok(!html.includes("<script>x"));
@@ -61,4 +65,10 @@ test("카드 머리 줄은 Economist View", () => {
 
 test("준법 검사", () => {
   assert.deepEqual(checkViewCompliance(content), { hard: [], soft: [], etf: [] });
+});
+
+test("하우스뷰 네 칸에 상태 배지와 판단을 바꿀 조건", () => {
+  const html = renderViewReport(content, facts);
+  assert.equal((html.match(/class="ev-view"/g) ?? []).length, 4);
+  assert.ok(html.includes("판단을 바꿀 조건") && html.includes("s-신규"));
 });

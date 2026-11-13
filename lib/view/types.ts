@@ -9,10 +9,22 @@ export interface ViewSentence {
   evidence: string[];
 }
 
+export interface ViewStance {
+  key: "kr_policy" | "inflation" | "growth" | "markets";
+  status: "유지" | "수정" | "신규";
+  stance: ViewSentence;
+  reason: ViewSentence;
+  trigger: ViewSentence;
+}
+
 export interface ViewContent {
   title: string;
   cardLine: string;
   lede: ViewSentence[];
+  /** 지난주 무엇이 있었나(반드시 다룰 것 포함). */
+  recap?: ViewSentence[];
+  /** 하우스뷰: 네 가지 판단. */
+  view?: ViewStance[];
   body: { sentences: ViewSentence[] }[];
   chartCaption: ViewSentence;
   readerCheck: ViewSentence[];
@@ -51,6 +63,10 @@ export interface ViewFacts {
   chart_panels: { key: string; title: string; unit: string; points: { period: string; value: number }[] }[];
   /** 꼬리말 출처(이번 호가 인용한 기관). */
   sources_line: string;
+  /** 이번 주 일정(코드 생성). */
+  agenda?: { date: string; label: string; title: string; source: string }[];
+  /** 하우스뷰 항목 이름. */
+  view_keys?: Record<string, string>;
   card_stats: { label: string; value: string; caption: string; tone: "up" | "down" | "flat" | "neutral" }[];
   cited: string[];
 }
