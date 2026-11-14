@@ -33,7 +33,7 @@ export interface ViewContent {
 
 export interface EvidenceRow {
   id: string;
-  kind: "level" | "diff" | "excerpt" | "definition";
+  kind: "level" | "diff" | "excerpt" | "definition" | "forecast";
   source: string;
   name: string;
   scope?: string;
@@ -67,6 +67,8 @@ export interface ViewFacts {
   agenda?: { date: string; label: string; title: string; source: string }[];
   /** 하우스뷰 항목 이름. */
   view_keys?: Record<string, string>;
+  /** 모형 전망(게이트를 통과한 지표만, 코드 생성). 없으면 블록을 그리지 않는다. */
+  forecast?: ViewForecast | null;
   card_stats: { label: string; value: string; caption: string; tone: "up" | "down" | "flat" | "neutral" }[];
   cited: string[];
 }
@@ -83,4 +85,15 @@ export interface ViewReportMeta {
 export interface ViewReportsIndex {
   reports: ViewReportMeta[];
   lastUpdated: string;
+}
+
+export interface ViewForecast {
+  title: string;
+  note: string;
+  items: {
+    key: string;
+    name: string;
+    last: { period_label: string; value_display: string };
+    points: { id: string; period_label: string; value_display: string; band_display: string }[];
+  }[];
 }

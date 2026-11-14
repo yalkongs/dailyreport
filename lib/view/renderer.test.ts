@@ -72,3 +72,20 @@ test("하우스뷰 네 칸에 상태 배지와 판단을 바꿀 조건", () => {
   assert.equal((html.match(/class="ev-view"/g) ?? []).length, 4);
   assert.ok(html.includes("판단을 바꿀 조건") && html.includes("s-신규"));
 });
+
+test("모형 전망 블록: 있을 때만, 판단 뒤·일정 앞, 구간과 설명 표시", () => {
+  assert.ok(!renderViewReport(content, facts).includes('data-section="forecast"'), "없으면 그리지 않음");
+  const fc = {
+    title: "모형 전망", note: "통계 모형의 중앙값 전망이며, 괄호 안은 68% 확률 구간입니다.",
+    items: [{ key: "kr_cpi_yoy", name: "소비자물가 상승률(전년동월비)", last: { period_label: "2026년 10월", value_display: "2.8%" },
+      points: [{ id: "fc:kr_cpi_yoy@2027-01", period_label: "2027년 1월", value_display: "2.8%", band_display: "2.0~3.5%" }] }],
+  };
+  const html = renderViewReport(content, { ...facts, forecast: fc, agenda: [{ date: "2026-11-18", label: "11월 18일", title: "x", source: "y" }] });
+  const i = html.indexOf('data-section="forecast"');
+  assert.ok(i > html.indexOf('data-section="view"') && i < html.indexOf('data-section="agenda"'));
+  assert.ok(html.includes("(2.0~3.5%)") && html.includes("2027년 1월") && html.includes("68% 확률 구간"));
+});
+
+test("고지문 4번: 책임편집자 검토 표현 없음(자동 게시)", () => {
+  assert.ok(!VIEW_DISCLAIMER.join(" ").includes("책임편집자"));
+});

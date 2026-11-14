@@ -16,12 +16,12 @@ export const VIEW_PUBLIC_DIR = "economist-view";
 const SITE = "https://dailyreport-eta.vercel.app";
 const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
-// 예금·금리 해설용 고지문 — 책임편집자 확정(2026-11-13, 초안 문구 그대로). 투자상품용 LEGAL_DISCLAIMER_ITEMS는 이 판본에 맞지 않는다.
+// 예금·금리 해설용 고지문 — 운영자 확정(2026-11-13 초안 문구, 2026-11-14 4번의 "책임편집자가 검토" 표현 삭제). 투자상품용 LEGAL_DISCLAIMER_ITEMS는 이 판본에 맞지 않는다.
 export const VIEW_DISCLAIMER: readonly string[] = [
   "본 자료는 경제 통계에 대한 정보 제공을 목적으로 작성되었으며, 특정 금융상품의 가입이나 해지를 권유하기 위한 자료가 아닙니다.",
   "본 자료의 금리 통계는 한국은행 등 작성기관이 공표한 예금은행 전체의 가중평균 값으로, iM뱅크를 포함한 개별 은행·상품의 금리와 다를 수 있습니다.",
   "개별 상품의 금리, 만기 후 처리, 중도해지 조건 등은 해당 상품설명서와 약관을 확인하시기 바랍니다.",
-  "본 자료는 공표 통계를 바탕으로 AI가 초안을 작성하고 책임편집자가 검토하였습니다. 오류가 확인되면 같은 주소에 정정 사유와 시각을 함께 게시합니다.",
+  "본 자료는 공표 통계를 바탕으로 AI가 초안을 작성하였습니다. 오류가 확인되면 같은 주소에 정정 사유와 시각을 함께 게시합니다.",
 ];
 
 const VIEW_CSS = `
@@ -45,6 +45,10 @@ const VIEW_CSS = `
 .report-embed .ev-badge.s-신규 { color: #0B6E61; background: #E6F6F2; }
 .report-embed .ev-view p { font-size: 14.5px; line-height: 1.7; margin: 2px 0; word-break: keep-all; }
 .report-embed .ev-view .lbl { display: block; font-size: 12px; font-weight: 700; color: #6B7280; margin-top: 6px; }
+.report-embed .ev-fc td, .report-embed .ev-fc th { font-size: 14px; padding: 6px 4px; border-bottom: 1px solid var(--border, #E5E7EB); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.report-embed .ev-fc th:first-child, .report-embed .ev-fc td:first-child { text-align: left; white-space: normal; word-break: keep-all; }
+.report-embed .ev-fc { width: 100%; border-collapse: collapse; margin: 4px 0 8px; }
+.report-embed .ev-fc .band { display: block; font-size: 12px; color: #6B7280; }
 .report-embed .ev-agenda li { font-size: 14px; line-height: 1.7; list-style: none; word-break: keep-all; }
 .report-embed .ev-table td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 `;
@@ -151,6 +155,21 @@ function renderView(view: ViewStance[], f: ViewFacts, refs: Map<string, number>)
     </section>`;
 }
 
+export function renderForecast(f: ViewFacts): string {
+  const fc = f.forecast;
+  if (!fc || fc.items.length === 0) return "";
+  const n = Math.max(...fc.items.map((i) => i.points.length));
+  const heads = fc.items[0].points.map((pt) => `<th>${escapeHtml(pt.period_label)}</th>`).join("");
+  const rows = fc.items.map((i) => `<tr><td>${escapeHtml(i.name)}</td><td>${escapeHtml(i.last.value_display)}<span class="band">${escapeHtml(i.last.period_label)} 실적</span></td>${
+    i.points.map((pt) => `<td>${escapeHtml(pt.value_display)}<span class="band">(${escapeHtml(pt.band_display)})</span></td>`).join("")
+  }${"<td></td>".repeat(n - i.points.length)}</tr>`).join("");
+  return `<section class="section" data-section="forecast">
+        <h2 class="section-title">${escapeHtml(fc.title)}</h2>
+        <table class="ev-fc"><thead><tr><th>지표</th><th>최근</th>${heads}</tr></thead><tbody>${rows}</tbody></table>
+        <p class="wk-note">${escapeHtml(fc.note)}</p>
+    </section>`;
+}
+
 function renderAgenda(f: ViewFacts): string {
   const items = f.agenda ?? [];
   if (items.length === 0) return "";
@@ -217,6 +236,7 @@ ${VIEW_CSS}
         ${c.body.map((b) => `<p class="ev-p">${p(b.sentences)}</p>`).join("\n        ")}
     </section>
     ${renderView(c.view ?? [], f, refs)}
+    ${renderForecast(f)}
     ${renderAgenda(f)}
     <section class="ev-check" data-section="reader-check">
         <div class="ev-check-title">내 계약에서 확인할 것</div>
