@@ -1,0 +1,99 @@
+// lib/view/types.ts — Economist View(은행 경제 리포트) 대외판.
+// 문장은 {text, type, evidence}로 오고, 숫자는 evidence 행(econo 근거표)에서만 나온다.
+
+export type SentenceType = "fact" | "interpretation" | "conditional";
+
+export interface ViewSentence {
+  text: string;
+  type: SentenceType;
+  evidence: string[];
+}
+
+export interface ViewStance {
+  key: "kr_policy" | "inflation" | "growth" | "markets";
+  status: "유지" | "수정" | "신규";
+  stance: ViewSentence;
+  reason: ViewSentence;
+  trigger: ViewSentence;
+}
+
+export interface ViewContent {
+  title: string;
+  cardLine: string;
+  lede: ViewSentence[];
+  /** 지난주 무엇이 있었나(반드시 다룰 것 포함). */
+  recap?: ViewSentence[];
+  /** 하우스뷰: 네 가지 판단. */
+  view?: ViewStance[];
+  body: { sentences: ViewSentence[] }[];
+  chartCaption: ViewSentence;
+  readerCheck: ViewSentence[];
+  closing: ViewSentence;
+}
+
+export interface EvidenceRow {
+  id: string;
+  kind: "level" | "diff" | "excerpt" | "definition" | "forecast";
+  source: string;
+  name: string;
+  scope?: string;
+  series?: string;
+  period?: string;
+  period_label?: string;
+  value?: number;
+  unit?: string;
+  value_display?: string;
+  published?: string;
+  text?: string;
+  url?: string;
+  codes?: string;
+  formula?: string;
+  inputs?: string[];
+}
+
+export interface ViewFacts {
+  issue_date: string;
+  evidence: {
+    cutoff: string;
+    rows: EvidenceRow[];
+    parts: Record<string, { latest_label: string; next_release: { title: string; date: string; time: string; label: string; source: string } | null }>;
+    chart: Record<string, { period: string; value: number }[]>;
+  };
+  /** 차트 패널(지시서의 chart 계열 순서, 같은 단위·같은 눈금). */
+  chart_panels: { key: string; title: string; unit: string; points: { period: string; value: number }[] }[];
+  /** 꼬리말 출처(이번 호가 인용한 기관). */
+  sources_line: string;
+  /** 이번 주 일정(코드 생성). */
+  agenda?: { date: string; label: string; title: string; source: string }[];
+  /** 하우스뷰 항목 이름. */
+  view_keys?: Record<string, string>;
+  /** 모형 전망(게이트를 통과한 지표만, 코드 생성). 없으면 블록을 그리지 않는다. */
+  forecast?: ViewForecast | null;
+  card_stats: { label: string; value: string; caption: string; tone: "up" | "down" | "flat" | "neutral" }[];
+  cited: string[];
+}
+
+export interface ViewReportMeta {
+  date: string;
+  headline: string;
+  description: string;
+  filePath: string;
+  previewPath: string;
+  generatedAt: string;
+}
+
+export interface ViewReportsIndex {
+  reports: ViewReportMeta[];
+  lastUpdated: string;
+}
+
+export interface ViewForecast {
+  title: string;
+  note: string;
+  items: {
+    key: string;
+    name: string;
+    last: { period_label: string; value_display: string };
+    points: { id: string; period_label: string; value_display: string; band_display: string }[];
+  }[];
+}

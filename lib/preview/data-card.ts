@@ -16,6 +16,11 @@ import { CARD_WIDTH, CARD_HEIGHT } from './card-size'
 export interface StripeSession { date: string; pct: number }          // date YYYY-MM-DD(KST 거래일)
 export interface MosaicTile { ticker: string; market: 'KR' | 'US'; category: string; pct: number; featured: boolean }
 export interface MarketCardInput { date: string; headline: string; line: string; sessions: StripeSession[] }
+// 글자 중심 카드(Economist View): 그림 없이 제목·한 줄·핵심 숫자 칸(lib/view/renderer.ts).
+// tone: 'up'·'down'은 등락 색(빨강·파랑), 'neutral'은 전망 등 방향 없는 값(진한 민트).
+export interface TextCardStat { label: string; value: string; caption: string; tone: 'up' | 'down' | 'flat' | 'neutral' }
+// brandName·kicker 기본값은 Economist View.
+export interface TextCardInput { date: string; headline: string; line: string; stats: TextCardStat[]; brandName?: string; kicker?: string }
 export interface EtfCardInput { date: string; headline: string; holdingLabel: string; line: string; tiles: MosaicTile[] }
 
 // 카드 크기는 import 없는 card-size.ts에 둔다(Next 페이지가 sharp 없이 og:image 크기를 쓰도록).
@@ -507,6 +512,46 @@ export function renderEtfCardSvg(input: EtfCardInput): string {
   const sub = fitForRender('line', input.line, rules.line, 'line')
   const subBlock = renderTextBlock('line', sub.lines, sub.size, labelTop + 70, 1.3, 'line', '#111827')
   return wrapCard(mosaic + head + titleBlock.svg + label + subBlock.svg)
+}
+
+const STAT_TONE: Record<TextCardStat['tone'], string> = { up: '#C62828', down: '#1565C0', flat: '#4B5563', neutral: '#0B6E61' }
+
+/** 텍스트 한 줄을 폭 안에 맞춘다(넘치면 '…'). */
+function fitLine(text: string, size: number, style: TextStyleName, maxW: number): string {
+  return measureTextPx(text, size, style) > maxW ? ellipsize(text, size, style, maxW) : text
+}
+
+/**
+ * 글자 중심 카드 — 일간 리포트의 스트라이프·모자이크 대신 제목·한 줄·핵심 숫자.
+ * 머리 줄(로고·이름·날짜) → 부제 라벨 → 큰 제목 → 한 줄 → 구분선 → 핵심 숫자 3칸(라벨·값·설명).
+ */
+export function renderTextCardSvg(input: TextCardInput): string {
+  const rules = CARD_TEXT_RULES.market
+  const head = renderBrandRow(84, input.brandName ?? 'Economist View', cardDateLabel(input.date))
+  const kicker = `<text data-role="kicker" x="${CONTENT_X}" y="${num(250 + ASCENT_EM * 44)}" ${FONT_ATTR} font-size="44" font-weight="700" fill="#0B6E61">${escapeXml(input.kicker ?? 'iM뱅크 경제 리포트')}</text>`
+  const title = fitForRender('headline', input.headline, rules.title, 'title')
+  const titleBlock = renderTextBlock('headline', title.lines, title.size, 340, 1.2, 'title', '#111827')
+  const sub = fitForRender('line', input.line, rules.line, 'line')
+  const subBlock = renderTextBlock('line', sub.lines, sub.size, titleBlock.bottom + 56, 1.32, 'line', '#374151')
+
+  const stats = input.stats.slice(0, 3)
+  const top = 1000
+  const colW = CONTENT_W / Math.max(1, stats.length)
+  const cells = stats.map((st, i) => {
+    const x = CONTENT_X + colW * i
+    const maxW = colW - 24
+    const label = fitLine(st.label, 44, 'label', maxW)
+    const value = fitLine(st.value, 80, 'title', maxW)
+    const caption = fitLine(st.caption, 40, 'label', maxW)
+    return `<g data-role="stat">`
+      + (i > 0 ? `<rect x="${num(x - 12)}" y="${top}" width="2" height="230" fill="#E5E7EB"/>` : '')
+      + `<text x="${num(x + (i > 0 ? 12 : 0))}" y="${num(top + ASCENT_EM * 44)}" ${FONT_ATTR} font-size="44" font-weight="700" fill="#4B5563">${escapeXml(label)}</text>`
+      + `<text x="${num(x + (i > 0 ? 12 : 0))}" y="${num(top + 64 + ASCENT_EM * 80)}" ${FONT_ATTR} font-size="80" font-weight="800" letter-spacing="-2" fill="${STAT_TONE[st.tone]}">${escapeXml(value)}</text>`
+      + `<text x="${num(x + (i > 0 ? 12 : 0))}" y="${num(top + 176 + ASCENT_EM * 40)}" ${FONT_ATTR} font-size="40" font-weight="600" fill="#9CA3AF">${escapeXml(caption)}</text>`
+      + `</g>`
+  }).join('')
+  const rule = `<rect data-role="divider" x="${CONTENT_X}" y="${top - 56}" width="${CONTENT_W}" height="3" fill="#E5E7EB"/>`
+  return wrapCard(head + kicker + titleBlock.svg + subBlock.svg + rule + cells)
 }
 
 /** SVG 카드를 PNG 파일로 저장하고 outPath를 돌려준다(상위 디렉터리 자동 생성). */
