@@ -1,18 +1,14 @@
 name: Economist View Telegram
-# iM뱅크 Economist View(대외판) 텔레그램 발송.
-# 생성·렌더·커밋은 맥미니의 econo 파이프라인(~/dev/econo)이 책임편집자 승인 후에만 한다(게시 경로는 아직 없음).
-# 이 workflow는 main에 Economist View 인덱스가 바뀌어 push되면, Vercel 배포가 끝나 공개 자산(본문·프리뷰 PNG)이
-# 실제로 열리는 것을 확인한 뒤 텔레그램으로 한 번 보낸다.
+# iM뱅크 Economist View(대외판) 텔레그램 발송 — 현재 자동 발송 꺼짐(2026-11-14 운영자 지시: 사이트 게재만, 텔레그램은 별도 지시 전까지 보내지 않음).
+# 생성·검증·렌더·커밋은 맥미니의 econo 파이프라인(~/dev/econo)이 하고, 검증을 통과한 호만 main에 push한다.
+# 자동 발송을 다시 켜려면 아래 on:에 push(main, paths: data/economist-view-index.json) 트리거를 되살린다.
+# 지금은 수동 실행(workflow_dispatch)만 가능: 배포가 끝나 공개 자산(본문·프리뷰 PNG)이 실제로 열리는지 확인한 뒤 한 번 보낸다.
 # 중복 방지: 그 날짜 HTML을 처음 추가한 커밋에 commit status `telegram/economist-view`를 기록한다.
 #   같은 호를 다시 렌더해 커밋해도(파일 수정) 추가 커밋은 같으므로 재발송하지 않는다.
 #   상태가 pending으로 남으면(결과 불명) 자동 재발송하지 않는다 — 구독 채널 확인 후 수동 처리.
 # 러너는 다른 workflow와 같이 ubuntu-24.04 고정.
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'data/economist-view-index.json'
   workflow_dispatch:
     inputs:
       date:

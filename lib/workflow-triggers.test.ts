@@ -489,12 +489,11 @@ for (const [job, step] of [["market", "Generate market report"], ["etf", "Run ET
 }
 
 // ── economist-view-telegram.yml: Economist View 발송 ─────────────────────────────
-test("economist-view-telegram: main의 Economist View 인덱스 push와 수동 실행에만 반응, 공개 자산 확인 후 발송, 중복 방지 status", () => {
+test("economist-view-telegram: 자동 발송 꺼짐(수동 실행만), 공개 자산 확인 후 발송, 중복 방지 status", () => {
   const raw = fs.readFileSync(path.join(WF_DIR, "economist-view-telegram.yml"), "utf8");
   const wf = yaml.load(raw) as { on: { push?: { branches?: string[]; paths?: string[] }; workflow_dispatch?: unknown } };
-  assert.deepEqual(wf.on.push?.branches, ["main"]);
-  assert.deepEqual(wf.on.push?.paths, ["data/economist-view-index.json"]);
-  assert.ok(wf.on.workflow_dispatch);
+  assert.equal(wf.on.push, undefined, "운영자 지시 전까지 push로 자동 발송하지 않는다");
+  assert.deepEqual(Object.keys(wf.on), ["workflow_dispatch"]);
   assert.ok(raw.indexOf("200 image/png") < raw.indexOf("sendPhoto"), "자산 확인이 발송보다 먼저");
   assert.ok(raw.indexOf("mark pending") < raw.indexOf("sendPhoto"), "pending 기록이 발송보다 먼저");
   assert.match(raw, /context="telegram\/economist-view"/);
