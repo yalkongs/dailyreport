@@ -34,8 +34,6 @@ const VIEW_CSS = `
 .report-embed .ev-check { background: #F0FAF7; border: 1px solid #CDEDE4; border-radius: 14px; padding: 14px 16px; margin: 18px 0; }
 .report-embed .ev-check-title { font-size: 13px; font-weight: 700; color: #0B6E61; margin-bottom: 6px; }
 .report-embed .ev-next { font-size: 14px; line-height: 1.6; margin: 10px 0 0; color: var(--text); }
-.report-embed .ev-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-.report-embed .ev-table th, .report-embed .ev-table td { border-bottom: 1px solid #EEF2F7; padding: 6px 4px; text-align: left; vertical-align: top; word-break: keep-all; }
 .report-embed .ev-view { border: 1px solid #E5E7EB; border-radius: 14px; padding: 12px 14px; margin: 10px 0; }
 .report-embed .ev-view-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .report-embed .ev-view-name { font-size: 14px; font-weight: 700; color: var(--text); }
@@ -49,8 +47,17 @@ const VIEW_CSS = `
 .report-embed .ev-fc th:first-child, .report-embed .ev-fc td:first-child { text-align: left; white-space: normal; word-break: keep-all; }
 .report-embed .ev-fc { width: 100%; border-collapse: collapse; margin: 4px 0 8px; }
 .report-embed .ev-fc .band { display: block; font-size: 12px; color: #6B7280; }
+.report-embed .ev-list { list-style: none; margin: 0; padding: 0; }
+.report-embed .ev-item { display: flex; gap: 8px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #EEF2F7; }
+.report-embed .ev-item:last-child { border-bottom: 0; }
+.report-embed .ev-n { flex: none; font-size: 12px; color: #6B7280; font-variant-numeric: tabular-nums; padding-top: 2px; }
+.report-embed .ev-main { flex: 1 1 auto; min-width: 0; }
+.report-embed .ev-what { font-size: 14px; line-height: 1.5; color: var(--text); word-break: keep-all; }
+.report-embed .ev-when { display: block; font-size: 12.5px; color: #4B5563; }
+.report-embed .ev-quote { font-size: 13px; line-height: 1.6; color: #374151; margin-top: 2px; word-break: keep-all; }
+.report-embed .ev-src { font-size: 12px; color: #6B7280; margin-top: 2px; word-break: keep-all; overflow-wrap: anywhere; }
+.report-embed .ev-val { flex: none; font-size: 15px; font-weight: 700; color: var(--text); white-space: nowrap; font-variant-numeric: tabular-nums; padding-left: 6px; }
 .report-embed .ev-agenda li { font-size: 14px; line-height: 1.7; list-style: none; word-break: keep-all; }
-.report-embed .ev-table td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 `;
 
 function loadCSS(): string {
@@ -121,20 +128,27 @@ export function renderTwinChart(f: ViewFacts): string {
 }
 
 function evidenceTable(refs: Map<string, number>, rows: EvidenceRow[]): string {
+  // 모바일 폭에서 열이 밀려 값이 안 보이지 않도록 표 대신 항목별 카드(번호·항목 / 값 / 출처·공표)로 쌓는다.
   const byId = new Map(rows.map((r) => [r.id, r]));
-  const tr = Array.from(refs.entries()).map(([id, n]) => {
+  const items = Array.from(refs.entries()).map(([id, n]) => {
     const r = byId.get(id)!;
-    const what = r.kind === "definition" ? `용어 정의: ${r.name}` : r.kind === "excerpt" ? `보도자료: ${r.name}` : `${r.name}${r.period_label ? ` · ${r.period_label}` : ""}`;
+    const what = r.kind === "definition" ? `용어 정의: ${r.name}` : r.kind === "excerpt" ? `보도자료: ${r.name}` : r.name;
+    const when = r.kind === "diff" ? [r.period_label, r.formula].filter(Boolean).join(" ") : (r.kind === "definition" || r.kind === "excerpt") ? "" : (r.period_label ?? "");
     const val = r.value_display ?? (r.text ? `“${r.text.length > 80 ? r.text.slice(0, 80) + "…" : r.text}”` : "");
-    const extra = r.kind === "diff" ? ` <span class="wk-sub">(${escapeHtml(r.formula ?? "")})</span>` : "";
     const src = r.url ? `<a href="${escapeHtml(r.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.source)}</a>` : escapeHtml(r.source);
-    return `<tr><td>[${n}]</td><td>${escapeHtml(what)}${extra}</td><td class="num">${escapeHtml(val)}</td><td>${src}${r.published && r.published !== "이전 공표" ? `<div class="wk-sub">공표 ${escapeHtml(r.published)}</div>` : ""}</td></tr>`;
+    const pub = r.published && r.published !== "이전 공표" ? ` · 공표 ${escapeHtml(r.published)}` : "";
+    const quote = !r.value_display && r.text;
+    return `<li class="ev-item"><span class="ev-n">[${n}]</span><div class="ev-main">
+                <div class="ev-what">${escapeHtml(what)}${when ? `<span class="ev-when">${escapeHtml(when)}</span>` : ""}</div>
+                ${quote ? `<div class="ev-quote">${escapeHtml(val)}</div>` : ""}
+                <div class="ev-src">${src}${pub}</div>
+            </div>${quote ? "" : `<span class="ev-val">${escapeHtml(val)}</span>`}</li>`;
   }).join("");
   return `
     <details class="more" id="evidence" data-section="evidence">
         <summary class="more-summary">근거표</summary>
         <div class="more-body">
-        <table class="ev-table"><thead><tr><th>#</th><th>항목</th><th style="text-align:right">값</th><th>출처</th></tr></thead><tbody>${tr}</tbody></table>
+        <ol class="ev-list">${items}</ol>
         </div>
     </details>`;
 }
