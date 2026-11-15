@@ -1,43 +1,24 @@
 {
-  "generatedAt": "2026-11-08T18:43:16.900Z",
-  "weekRangeStart": "2026-11-09",
-  "weekRangeEnd": "2026-11-23",
+  "generatedAt": "2026-11-15T19:38:58.103Z",
+  "weekRangeStart": "2026-11-16",
+  "weekRangeEnd": "2026-11-30",
   "events": [
     {
-      "date": "2026-11-11",
-      "category": "employment",
-      "name": "고용동향 발표 — 2026년 10월",
-      "importance": 4,
-      "description": "국가데이터처 공식 보도계획에 명시된 공표일.",
-      "source": "mods.go.kr (국가데이터처 공식 보도계획)",
-      "confirmed": true,
-      "time": "08:00"
-    },
-    {
-      "date": "2026-11-12",
-      "category": "futures_expiry",
-      "name": "KOSPI200 선물·옵션 11월 월물 만기일",
-      "importance": 2,
-      "description": "KRX 규정상 결제월 두 번째 목요일이 최종거래일. 11월은 12일(목). 옵션 월 만기이며 분기 동시만기(네 마녀의 날)가 아님. 미니코스피200 포함 각종 월물 동시 만기.",
-      "source": "indexflowpro.com / trader.ai.kr / estockpost.com",
-      "confirmed": true
-    },
-    {
-      "date": "2026-11-13",
+      "date": "2026-11-16",
       "category": "other",
-      "name": "한국은행 2026년 10월 수출입물가지수 및 무역지수(잠정) 발표",
-      "importance": 3,
-      "description": "한국은행 월간통계 공표일정(11월)에 명시. 수출입물가와 무역지수 잠정치 공표.",
-      "source": "bok.or.kr",
+      "name": "2025년 주택소유통계 발표",
+      "importance": 1,
+      "description": "국가데이터처(구 통계청) 2025년 주택소유통계 공표. 부동산 보유 현황 파악 참고 지표.",
+      "source": "mods.go.kr",
       "confirmed": true,
       "time": "06:00"
     },
     {
-      "date": "2026-11-13",
+      "date": "2026-11-18",
       "category": "other",
-      "name": "한국은행 2026년 9월 통화 및 유동성 발표",
-      "importance": 1,
-      "description": "한국은행 월간통계 공표일정(11월)에 명시. M1·M2 등 통화량 지표.",
+      "name": "한국은행 3/4분기 가계신용(잠정) 발표",
+      "importance": 2,
+      "description": "한국은행이 2026년 3분기 가계신용(잠정)을 공표. 가계부채 추이와 통화정책 판단에 활용되는 지표.",
       "source": "bok.or.kr",
       "confirmed": true,
       "time": "12:00"
@@ -45,18 +26,9 @@
     {
       "date": "2026-11-18",
       "category": "other",
-      "name": "한국은행 2026년 3/4분기 가계신용(잠정) 발표",
-      "importance": 2,
-      "description": "한국은행 월간통계 공표일정(11월)에 명시. 가계대출·판매신용 합산 가계신용 잠정치.",
-      "source": "bok.or.kr",
-      "confirmed": true
-    },
-    {
-      "date": "2026-11-18",
-      "category": "other",
-      "name": "KDI 경제전망, 2026년 하반기 발표",
+      "name": "KDI 2026년 하반기 경제전망 발표",
       "importance": 3,
-      "description": "KDI 공식 사이트에 '2026년 11월 18일(수) 정오 공개 예정'으로 명시. 내부 사정에 따라 변경 가능.",
+      "description": "한국개발연구원(KDI)이 2026년 하반기 경제전망 보고서를 11월 18일(수) 정오에 공개 예정. 성장률·물가 수정 전망 포함.",
       "source": "kdi.re.kr",
       "confirmed": true,
       "time": "12:00"
@@ -64,18 +36,19 @@
     {
       "date": "2026-11-19",
       "category": "other",
-      "name": "한국은행 2026년 3/4분기 국제투자대조표 발표",
-      "importance": 1,
-      "description": "한국은행 월간통계 공표일정(11월)에 명시.",
+      "name": "한국은행 3/4분기 국제투자대조표(잠정) 발표",
+      "importance": 2,
+      "description": "한국은행이 2026년 3분기 국제투자대조표(잠정)를 공표. 대외 금융자산·부채 현황 파악 지표.",
       "source": "bok.or.kr",
-      "confirmed": true
+      "confirmed": true,
+      "time": "12:00"
     },
     {
       "date": "2026-11-20",
       "category": "other",
-      "name": "한국은행 2026년 3/4분기 차주별 가계부채 발표",
+      "name": "한국은행 3/4분기 차주별 가계부채 발표",
       "importance": 2,
-      "description": "한국은행 월간통계 공표일정(11월)에 명시. 차주별 가계부채 세부 현황.",
+      "description": "한국은행이 2026년 3분기 차주별 가계부채 통계를 공표. 차주 특성별 부채 분포 파악 지표.",
       "source": "bok.or.kr",
       "confirmed": true
     },
@@ -84,8 +57,18 @@
       "category": "other",
       "name": "한국은행 2026년 10월 생산자물가지수(잠정) 발표",
       "importance": 2,
-      "description": "한국은행 월간통계 공표일정(11월)에 명시. PPI 잠정치.",
+      "description": "한국은행이 2026년 10월 생산자물가지수(PPI) 잠정치를 공표. 소비자물가 선행 지표로서 통화정책 참고자료.",
       "source": "bok.or.kr",
+      "confirmed": true,
+      "time": "06:00"
+    },
+    {
+      "date": "2026-11-24",
+      "category": "other",
+      "name": "2025년 인구주택총조사(표본) 결과 발표",
+      "importance": 1,
+      "description": "국가데이터처가 2025년 인구주택총조사 표본 결과를 공표.",
+      "source": "mods.go.kr",
       "confirmed": true
     },
     {
@@ -93,7 +76,7 @@
       "category": "other",
       "name": "한국은행 2026년 11월 소비자동향조사 결과 발표",
       "importance": 2,
-      "description": "한국은행 월간통계 공표일정(11월)에 명시. 소비자심리지수(CCSI) 포함.",
+      "description": "한국은행이 11월 소비자동향조사(CSI) 결과 공표. 소비심리지수(CCSI)가 경기 선행지표로 활용됨.",
       "source": "bok.or.kr",
       "confirmed": true
     },
@@ -102,28 +85,49 @@
       "category": "other",
       "name": "한국은행 2026년 10월 금융기관 가중평균금리 발표",
       "importance": 2,
-      "description": "한국은행 월간통계 공표일정(11월)에 명시. 예금·대출금리 가중평균.",
+      "description": "한국은행이 2026년 10월 금융기관 가중평균금리를 공표. 대출·예금 금리 흐름 파악 지표.",
       "source": "bok.or.kr",
-      "confirmed": true
+      "confirmed": true,
+      "time": "06:00"
     },
     {
       "date": "2026-11-25",
       "category": "other",
-      "name": "한국은행 2026년 11월 기업경기조사 결과 및 경제심리지수(ESI) 발표",
+      "name": "한국은행 2026년 11월 기업경기조사(BSI) 및 경제심리지수(ESI) 발표",
       "importance": 2,
-      "description": "한국은행 월간통계 공표일정(11월)에 명시. BSI·ESI 복합 발표.",
+      "description": "한국은행이 2026년 11월 기업경기실사지수(BSI) 및 경제심리지수(ESI)를 공표. 기업 경기심리 선행 지표.",
       "source": "bok.or.kr",
-      "confirmed": true
+      "confirmed": true,
+      "time": "06:00"
     },
     {
       "date": "2026-11-26",
       "category": "bok_mpb",
-      "name": "한국은행 금융통화위원회 통화정책방향 결정회의 (2026년 제8차·연내 마지막)",
+      "name": "한국은행 금융통화위원회 통화정책방향 결정회의",
       "importance": 5,
-      "description": "2026년 연간 마지막 통화정책방향 결정회의. 한국은행이 공식 발표한 2026년 금통위 일정에 11월 26일로 명시. 기준금리 결정 및 경제전망 수정치 병행 발표 예정. 현 기준금리 연 3.00%.",
-      "source": "bok.or.kr / issueon.co.kr / sbhnews.com",
+      "description": "2026년 8번째이자 연내 마지막 통화정책방향 결정회의. 기준금리 결정(현 3.00%) 및 총재 기자간담회 예정. 한국은행 공식 일정에서 11월 26일(목)로 확인.",
+      "source": "bok.or.kr",
       "confirmed": true,
       "time": "10:00"
+    },
+    {
+      "date": "2026-11-30",
+      "category": "other",
+      "name": "국가데이터처 11월 말 통계 공표 (잠정)",
+      "importance": 1,
+      "description": "국가데이터처 11월 주요통계 공표일정상 11월 30일에 추가 공표 항목이 예정되어 있으나, 구체 통계명은 검색으로 확인되지 않음. 추정 항목 포함 가능.",
+      "source": "mods.go.kr",
+      "confirmed": false
+    },
+    {
+      "date": "2026-11-30",
+      "category": "industrial",
+      "name": "산업활동동향 발표 — 2026년 10월",
+      "importance": 3,
+      "description": "국가데이터처 공식 보도계획에 명시된 공표일.",
+      "source": "mods.go.kr (국가데이터처 공식 보도계획)",
+      "confirmed": true,
+      "time": "08:00"
     }
   ]
 }
