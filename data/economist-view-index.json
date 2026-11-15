@@ -1,4 +1,13 @@
 {
-  "reports": [],
-  "lastUpdated": ""
+  "reports": [
+    {
+      "date": "2026-11-16",
+      "headline": "시장금리 급등, 고정·변동금리 판단의 기준은",
+      "description": "지난주 국내외 시장금리가 같은 방향으로 크게 올랐지만, 한 주의 움직임만으로 대출금리 상승 추세를 단정하기는 이르다고 봅니다. 고정·변동금리 선택은 이번 상승이 유지되는지를 확인하면서 자신의 상환 기간과 금리 변동 감내 범위를 기준으로 판단할 문제입니다.",
+      "filePath": "/economist-view/2026-11-16.html",
+      "previewPath": "/economist-view/2026-11-16-preview.png",
+      "generatedAt": "2026-11-15T20:33:09.658Z"
+    }
+  ],
+  "lastUpdated": "2026-11-15T20:33:09.658Z"
 }
