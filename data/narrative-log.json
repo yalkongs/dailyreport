@@ -1,6 +1,19 @@
 {
   "entries": [
     {
+      "date": "2026-11-18",
+      "narrativeAngle": "generation_wallet",
+      "headline": "코스피 5000선 아래로…뉴욕도 7월 이후 최저",
+      "bigStoryTopic": "전 거래일 코스피 <strong>-2.59%</strong> 하락으로 <strong>4,9",
+      "walletTopics": [
+        "KDI 성장률 전망치가 현재 금리 수준을 뒷받침하는가",
+        "현대차 유럽 적자가 국내 완성차·부품주에 추가 압박이 되는가",
+        "엔비디아 호실적이 국내 HBM 수요 체인으로 이어지는가"
+      ],
+      "metaphors": [],
+      "lookingAhead": "KDI 경제전망·한은 가계신용 동시 발표"
+    },
+    {
       "date": "2026-11-17",
       "narrativeAngle": "hidden_variable",
       "headline": "코스피 3.6% 하락, 뉴욕 AI 매도세 여파",
@@ -463,25 +476,6 @@
         "발목"
       ],
       "lookingAhead": "코스피 반등 여부 — SK하이닉스 충격 소화"
-    },
-    {
-      "date": "2026-10-06",
-      "narrativeAngle": "job_perspective",
-      "headline": "나스닥 사상 최고, 국채는 2002년 이후 최고 금리",
-      "bigStoryTopic": "간밤(2026-10-05 현지 마감) 나스닥이 <strong>+1.05%</strong> ",
-      "walletTopics": [
-        "반도체 관련 종목 보유자 — HBM 공급 부족이 국내에 미치는 경로",
-        "수출 중소기업 — 원화 강세 실익과 비용의 교차",
-        "항공·물류업 종사자 관련 — 유가 하락의 실질 원가 효과",
-        "지금 각 자산은 어디에 서 있나",
-        "기준금리 3%, 예금의 위치를 다시 재본다"
-      ],
-      "metaphors": [
-        "최고치",
-        "국채 금리",
-        "엔비디아"
-      ],
-      "lookingAhead": "삼성전자·SK하이닉스 — AI 반도체 온도 차 확인"
     }
   ]
 }
