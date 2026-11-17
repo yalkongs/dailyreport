@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-11-18",
+      "type": "morning",
+      "headline": "코스피 급락 속 원자력 ETF도 동반 하락",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-11-18",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-11-17T21:43:20.569Z"
+    },
+    {
       "date": "2026-11-17",
       "type": "morning",
       "headline": "미 AI칩 수출규제 강화…국내 반도체 ETF 오늘도 시험대",
