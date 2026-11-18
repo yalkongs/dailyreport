@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-11-19",
+      "type": "morning",
+      "headline": "미디어·콘텐츠, 코스피 반등의 중심에 서다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-11-19",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-11-18T21:43:22.639Z"
+    },
+    {
       "date": "2026-11-18",
       "type": "morning",
       "headline": "코스피 급락 속 원자력 ETF도 동반 하락",
