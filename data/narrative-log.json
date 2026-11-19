@@ -1,6 +1,19 @@
 {
   "entries": [
     {
+      "date": "2026-11-20",
+      "narrativeAngle": "supply_chain",
+      "headline": "앤트로픽 상장 첫날 하락 마감, S&P500 2% 급락",
+      "bigStoryTopic": "다우 <strong>5만선</strong> 아래로 후퇴. 간밤 미국 증시 하락이 오늘 국내",
+      "walletTopics": [
+        "AI 칩 수출통제 체인이 국내 반도체 수주에 미치는 영향",
+        "앤트로픽 상장 실망 — AI 모멘텀 재점검이 기술주 전반으로 번지는지",
+        "금통위 앞 PPI·가계부채 — 추가 인상 여부 가늠자"
+      ],
+      "metaphors": [],
+      "lookingAhead": "한국은행 10월 생산자물가지수(PPI) — 0.1% 하락 발표"
+    },
+    {
       "date": "2026-11-19",
       "narrativeAngle": "job_perspective",
       "headline": "다우 하락·나스닥 반등, 코스피는 5,067 회복",
@@ -451,25 +464,6 @@
         "흔들림"
       ],
       "lookingAhead": "미국 9월 CPI — 연준·한은 모두 눈치 보는 숫자"
-    },
-    {
-      "date": "2026-10-08",
-      "narrativeAngle": "time_travel",
-      "headline": "삼성전자 실적 발표일, 미 국채는 5.277%를 찍었다",
-      "bigStoryTopic": "전 거래일 코스피가 <strong>-1.98%</strong> 밀린 가운데, 간밤 미 증시",
-      "walletTopics": [
-        "삼성전자 보유자 — 실적이 '확인'이냐 '실망'이냐",
-        "파생상품 관련 투자자 — 만기일 변동성, 미리 아는 것이 다르다",
-        "한미반도체·HBM 장비 관련 종목 보유자 — TrendForce 분석의 경로",
-        "지금 어느 자산이 어느 온도에 있나",
-        "기준금리 3%, 지금 예금의 자리"
-      ],
-      "metaphors": [
-        "국채 금리",
-        "실적 발표",
-        "시간여행"
-      ],
-      "lookingAhead": "삼성전자 3분기 잠정 실적 발표"
     }
   ]
 }
