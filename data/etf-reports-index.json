@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-11-24",
+      "type": "morning",
+      "headline": "젠슨 황 복귀 훈풍…국내 반도체 ETF 오늘 시험대",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-11-24",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-11-23T21:43:25.324Z"
+    },
+    {
       "date": "2026-11-23",
       "type": "morning",
       "headline": "미 AI 쇼크, 국내 반도체 ETF 오늘 첫 반응",
