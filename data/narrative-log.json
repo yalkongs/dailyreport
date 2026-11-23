@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "date": "2026-11-24",
+      "narrativeAngle": "structural_lens",
+      "headline": "코스피 4,708까지 밀린 뒤…뉴욕발 반도체 훈풍 맞닥뜨려",
+      "bigStoryTopic": "간밤 나스닥 <strong>+6.51%</strong>로 2025년 4월 이후 최대 단일 ",
+      "walletTopics": [
+        "반도체 모멘텀의 지속성 — 단발 이벤트냐, 사이클 전환이냐",
+        "목요일 금통위 — 인상 확정 시 성장주 추가 압박 경로",
+        "한중 FTA 후속 타결 — K-뷰티·여행주의 중국 재진입 가능성"
+      ],
+      "metaphors": [
+        "역방향",
+        "착지"
+      ],
+      "lookingAhead": "국내 반도체 대형주 — 간밤 ADR 급등의 국내 흡수 폭"
+    },
+    {
       "date": "2026-11-23",
       "narrativeAngle": "time_travel",
       "headline": "미 수출규제에 반도체주 직격, 코스피 5% 급락",
@@ -439,25 +455,6 @@
         "6,035"
       ],
       "lookingAhead": "미국 9월 CPI 발표 — 한국시간 21:30"
-    },
-    {
-      "date": "2026-10-13",
-      "narrativeAngle": "global_domino",
-      "headline": "현대차·기아 반토막, 코스피도 241포인트 무너졌다",
-      "bigStoryTopic": "전 거래일 코스피가 <strong>-3.65%</strong>로 <strong>6,384p",
-      "walletTopics": [
-        "현대차·기아 보유자 — '반토막 딜레마'의 구조를 먼저 파악하라",
-        "반도체 관련 투자자 — HBM 수요 증가와 패키징 경쟁 사이",
-        "물류·항공 관련 — 유가 105달러 속 한진 역대 최대 매출의 의미",
-        "코스피 급락 이후, 각 자산의 온도는",
-        "기준금리 3%, 지금 예금의 무게"
-      ],
-      "metaphors": [
-        "반토막",
-        "도미노",
-        "딜레마"
-      ],
-      "lookingAhead": "미국 9월 CPI 발표 — 연준 행보의 갈림길"
     }
   ]
 }
