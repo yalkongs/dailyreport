@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-11-25",
+      "type": "morning",
+      "headline": "삼성 인사에 로봇 힘 실려, 국내 로봇 ETF 급등",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-11-25",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-11-24T21:42:54.608Z"
+    },
+    {
       "date": "2026-11-24",
       "type": "morning",
       "headline": "젠슨 황 복귀 훈풍…국내 반도체 ETF 오늘 시험대",
