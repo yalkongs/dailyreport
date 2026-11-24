@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>코스피 5,000선 탈환 뒤 금통위 대기 - iM AI Market Report</title>
+<meta property="og:title" content="코스피 5,000선 탈환 뒤 금통위 대기">
+<meta property="og:description" content="코스피가 6% 넘게 급반등해 5,000선을 되찾았고, 간밤 뉴욕은 다우만 오르고 나스닥은 반락했습니다.">
+<meta property="og:site_name" content="iM뱅크">
+<meta property="og:type" content="article">
+<meta property="og:image" content="https://dailyreport-eta.vercel.app/reports/2026-11-25-preview.png">
+<meta property="og:image:width" content="1080">
+<meta property="og:image:height" content="1350">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="코스피 5,000선 탈환 뒤 금통위 대기">
+<meta name="twitter:description" content="코스피가 6% 넘게 급반등해 5,000선을 되찾았고, 간밤 뉴욕은 다우만 오르고 나스닥은 반락했습니다.">
+<meta name="twitter:image" content="https://dailyreport-eta.vercel.app/reports/2026-11-25-preview.png">
+<style>
+/* iM AI Market Report — Standardized Template CSS */
+/* 이 파일은 Claude가 생성한 HTML에 자동 주입됩니다. Claude의 인라인 <style>은 제거됩니다. */
+
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
+:root {
+  /* iM금융 CI 리프레시 (2026-07-01): 민트+라임. 레이아웃 무변경, 색만.
+     값은 ETF 렌더러(etf/renderer.ts)의 기존 iM 팔레트에 정확히 정렬 — 두 리포트 팔레트 통일.
+     --navy = 다크 잉크(제목·강조 텍스트·다크 배경), --teal = iM 민트(장식 액센트). */
+  --navy: #161B1D;        /* ETF --ink 정렬 — 제목/강조 텍스트, 캘린더 헤더 배경 */
+  --teal: #00BFA5;        /* ETF --im-teal — iM 민트, 밑줄/보더/채움 액센트 */
+  --mint-deep: #008F7F;   /* ETF --im-teal-deep — 헤더 그라데이션 끝·소형 액센트 텍스트 */
+  --lime: #84D96B;        /* ETF --im-mint — 라이트 그린 포인트 */
+  --slate: #8B9DAF;
+  --bg: #F5F7F3;          /* ETF --paper — 페이퍼 오프화이트 */
+  --card-bg: #FFFFFF;
+  --text: #1A2421;        /* ETF 본문 톤 near-black */
+  --text-sub: #5A6577;
+  --border: #E2E8F0;
+  --up: #D32F2F;          /* 상승 빨강 (한국식·기능색 유지) */
+  --down: #1565C0;        /* 하락 파랑 (유지) */
+  --up-bg: rgba(211, 47, 47, 0.06);
+  --down-bg: rgba(21, 101, 192, 0.06);
+}
+
+
+.report-embed * { margin: 0; padding: 0; box-sizing: border-box; }
+
+.report-embed {
+  font-family: 'Pretendard Variable', 'Pretendard', -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  font-size: 16px;
+  line-height: 1.8;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.report-container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ===== 1. MASTHEAD · 제목 · 세 줄 요약 ===== */
+/* 읽기 폭: .report-container 가 680px(좌우 20px 여백)이라 본문 칸은 640px. 스트라이프는 여백 없이 680px 전폭. */
+.masthead {
+  margin: 0 -20px 20px;
+  padding: 16px 20px 0;
+  border-top: 4px solid transparent;
+  border-image: linear-gradient(90deg, #00BFA5, #8BE08F) 1;
+}
+.mast-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding-bottom: 12px;
+}
+.mast-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.mast-logo { display: block; flex: none; }
+.mast-sep { flex: none; width: 2px; height: 28px; background: #D1D5DB; }
+.mast-titles { display: flex; flex-direction: column; line-height: 1.25; }
+.mast-label { font-size: 11px; font-weight: 600; color: var(--slate); letter-spacing: 0.02em; }
+.mast-name { font-size: 18px; font-weight: 700; color: #0B6E61; letter-spacing: -0.01em; }
+.mast-date { font-size: 13px; font-weight: 600; color: #6B7280; }
+.mast-stripes-svg { display: block; width: calc(100% + 40px); height: auto; margin: 0 -20px; }  /* 머리글 좌우 여백을 뚫고 680px 전폭 */
+.mast-caption {
+  font-size: 12px;
+  color: var(--text-sub);
+  line-height: 1.5;
+  margin: 2px 0 0;
+}
+
+.title-block { margin: 0 0 20px; }
+.cover-headline {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  color: #111827;
+  margin-bottom: 8px;
+  text-wrap: balance;
+}
+.cover-subline {
+  font-size: 15px;
+  color: var(--text-sub);
+  line-height: 1.6;
+}
+
+.summary-box {
+  background: #EEFAF7;
+  border: 1px solid #BFE9DF;
+  border-radius: 10px;
+  padding: 8px 16px;
+  margin-bottom: 36px;
+}
+.summary-list { list-style: none; }
+.summary-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 0;
+}
+.summary-row + .summary-row { border-top: 1px solid #D3EEE7; }
+.summary-label {
+  flex: none;
+  width: 66px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mint-deep);
+}
+.summary-text { font-size: 15px; line-height: 1.65; color: var(--text); min-width: 0; word-break: keep-all; overflow-wrap: break-word; }
+.summary-link { text-decoration: none; }
+.summary-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.summary-arrow { color: var(--mint-deep); font-weight: 700; }
+
+/* ===== 2. SECTION COMMON ===== */
+.section {
+  margin-bottom: 40px;
+}
+.section-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  position: relative;
+}
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--teal), var(--lime));
+  border-radius: 2px;
+}
+
+/* ===== 3. MARKET PULSE (히트맵) ===== */
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+/* 핵심 지표 6개 — 모바일에서도 3열 유지 */
+.key-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.pulse-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  transition: transform 0.15s;
+}
+.pulse-card:hover { transform: translateY(-1px); }
+.pulse-card .label {
+  font-size: 13px;
+  color: var(--slate);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+.pulse-card .value {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  text-align: right;
+}
+.pulse-card .change {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+  text-align: right;
+}
+.pulse-card .change.up { color: var(--up); }
+.pulse-card .change.down { color: var(--down); }
+.pulse-card .change.flat { color: var(--slate); }
+
+/* 히트맵 배경 강도 */
+.pulse-card.heat-up-1 { background: rgba(211,47,47,0.04); }
+.pulse-card.heat-up-2 { background: rgba(211,47,47,0.08); }
+.pulse-card.heat-up-3 { background: rgba(211,47,47,0.15); }
+.pulse-card.heat-up-4 { background: rgba(211,47,47,0.25); }
+.pulse-card.heat-up-5 { background: rgba(211,47,47,0.35); }
+.pulse-card.heat-down-1 { background: rgba(21,101,192,0.04); }
+.pulse-card.heat-down-2 { background: rgba(21,101,192,0.08); }
+.pulse-card.heat-down-3 { background: rgba(21,101,192,0.15); }
+.pulse-card.heat-down-4 { background: rgba(21,101,192,0.25); }
+.pulse-card.heat-down-5 { background: rgba(21,101,192,0.35); }
+
+/* ===== HISTORICAL CHART ===== */
+.chart-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  margin-top: 16px;
+}
+.chart-card .chart-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.chart-card svg { width: 100%; }
+
+/* ===== NARRATIVE ===== */
+.narrative { max-width: 640px; }
+.narrative p {
+  margin-bottom: 20px;
+  text-align: left;
+  word-break: keep-all;          /* 왼쪽 정렬에서 낱말 중간이 끊기지 않게(한국어는 띄어쓰기에서만 줄바꿈) */
+  overflow-wrap: break-word;
+}
+.narrative strong {
+  color: var(--navy);
+  font-weight: 700;
+}
+
+.pull-quote {
+  border-left: 4px solid var(--teal);
+  padding: 20px 24px;
+  margin: 32px 0;
+  background: rgba(0,191,165,0.05);
+  border-radius: 0 12px 12px 0;
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.data-card {
+  background: var(--card-bg);
+  border: 1px solid rgba(10,61,51,0.14);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin: 28px 0;
+}
+.data-card .data-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 12px;
+}
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.data-row:last-child { border-bottom: none; }
+.data-row .data-label { color: var(--text-sub); }
+.data-row .data-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== WATCH POINTS (관찰 포인트) ===== */
+.watch-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 12px;
+}
+.watch-card .watch-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(0,191,165,0.12);
+  color: var(--mint-deep);
+  margin-bottom: 8px;
+}
+.watch-card .watch-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.watch-card .watch-desc {
+  font-size: 14px;
+  color: var(--text-sub);
+  line-height: 1.7;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* ===== SO WHAT ===== */
+.sowhat-card {
+  background: var(--card-bg);
+  border: 1px solid rgba(0,191,165,0.18);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 12px;
+}
+.sowhat-card:first-child {
+  border-left: 4px solid var(--teal);
+  background: rgba(0,191,165,0.04);
+}
+.sowhat-card .sowhat-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 8px;
+}
+.sowhat-card p {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* ===== 펼쳐 보기 (details) ===== */
+.more {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 40px;
+}
+.more-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--navy);
+}
+.more-summary::-webkit-details-marker { display: none; }
+.more-summary::after {
+  content: "펼치기";
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mint-deep);
+}
+.more[open] > .more-summary { border-bottom: 1px solid var(--border); }
+.more[open] > .more-summary::after { content: "접기"; }
+.more-body { padding: 4px 16px 18px; }
+.more-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+  margin: 18px 0 10px;
+}
+
+/* ===== CALENDAR TABLE ===== */
+.calendar-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.calendar-table th {
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--navy);
+  color: #FFFFFF;
+  font-weight: 600;
+  font-size: 13px;
+}
+.calendar-table th:first-child { border-radius: 10px 0 0 0; }
+.calendar-table th:last-child { border-radius: 0 10px 0 0; }
+.calendar-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.calendar-table tr:nth-child(even) td {
+  background: rgba(10,61,51,0.025);
+}
+.calendar-table .stars { color: #F59E0B; }
+
+/* ===== FOOTER ===== */
+.source-note {
+  font-size: 12px;
+  color: var(--slate);
+  margin: 0 0 8px;
+}
+.data-basis { margin: 0 0 8px; }
+.data-basis .source-note { margin: 0; line-height: 1.6; word-break: keep-all; overflow-wrap: break-word; }
+.data-basis strong { font-weight: 700; color: var(--text-sub); }
+.source-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.source-list a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.source-meta { color: var(--slate); font-size: 12px; }
+.pulse-note {
+  font-size: 11px;
+  color: var(--slate);
+  margin: 10px 0 0;
+  line-height: 1.5;
+}
+.report-footer {
+  text-align: center;
+  padding: 40px 0 32px;
+  border-top: 2px solid var(--navy);
+  margin-top: 48px;
+}
+.report-footer .closing {
+  font-size: 16px;
+  color: var(--text);
+  margin-bottom: 20px;
+  line-height: 1.7;
+}
+.report-footer .legal-notice {
+  text-align: left;
+  border: 1px solid var(--slate);
+  border-radius: 6px;
+  padding: 16px 18px;
+  margin: 0;
+}
+.report-footer .legal-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--navy);
+  letter-spacing: 0.2px;
+  margin-bottom: 8px;
+}
+.report-footer .legal-list {
+  margin: 0;
+  padding-left: 16px;
+  list-style: disc;
+}
+.report-footer .legal-list li {
+  font-size: 11px;
+  color: var(--slate);
+  line-height: 1.65;
+  margin-bottom: 5px;
+  word-break: keep-all;
+}
+.report-footer .legal-list li:last-child { margin-bottom: 0; }
+.report-footer .copyright {
+  font-size: 11px;
+  color: var(--slate);
+  opacity: 0.7;
+  margin-bottom: 12px;
+}
+
+/* ===== DIVIDER ===== */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--slate), transparent);
+  margin: 40px 0;
+  border: none;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 640px) {
+  .cover-headline { font-size: 22px; }
+  .summary-label { width: 62px; }
+  .market-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .key-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .pulse-card {
+    padding: 10px;
+    overflow: hidden;
+  }
+  .pulse-card .label {
+    font-size: 11px;
+    margin-bottom: 2px;
+  }
+  .pulse-card .value {
+    font-size: 16px;
+  }
+  .pulse-card .change {
+    font-size: 11px;
+  }
+  .pulse-card svg {
+    width: 56px;
+    height: 22px;
+  }
+  .pull-quote {
+    margin-left: -20px;
+    margin-right: -20px;
+    border-radius: 0;
+    padding: 20px;
+  }
+  .section { margin-bottom: 32px; }
+  .more-body { padding: 4px 12px 16px; }
+}
+
+</style>
+</head>
+<body>
+<div class="report-embed">
+<div class="report-container">
+    <header class="masthead" data-section="masthead">
+        <div class="mast-top">
+            <div class="mast-brand">
+                <svg class="mast-logo" role="img" aria-label="iM뱅크" viewBox="65 231 871 564" width="52.5" height="34"><image href="/im-bank-logo.png" width="1000" height="1000"/></svg>
+                <span class="mast-sep" aria-hidden="true"></span>
+                <span class="mast-titles"><span class="mast-label">iM AI Analyst</span><span class="mast-name">Daily Market</span></span>
+            </div>
+            <div class="mast-date">2026년 11월 25일 수요일</div>
+        </div>
+        <div class="mast-stripes">
+            <svg class="mast-stripes-svg" viewBox="0 0 680 140" role="img" aria-label="최근 20거래일 코스피 일간 등락을 색으로 나타낸 띠"><g data-role="stripes"><g shape-rendering="crispEdges"><rect data-session="2026-10-28" data-pct="6.63" x="0" y="0" width="34" height="120" fill="#A50E0E"/><rect data-session="2026-10-29" data-pct="-1.24" x="34" y="0" width="34" height="120" fill="#8BADEF"/><rect data-session="2026-10-30" data-pct="-3.48" x="68" y="0" width="34" height="120" fill="#3364BE"/><rect data-session="2026-11-02" data-pct="2.24" x="102" y="0" width="34" height="120" fill="#EB6A60"/><rect data-session="2026-11-03" data-pct="-3.59" x="136" y="0" width="34" height="120" fill="#3061BA"/><rect data-session="2026-11-04" data-pct="0.62" x="170" y="0" width="34" height="120" fill="#EABCBA"/><rect data-session="2026-11-05" data-pct="-5.28" x="204" y="0" width="34" height="120" fill="#0B3A8C"/><rect data-session="2026-11-06" data-pct="-6.02" x="238" y="0" width="34" height="120" fill="#0B3A8C"/><rect data-session="2026-11-09" data-pct="-0.81" x="272" y="0" width="34" height="120" fill="#A6BFEE"/><rect data-session="2026-11-10" data-pct="4.39" x="306" y="0" width="34" height="120" fill="#B4211F"/><rect data-session="2026-11-11" data-pct="2.60" x="340" y="0" width="34" height="120" fill="#E15D55"/><rect data-session="2026-11-12" data-pct="-0.61" x="374" y="0" width="34" height="120" fill="#B3C8EE"/><rect data-session="2026-11-13" data-pct="-0.98" x="408" y="0" width="34" height="120" fill="#9BB8EF"/><rect data-session="2026-11-16" data-pct="-3.59" x="442" y="0" width="34" height="120" fill="#3061BA"/><rect data-session="2026-11-17" data-pct="-2.59" x="476" y="0" width="34" height="120" fill="#4D7EDD"/><rect data-session="2026-11-18" data-pct="1.99" x="510" y="0" width="34" height="120" fill="#EF746B"/><rect data-session="2026-11-19" data-pct="1.39" x="544" y="0" width="34" height="120" fill="#ED928C"/><rect data-session="2026-11-20" data-pct="-5.21" x="578" y="0" width="34" height="120" fill="#0B3A8C"/><rect data-session="2026-11-23" data-pct="-3.31" x="612" y="0" width="34" height="120" fill="#3869C3"/><rect data-session="2026-11-24" data-pct="6.32" x="646" y="0" width="34" height="120" fill="#A50E0E"/></g><path data-marker="today" d="M645 120 L681 120 L663 140 Z" fill="#A50E0E"/></g></svg>
+            <p class="mast-caption">최근 20거래일 코스피 등락(색이 짙을수록 큰 움직임)</p>
+        </div>
+    </header>
+
+    <section class="title-block" data-section="title">
+        <h1 class="cover-headline">코스피 5,000선 탈환 뒤 금통위 대기</h1>
+        <p class="cover-subline">전 거래일 297포인트 뛰어 5,006으로 마감. 간밤 뉴욕에서는 반도체주가 하루 만에 되밀려 엇갈린 신호를 남겼습니다.</p>
+    </section>
+
+    <section class="summary-box" data-section="summary" aria-label="세 줄 요약">
+        <ul class="summary-list">
+            <li class="summary-row"><span class="summary-label">어제</span><span class="summary-text">코스피가 6% 넘게 급반등해 5,000선을 되찾았고, 간밤 뉴욕은 다우만 오르고 나스닥은 반락했습니다.</span></li>
+            <li class="summary-row"><span class="summary-label">오늘 볼 것</span><span class="summary-text">내일 금통위 금리 결정을 하루 앞두고, 간밤 반도체 흐름이 국내 개장에 어떻게 옮겨올지 확인할 시점입니다.</span></li>
+            <li class="summary-row"><span class="summary-label">내 자산은</span><a class="summary-text summary-link" href="/etf-reports/2026-11-25">자산군 세부 흐름은 ETF Today에서 확인하세요. 오늘은 금리·반도체 연동 종목의 움직임이 핵심입니다.<span class="summary-arrow" aria-hidden="true"> →</span></a></li>
+        </ul>
+    </section>
+
+    <section class="section" data-section="key-indicators">
+        <h2 class="section-title">핵심 지표</h2>
+        <div class="key-grid">
+                <div class="pulse-card heat-up-5">
+                    <div class="label">코스피</div>
+                    <div class="value">5,006.03</div>
+                    <div class="change up">+6.32%</div>
+                </div>
+                <div class="pulse-card heat-down-1">
+                    <div class="label">S&amp;P 500</div>
+                    <div class="value">7,201.09</div>
+                    <div class="change down">-0.50%</div>
+                </div>
+                <div class="pulse-card heat-down-2">
+                    <div class="label">나스닥</div>
+                    <div class="value">23,733.54</div>
+                    <div class="change down">-1.48%</div>
+                </div>
+                <div class="pulse-card heat-down-1">
+                    <div class="label">원/달러</div>
+                    <div class="value">1,340.32</div>
+                    <div class="change down">-0.13%</div>
+                </div>
+                <div class="pulse-card heat-down-1">
+                    <div class="label">미 10년물</div>
+                    <div class="value">4.90%</div>
+                    <div class="change down">-0.01%p</div>
+                </div>
+                <div class="pulse-card heat-down-3">
+                    <div class="label">금</div>
+                    <div class="value">$3,551.6</div>
+                    <div class="change down">-2.73%</div>
+                </div>
+        </div>
+    </section>
+
+    <section class="section" data-section="story">
+        <h2 class="section-title">어제 무슨 일이 있었나</h2>
+        <div class="narrative">
+                <p>전 거래일 코스피는 <strong>+6.32%</strong>, <strong>297포인트</strong> 뛰어 <strong>5,006</strong>으로 마감했습니다. 미국발 AI 반도체 랠리가 도쿄를 거쳐 서울까지 차례로 불을 붙인 하루였습니다. 닛케이 225도 같은 날 <strong>+3.9%</strong> 올랐고, 코스닥도 <strong>+3.1%</strong>로 동반 상승했습니다.</p>
+                <p>도미노의 출발점은 뉴욕이었습니다. 젠슨 황 엔비디아 CEO의 복귀 효과에 힘입어 나스닥이 <strong>+6.51%</strong> 급등한 세션이 연쇄 반응을 만들었습니다. 그 흐름이 도쿄 장으로 넘어갔고, 서울까지 이어졌습니다. 주간 기준(지난 금요일 종가 <strong>4,870</strong>)과 비교하면 코스피는 이틀 만에 <strong>136포인트</strong>를 회복한 셈입니다.</p>
+                <p>그런데 도미노는 서울에서 멈추지 않았습니다. 다음 도미노가 반대 방향으로 넘어졌습니다. 간밤 뉴욕에서 나스닥은 <strong>-1.5%</strong>로 되밀렸습니다. CNBC에 따르면 엔비디아 복귀 효과의 지속 가능성에 의문이 제기되며 반도체주가 재차 팔렸고, 앤트로픽은 IPO가 첫날 공모가를 밑돌았습니다. 연합뉴스는 미국 반도체 지수가 하루 새 <strong>8%</strong> 급반락했다고 전했습니다. 다우만 <strong>+0.85%</strong>로 올랐고, S&amp;P 500은 소폭 하락으로 마감했습니다.</p>
+                <p>반도체 흐름 이면에 개별 기업 뉴스도 쌓였습니다. 삼성전자는 임원 인사에서 스마트폰·가전 부문 임원 수가 작년보다 31명 줄었다고 한겨레가 전했습니다. 현대차 인도법인은 12월 최대 8,000루피 가격 인상을 발표했으나, 매출 2,000억 돌파에도 마진이 급감한 것으로 알려졌습니다. 호실적과 수익성 사이의 간극이 주목받는 국면입니다.</p>
+                <p>채권 시장에서는 미국 10년물 국채 금리가 <strong>4.90%</strong>로 소폭 내렸고, 한국 국고채 3년물은 <strong>3.64%</strong>로 소폭 올랐습니다. 원·달러 환율은 <strong>1,340원</strong> 수준으로 1년 전(<strong>1,468원</strong>)보다 크게 낮습니다. 금은 <strong>-2.7%</strong> 하락해 안전자산 선호가 다소 약해진 모습이고, VIX는 <strong>26.36</strong>으로 여전히 경계 구간에 위치합니다.</p>
+                <p>이 도미노가 오늘 서울 장에서 어떻게 작동할지는 간밤 반도체 하락이 얼마나 무겁게 전달되느냐에 달렸습니다. 그리고 그 위로 더 큰 변수가 내일 아침 얹힙니다. 한국은행 금융통화위원회가 내일(목요일) 09:00에 기준금리 결정을 발표합니다. 시장 컨센서스는 현행 <strong>3.00%</strong>에서 <strong>3.25%</strong>로 인상입니다. 오늘 하루는 그 결정을 하루 앞둔 대기 국면으로 읽힙니다.</p>
+        </div>
+    </section>
+
+    <section class="section" data-section="today">
+        <h2 class="section-title">오늘 볼 것</h2>
+            <div class="watch-card">
+                <div class="watch-badge">09:00~장중</div>
+                <div class="watch-title">간밤 반도체 하락, 국내 반도체·IT주 개장 반응</div>
+                <div class="watch-desc">간밤 미국 반도체 지수가 8% 급반락했습니다. 전 거래일 국내 반도체주가 급등한 직후인 만큼, 오늘 개장 초반 되돌림 압력이 얼마나 나타나는지가 첫 번째 확인 포인트입니다. 삼성전자 임원 인사 여파도 장중 소화될 수 있습니다.</div>
+            </div>
+            <div class="watch-card">
+                <div class="watch-badge">내일 09:00</div>
+                <div class="watch-title">한국은행 금통위 기준금리 결정</div>
+                <div class="watch-desc">내일(목요일) 09:00 한국은행 금융통화위원회 본회의에서 기준금리를 결정합니다. 시장 컨센서스는 현행 <strong>3.00%</strong>에서 <strong>3.25%</strong>로 0.25%p 인상입니다. 총재 기자간담회는 11시 10분 예정이며, 오후에는 수정 경제전망도 발표됩니다. 오늘 장중 국고채 금리와 성장주 흐름은 이 결정을 미리 반영하는 과정일 수 있습니다.</div>
+            </div>
+            <div class="watch-card">
+                <div class="watch-badge">오늘 밤 22:30 발표 → 내일 반영</div>
+                <div class="watch-title">미국 GDP·주택착공 발표</div>
+                <div class="watch-desc">한국시간 오늘 밤 22:30 미국 GDP 잠정치와 주택착공 지표가 발표됩니다. 국내 장 마감 이후 발표인 만큼, 오늘 한국 장에는 직접 영향을 주지 않습니다. 결과는 목요일 국내 장에 반영됩니다.</div>
+            </div>
+    </section>
+
+    <section class="section" data-section="meaning">
+        <h2 class="section-title">한국 시장에 주는 의미</h2>
+            <div class="sowhat-card">
+                <div class="sowhat-title">금통위 인상 현실화 시 성장주·금리 민감주 점검</div>
+                <p>내일 금통위가 시장 컨센서스대로 <strong>3.25%</strong>로 인상을 결정하면, 현재 <strong>3.64%</strong> 수준인 국고채 3년물 금리에 추가 상승 압력이 가해질 수 있습니다. 이는 할인율이 높아지는 성장주·기술주에 추가 부담 경로가 됩니다. 반면 동결로 어긋난다면, 전 거래일 반등을 받쳐 준 위험 선호 분위기가 연장될 여지가 있습니다.</p>
+            </div>
+            <div class="sowhat-card">
+                <div class="sowhat-title">미국 반도체 반락이 국내 HBM 수요 체인으로 번지는지 여부</div>
+                <p>간밤 뉴욕에서 반도체주가 하루 만에 반락한 배경으로 '젠슨 황 복귀 효과의 지속 가능성'에 대한 의문이 거론됩니다. 이 흐름이 단기 차익 실현에 그친다면 국내 HBM·메모리 연동 종목의 낙폭은 제한될 수 있습니다. 반면 AI 수요 모멘텀 자체에 대한 재평가로 이어진다면, 국내 반도체 수주 체인에도 영향이 번질 가능성을 열어 두어야 합니다.</p>
+            </div>
+            <div class="sowhat-card">
+                <div class="sowhat-title">현대차 인도법인 마진 압박, 완성차·부품주 수익성 가늠자</div>
+                <p>현대차 인도법인은 매출 2,000억을 넘겼음에도 마진이 급감한 것으로 전해졌습니다. 12월 가격 인상 발표가 이 압박을 얼마나 만회할지 확인이 필요합니다. 가격 인상 효과가 실제 마진 개선으로 이어진다면 완성차 관련주에 긍정적 신호가 될 수 있고, 그렇지 않다면 비용 압박 우려가 부품주로까지 번질 수 있습니다.</p>
+            </div>
+    </section>
+
+    <details class="more" data-section="details">
+        <summary class="more-summary">전체 지표·이번 주 일정·과거 비교</summary>
+        <div class="more-body">
+        <h3 class="more-title">시장 체온</h3>
+        <div class="market-grid">
+                <div class="pulse-card heat-up-5" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><title>1년 전·3개월 전·1개월 전·1주 전·현재 5개 시점(시간 간격 비례 아님)</title><defs><linearGradient id="spllg51n" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#D32F2F" stop-opacity="0.2"/><stop offset="100%" stop-color="#D32F2F" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 24.0 L 19.0 4.0 L 36.0 12.5 L 53.0 16.4 L 70.0 16.2 L 70.0 26.0 Z" fill="url(#spllg51n)"/><polyline points="2.0,24.0 19.0,4.0 36.0,12.5 53.0,16.4 70.0,16.2" fill="none" stroke="#D32F2F" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="16.2" r="2" fill="#D32F2F"/></svg></div><div style="flex:1;min-width:0"><div class="label">코스피</div>
+                    <div class="value">5,006.03</div>
+                    <div class="change up">+6.32%</div></div></div>
+                <div class="pulse-card heat-up-4" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><title>1년 전·3개월 전·1개월 전·1주 전·현재 5개 시점(시간 간격 비례 아님)</title><defs><linearGradient id="sp146kli" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1565C0" stop-opacity="0.2"/><stop offset="100%" stop-color="#1565C0" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 4.0 L 19.0 6.9 L 36.0 14.2 L 53.0 24.0 L 70.0 22.5 L 70.0 26.0 Z" fill="url(#sp146kli)"/><polyline points="2.0,4.0 19.0,6.9 36.0,14.2 53.0,24.0 70.0,22.5" fill="none" stroke="#1565C0" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="22.5" r="2" fill="#1565C0"/></svg></div><div style="flex:1;min-width:0"><div class="label">코스닥</div>
+                    <div class="value">665.88</div>
+                    <div class="change up">+3.13%</div></div></div>
+                <div class="pulse-card heat-down-1" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><title>1년 전·3개월 전·1개월 전·1주 전·현재 5개 시점(시간 간격 비례 아님)</title><defs><linearGradient id="spcn4ru3" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#D32F2F" stop-opacity="0.2"/><stop offset="100%" stop-color="#D32F2F" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 24.0 L 19.0 4.0 L 36.0 5.1 L 53.0 10.9 L 70.0 13.8 L 70.0 26.0 Z" fill="url(#spcn4ru3)"/><polyline points="2.0,24.0 19.0,4.0 36.0,5.1 53.0,10.9 70.0,13.8" fill="none" stroke="#D32F2F" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="13.8" r="2" fill="#D32F2F"/></svg></div><div style="flex:1;min-width:0"><div class="label">S&amp;P 500</div>
+                    <div class="value">7,201.09</div>
+                    <div class="change down">-0.50%</div></div></div>
+                <div class="pulse-card heat-down-2" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><title>1년 전·3개월 전·1개월 전·1주 전·현재 5개 시점(시간 간격 비례 아님)</title><defs><linearGradient id="sp2evzvb" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#D32F2F" stop-opacity="0.2"/><stop offset="100%" stop-color="#D32F2F" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 24.0 L 19.0 4.0 L 36.0 5.1 L 53.0 15.1 L 70.0 18.7 L 70.0 26.0 Z" fill="url(#sp2evzvb)"/><polyline points="2.0,24.0 19.0,4.0 36.0,5.1 53.0,15.1 70.0,18.7" fill="none" stroke="#D32F2F" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="18.7" r="2" fill="#D32F2F"/></svg></div><div style="flex:1;min-width:0"><div class="label">나스닥</div>
+                    <div class="value">23,733.54</div>
+                    <div class="change down">-1.48%</div></div></div>
+                <div class="pulse-card heat-up-2" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><title>1년 전·3개월 전·1개월 전·1주 전·현재 5개 시점(시간 간격 비례 아님)</title><defs><linearGradient id="spag1zw5" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#D32F2F" stop-opacity="0.2"/><stop offset="100%" stop-color="#D32F2F" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 24.0 L 19.0 4.0 L 36.0 7.6 L 53.0 11.7 L 70.0 13.8 L 70.0 26.0 Z" fill="url(#spag1zw5)"/><polyline points="2.0,24.0 19.0,4.0 36.0,7.6 53.0,11.7 70.0,13.8" fill="none" stroke="#D32F2F" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="13.8" r="2" fill="#D32F2F"/></svg></div><div style="flex:1;min-width:0"><div class="label">다우존스</div>
+                    <div class="value">50,018.7</div>
+                    <div class="change up">+0.85%</div></div></div>
+                <div class="pulse-card heat-up-4" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><title>1년 전·3개월 전·1개월 전·1주 전·현재 5개 시점(시간 간격 비례 아님)</title><defs><linearGradient id="spgasc5l" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#D32F2F" stop-opacity="0.2"/><stop offset="100%" stop-color="#D32F2F" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 24.0 L 19.0 4.0 L 36.0 8.0 L 53.0 12.4 L 70.0 12.6 L 70.0 26.0 Z" fill="url(#spgasc5l)"/><polyline points="2.0,24.0 19.0,4.0 36.0,8.0 53.0,12.4 70.0,12.6" fill="none" stroke="#D32F2F" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="12.6" r="2" fill="#D32F2F"/></svg></div><div style="flex:1;min-width:0"><div class="label">닛케이 225</div>
+                    <div class="value">58,644.63</div>
+                    <div class="change up">+3.91%</div></div></div>
+                <div class="pulse-card heat-down-1" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><title>1년 전·3개월 전·1개월 전·1주 전·현재 5개 시점(시간 간격 비례 아님)</title><defs><linearGradient id="spxl3g4y" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1565C0" stop-opacity="0.2"/><stop offset="100%" stop-color="#1565C0" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 4.0 L 19.0 16.2 L 36.0 24.0 L 53.0 22.6 L 70.0 22.0 L 70.0 26.0 Z" fill="url(#spxl3g4y)"/><polyline points="2.0,4.0 19.0,16.2 36.0,24.0 53.0,22.6 70.0,22.0" fill="none" stroke="#1565C0" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="22.0" r="2" fill="#1565C0"/></svg></div><div style="flex:1;min-width:0"><div class="label">원/달러</div>
+                    <div class="value">1,340.32</div>
+                    <div class="change down">-0.13%</div></div></div>
+                <div class="pulse-card heat-up-3" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><title>1년 전·3개월 전·1개월 전·1주 전·현재 5개 시점(시간 간격 비례 아님)</title><defs><linearGradient id="sppu3bz4" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#D32F2F" stop-opacity="0.2"/><stop offset="100%" stop-color="#D32F2F" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 24.0 L 19.0 13.5 L 36.0 4.0 L 53.0 11.8 L 70.0 13.8 L 70.0 26.0 Z" fill="url(#sppu3bz4)"/><polyline points="2.0,24.0 19.0,13.5 36.0,4.0 53.0,11.8 70.0,13.8" fill="none" stroke="#D32F2F" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="13.8" r="2" fill="#D32F2F"/></svg></div><div style="flex:1;min-width:0"><div class="label">WTI 원유</div>
+                    <div class="value">$81.5</div>
+                    <div class="change up">+1.66%</div></div></div>
+                <div class="pulse-card heat-up-3" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><title>1년 전·3개월 전·1개월 전·1주 전·현재 5개 시점(시간 간격 비례 아님)</title><defs><linearGradient id="spn27hwa" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#D32F2F" stop-opacity="0.2"/><stop offset="100%" stop-color="#D32F2F" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 24.0 L 19.0 14.8 L 36.0 4.0 L 53.0 12.8 L 70.0 14.6 L 70.0 26.0 Z" fill="url(#spn27hwa)"/><polyline points="2.0,24.0 19.0,14.8 36.0,4.0 53.0,12.8 70.0,14.6" fill="none" stroke="#D32F2F" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="14.6" r="2" fill="#D32F2F"/></svg></div><div style="flex:1;min-width:0"><div class="label">브렌트유</div>
+                    <div class="value">$88.34</div>
+                    <div class="change up">+1.92%</div></div></div>
+                <div class="pulse-card heat-down-3" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><title>1년 전·3개월 전·1개월 전·1주 전·현재 5개 시점(시간 간격 비례 아님)</title><defs><linearGradient id="spnn8cuw" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1565C0" stop-opacity="0.2"/><stop offset="100%" stop-color="#1565C0" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 14.1 L 19.0 4.0 L 36.0 15.7 L 53.0 18.3 L 70.0 24.0 L 70.0 26.0 Z" fill="url(#spnn8cuw)"/><polyline points="2.0,14.1 19.0,4.0 36.0,15.7 53.0,18.3 70.0,24.0" fill="none" stroke="#1565C0" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="24.0" r="2" fill="#1565C0"/></svg></div><div style="flex:1;min-width:0"><div class="label">금</div>
+                    <div class="value">$3,551.6</div>
+                    <div class="change down">-2.73%</div></div></div>
+                <div class="pulse-card heat-down-5" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><title>1년 전·3개월 전·1개월 전·1주 전·현재 5개 시점(시간 간격 비례 아님)</title><defs><linearGradient id="spi7c7wm" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1565C0" stop-opacity="0.2"/><stop offset="100%" stop-color="#1565C0" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 16.9 L 19.0 4.0 L 36.0 14.4 L 53.0 19.1 L 70.0 24.0 L 70.0 26.0 Z" fill="url(#spi7c7wm)"/><polyline points="2.0,16.9 19.0,4.0 36.0,14.4 53.0,19.1 70.0,24.0" fill="none" stroke="#1565C0" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="24.0" r="2" fill="#1565C0"/></svg></div><div style="flex:1;min-width:0"><div class="label">은</div>
+                    <div class="value">$40.6</div>
+                    <div class="change down">-5.98%</div></div></div>
+                <div class="pulse-card heat-down-3" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><title>1년 전·3개월 전·1개월 전·1주 전·현재 5개 시점(시간 간격 비례 아님)</title><defs><linearGradient id="spr6y4bv" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1565C0" stop-opacity="0.2"/><stop offset="100%" stop-color="#1565C0" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 4.0 L 19.0 10.5 L 36.0 9.8 L 53.0 20.4 L 70.0 24.0 L 70.0 26.0 Z" fill="url(#spr6y4bv)"/><polyline points="2.0,4.0 19.0,10.5 36.0,9.8 53.0,20.4 70.0,24.0" fill="none" stroke="#1565C0" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="24.0" r="2" fill="#1565C0"/></svg></div><div style="flex:1;min-width:0"><div class="label">비트코인</div>
+                    <div class="value">$59,803</div>
+                    <div class="change down">-2.38%</div></div></div>
+                <div class="pulse-card heat-down-3" style="display:flex;align-items:center;gap:8px"><div style="flex-shrink:0"><svg width="72" height="28" viewBox="0 0 72 28" style="display:block"><title>1년 전·3개월 전·1개월 전·1주 전·현재 5개 시점(시간 간격 비례 아님)</title><defs><linearGradient id="spvh1q7f" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1565C0" stop-opacity="0.2"/><stop offset="100%" stop-color="#1565C0" stop-opacity="0.02"/></linearGradient></defs><path d="M 2.0 26.0 L 2.0 4.0 L 19.0 11.0 L 36.0 13.8 L 53.0 21.7 L 70.0 24.0 L 70.0 26.0 Z" fill="url(#spvh1q7f)"/><polyline points="2.0,4.0 19.0,11.0 36.0,13.8 53.0,21.7 70.0,24.0" fill="none" stroke="#1565C0" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="70.0" cy="24.0" r="2" fill="#1565C0"/></svg></div><div style="flex:1;min-width:0"><div class="label">이더리움</div>
+                    <div class="value">$1,678</div>
+                    <div class="change down">-2.56%</div></div></div>
+        </div>
+        <p class="pulse-note">추세선: 1년 전·3개월 전·1개월 전·1주 전·현재 5개 시점 비교(시간 간격 비례 아님). 추세선 색은 1년 전 대비, 숫자는 전일 대비입니다.</p>
+        <h3 class="more-title">이번 주 주요 일정</h3>
+        <table class="calendar-table">
+            <thead><tr><th>날짜</th><th>국가</th><th>이벤트</th><th>중요도</th></tr></thead>
+            <tbody>
+            <tr>
+                <td>11/25</td>
+                <td>US</td>
+                <td>Gross Domestic Product · 22:30 KST</td>
+                <td class="stars">★★★★☆</td>
+            </tr>
+            <tr>
+                <td>11/25</td>
+                <td>US</td>
+                <td>Housing Starts · 22:30 KST</td>
+                <td class="stars">★★★☆☆</td>
+            </tr>
+            </tbody>
+        </table>
+        </div>
+    </details>
+
+    <section class="section" data-section="sources">
+        <h2 class="section-title">참고한 뉴스</h2>
+        <p class="source-note">리포트 작성 때 입력으로 제공된 뉴스 중 일부입니다. 본문 각 문장과 1:1로 연결된 인용 목록은 아닙니다.</p>
+        <ul class="source-list">
+            <li><a href="https://news.google.com/rss/articles/CBMidkFVX3lxTFBHLTBMU0lqX0pMZFM3WlVySXFQbmRERFVlYnd4Z1ZVT1VFZWtSVTRjMUw1dFFjY0R1ckRNbFJ5OUJDS3lMZDU5OTZlTkZUQ3pwSmdkc3B6YV8wMmNGMER4M2FQQ3kyT1hWU1FldFlSY1U3V2ZGTnc?oc=5" target="_blank" rel="noopener noreferrer">Nvidia CEO Faces Senate Scrutiny Over China Chip and Spy Scandal - Legis1</a> <span class="source-meta">· Google News 반도체정책</span></li>
+            <li><a href="https://news.google.com/rss/articles/CBMi3wFBVV95cUxNMEhYd2YzdW9RLU5fRm1YYllkNjlZVlU0d3BKcXM1UzNXZkduWmZWMWlsTTR5WFVKX2RxdnNFSXd6RElyenpGYVBuanUza240SU9KM1lYQlo1dmdsNkNQeU1PVTNCbkhtRzF4XzFyc2xlcjh0OUd6aGNFelAyU3Y4a0FnRHl4S19nMGRYRklRSUtGeklHWXVkOEFITUhFUy13Q1ZzdnBCSXpMb19Vdmx1RFVPRjcxdDE4T2xaOGVlMjdaaW1tRDh4ODRHLVpxNzFxTG1IR09PZWhvakptRXlv?oc=5" target="_blank" rel="noopener noreferrer">Micron Falls 7% as NVIDIA Pullback Partially Reverses Monday's AI Chip Rally; SanDisk and SK Hynix Drop 6% - 24/7 Wall St.</a> <span class="source-meta">· Google News 반도체벨웨더</span></li>
+            <li><a href="https://www.yna.co.kr/view/AKR20261125012700009" target="_blank" rel="noopener noreferrer">'젠슨황 효과' 의문에 美증시 반도체지수 8% 급반락</a> <span class="source-meta">· 연합뉴스 마켓</span></li>
+            <li><a href="https://www.yna.co.kr/view/AKR20261124155800030" target="_blank" rel="noopener noreferrer">계란 산지 가격 하락에도 소매가는 올라…고병원성 AI 확산 우려</a> <span class="source-meta">· 연합뉴스 경제</span></li>
+            <li><a href="https://news.google.com/rss/articles/CBMimgFBVV95cUxOVkNhX201Z2FXd01iTjcxMmVvVkhXOFFlaGNtUWJaUm9UYnJMY214LWplakU4OUtqWlk0UEVmWGVOZGc1NVdsTG1UcU9hQlYtSDZHWl80VjVEUDlCV0E5TENKU0t0R0pnOGlodnZZSnpmb2xYTGVBMmlYNUk2dURreWh4V0hqWHZIQjFrYmNnU1I1dVJOOFJhVm13?oc=5" target="_blank" rel="noopener noreferrer">Markets News, Nov. 24, 2026: S&amp;P 500, Nasdaq Fall After Massive Rally as Nvidia Leads AI Sell-Off; Anthropic Drops Below IPO Price - Investopedia</a> <span class="source-meta">· Google News US</span></li>
+            <li><a href="https://news.google.com/rss/articles/CBMid0FVX3lxTE55Qzd6R1BVMkNsU2hwVWc4OElya24tNzEwcjFjd1NyVkczM2dDTHk2WnNzdkxlR2huZW1IcTgtMDBTUVU3WWxZNW1PeFQyaHgwdGl3LTlaVjV1cEtWa0JSQmNuQ3hnQmViVG5XYndIVEFaRFVEUzJ30gF8QVVfeXFMTWJnbFVGZ0NXUU1Xb04xRi1tMnlKazVMVWxSOUpYSWtBV2dHVHZycUpyUk1XX24zQ2o4bHFEVDEyaklmcktGaTFvMHlualhDckJrZ25tMDB5VnEzbTRYQmhEOThhNDZSWWtMSDYya2ZHckRQLUtEZGl0Tmp2TQ?oc=5" target="_blank" rel="noopener noreferrer">Dow soars 1,400 points; Nasdaq surges 6% in its best day since April 2025 as Jensen Huang returns to Nvidia - CNBC</a> <span class="source-meta">· Google News US</span></li>
+        </ul>
+    </section>
+
+    <section class="data-basis" data-section="data-basis">
+        <p class="source-note"><strong>데이터 기준</strong> 2026년 11월 25일 06:41(한국시간)에 수집했습니다. 주가지수는 수집 시점의 가장 최근 시세(개장 전이면 직전 종가), 환율·원자재·가상자산은 수집 시점 가격이며, 등락은 전일 대비입니다.</p>
+    </section>
+
+    <footer class="report-footer" data-section="footer">
+        <div class="closing">오늘 장은 전 거래일 급반등의 여진을 소화하면서 내일 금통위를 대기하는 흐름이 될 것으로 보입니다.</div>
+        <div class="copyright">© iM뱅크 | Powered by iM AI Analyst | 데이터 출처: Yahoo Finance, FRED, ECOS, KRX, Google News</div>
+        <div class="legal-notice">
+            <div class="legal-title">투자 유의사항 및 법적 고지</div>
+            <ul class="legal-list">
+            <li>본 자료는 정보제공을 목적으로 작성되었으며, 「자본시장과 금융투자업에 관한 법률」에 따른 투자권유·투자자문 또는 특정 금융투자상품의 매매를 유인하기 위한 자료가 아닙니다.</li>
+            <li>본 자료는 「금융소비자 보호에 관한 법률」상 금융상품의 계약체결을 권유할 목적으로 제공되지 않으며, 개별 고객의 투자성향·투자목적·재산상황을 반영한 적합성·적정성 판단이나 설명의무 이행을 대체하지 않습니다.</li>
+            <li>본 자료는 AI가 자동 생성한 것으로 오류나 누락이 있을 수 있습니다. 신뢰할 수 있다고 판단되는 자료와 정보에 근거했으나 그 정확성·완전성을 보장하지 않으며, 내용은 사전 통지 없이 변경될 수 있습니다.</li>
+            <li>금융투자상품은 원금 손실이 발생할 수 있고 그 손실은 투자자 본인에게 귀속되며, 예금자보호법에 따른 보호를 받지 않습니다.</li>
+            <li>과거의 수익률이나 성과는 미래의 수익을 보장하지 않습니다.</li>
+            <li>투자 전 (간이)투자설명서와 상품설명서를 반드시 확인하시고, 상품별 보수·수수료·세금 등 비용을 함께 검토하시기 바랍니다.</li>
+            <li>최종 투자 판단과 그 결과에 대한 책임은 투자자 본인에게 있으며, 본 자료를 이용하여 발생한 결과에 대해 법적 책임을 지지 않습니다.</li>
+            </ul>
+        </div>
+    </footer>
+</div>
+</div>
+</body>
+</html>

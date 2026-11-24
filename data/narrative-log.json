@@ -1,6 +1,19 @@
 {
   "entries": [
     {
+      "date": "2026-11-25",
+      "narrativeAngle": "global_domino",
+      "headline": "코스피 5,000선 탈환 뒤 금통위 대기",
+      "bigStoryTopic": "전 거래일 <strong>297포인트</strong> 뛰어 <strong>5,006</st",
+      "walletTopics": [
+        "금통위 인상 현실화 시 성장주·금리 민감주 점검",
+        "미국 반도체 반락이 국내 HBM 수요 체인으로 번지는지 여부",
+        "현대차 인도법인 마진 압박, 완성차·부품주 수익성 가늠자"
+      ],
+      "metaphors": [],
+      "lookingAhead": "간밤 반도체 하락, 국내 반도체·IT주 개장 반응"
+    },
+    {
       "date": "2026-11-24",
       "narrativeAngle": "structural_lens",
       "headline": "코스피 4,708까지 밀린 뒤…뉴욕발 반도체 훈풍 맞닥뜨려",
@@ -436,25 +449,6 @@
         "금리경로"
       ],
       "lookingAhead": "통계청 9월 고용동향 발표"
-    },
-    {
-      "date": "2026-10-14",
-      "narrativeAngle": "structural_lens",
-      "headline": "코스피, 349포인트 무너지며 6,035선 후퇴",
-      "bigStoryTopic": "전 거래일 코스피가 <strong>-5.46%</strong>로 <strong>6,035p",
-      "walletTopics": [
-        "반도체 보유자 — 미국 반도체 약세와 코스피 낙폭의 연결",
-        "현대차·기아 관련 종목 보유자 — 인도 20조 투자의 의미",
-        "인터넷은행 관련 — 부실채권 구조와 금리 인상의 교차",
-        "코스피 5% 급락 이후, 각 자산의 현재 온도",
-        "기준금리 3%, 지금 예금과 주식 사이"
-      ],
-      "metaphors": [
-        "후퇴",
-        "낙폭",
-        "6,035"
-      ],
-      "lookingAhead": "미국 9월 CPI 발표 — 한국시간 21:30"
     }
   ]
 }
