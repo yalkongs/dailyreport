@@ -1,6 +1,15 @@
 {
   "reports": [
     {
+      "date": "2026-11-26",
+      "type": "morning",
+      "headline": "국내 반도체 ETF 급락, 관세 변수는 아직 열려 있다",
+      "url": "https://dailyreport-eta.vercel.app/etf-reports/2026-11-26",
+      "anomalyCount": 0,
+      "anomalyBreakdown": {},
+      "createdAt": "2026-11-25T21:42:40.547Z"
+    },
+    {
       "date": "2026-11-25",
       "type": "morning",
       "headline": "삼성 인사에 로봇 힘 실려, 국내 로봇 ETF 급등",
