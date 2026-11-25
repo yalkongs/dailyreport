@@ -1,6 +1,19 @@
 {
   "entries": [
     {
+      "date": "2026-11-26",
+      "narrativeAngle": "data_anatomy",
+      "headline": "코스피 308포인트 빠진 날, 금통위가 기다린다",
+      "bigStoryTopic": "AI 메모리 고점 논쟁에 반도체주 흔들리고 코스피는 <strong>-6.16%</stron",
+      "walletTopics": [
+        "금통위가 인상을 단행하면",
+        "AI 메모리 고점 논쟁이 이어진다면",
+        "부실채권비율 12년 최고 — 가계 신용의 균열"
+      ],
+      "metaphors": [],
+      "lookingAhead": "한국은행 금통위 기준금리 결정"
+    },
+    {
       "date": "2026-11-25",
       "narrativeAngle": "global_domino",
       "headline": "코스피 5,000선 탈환 뒤 금통위 대기",
@@ -430,25 +443,6 @@
         "하루"
       ],
       "lookingAhead": "한국은행 9월 수출입물가지수 발표 (오늘 오전 6시 기공표)"
-    },
-    {
-      "date": "2026-10-15",
-      "narrativeAngle": "historical_deja_vu",
-      "headline": "CPI 예상 상회, 나스닥 1.9% 밀렸다",
-      "bigStoryTopic": "미국 9월 소비자물가지수가 시장 예상을 웃돌며 연준의 추가 인상 우려를 되살렸습니다. 기술",
-      "walletTopics": [
-        "반도체·기술주 보유자 — 나스닥 낙폭의 구조를 먼저 보십시오",
-        "현대차 인도 신공장 발표 — 원자재 비용 압력과 동시에 읽어야 합니다",
-        "부동산 PF 리스크 — 유동성 긴축과 맞물린 취약 고리",
-        "CPI 충격 이후, 각 자산의 온도",
-        "기준금리 3%, 지금 예금의 무게감"
-      ],
-      "metaphors": [
-        "데자뷰",
-        "물가충격",
-        "금리경로"
-      ],
-      "lookingAhead": "통계청 9월 고용동향 발표"
     }
   ]
 }
