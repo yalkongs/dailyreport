@@ -24,9 +24,44 @@ export function daysBetween(a: string, b: string): number {
 
 const dirWord = (delta: number) => (delta > 0 ? "인상" : "인하");
 
+/**
+ * 통화정책 결정회의 일정(결정일). 금리 이력에는 '동결'이 찍히지 않으므로, 마지막 변경 뒤 열린 회의를 세어 동결을 안다.
+ * (2026-11-26 마켓 리포트: 한은 10/22 동결이 블록에 없어 "세 번째 연속 인상 여부"라고 썼다.)
+ * coverageStart 이후로는 빠진 회의가 없어야 한다 — 마지막 변경이 그 이전이면 동결을 세지 않는다.
+ * 새해 일정이 나오면 행을 추가할 것.
+ */
+export interface MeetingTable {
+  source: string;
+  coverageStart: string;
+  dates: string[];
+}
+
+export const FOMC_MEETINGS: MeetingTable = {
+  // federalreserve.gov/monetarypolicy/fomccalendars.htm — 회의 둘째 날(결정 발표일, 미국 날짜)
+  source: "federalreserve.gov FOMC 일정",
+  coverageStart: "2026-01-01",
+  dates: ["2026-01-28", "2026-03-18", "2026-04-29", "2026-06-17", "2026-07-29", "2026-09-16", "2026-10-28", "2026-12-09"],
+};
+
+export const BOK_MPB_MEETINGS: MeetingTable = {
+  // 2026: 8/27(제16차 정기 의사록)·10/22(동결)·11/26 확인. 2027: 한은 2026-10-29 의결 일정(SBS Biz 보도).
+  source: "한국은행 통화정책방향 결정회의 일정",
+  coverageStart: "2026-08-01",
+  dates: [
+    "2026-08-27", "2026-10-22", "2026-11-26",
+    "2027-01-14", "2027-02-25", "2027-04-09", "2027-05-27", "2027-07-15", "2027-08-26", "2027-10-15", "2027-11-25",
+  ],
+};
+
+/** 마지막 변경(효력일) 뒤, 데이터 기준일까지 열린 회의 = 동결 결정. 오늘 열리는 회의는 아직 결과가 없으므로 제외. */
+export function holdsSince(lastChangeDate: string, asOf: string, today: string, table: MeetingTable): string[] {
+  if (lastChangeDate < table.coverageStart) return [];
+  return table.dates.filter((d) => d > lastChangeDate && d <= asOf && d < today);
+}
+
 export function summarizePolicyRate(
   points: RatePoint[],
-  opts: { label: string; today: string; windowStart: string; currentText?: string },
+  opts: { label: string; today: string; windowStart: string; currentText?: string; meetings?: MeetingTable },
 ): PolicyRateSummary | null {
   const valid = points
     .filter((p) => Number.isFinite(p.value))
@@ -87,6 +122,14 @@ export function summarizePolicyRate(
     } else if (Math.sign(prevChange.delta) !== Math.sign(lastChange.delta)) {
       stance = `${dir}(${dirWord(prevChange.delta)}→${dir} 전환)`;
     }
+  }
+  // 마지막 변경 뒤 동결 결정이 있었으면 '연속 인상' 중이 아니다. 방향(stanceDirection)은 마지막 변경 쪽으로 둔다 —
+  // 인상 뒤 동결 국면에서 '인하 기대'를 전제로 쓰는 오류를 계속 기록하기 위해서다.
+  const holds = opts.meetings ? holdsSince(lastChange.date, last.date, opts.today, opts.meetings) : [];
+  if (holds.length > 0) {
+    const before = streak >= 2 ? `${streak}회 연속 ${dir}` : dir;
+    stance = `동결(${before} 뒤 ${holds.length}회 연속 동결, 마지막 결정 ${holds.at(-1)} 동결)`;
+    return { ...base, stance, stanceDirection: direction, holds };
   }
   return { ...base, stance, stanceDirection: direction };
 }
@@ -175,6 +218,7 @@ export async function collectPolicyRates(
       today,
       windowStart,
       currentText: `${lowerLatest.value.toFixed(2)}~${upperLatest.value.toFixed(2)}%`,
+      meetings: FOMC_MEETINGS,
     });
     if (!s) throw new Error("요약 불가: 이력 불완전 또는 오래됨");
     return s;
@@ -183,7 +227,7 @@ export async function collectPolicyRates(
   const bokTask = async (): Promise<PolicyRateSummary | null> => {
     if (!ecosKey) return null;
     const pts = await fetchEcosBaseRate(fetcher, ecosKey, windowStart, today);
-    const s = summarizePolicyRate(pts, { label: "한국은행 기준금리", today, windowStart });
+    const s = summarizePolicyRate(pts, { label: "한국은행 기준금리", today, windowStart, meetings: BOK_MPB_MEETINGS });
     if (!s) throw new Error("요약 불가: 이력 불완전 또는 오래됨");
     return s;
   };
@@ -214,6 +258,7 @@ function renderLine(label: string, s: PolicyRateSummary | null): string {
   } else {
     facts = `최근 변경 ${s.lastChange.date}(효력일) ${fmtDelta(s.lastChange.delta)}`;
     if (s.prevChange) facts += `, 직전 변경 ${s.prevChange.date} ${fmtDelta(s.prevChange.delta)}`;
+    if (s.holds && s.holds.length > 0) facts += `, 그 뒤 회의 ${s.holds.join("·")} 동결`;
   }
   return `- ${s.label}: ${s.currentText} — ${facts}\n  → 현재 국면: ${s.stance} (데이터 기준일 ${s.asOf})\n`;
 }

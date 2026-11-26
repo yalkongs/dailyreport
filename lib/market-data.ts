@@ -84,6 +84,29 @@ export const CRYPTO = [
 
 const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 
+/**
+ * 시세의 '이전 종가'가 두 거래일 전 종가로 남아 있는지 일봉으로 검사해 바로잡는다(2026-11-27).
+ * 야후 아시아 지수는 regularMarketPreviousClose 가 두 세션 전 값인 날이 있다 — 11-23 마켓의 항셍 -3.79%(실제 -1.89%)는
+ * 이틀 누적이었다. 이전 종가가 '직전 일봉'이 아니라 '그 전 일봉'과 일치할 때만 직전 일봉으로 다시 계산한다
+ * (선물 정산가처럼 일봉 종가와 원래 다른 값은 건드리지 않는다). asOf 는 시세의 현지 거래일.
+ */
+export function reconcilePreviousClose(
+  quote: { price: number | null; change: number | null; changePercent: number | null; previousClose: number | null; asOf: string | null },
+  bars: ReadonlyArray<{ date: string; close: number | null | undefined }>,
+): { price: number | null; change: number | null; changePercent: number | null; previousClose: number | null; corrected: boolean } {
+  const base = { price: quote.price, change: quote.change, changePercent: quote.changePercent, previousClose: quote.previousClose, corrected: false };
+  const valid = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v) && v > 0;
+  if (!quote.asOf || !valid(quote.price) || !valid(quote.previousClose)) return base;
+  const past = bars.filter((b) => b.date < (quote.asOf as string) && valid(b.close)).sort((a, b) => (a.date < b.date ? -1 : 1));
+  if (past.length < 2) return base;
+  const prev = past[past.length - 1].close as number;
+  const prev2 = past[past.length - 2].close as number;
+  const near = (a: number, b: number) => Math.abs(a / b - 1) < 0.0002;
+  if (near(quote.previousClose, prev) || !near(quote.previousClose, prev2)) return base;
+  const change = quote.price - prev;
+  return { price: quote.price, change, changePercent: (change / prev) * 100, previousClose: prev, corrected: true };
+}
+
 async function fetchQuote(
   symbol: string
 ): Promise<{
@@ -91,17 +114,34 @@ async function fetchQuote(
   change: number | null;
   changePercent: number | null;
   previousClose: number | null;
+  asOf: string | null;
 }> {
   try {
-    const quote = await yahooFinance.quote(symbol);
-    return {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const quote: any = await yahooFinance.quote(symbol, {}, { validateResult: false });
+    const tz: string = quote.exchangeTimezoneName || "America/New_York";
+    const asOf = sessionDate(quote.regularMarketTime, tz);
+    const raw = {
       price: quote.regularMarketPrice ?? null,
       change: quote.regularMarketChange ?? null,
       changePercent: quote.regularMarketChangePercent ?? null,
       previousClose: quote.regularMarketPreviousClose ?? null,
+      asOf,
     };
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const history: any = await yahooFinance.chart(symbol, { period1: new Date(Date.now() - 12 * 86400000), interval: "1d" });
+      const bars = (history?.quotes ?? []).map((b: { date: Date; close: number | null }) => ({ date: sessionDate(b.date, tz) ?? "", close: b.close }));
+      const fixed = reconcilePreviousClose(raw, bars);
+      if (fixed.corrected) {
+        console.log(`  🔧 ${symbol}: 이전 종가가 두 거래일 전 값 — ${raw.previousClose} → ${fixed.previousClose}, 등락 ${raw.changePercent?.toFixed(2)}% → ${fixed.changePercent?.toFixed(2)}%`);
+      }
+      return { price: fixed.price, change: fixed.change, changePercent: fixed.changePercent, previousClose: fixed.previousClose, asOf };
+    } catch {
+      return raw; // 일봉 실패는 시세 그대로
+    }
   } catch {
-    return { price: null, change: null, changePercent: null, previousClose: null };
+    return { price: null, change: null, changePercent: null, previousClose: null, asOf: null };
   }
 }
 
@@ -137,6 +177,7 @@ async function fetchForex(
       rate: quote.price,
       change: quote.change,
       changePercent: quote.changePercent,
+      asOf: quote.asOf,
     });
   }
   return { data, errors };
@@ -173,6 +214,7 @@ async function fetchBonds(
       ...config,
       yield: quote.price,
       change: quote.change,
+      asOf: quote.asOf,
     });
   }
   return { data, errors };

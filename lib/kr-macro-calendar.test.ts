@@ -88,3 +88,28 @@ test("공식 보도계획: 연도 경계 — 대상 월이 표에 있으면 다�
     ["2027-01-13", "employment"],
   ]);
 });
+
+// 2026-11-22 갱신 캐시가 금통위를 09:00(회의 시작)으로 가져와 11-25·26 마켓이 "09:00 결정 발표"라고 썼다.
+test("applyBokOfficialSchedule: 검색 결과의 금통위를 공식 일정(10:00 발표)으로 교체", () => {
+  const { applyBokOfficialSchedule } = require("./kr-macro-calendar");
+  const out = applyBokOfficialSchedule(
+    [
+      { date: "2026-11-26", category: "bok_mpb", name: "한국은행 금융통화위원회", importance: 5, time: "09:00", confirmed: true },
+      { date: "2026-11-26", category: "bok_outlook", name: "한국은행 수정 경제전망", importance: 4, time: "13:30", confirmed: true },
+      { date: "2026-12-10", category: "bok_mpb", name: "금통위(추정)", importance: 5 },
+    ],
+    "2026-11-25",
+    "2026-12-31",
+  );
+  const mpb = out.filter((e: { category: string }) => e.category === "bok_mpb");
+  assert.equal(mpb.length, 1);
+  assert.equal(mpb[0].date, "2026-11-26");
+  assert.equal(mpb[0].time, "10:00");
+  assert.ok(out.some((e: { category: string }) => e.category === "bok_outlook"));
+});
+
+test("applyBokOfficialSchedule: 일정표 밖 연도는 검색 결과를 그대로 둔다", () => {
+  const { applyBokOfficialSchedule } = require("./kr-macro-calendar");
+  const ev = { date: "2028-01-13", category: "bok_mpb", name: "한국은행 금융통화위원회", importance: 5 };
+  assert.deepEqual(applyBokOfficialSchedule([ev], "2028-01-01", "2028-01-31"), [ev]);
+});

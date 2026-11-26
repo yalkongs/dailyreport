@@ -12,6 +12,8 @@ import type {
 import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS, MARKET_GENERATION_BUDGET_MS, REPORT_MODEL, makeDeadline } from "./claude-budget";
 import { EVIDENCE_RULES } from "./evidence-rules";
 import { formatEconomicEventLine } from "./economic-calendar";
+import { buildReportCalendar } from "./report-calendar";
+import { getUpcomingKrMacroEvents } from "./kr-macro-calendar";
 import { renderReport, sanitizeInlineHtml } from "./report-renderer";
 import { cardTextFits } from "./preview/data-card";
 import { decodeCharacterReferences, stripEmphasisTags } from "./html-entities";
@@ -356,7 +358,6 @@ ${lines}
 - (기본/normal 모드 기준) bigStory.content: paragraph 블록 4~6개 (사건 → 근거 있는 원인 → 시장 반응), pullQuote 0~1개, dataCard는 쓰지 않음
 - watchPoints: 최대 3개 (한국시간 순서)
 - soWhat: 2~3개 ("확인되면 / 어긋나면" 조건형)
-- calendar: 경제 캘린더 데이터가 있으면 주요 일정 포함
 독자는 모바일에서 1~2분 안에 읽습니다. 길게 쓰기보다 정확하고 근거 있게, 핵심을 위에 두십시오.
 ${modeBlock}
 ${calendarBlock}
@@ -372,6 +373,7 @@ ${sidewaysBlock}
 ${evidenceBlock}
 ${contextBlock}
 ## 시장 데이터
+각 항목의 asOf 는 그 시세의 현지 거래일입니다. asOf 가 다른 같은 지역 지표보다 이르면 그 시장은 휴장이었습니다 — 그 등락을 '전일 대비'·'어제'로 쓰지 말고 "M/D 종가 기준"으로 쓰거나 언급하지 마십시오. 일정표(휴장일 포함)는 코드가 따로 그리니 JSON에 calendar 를 쓰지 마십시오.
 \`\`\`json
 ${JSON.stringify(data, null, 2)}
 \`\`\`
@@ -415,14 +417,6 @@ ${JSON.stringify(data, null, 2)}
     {
       "title": string,   // 제목 한 줄
       "body": string     // 2~3문장, "~가 확인되면 …, 어긋나면 …" 조건형 (<strong> 사용 가능)
-    }
-  ],
-  "calendar": [
-    {
-      "date": string,       // "4/15" 등
-      "country": string,    // "미국", "중국", "한국" 등
-      "event": string,      // 이벤트명
-      "importance": number  // 1~5
     }
   ],
   "closingMessage": string  // 마무리 한 문장
@@ -1110,21 +1104,10 @@ function finalizeMarketReport(
     }
   }
 
-  // 캘린더: Claude 생성 대신 실제 경제 캘린더 데이터 사용 (날조 방지)
-  if (context?.economicCalendar && context.economicCalendar.length > 0) {
-    content.calendar = context.economicCalendar
-      .filter((e) => e.importance >= 3)
-      .sort((a, b) => b.importance - a.importance)
-      .slice(0, 8)
-      .map((e) => ({
-        // C03: 한국시간 날짜·시각으로 표시(FOMC는 한국시간 다음 날 새벽).
-        date: formatCalendarDate(e.kstDate ?? e.date),
-        country: e.country,
-        event: e.time ? `${e.event} · ${e.time} KST` : e.event,
-        importance: e.importance,
-      }));
-    console.log(`📅 캘린더: 실제 경제 데이터에서 ${content.calendar.length}건 사용 (Claude 생성 대체)`);
-  }
+  // 캘린더: 모델 출력은 쓰지 않는다 — 미국 경제 캘린더·한국 매크로 일정(공식표)·휴장일 표로 코드가 만든다(날조 방지).
+  // (2026-11-26: 미국 캘린더가 빈 날 모델이 "11/27 추수감사절 휴장"을 지어냈다 — 실제 11/26.)
+  content.calendar = buildReportCalendar(data.date, context?.economicCalendar ?? [], getUpcomingKrMacroEvents(data.date, 7));
+  console.log(`📅 캘린더: 코드 생성 ${content.calendar.length}건 (미국 지표·한국 일정·휴장일)`);
 
   // Ruling 37·37e: 발송할 content(기본 문장·실제 일정을 채운 뒤)도 HARD 검사를 통과해야 한다 — 후보는 이미 통과했으므로 방어선.
   // 매 시도 검사와 같은 화면 글자 함수(marketAdviceText)를 쓴다. SOFT는 루프에서 이미 경고로 남겼다(F02).
@@ -1151,15 +1134,6 @@ function gaugeTypeToPercent(type: string): number {
     case "cautious": return 30;
     default: return 50;
   }
-}
-
-/** 경제 캘린더 날짜 포맷 (YYYY-MM-DD → M/D) */
-function formatCalendarDate(dateStr: string): string {
-  const parts = dateStr.split("-");
-  if (parts.length === 3) {
-    return `${parseInt(parts[1])}/${parseInt(parts[2])}`;
-  }
-  return dateStr;
 }
 
 /** 금지된 표현을 감지하고 로그 (JSON에서는 제거하지 않고 경고만) */

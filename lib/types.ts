@@ -8,6 +8,7 @@ export interface MarketIndex {
   change: number | null;
   changePercent: number | null;
   previousClose: number | null;
+  asOf?: string | null; // 시세의 현지 거래일(휴장이면 직전 거래일로 남는다)
 }
 
 export interface ForexData {
@@ -17,6 +18,7 @@ export interface ForexData {
   rate: number | null;
   change: number | null;
   changePercent: number | null;
+  asOf?: string | null; // 시세의 현지 거래일(휴장이면 직전 거래일로 남는다)
 }
 
 export interface CommodityData {
@@ -26,6 +28,7 @@ export interface CommodityData {
   price: number | null;
   change: number | null;
   changePercent: number | null;
+  asOf?: string | null; // 시세의 현지 거래일(휴장이면 직전 거래일로 남는다)
 }
 
 export interface BondData {
@@ -34,6 +37,7 @@ export interface BondData {
   nameKo: string;
   yield: number | null;
   change: number | null;
+  asOf?: string | null; // 시세의 현지 거래일(휴장이면 직전 거래일로 남는다)
 }
 
 export interface CryptoData {
@@ -43,6 +47,7 @@ export interface CryptoData {
   price: number | null;
   change: number | null;
   changePercent: number | null;
+  asOf?: string | null; // 시세의 현지 거래일(휴장이면 직전 거래일로 남는다)
 }
 
 export interface MarketDataCollection {
@@ -205,6 +210,7 @@ export interface PolicyRateSummary {
   stance: string;
   stanceDirection: "hike" | "cut" | "hold";
   asOf: string;
+  holds?: string[]; // 마지막 변경 뒤 동결 결정일(회의 일정표 기준)
 }
 
 export interface PolicyRates {

@@ -345,7 +345,9 @@ test('generateReport: watchPoints·soWhat·calendar·closingMessage·부제가 �
   const { stream } = fakeStream([JSON.stringify(o)])
   const { content, html } = await generateReport(DATA)
   assert.equal(stream.mock.callCount(), 1, '선택 항목 누락은 재생성 사유가 아니다')
-  assert.deepEqual([content.watchPoints, content.soWhat, content.calendar, content.compass], [[], [], [], []])
+  assert.deepEqual([content.watchPoints, content.soWhat, content.compass], [[], [], []])
+  // 일정표는 모델 출력이 아니라 코드가 만든다(2026-11-27) — 배열이면 된다.
+  assert.ok(Array.isArray(content.calendar))
   assert.equal(content.closingMessage, '')
   assert.equal(content.cover.subline, '')
   assert.match(html, /class="cover-headline"/)
@@ -433,7 +435,8 @@ test('generateReport: 선택 항목 배열의 깨진 원소는 재생성 사유�
   assert.equal(content.bigStory.content.length, 1)
   assert.match(html, /<div class="watch-title">개장<\/div>/)
   assert.match(html, /<div class="sowhat-title">확인되면<\/div>/)
-  assert.match(html, /<td>CPI<\/td>/)
+  // 모델이 쓴 일정표는 버린다(2026-11-27 — 코드가 미국 지표·한국 일정·휴장일로 만든다).
+  assert.doesNotMatch(html, /<td>CPI<\/td>/)
 })
 
 test('generateReport: 고른 결과의 마무리·렌더가 던지면 다음 후보로 발송한다(모두 실패할 때만 실패)', async (t) => {

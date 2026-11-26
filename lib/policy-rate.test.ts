@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { summarizePolicyRate, daysBetween, type RatePoint, collectPolicyRates, renderPolicyRateBlock, formatPolicyRateLog, POLICY_RATE_RULE, findPolicyDirectionMismatches, extractReportText } from "./policy-rate";
+import { summarizePolicyRate, holdsSince, FOMC_MEETINGS, BOK_MPB_MEETINGS, daysBetween, type RatePoint, collectPolicyRates, renderPolicyRateBlock, formatPolicyRateLog, POLICY_RATE_RULE, findPolicyDirectionMismatches, extractReportText } from "./policy-rate";
 import type { PolicyRateSummary } from "./types";
 
 const TODAY = "2026-10-05";
@@ -387,4 +387,30 @@ test("context-data.ts: 수집 에러 로그에 사유(message) 포함", () => {
 test("claude-client.ts: 컨텍스트 비활성 시에도 정책금리 블록 유지", () => {
   const src = fs.readFileSync(new URL("./claude-client.ts", import.meta.url), "utf8");
   assert.ok(src.includes("if (!context) return renderPolicyRateBlock({ fed: null, bok: null });"));
+});
+
+// 2026-11-26 마켓: 한은 10/22 동결이 블록에 없어 "세 번째 연속 인상 여부"라고 썼다.
+test("회의 일정표: 마지막 변경 뒤 동결 결정을 국면에 반영(11-26 한은)", () => {
+  const pts = daily("2023-11-26", "2026-11-23", 2.5, [["2026-07-16", 2.75], ["2026-08-27", 3.0]]);
+  const s = summarizePolicyRate(pts, { label: "한국은행 기준금리", today: "2026-11-26", windowStart: "2023-11-26", meetings: BOK_MPB_MEETINGS })!;
+  assert.deepEqual(s.holds, ["2026-10-22"]);
+  assert.equal(s.stance, "동결(2회 연속 인상 뒤 1회 연속 동결, 마지막 결정 2026-10-22 동결)");
+  assert.equal(s.stanceDirection, "hike");
+  const block = renderPolicyRateBlock({ fed: null, bok: s });
+  assert.match(block, /그 뒤 회의 2026-10-22 동결/);
+  assert.doesNotMatch(block, /국면: 인상\(2회 연속\)/);
+});
+
+test("회의 일정표: 오늘 회의·데이터 기준일 뒤 회의는 동결로 세지 않는다", () => {
+  assert.deepEqual(holdsSince("2026-08-27", "2026-11-25", "2026-11-26", BOK_MPB_MEETINGS), ["2026-10-22"]);
+  assert.deepEqual(holdsSince("2026-08-27", "2026-11-27", "2026-11-28", BOK_MPB_MEETINGS), ["2026-10-22", "2026-11-26"]);
+  assert.deepEqual(holdsSince("2026-08-27", "2026-10-20", "2026-11-28", BOK_MPB_MEETINGS), []);
+});
+
+test("회의 일정표: 연준 결정일(9/16)은 효력일(9/17) 변경 자체 — 동결은 10/28부터", () => {
+  assert.deepEqual(holdsSince("2026-09-17", "2026-11-25", "2026-11-26", FOMC_MEETINGS), ["2026-10-28"]);
+});
+
+test("회의 일정표: 마지막 변경이 일정표 범위 밖이면 동결을 세지 않는다", () => {
+  assert.deepEqual(holdsSince("2026-05-01", "2026-11-25", "2026-11-26", BOK_MPB_MEETINGS), []);
 });

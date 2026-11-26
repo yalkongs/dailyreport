@@ -14,6 +14,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { koreanWeekday } from "./market-calendar";
+import { BOK_MPB_MEETINGS } from "./policy-rate";
 
 export type KrMacroCategory =
   | "bok_mpb"       // 한국은행 금통위
@@ -136,6 +137,39 @@ export function applyKostatOfficialPlan(events: KrMacroEvent[], start: string, e
   return [...kept, ...official].sort((a, b) => a.date.localeCompare(b.date));
 }
 
+/**
+ * 한은 금통위(통화정책방향 결정회의)를 공식 일정표(lib/policy-rate.ts BOK_MPB_MEETINGS)로 교체한다.
+ * 웹 검색 캐시는 시각을 회의 시작(09:00)으로 가져온 적이 있다(11-22 갱신 → 11-25·26 마켓 "09:00 결정 발표").
+ * 결정 발표는 10:00 전후다. 일정표가 덮지 않는 날짜(coverageStart 이전·미등록 연도)는 검색 결과를 그대로 둔다.
+ */
+const BOK_YEARS = new Set(BOK_MPB_MEETINGS.dates.map((d) => d.slice(0, 4)));
+function coveredByBokTable(e: KrMacroEvent): boolean {
+  const isMpb = e.category === "bok_mpb" || (/금융통화위원회|금통위|통화정책방향/.test(e.name) && !FOREIGN_RE.test(e.name));
+  return isMpb && e.date >= BOK_MPB_MEETINGS.coverageStart && BOK_YEARS.has(e.date.slice(0, 4));
+}
+
+export function applyBokOfficialSchedule(events: KrMacroEvent[], start: string, end: string): KrMacroEvent[] {
+  const kept = events.filter((e) => !coveredByBokTable(e));
+  const official: KrMacroEvent[] = BOK_MPB_MEETINGS.dates
+    .filter((d) => d >= start && d <= end)
+    .map((date) => ({
+      date,
+      category: "bok_mpb" as const,
+      name: "한국은행 금융통화위원회 통화정책방향 결정(기준금리 발표)",
+      importance: 5 as const,
+      description: "회의는 09:00 시작, 기준금리 결정은 10:00 전후 발표 — 09:00을 결정 발표 시각으로 쓰지 말 것.",
+      source: BOK_MPB_MEETINGS.source,
+      confirmed: true,
+      time: "10:00",
+    }));
+  return [...kept, ...official].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** 공식 일정표 두 개(국가데이터처 3대 지표·한은 금통위)를 검색 결과에 덮어쓴다. */
+export function applyOfficialSchedules(events: KrMacroEvent[], start: string, end: string): KrMacroEvent[] {
+  return applyBokOfficialSchedule(applyKostatOfficialPlan(events, start, end), start, end);
+}
+
 export interface KrMacroCalendarCache {
   generatedAt: string;     // ISO 8601, refresh 시각
   weekRangeStart: string;  // YYYY-MM-DD
@@ -176,8 +210,15 @@ export function getUpcomingKrMacroEvents(
   const todayTs = Date.parse(today + "T00:00:00+09:00");
   const yesterdayTs = todayTs - 24 * 3600 * 1000;
   const futureTs = todayTs + daysAhead * 24 * 3600 * 1000;
+  const iso = (ts: number) => new Date(ts + 9 * 3600 * 1000).toISOString().slice(0, 10);
+  // 읽을 때도 공식 일정표를 덮는다 — 주간 갱신 전에 들어온 캐시 오류(금통위 09:00 등)가 그대로 나가지 않게.
+  const events = applyOfficialSchedules(
+    cache.events.filter((e) => e && typeof e === "object" && typeof e.date === "string" && typeof e.name === "string"),
+    iso(yesterdayTs),
+    iso(futureTs),
+  );
 
-  return cache.events
+  return events
     .filter((e) => {
       try {
         // event 형식 검증

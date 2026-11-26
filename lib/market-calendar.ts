@@ -120,6 +120,20 @@ function addDays(date: string, n: number): string {
   return `${yy}-${mm}-${dd}`;
 }
 
+/** start~end(포함) 평일 휴장일 — 리포트 일정표용(2026-11-27: 모델이 추수감사절을 11/27로 지어냈다). */
+export function marketHolidaysBetween(start: string, end: string): { date: string; market: "kr" | "us"; name: string }[] {
+  const out: { date: string; market: "kr" | "us"; name: string }[] = [];
+  for (let d = start; d <= end; d = addDays(d, 1)) {
+    const dow = dayOfWeek(d);
+    if (dow === 0 || dow === 6) continue;
+    const kr = lookupHoliday(KR_HOLIDAYS, d);
+    if (kr) out.push({ date: d, market: "kr", name: kr });
+    const us = lookupHoliday(US_HOLIDAYS, d);
+    if (us) out.push({ date: d, market: "us", name: us });
+  }
+  return out;
+}
+
 // ─── 시장 상태 판정 ────────────────────────────────────
 
 function getKrStatus(date: string): { status: MarketStatus; name?: string } {
