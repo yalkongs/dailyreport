@@ -10,7 +10,7 @@ name: Generate Daily Market Report
 
 on:
   schedule:
-    # 3순위 백업 트리거 — KST 07:30 (월~금) = UTC 22:30 (일~목). 실제 발화는 만성 지연.
+    # 3순위 백업 트리거 — KST 07:30 (월~금) = UTC 22:30 (일~목). 실제 발화는 만성 지연 — 08:50 KST 이후 발화는 gate job이 멈춘다.
     # 정시 트리거는 맥미니 launchd(ops/macmini/)가 workflow_dispatch로 담당: 06:40 1차·07:20 2차(only=both).
     # 맥미니가 죽은 날에만 의미 있으며 두 job을 모두 돌려 중복 가드에 맡긴다
     # (README "아침 트리거" 참조).
@@ -54,8 +54,28 @@ permissions:
   statuses: write  # Vercel 배포 상태 읽기 + Telegram 발송 상태(telegram/market·etf) 기록
 
 jobs:
+  gate:
+    # 백업 schedule 시각 가드(2026-11-27). GitHub schedule은 만성 지연이라(11-18~26 실측 11:56~15:12 KST)
+    # 개장 뒤에 돌면 장중 시세로 '아침 리포트'를 만들고 보낸다. 08:50 KST 이후 schedule 실행은 생성·발송하지 않는다.
+    # dispatch(맥미니 06:40·07:20, 수동 재실행)는 시각과 무관하게 통과. 맥미니가 죽은 날의 경보는 delivery-monitor가 맡는다.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    outputs:
+      late: ${{ steps.check.outputs.late }}
+    steps:
+      - id: check
+        run: |
+          now=$((10#$(TZ=Asia/Seoul date +%H%M)))
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "$now" -ge 850 ]; then
+            echo "late=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::백업 schedule이 $(TZ=Asia/Seoul date +%H:%M) KST에 발화 — 개장 뒤라 생성·발송하지 않습니다"
+          else
+            echo "late=false" >> "$GITHUB_OUTPUT"
+          fi
+
   market:
-    if: ${{ inputs.only != 'etf' }}
+    needs: [gate]
+    if: ${{ needs.gate.outputs.late != 'true' && inputs.only != 'etf' }}
     runs-on: ubuntu-24.04
     # 20분: JSON 파싱 안전망(claude-client.ts)이 최대 3회 재생성할 여유 확보.
     # 정상 실행은 ~4~5분이라 평소엔 영향 없음.
@@ -201,9 +221,10 @@ jobs:
           if-no-files-found: warn
 
   etf:
-    # market과 병렬(needs 없음). schedule(3순위 백업)·only=both·only=etf에서 돈다(2026-10-19).
+    # market과 병렬(서로 needs 없음, 시각 가드 gate만). schedule(3순위 백업)·only=both·only=etf에서 돈다(2026-10-19).
     # ETF는 전일 종가 기준이라 KRX 게시(~08:00)를 기다리지 않는다 — only=both에서 ETF를 막던 2026-09-30 규칙은 폐기.
-    if: ${{ github.event_name == 'schedule' || inputs.only == 'both' || inputs.only == 'etf' }}
+    needs: [gate]
+    if: ${{ needs.gate.outputs.late != 'true' && (github.event_name == 'schedule' || inputs.only == 'both' || inputs.only == 'etf') }}
     runs-on: ubuntu-24.04
     # 10→15 (2026-08-18): 글꼴 설치 상한 5분 + ETF 파이프라인 ~3분에 여유를 둔다.
     timeout-minutes: 15
@@ -344,8 +365,8 @@ jobs:
     # resolve는 그 생성 job이 이번 실행 대상이었을 때만(needs.<kind>.result != 'skipped') — only=market 재발송이
     # ETF까지 재발송하지 않게. 생성 job이 실패해도 조회는 한다(앞선 실행이 만든 미발송 리포트가 있으면 보낸다).
     # 어느 step이 실패하든 job은 실패로 끝나 GitHub가 소유자에게 메일을 보낸다(실패를 가리는 설정을 두지 않는다).
-    needs: [market, etf]
-    if: ${{ always() && !cancelled() }}
+    needs: [gate, market, etf]
+    if: ${{ always() && !cancelled() && needs.gate.outputs.late != 'true' }}
     runs-on: ubuntu-24.04
     # 배포 대기 최대 10분 ×2 + 자산 확인 최대 1분 ×2 + 설치. 06:40 시작이어도 08:00 전에 끝난다.
     timeout-minutes: 25

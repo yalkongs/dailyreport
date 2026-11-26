@@ -1,3 +1,5 @@
+import os from "node:os";
+import { execFileSync } from "node:child_process";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
@@ -53,7 +55,7 @@ test("생성 job은 텔레그램을 보내지 않고, deliver job이 market → 
   assert.ok(!jobBlock(wf, "market").includes("api.telegram.org"));
   assert.ok(!jobBlock(wf, "etf").includes("api.telegram.org"));
   const d = jobBlock(wf, "deliver");
-  assert.match(d, /needs:\s*\[\s*market,\s*etf\s*\]/);
+  assert.match(d, /needs:\s*\[\s*gate,\s*market,\s*etf\s*\]/);
   assert.match(d, /always\(\) && !cancelled\(\)/);
   assert.match(d, /group: daily-report-deliver/);
   assert.ok(d.indexOf("resolve market") < d.indexOf("resolve etf"));
@@ -183,11 +185,12 @@ test("모든 workflow가 YAML로 파싱되고, 모든 job은 ubuntu-24.04", () =
 
 test("daily-report 구조(YAML): market·etf 병렬, deliver가 둘을 기다림, test_date 입력, deliver 단계 순서", () => {
   const wf = yaml.load(readWorkflow()) as Wf;
-  assert.deepEqual(Object.keys(wf.jobs), ["market", "etf", "deliver"]);
-  assert.equal(wf.jobs.market.needs, undefined);
-  assert.equal(wf.jobs.etf.needs, undefined);
-  assert.deepEqual(wf.jobs.deliver.needs, ["market", "etf"]);
-  assert.equal(wf.jobs.deliver.if, "${{ always() && !cancelled() }}");
+  // 2026-11-27: 백업 schedule 시각 가드(gate) — market·etf는 서로 needs 없이 gate만 기다린다(병렬 유지).
+  assert.deepEqual(Object.keys(wf.jobs), ["gate", "market", "etf", "deliver"]);
+  assert.deepEqual(wf.jobs.market.needs, ["gate"]);
+  assert.deepEqual(wf.jobs.etf.needs, ["gate"]);
+  assert.deepEqual(wf.jobs.deliver.needs, ["gate", "market", "etf"]);
+  assert.equal(wf.jobs.deliver.if, "${{ always() && !cancelled() && needs.gate.outputs.late != 'true' }}");
   for (const job of ["market", "etf"]) assert.deepEqual(wf.jobs[job].outputs, { changed: "${{ steps.changes.outputs.changed }}" });
   const inputs = wf.on.workflow_dispatch!.inputs!;
   assert.equal(inputs.test_date.type, "string");
@@ -353,15 +356,15 @@ test("ETF 파이프라인 step에도 FORCE_REGENERATE가 전달된다", () => {
 test("schedule은 하나(3순위 백업), job 분기는 inputs.only로", () => {
   assert.match(yml, /- cron: '30 22 \* \* 0-4'/);
   assert.equal((yml.match(/- cron:/g) ?? []).length, 1);
-  assert.match(jobBlock(yml, "market"), /\n    if: \$\{\{ inputs\.only != 'etf' \}\}\n/);
-  assert.match(jobBlock(yml, "etf"), /\n    if: \$\{\{ github\.event_name == 'schedule' \|\| inputs\.only == 'both' \|\| inputs\.only == 'etf' \}\}\n/);
+  assert.match(jobBlock(yml, "market"), /\n    if: \$\{\{ needs\.gate\.outputs\.late != 'true' && inputs\.only != 'etf' \}\}\n/);
+  assert.match(jobBlock(yml, "etf"), /\n    if: \$\{\{ needs\.gate\.outputs\.late != 'true' && \(github\.event_name == 'schedule' \|\| inputs\.only == 'both' \|\| inputs\.only == 'etf'\) \}\}\n/);
 });
 
 // 2026-10-19: Market·ETF가 06:40·07:20 트리거(only=both)를 공유한다. ETF는 더 이상 KRX 게시(~08:00)를
 // 기다리지 않는다(전일 종가 기준) — only=both에서 ETF를 막던 2026-09-30 규칙은 폐기.
 test("job 실행 대상: both·schedule은 둘 다, market·etf는 그 종류만", () => {
-  const evalCond = (job: string, event: string, only: string) =>
-    new Function("github", "inputs", `return ${jobIf(yml, job)}`)({ event_name: event }, event === "schedule" ? {} : { only });
+  const evalCond = (job: string, event: string, only: string, late = "false") =>
+    new Function("github", "inputs", "needs", `return ${jobIf(yml, job)}`)({ event_name: event }, event === "schedule" ? {} : { only }, { gate: { outputs: { late } } });
   for (const [event, only, market, etf] of [
     ["workflow_dispatch", "both", true, true],
     ["workflow_dispatch", "market", true, false],
@@ -371,6 +374,9 @@ test("job 실행 대상: both·schedule은 둘 다, market·etf는 그 종류만
     assert.equal(evalCond("market", event, only), market, `market ${event} ${only}`);
     assert.equal(evalCond("etf", event, only), etf, `etf ${event} ${only}`);
   }
+  // 2026-11-27: 개장 뒤(08:50 KST 이후) 발화한 백업 schedule은 둘 다 멈춘다.
+  assert.equal(evalCond("market", "schedule", "", "true"), false);
+  assert.equal(evalCond("etf", "schedule", "", "true"), false);
 });
 
 // ── delivery-monitor.yml: 독립 도착 감시(감사 F06c) ─────────────────────────────────────
@@ -498,4 +504,20 @@ test("economist-view-telegram: 자동 발송 꺼짐(수동 실행만), 공개 �
   assert.ok(raw.indexOf("mark pending") < raw.indexOf("sendPhoto"), "pending 기록이 발송보다 먼저");
   assert.match(raw, /context="telegram\/economist-view"/);
   assert.match(raw, /success\|pending\) echo "이미 처리된 호/);
+});
+
+// 2026-11-27: 백업 schedule 시각 가드 — schedule이고 08:50 KST 이후면 late=true, dispatch는 늘 false.
+test("gate: 백업 schedule이 08:50 KST 이후 발화하면 생성·발송을 멈춘다", () => {
+  const block = jobBlock(yml, "gate");
+  const script = block.split("run: |\n")[1].split("\n").map((l: string) => l.replace(/^ {10}/, "")).join("\n");
+  const run = (event: string, hhmm: string) =>
+    execFileSync("bash", ["-c", script.replace("${{ github.event_name }}", event).replace("$(TZ=Asia/Seoul date +%H%M)", hhmm).replace(/\$\(TZ=Asia\/Seoul date \+%H:%M\)/, hhmm) + "\ncat \"$GITHUB_OUTPUT\""], {
+      env: { ...process.env, GITHUB_OUTPUT: `${os.tmpdir()}/gate-${process.pid}-${event}-${hhmm}` },
+    }).toString();
+  assert.match(run("schedule", "0730"), /late=false/);
+  assert.match(run("schedule", "0849"), /late=false/);
+  assert.match(run("schedule", "0850"), /late=true/);
+  assert.match(run("schedule", "1312"), /late=true/);
+  assert.match(run("workflow_dispatch", "1312"), /late=false/);
+  assert.match(run("schedule", "0905"), /late=true/); // 08·09 앞자리 0도 10진수로
 });

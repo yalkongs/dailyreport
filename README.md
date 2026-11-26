@@ -275,6 +275,9 @@ Market(`scripts/run.ts`)도 같은 흐름이다: 가드(휴장·중복·가격 �
   그대로 둔다. 두 생성 job을 모두 돌리고 중복 가드에 맡긴다. ETF는 KRX 게시(08:00)를
   기다리지 않으므로 어느 시각에 돌아도 데이터가 깨지지 않는다(KRX 병합 여부는 응답 날짜
   판정이 정하므로 늦게 돌면 KRX 값이 더 들어갈 뿐이다).
+  2026-11-27부터 `gate` job이 08:50 KST 이후 발화한 schedule 실행을 멈춘다 — 실측 발화가
+  11:56~15:12 KST(11-18~26)라 개장 뒤 장중 시세로 '아침 리포트'를 만들 수 있었다. 맥미니가 죽은
+  날의 경보는 delivery-monitor(07:45 dispatch + 늦은 schedule)가 맡는다.
 - `workflow_dispatch` 수동 옵션:
   - `dry_run` (커밋·Telegram 발송 안 함, 생성 HTML·PNG를 아티팩트로 보관). 실행한 ref(`--ref`)의 코드를 체크아웃하므로 브랜치 코드로 점검할 수 있다
   - `force_regenerate` (오늘자 이미 있어도 재생성)
