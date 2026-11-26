@@ -133,6 +133,9 @@ export interface CollectedData {
   failedSources?: string[]
   // Layer 0 (2026-05-29): 근거 충분성 tier (헤드라인 규칙이 소비).
   etfEvidence?: import('./etf-evidence').EtfEvidence
+  // 2026-11-27 시간 순서 설계: 국내 전일 세션·그 직전 미국 장(원인 후보) 등락. 프롬프트를 만드는 시각(ms)은 뉴스 표시용.
+  priorUsMoves?: Array<{ nameKo: string; changePercent: number }>
+  promptNowMs?: number
 }
 
 export type StrategyStance = '선호' | '관찰' | '중립' | '경계'

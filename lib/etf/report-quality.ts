@@ -15,6 +15,8 @@
 // 외부 호출자(claude-client, run-etf)는 기존 호출만으로 새 구조의 이점을 얻음.
 
 import { findNumericClaimMismatches } from './numeric-claims'
+import { findSessionOrderViolations, findCardSessionOrderViolations } from './session-order-check'
+import { buildSessionTimeline } from '../session-timeline'
 import type { CollectedData, MorningReport, MorningStrategyInput } from './types'
 // 2026-10-17 출력 스키마 개편: 자산군 카드 key·카드 key는 코드가 확정한 슬롯 안에서만.
 import { buildAssetClassSlots, cardSlot, findTacticalAlert, pickFeaturedSlot, TACTICAL_WARNING_MIN_ABS_PCT } from './asset-classes'
@@ -658,6 +660,15 @@ export function assessMorningReportQuality(
   const fxErrors = findFxDirectionErrors(text)
   if (fxErrors.length > 0) {
     factViolations.push(`환율 방향 오류(원화 약세는 환노출 원화 환산에 플러스): ${fxErrors.slice(0, 2).join(' / ')}`)
+  }
+  // 2026-11-27 시간 순서: 국내 전일 등락을 그보다 뒤에 열린 간밤 미국 장으로 설명한 문장·카드 이유.
+  const timeline = buildSessionTimeline(data.date)
+  const orderHits = [
+    ...findSessionOrderViolations(text, timeline, data.indices),
+    ...findCardSessionOrderViolations(report.assetCards, buildAssetClassSlots(data.quotes), timeline),
+  ]
+  if (orderHits.length > 0) {
+    factViolations.push(`시간 순서 오류(국내 전일 등락의 이유로 그 뒤에 열린 간밤 미국 장을 씀 — 원인 후보는 [시간 순서]의 직전 미국 장): ${orderHits.slice(0, 2).join(' / ')}`)
   }
   if (options.factChecksAsWarnings) {
     for (const v of factViolations) console.warn(`  [fact-warn] ${v}`)

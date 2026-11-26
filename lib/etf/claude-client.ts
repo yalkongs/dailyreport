@@ -1,5 +1,6 @@
 // lib/claude-client.ts
 import Anthropic from '@anthropic-ai/sdk'
+import { buildSessionTimeline, describeSessionOrder, newsTimingTag } from '../session-timeline'
 import type { CollectedData, EtfQuote, MorningReport } from './types'
 // 2026-10-17 아침 리포트 개편: 자산군 슬롯·카드 자산군·레버리지 주의 조건을 프롬프트에 주입
 // (렌더러·검증·미리보기 카드와 같은 계산).
@@ -418,7 +419,14 @@ ${rule}`
 }
 
 // export: 프롬프트 조립 테스트용(claude-client.prompt.test.ts). 동작 불변.
+// 2026-11-27 시간 순서 설계 — 국내 전일 세션과 원인이 될 수 있는 미국 장을 코드가 갈라 준다.
+export function buildSessionOrderBlock(data: CollectedData): string {
+  return `[시간 순서 — 원인과 결과]\n${describeSessionOrder(buildSessionTimeline(data.date), data.priorUsMoves ?? [])}`
+}
+
 export function buildMorningPrompt(data: CollectedData): string {
+  const timeline = buildSessionTimeline(data.date)
+  const nowMs = data.promptNowMs ?? Date.now()
   const strategy = buildMorningStrategyInput(data)
   const slots = buildAssetClassSlots(data.quotes)
   const featured = pickFeaturedSlot(slots)
@@ -536,6 +544,8 @@ ${buildKrTradingValueLine(topKr)}
 
 ${buildIndexBlock(data.indices)}
 
+${buildSessionOrderBlock(data)}
+
 ${buildUsEventsBlock(data.usEvents, data.date)}${buildMacroBlock(data.macro, data.failedSources)}
 
 ${(() => {
@@ -560,10 +570,11 @@ ${data.news.slice(0, 6).map(n => {
     : 'age 불명'
   const cat = n.category ? `${n.category}|` : ''
   const snip = n.snippet ? `\n    ↳ ${n.snippet}` : ''
-  return `- [${cat}${ago}] ${n.title} (${n.source}, ${n.url})${snip}`
+  const timing = newsTimingTag(n.publishedHoursAgo, timeline, nowMs)
+  return `- [${cat}${ago}${timing ? `|${timing}` : ''}] ${n.title} (${n.source}, ${n.url})${snip}`
 }).join('\n')}
 - **24시간 초과 기사는 "배경 맥락"으로만 활용**하고, 현재 상황·오늘의 전개로 단정하지 마십시오.
-- 뉴스 내용이 어제 한국 증시 마감 이후의 전개인지, 그 이전의 전개인지 발행 시각으로 판단하여 쓰십시오.
+- 각 기사의 [국내 장 마감 전/후] 표시를 따르십시오 — 마감 후 기사는 국내 전일 등락의 원인이 될 수 없습니다([시간 순서] 참조).
 - **[semiconductor]** 태그는 삼성·SK하이닉스 등 국내 반도체에 영향을 주는 국제 뉴스·리서치(NVIDIA·TSMC·Micron·HBM·메모리 가격·수출규제)입니다. 국내 ETF와의 연결고리를 짚어 활용하십시오.
 - **해외 뉴스·리서치 인용 규칙:** ① 해외 기관·매체發 주장·전망은 반드시 **출처(기관/매체명)를 문장에 드러내** 인용(출처 없는 전망·수치 날조 금지). ② 리서치·전망을 **특정 종목·ETF 매수·매도 권유로 번역 금지** — 사실·방향성만. ③ 제공된 제목·요약(↳)의 **사실만** 인용, 원문 문단 복제·창작 금지.
 - **본문에 매체명을 인용할 수 있는 것은 다음뿐**: ${QUOTABLE_SOURCES.join(', ')}. 그 외 매체(블로그·소형 외신 등) 기사는 내용은 쓰되 매체명 대신 '외신'으로 지칭하십시오.
@@ -596,7 +607,7 @@ ${renderRecentHeadlineLines(recentHeadlines)}
 
 [assetCards 작성 규칙 — 자산군별 판단 재료]
 - [자산군 슬롯]의 key를 순서대로 모두, 하나씩 씁니다.
-- reason: 어제 움직임의 이유 1문장. 입력(뉴스·catalyst·거시 지표)에 근거가 있을 때만 쓰고, 근거가 없으면 "reason" 키를 빼십시오. 추측으로 채우지 마십시오. 국내 직전 장이 끝난 뒤 열린 간밤 미국 장의 움직임을 국내 자산군의 이유로 들지 마십시오 — 시간 순서상 원인이 될 수 없습니다(간밤 미국 장은 오늘 국내 개장에 줄 신호로만 씁니다).
+- reason: 어제 움직임의 이유 1문장. 입력(뉴스·catalyst·거시 지표)에 근거가 있을 때만 쓰고, 근거가 없으면 "reason" 키를 빼십시오. 추측으로 채우지 마십시오. 국내 자산군의 이유는 [시간 순서]의 직전 미국 장과 [국내 장 마감 전] 기사에서만 찾습니다.
 - ifHolding(갖고 있다면)·ifConsidering(새로 본다면): 각각 60자 이내의 조건·관찰형 문장입니다. "~라면 ~를 지켜볼 때입니다", "~가 확인되기 전까지는 ~를 따로 볼 자리입니다"처럼 무엇을 확인할지와 그 조건을 씁니다.
 - 매수·매도·비중 조절을 지시하지 마십시오("사세요·파세요·담으세요·비중을 줄이세요·늘리세요" 같은 지시형 금지). 판단은 독자의 몫입니다.
 - 대표 ETF는 화면에 "예시"로 표시됩니다. 특정 ETF를 추천 대상처럼 쓰지 마십시오.

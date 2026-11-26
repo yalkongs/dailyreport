@@ -158,3 +158,36 @@ export function isMacroEmpty(macro: MacroContext | null | undefined): boolean {
   if (!macro) return true
   return [macro.usdKrw, macro.dxy, macro.vix, macro.us10y, macro.wti, macro.gold].every(v => v === null || v === undefined)
 }
+
+/**
+ * 특정 미국 거래일(현지 날짜)의 지수 등락 — 일봉 종가 두 개로 계산한다(2026-11-27 시간 순서 설계).
+ * 국내 전일 장 '직전' 미국 장을 원인 후보로 주기 위해서다(간밤 시세 quote 는 국내 장 뒤 세션이다).
+ */
+export function sessionMoveFromCloses(
+  bars: ReadonlyArray<{ date: Date; close: number | null | undefined }>,
+  session: string,
+): number | null {
+  const valid = bars
+    .map(b => ({ day: sessionDate(b.date, 'America/New_York'), close: b.close }))
+    .filter((b): b is { day: string; close: number } => !!b.day && typeof b.close === 'number' && Number.isFinite(b.close) && b.close > 0)
+    .sort((a, b) => (a.day < b.day ? -1 : 1))
+  const i = valid.findIndex(b => b.day === session)
+  if (i < 1) return null
+  return (valid[i].close / valid[i - 1].close - 1) * 100
+}
+
+export async function collectUsSessionMoves(session: string): Promise<Array<{ nameKo: string; changePercent: number }>> {
+  const targets = INDEX_SYMBOLS.filter(i => !/^\^K[SQ]/.test(i.symbol))
+  const results = await Promise.allSettled(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    targets.map(i => yahooFinance.chart(i.symbol, { period1: new Date(Date.parse(`${session}T00:00:00Z`) - 10 * 86400000), interval: '1d' }) as Promise<any>),
+  )
+  const out: Array<{ nameKo: string; changePercent: number }> = []
+  targets.forEach((t, idx) => {
+    const r = results[idx]
+    if (r.status !== 'fulfilled') return
+    const pct = sessionMoveFromCloses(r.value?.quotes ?? [], session)
+    if (pct !== null) out.push({ nameKo: t.nameKo, changePercent: pct })
+  })
+  return out
+}

@@ -8,7 +8,8 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { collectAllEtfData } from '../lib/etf/etf-data'
 import { krxNavFailed } from '../lib/etf/krx-session'
-import { collectIndexQuotes, collectMacroContext, isMacroEmpty } from '../lib/etf/market-context'
+import { collectIndexQuotes, collectMacroContext, collectUsSessionMoves, isMacroEmpty } from '../lib/etf/market-context'
+import { buildSessionTimeline } from '../lib/session-timeline'
 import { collectEconomicCalendar } from '../lib/economic-calendar'
 import { ETF_GENERATION_BUDGET_MS, makeDeadline } from '../lib/claude-budget'
 import { collectNews } from '../lib/etf/news'
@@ -108,12 +109,14 @@ async function main() {
 
   // Step 1: 데이터 수집 (병렬)
   console.log('[1/8] 데이터 수집 중...')
-  const [etfData, macro, news, indices, usEvents] = await Promise.allSettled([
+  const [etfData, macro, news, indices, usEvents, priorUsMoves] = await Promise.allSettled([
     collectAllEtfData(date),
     collectMacroContext(),
     collectNews(),
     collectIndexQuotes(),
     collectEconomicCalendar(),
+    // 국내 전일 장 '직전' 미국 장 등락 — 국내 등락의 해외 원인 후보(2026-11-27 시간 순서 설계)
+    collectUsSessionMoves(buildSessionTimeline(date).priorUsSession),
   ])
 
   const collected = etfData.status === 'fulfilled'
@@ -180,6 +183,7 @@ async function main() {
     news: news.status === 'fulfilled' ? news.value : [],
     indices: indices.status === 'fulfilled' ? indices.value : [],
     usEvents: usEvents.status === 'fulfilled' ? usEvents.value : [],
+    priorUsMoves: priorUsMoves.status === 'fulfilled' ? priorUsMoves.value : [],
     analysisLens,
     narrativeAngle,
     recentHeadlines,

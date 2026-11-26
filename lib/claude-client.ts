@@ -13,6 +13,7 @@ import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS, MARKET_GENERATION_BUDGET
 import { EVIDENCE_RULES } from "./evidence-rules";
 import { formatEconomicEventLine } from "./economic-calendar";
 import { buildReportCalendar } from "./report-calendar";
+import { buildSessionTimeline, describeSessionOrder, newsTimingTag } from "./session-timeline";
 import { getUpcomingKrMacroEvents } from "./kr-macro-calendar";
 import { renderReport, sanitizeInlineHtml } from "./report-renderer";
 import { cardTextFits } from "./preview/data-card";
@@ -217,15 +218,20 @@ function buildContextBlock(context: ContextData | null, ctx?: AntiRepetitionCont
       block += `(다만 제목(일부 출처는 짧은 요약 포함)만 제공되므로 기사 본문 전체를 단정하지 말고 "~로 알려졌다·전해졌다" 수준으로 인용)\n`;
     }
 
+    // 2026-11-27 시간 순서 설계: 기사마다 국내 장 마감 전/후를 코드가 표시한다.
+    const timeline = reportDate ? buildSessionTimeline(reportDate) : null;
+    const nowMs = Date.now();
     block += `\n### 주요 뉴스 헤드라인 (최신순, 발행 경과 시간 포함)\n`;
     for (const n of context.news) {
       const ago = typeof n.publishedHoursAgo === "number"
         ? `${Math.round(n.publishedHoursAgo)}h전`
         : "시각미상";
-      block += `- [${n.category}|${ago}] ${n.title} (${n.source})\n`;
+      const timing = timeline ? newsTimingTag(n.publishedHoursAgo, timeline, nowMs) : "";
+      block += `- [${n.category}|${ago}${timing ? `|${timing}` : ""}] ${n.title} (${n.source})\n`;
       if (n.snippet) block += `    ↳ ${n.snippet}\n`;
     }
     block += `위 헤드라인 중 발행 경과 시간이 짧은(최근) 한국 시장 관련 뉴스를 우선 반영하십시오.\n`;
+    if (timeline) block += `\n### 시간 순서 — 원인과 결과\n${describeSessionOrder(timeline)}\n- 한국 장과 미국 장의 등락을 "같은 충격"처럼 나란히 비교할 때는 각각 어느 날 세션인지 밝히십시오.\n`;
     block += `\n[semiconductor] 태그는 삼성전자·SK하이닉스 등 한국 반도체에 영향을 주는 국제 뉴스·리서치(NVIDIA·TSMC·Micron·HBM·메모리 가격·수출규제)입니다. 한국 시장과의 연결고리를 짚어 활용하십시오.\n`;
     block += `\n**해외 뉴스·리서치 인용 규칙:**\n`;
     block += `- 해외 기관·매체發 주장·전망은 반드시 **출처(기관/매체명)를 문장에 드러내** 인용하십시오("TrendForce에 따르면", "마이크론 실적 발표에서" 등). 출처 없는 전망·수치를 지어내지 마십시오.\n`;
