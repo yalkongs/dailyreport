@@ -124,7 +124,9 @@ export function reconcilePreviousClose(
 const RECONCILE_CHART_MS = 4000;
 
 async function fetchQuote(
-  symbol: string
+  symbol: string,
+  // 가격만 쓰는 호출(VIX·과거 비교)은 일봉 대조를 하지 않는다 — Yahoo 호출 수·수집 시간 절약.
+  reconcile = true,
 ): Promise<{
   price: number | null;
   change: number | null;
@@ -144,6 +146,7 @@ async function fetchQuote(
       previousClose: quote.regularMarketPreviousClose ?? null,
       asOf,
     };
+    if (!reconcile) return raw;
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const history: any = await withDeadline(
@@ -271,7 +274,7 @@ function getEffectiveDate(): { now: Date; dateStr: string } {
 /** VIX 수집 — context-data.ts에서 호출 */
 export async function collectVix(): Promise<{ value: number; change: number; changePercent: number } | undefined> {
   try {
-    const quote = await fetchQuote("^VIX");
+    const quote = await fetchQuote("^VIX", false);
     if (quote.price != null) {
       return {
         value: quote.price,
@@ -309,7 +312,7 @@ export async function collectHistoricalData(): Promise<HistoricalComparison[]> {
 
   for (const item of HISTORICAL_SYMBOLS) {
     try {
-      const currentQuote = await fetchQuote(item.symbol);
+      const currentQuote = await fetchQuote(item.symbol, false);
       if (currentQuote.price == null) continue;
 
       const comparison: HistoricalComparison = {

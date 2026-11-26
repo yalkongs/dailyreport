@@ -205,6 +205,9 @@ function buildContextBlock(context: ContextData | null, ctx?: AntiRepetitionCont
   block += `아래 데이터는 시장 분석의 맥락을 제공합니다. 리포트 본문에 자연스럽게 녹여 활용하십시오.\n`;
 
   if (context.news.length > 0) {
+    // 2026-11-27 시간 순서 설계: 기사·catalyst마다 국내 장 마감 전/후를 코드가 표시한다.
+    const timeline = reportDate ? buildSessionTimeline(reportDate) : null;
+    const nowMs = Date.now();
     // Phase F2 (2026-05-24): catalyst 자동 추출 — 상위 1~3건을 별도 강조 블록으로.
     const { extractTopCatalysts, formatCatalystForPrompt } = require("./catalyst-extractor");
     // 2026-05-28: 최근 헤드라인 전달해 같은 catalyst 며칠 반복 패널티 적용
@@ -213,16 +216,14 @@ function buildContextBlock(context: ContextData | null, ctx?: AntiRepetitionCont
     if (catalysts.length > 0) {
       block += `\n### 🔥 오늘의 forward catalyst (자동 추출 — 상위 ${catalysts.length}건)\n`;
       for (const c of catalysts) {
-        block += `- ${formatCatalystForPrompt(c)}\n`;
+        const timing = timeline ? newsTimingTag(c.publishedHoursAgo, timeline, nowMs) : "";
+        block += `- ${formatCatalystForPrompt(c)}${timing ? ` [${timing}]` : ""}\n`;
       }
       block += `위 catalyst 는 신선도·시총 상위 기업명·시장 이벤트 키워드로 자동 점수화되어 추출된 것입니다.\n`;
       block += `**오늘 한국 장 방향을 움직일 가능성이 가장 큰 변수**일 수 있으므로 본문에 우선적으로 반영하고, 제목 반영 여부·방식은 아래 [제목 작성 규칙]을 따르십시오.\n`;
       block += `(다만 제목(일부 출처는 짧은 요약 포함)만 제공되므로 기사 본문 전체를 단정하지 말고 "~로 알려졌다·전해졌다" 수준으로 인용)\n`;
     }
 
-    // 2026-11-27 시간 순서 설계: 기사마다 국내 장 마감 전/후를 코드가 표시한다.
-    const timeline = reportDate ? buildSessionTimeline(reportDate) : null;
-    const nowMs = Date.now();
     block += `\n### 주요 뉴스 헤드라인 (최신순, 발행 경과 시간 포함)\n`;
     for (const n of context.news) {
       const ago = typeof n.publishedHoursAgo === "number"

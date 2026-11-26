@@ -559,7 +559,10 @@ ${(() => {
   })
   if (catalysts.length === 0) return ''
   return `\n[🔥 오늘의 forward catalyst — 자동 추출 ${catalysts.length}건]\n` +
-    catalysts.map((c: { score: number; publishedHoursAgo?: number; title: string; source?: string }) => `- ${formatCatalystForPrompt(c)}`).join('\n') +
+    catalysts.map((c: { score: number; publishedHoursAgo?: number; title: string; source?: string }) => {
+      const timing = newsTimingTag(c.publishedHoursAgo, timeline, nowMs)
+      return `- ${formatCatalystForPrompt(c)}${timing ? ` [${timing}]` : ''}`
+    }).join('\n') +
     `\n위는 신선도·시총 상위 기업명·시장 이벤트 키워드로 자동 점수화된 한국 시장 forward catalyst 입니다. ` +
     `summary·assetCards의 reason 등 본문에 우선 반영. 헤드라인 반영 여부·방식은 아래 [cover.headline 작성 규칙]을 따르십시오.\n`
 })()}
