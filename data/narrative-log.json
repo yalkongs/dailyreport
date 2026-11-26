@@ -1,6 +1,19 @@
 {
   "entries": [
     {
+      "date": "2026-11-27",
+      "narrativeAngle": "hidden_variable",
+      "headline": "미 나스닥 소폭 하락 속 한은 금리 3.25% 인상 확정",
+      "bigStoryTopic": "지난 수요일(25일) S&P500은 0.25% 내렸고 나스닥은 0.62% 빠졌습니다. 한은",
+      "walletTopics": [
+        "금리 인상 이후 국채 금리가 계속 오른다면",
+        "미 반도체 수출규제가 국내 HBM 수주로 번지느냐",
+        "12/2 소비자물가가 인상 경로를 결정한다"
+      ],
+      "metaphors": [],
+      "lookingAhead": "금리 인상 이후 시장의 첫 반응 — 성장주·금리 민감주"
+    },
+    {
       "date": "2026-11-26",
       "narrativeAngle": "data_anatomy",
       "headline": "코스피 308포인트 빠진 날, 금통위가 기다린다",
@@ -424,25 +437,6 @@
         "격차"
       ],
       "lookingAhead": "삼성전자 HBM·TSMC 3nm 보도 시장 반응"
-    },
-    {
-      "date": "2026-10-16",
-      "narrativeAngle": "job_perspective",
-      "headline": "코스피 7.5%, 한 주를 통째로 반납했다",
-      "bigStoryTopic": "전 거래일 코스피가 <strong>-7.57%</strong>, 코스닥이 <strong>-",
-      "walletTopics": [
-        "수출 중소기업이라면 — 유가 96달러의 원가 구조",
-        "해운·물류 업종 종사자라면 — HMM 2조 2,000억 투자의 맥락",
-        "반도체·IT 장비 업종 종사자라면 — 엔비디아 대안 탐색의 의미",
-        "이번 주 급락 이후, 각 자산의 현재 위치",
-        "코스피 -13% 주간 낙폭, 예금의 상대적 위치"
-      ],
-      "metaphors": [
-        "반납",
-        "소화",
-        "하루"
-      ],
-      "lookingAhead": "한국은행 9월 수출입물가지수 발표 (오늘 오전 6시 기공표)"
     }
   ]
 }
