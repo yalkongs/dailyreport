@@ -39,3 +39,8 @@ test('카드: 국내 상장 ETF 카드의 이유 칸에 간밤 미국 장(11-24 
   const mixed = [{ key: 'us-equity', reason: '간밤 나스닥이 0.62% 하락했습니다.' }]
   assert.deepEqual(findCardSessionOrderViolations(mixed, slots, t), [])
 })
+
+test('Codex 지적: 뒤 세션임을 밝혀 나눈 문장은 통과', () => {
+  const s = '전일 국내 반도체 ETF는 수출 둔화의 영향을 받았고, 이어 열린 간밤 나스닥은 하락했습니다.'
+  assert.deepEqual(findSessionOrderViolations(s, T1123, []), [])
+})

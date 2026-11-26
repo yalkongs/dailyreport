@@ -10,6 +10,7 @@ import type { SessionTimeline } from '../session-timeline'
 const KR_SUBJECT = /국내|코스피|코스닥|\(\d{6}\)|KODEX|TIGER|ACE|RISE|SOL|PLUS|HANARO|KIWOOM|KoAct|TIME/
 const CAUSAL = /여파|영향|충격|때문|탓|끌어내|끌어 내|받아|받았|받으며|이어받|번지|번져|전이|따라 (?:밀|내|떨어|올|오르)|발목/
 const FORWARD = /오늘|개장|장 초반|장초반|출발|이번 장|시초가|아침/
+const AFTER_MARKER = /이어 열린|뒤이어 열린|그 뒤 열린|국내 장이 끝난 뒤/
 const SESSION_SPLIT = /전일|이어 열린|뒤이어|그 뒤 열린/
 
 const US_NAMES: Array<{ nameKo: string; pattern: RegExp }> = [
@@ -46,7 +47,8 @@ export function findSessionOrderViolations(text: string, timeline: SessionTimeli
   const overnight = (indices ?? []).filter(i => !/^\^K[SQ]/.test(i.symbol) && !!i.asOf && i.asOf >= timeline.krSession)
   const hits: string[] = []
   for (const s of splitSentences(text)) {
-    if (!KR_SUBJECT.test(s) || !CAUSAL.test(s) || FORWARD.test(s)) continue
+    // "…영향을 받았고, 이어 열린 간밤 나스닥은…"처럼 뒤 세션임을 밝혀 나눈 문장은 순서를 지킨 것이다(Codex 지적).
+    if (!KR_SUBJECT.test(s) || !CAUSAL.test(s) || FORWARD.test(s) || AFTER_MARKER.test(s)) continue
     if (/간밤/.test(s) || citesOvernightIndex(s, overnight)) hits.push(s.slice(0, 90))
   }
   return hits

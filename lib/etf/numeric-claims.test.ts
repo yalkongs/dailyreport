@@ -173,3 +173,9 @@ test('방향어: 수치에 가장 가까운 방향어로 판정 — 뒤따르는
     assert.equal(findNumericClaimMismatches(t, q, []).length, 1, t)
   }
 })
+
+test('2026-11-27: 직전 미국 장(프롬프트 제공) 지수 등락과 맞으면 통과', () => {
+  const idx = [{ symbol: '^IXIC', nameKo: '나스닥', price: 1, changePercent: -1.2, asOf: '2026-11-25' }]
+  assert.equal(findNumericClaimMismatches('11/24 미국 장에서 나스닥은 1.48% 하락했습니다.', [], idx).length, 1)
+  assert.deepEqual(findNumericClaimMismatches('11/24 미국 장에서 나스닥은 1.48% 하락했습니다.', [], idx, [{ nameKo: '나스닥', changePercent: -1.48 }]), [])
+})

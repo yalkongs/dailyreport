@@ -58,3 +58,12 @@ export async function fetchTextWithTimeout(
     clearTimeout(timer);
   }
 }
+
+/** 선택 보조 호출(일봉 대조 등)이 멈춰도 수집 전체가 기다리지 않게 — 시한이 지나면 reject(호출자는 원래 값으로). */
+export function withDeadline<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} ${ms}ms 초과`)), ms);
+  });
+  return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
+}

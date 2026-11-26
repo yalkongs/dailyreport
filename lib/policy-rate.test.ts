@@ -414,3 +414,8 @@ test("회의 일정표: 연준 결정일(9/16)은 효력일(9/17) 변경 자체 
 test("회의 일정표: 마지막 변경이 일정표 범위 밖이면 동결을 세지 않는다", () => {
   assert.deepEqual(holdsSince("2026-05-01", "2026-11-25", "2026-11-26", BOK_MPB_MEETINGS), []);
 });
+
+test("회의 일정표: 연준 결정 다음 날 아침 FRED가 결정일까지만 있으면 그 회의를 동결로 세지 않는다(Codex 지적)", () => {
+  assert.deepEqual(holdsSince("2026-09-17", "2026-10-28", "2026-10-29", FOMC_MEETINGS), []);
+  assert.deepEqual(holdsSince("2026-09-17", "2026-10-29", "2026-10-30", FOMC_MEETINGS), ["2026-10-28"]);
+});

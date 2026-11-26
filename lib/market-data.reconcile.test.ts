@@ -34,3 +34,11 @@ test("시세 날짜 당일 일봉은 이전 종가 후보가 아니다 · 일봉
   assert.equal(reconcilePreviousClose({ ...q, asOf: null }, bars).corrected, false);
   assert.equal(reconcilePreviousClose(q, [...bars.slice(0, 1), { date: "2026-11-19", close: null }, bars[2]]).corrected, false);
 });
+
+test("withDeadline: 멈춘 보조 호출은 시한에 reject — 호출자가 원래 시세로 계속한다", async () => {
+  const { withDeadline } = await import("./fetch-utils");
+  const t0 = Date.now();
+  await assert.rejects(withDeadline(new Promise(() => {}), 50, "멈춤"), /50ms 초과/);
+  assert.ok(Date.now() - t0 < 1000);
+  assert.equal(await withDeadline(Promise.resolve(7), 50, "정상"), 7);
+});

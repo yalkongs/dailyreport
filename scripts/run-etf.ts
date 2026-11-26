@@ -4,6 +4,7 @@
 // workflow. Fully independent: ETF failure does not affect the already-
 // sent market report, and vice versa.
 
+import { isLateScheduledRun } from '../lib/schedule-cutoff'
 import * as fs from 'fs'
 import * as path from 'path'
 import { collectAllEtfData } from '../lib/etf/etf-data'
@@ -107,8 +108,15 @@ async function main() {
     return
   }
 
+  if (isLateScheduledRun(process.env.GITHUB_EVENT_NAME)) {
+    console.log('⏰ 백업 schedule 실행이 08:50 KST를 넘겼습니다 — 개장 뒤 시세로 아침 리포트를 만들지 않습니다.')
+    return
+  }
+
   // Step 1: 데이터 수집 (병렬)
   console.log('[1/8] 데이터 수집 중...')
+  // 뉴스 발행 경과 시간의 기준 시각 — 프롬프트의 국내 장 마감 전/후 표시가 재시도 때 밀리지 않게(Codex 지적).
+  const newsCollectedAtMs = Date.now()
   const [etfData, macro, news, indices, usEvents, priorUsMoves] = await Promise.allSettled([
     collectAllEtfData(date),
     collectMacroContext(),
@@ -184,6 +192,7 @@ async function main() {
     indices: indices.status === 'fulfilled' ? indices.value : [],
     usEvents: usEvents.status === 'fulfilled' ? usEvents.value : [],
     priorUsMoves: priorUsMoves.status === 'fulfilled' ? priorUsMoves.value : [],
+    promptNowMs: newsCollectedAtMs,
     analysisLens,
     narrativeAngle,
     recentHeadlines,

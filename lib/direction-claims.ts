@@ -19,6 +19,8 @@ export interface DirectionAsset {
   minAbs: number;
   /** 변화 단위 표기(금리는 bp). */
   unit?: "pct" | "bp";
+  /** 다른 세션의 변화(ETF: 국내 전일 장 '직전' 미국 장 — 프롬프트가 주는 값). 이것과 방향이 맞으면 통과. */
+  altChange?: number | null;
 }
 
 const UP = /^(?:올랐|오른|오르며|오르면서|올라|상승|강세|반등|급등|뛰었|뛰며|뛰어|치솟|오름세)/;
@@ -30,7 +32,7 @@ const GAP = new RegExp(String.raw`^(?:\s|${GAP_TOKEN})*`);
 
 // 이 문장들은 '어제 하루'의 방향 주장이 아니다.
 const SKIP_SENTENCE =
-  /(면\s|라면|다면|이면|할지|일지|는지|을지|수 있|전망|예상|가능성|우려|기대|관건|변수|지켜볼|확인할|확인한 뒤|판단|해석|이릅|여부|볼 만|\?|오늘|이번 주|한 주|주간|지난주|지난 |전날|그저께|이틀|사흘|연속|누적|연초|올해|한 달|개월|년 전|전 대비|같은 기간|새 |최근|며칠|일째|동안|계산|직전 거래일)/;
+  /(면\s|라면|다면|이면|할지|일지|는지|을지|수 있|전망|예상|가능성|우려|기대|관건|변수|지켜볼|확인할|확인한 뒤|판단|해석|이릅|여부|볼 만|\?|오늘|이번 주|한 주|주간|지난주|지난 |전날|그저께|이틀|사흘|연속|누적|연초|올해|한 달|개월|년 전|전 대비|같은 기간|새 |최근|며칠|일째|동안|계산|직전 거래일|직전 미국 장|\d{1,2}\/\d{1,2})/;
 
 function sentences(text: string): string[] {
   return text
@@ -47,6 +49,8 @@ export function directionAfter(rest: string): "up" | "down" | null {
   const dir = UP.test(head) ? "up" : DOWN.test(head) ? "down" : null;
   // "밀렸던 자리"처럼 지난 일을 가리키는 관형형은 어제 하루의 주장이 아니다(11-11 실례).
   if (dir && /^[가-힣]{1,3}던/.test(head)) return null;
+  // "상승하지 못했다·하락하지 않았다" — 부정은 그 방향의 주장이 아니다(Codex 지적).
+  if (dir && /^[가-힣]{1,4}지\s?(?:못|않)/.test(head)) return null;
   return dir;
 }
 
@@ -60,6 +64,8 @@ export function findDirectionClaimMismatches(text: string, assets: DirectionAsse
       const re = new RegExp(a.pattern.source, a.pattern.flags.includes("g") ? a.pattern.flags : a.pattern.flags + "g");
       for (const m of s.matchAll(re)) {
         const dir = directionAfter(s.slice((m.index ?? 0) + m[0].length));
+        const alt = a.altChange;
+        if (dir && typeof alt === "number" && Number.isFinite(alt) && (dir === "up" ? alt > 0 : alt < 0)) break;
         if (dir === "up" && a.change < 0) hits.push(`${a.label} 상승 서술인데 입력 ${fmt(a)}: ${s.slice(0, 70)}`);
         if (dir === "down" && a.change > 0) hits.push(`${a.label} 하락 서술인데 입력 ${fmt(a)}: ${s.slice(0, 70)}`);
         if (dir) break;
@@ -131,12 +137,14 @@ export function etfDirectionAssets(
   indices: { nameKo: string; changePercent: number | null }[] | undefined,
   quotes: { ticker: string; changePercent: number | null }[],
   usdKrwChangePercent: number | null,
+  priorMoves: { nameKo: string; changePercent: number }[] = [],
 ): DirectionAsset[] {
   const alias: Record<string, string> = { "S&P500": "S&P 500", 다우: "다우존스" };
   const out: DirectionAsset[] = [];
   for (const i of indices ?? []) {
     const pattern = INDEX_PATTERNS[alias[i.nameKo] ?? i.nameKo];
-    if (pattern) out.push({ label: i.nameKo, pattern, change: i.changePercent, minAbs: 0.3 });
+    const altChange = priorMoves.find((p) => p.nameKo === i.nameKo)?.changePercent ?? null;
+    if (pattern) out.push({ label: i.nameKo, pattern, change: i.changePercent, minAbs: 0.3, altChange });
   }
   const q = (t: string) => quotes.find((x) => x.ticker === t)?.changePercent ?? null;
   const notEtf = (re: RegExp) => new RegExp(`(?:${re.source})(?!\\s?(?:ETF|광산|채굴))`);

@@ -3,6 +3,7 @@ import YahooFinance from 'yahoo-finance2'
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] })
 import type { IndexQuote, MacroContext } from './types'
 import { fetchJson } from './fetcher'
+import { withDeadline } from '../fetch-utils'
 
 const MACRO_TICKERS: Record<keyof Omit<MacroContext, 'fearGreed' | 'moveIndex' | 'usdKrwChangePercent'>, string> = {
   usdKrw: 'KRW=X',
@@ -179,8 +180,12 @@ export function sessionMoveFromCloses(
 export async function collectUsSessionMoves(session: string): Promise<Array<{ nameKo: string; changePercent: number }>> {
   const targets = INDEX_SYMBOLS.filter(i => !/^\^K[SQ]/.test(i.symbol))
   const results = await Promise.allSettled(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    targets.map(i => yahooFinance.chart(i.symbol, { period1: new Date(Date.parse(`${session}T00:00:00Z`) - 10 * 86400000), interval: '1d' }) as Promise<any>),
+    targets.map(i => withDeadline(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      yahooFinance.chart(i.symbol, { period1: new Date(Date.parse(`${session}T00:00:00Z`) - 10 * 86400000), interval: '1d' }) as Promise<any>,
+      6000,
+      `${i.symbol} 일봉`,
+    )),
   )
   const out: Array<{ nameKo: string; changePercent: number }> = []
   targets.forEach((t, idx) => {

@@ -1,3 +1,4 @@
+import { isLateScheduledRun } from "../lib/schedule-cutoff";
 import * as fs from "fs";
 import * as path from "path";
 import { collectAllMarketData, collectKospiSessions, collectionFailureCounts, OPTIONAL_SYMBOLS, toKSTString } from "../lib/market-data";
@@ -140,6 +141,11 @@ async function main() {
 
   // FORCE_REGENERATE=true는 중복 실행 가드(Step 1a)와 가격 해시 가드(Step 2) 둘 다 우회한다.
   const forceRegenerate = process.env.FORCE_REGENERATE === "true";
+
+  if (isLateScheduledRun(process.env.GITHUB_EVENT_NAME)) {
+    console.log("⏰ 백업 schedule 실행이 08:50 KST를 넘겼습니다 — 개장 뒤 시세로 아침 리포트를 만들지 않습니다.");
+    process.exit(0);
+  }
 
   // Step 1: 데이터 수집
   console.log("━━━ Step 1: 시장 데이터 수집 ━━━");

@@ -34,12 +34,15 @@ export interface MeetingTable {
   source: string;
   coverageStart: string;
   dates: string[];
+  /** 결정일 → 효력일 간격(일). 연준은 다음 날 효력이라 1 — 효력일 관측이 들어오기 전엔 동결로 세지 않는다. */
+  effectiveLagDays: number;
 }
 
 export const FOMC_MEETINGS: MeetingTable = {
   // federalreserve.gov/monetarypolicy/fomccalendars.htm — 회의 둘째 날(결정 발표일, 미국 날짜)
   source: "federalreserve.gov FOMC 일정",
   coverageStart: "2026-01-01",
+  effectiveLagDays: 1,
   dates: ["2026-01-28", "2026-03-18", "2026-04-29", "2026-06-17", "2026-07-29", "2026-09-16", "2026-10-28", "2026-12-09"],
 };
 
@@ -47,16 +50,21 @@ export const BOK_MPB_MEETINGS: MeetingTable = {
   // 2026: 8/27(제16차 정기 의사록)·10/22(동결)·11/26 확인. 2027: 한은 2026-10-29 의결 일정(SBS Biz 보도).
   source: "한국은행 통화정책방향 결정회의 일정",
   coverageStart: "2026-08-01",
+  effectiveLagDays: 0,
   dates: [
     "2026-08-27", "2026-10-22", "2026-11-26",
     "2027-01-14", "2027-02-25", "2027-04-09", "2027-05-27", "2027-07-15", "2027-08-26", "2027-10-15", "2027-11-25",
   ],
 };
 
-/** 마지막 변경(효력일) 뒤, 데이터 기준일까지 열린 회의 = 동결 결정. 오늘 열리는 회의는 아직 결과가 없으므로 제외. */
+/**
+ * 마지막 변경(효력일) 뒤 열린 회의 = 동결 결정. 오늘 열리는 회의는 아직 결과가 없으므로 제외하고,
+ * 그 회의의 효력일까지 관측이 들어와 있을 때만 센다(연준 결정 다음 날 아침, FRED가 결정일까지만 있으면 변경을 동결로 잘못 센다).
+ */
 export function holdsSince(lastChangeDate: string, asOf: string, today: string, table: MeetingTable): string[] {
   if (lastChangeDate < table.coverageStart) return [];
-  return table.dates.filter((d) => d > lastChangeDate && d <= asOf && d < today);
+  const effective = (d: string) => new Date(Date.parse(`${d}T00:00:00Z`) + table.effectiveLagDays * 86400000).toISOString().slice(0, 10);
+  return table.dates.filter((d) => d > lastChangeDate && effective(d) <= asOf && d < today);
 }
 
 export function summarizePolicyRate(

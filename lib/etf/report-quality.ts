@@ -569,7 +569,7 @@ export function headlineCandidateProblems(c: HeadlineCandidate, report: MorningR
   const ambiguous = [...findUnqualifiedAmbiguousWords(c.headline), ...findUnqualifiedAmbiguousWords(c.subline)]
   if (ambiguous.length > 0) problems.push(`시장이 특정되지 않은 표현: ${ambiguous.slice(0, AMBIGUOUS_SAMPLE_LIMIT).join(' | ')}`)
   const both = `${c.headline}\n${c.subline}`
-  const numeric = findNumericClaimMismatches(both, data.quotes, data.indices)
+  const numeric = findNumericClaimMismatches(both, data.quotes, data.indices, data.priorUsMoves ?? [])
   if (numeric.length > 0) problems.push(`수치가 입력 데이터와 다름: ${numeric.slice(0, 2).join(' / ')}`)
   const advice = findMatches(both, INVESTMENT_ADVICE_PATTERNS)
   if (advice.length > 0) problems.push(`투자 권유성 표현: ${advice.join(', ')}`)
@@ -650,7 +650,7 @@ export function assessMorningReportQuality(
 
   // 사실 검증(2026-10-16 감사 C01·C02·C04·C05) — 정상 시도에서는 재생성 사유, 축소판에서는 경고.
   const factViolations: string[] = []
-  const numeric = findNumericClaimMismatches(text, data.quotes, data.indices)
+  const numeric = findNumericClaimMismatches(text, data.quotes, data.indices, data.priorUsMoves ?? [])
   if (numeric.length > 0) {
     factViolations.push(`수치가 입력 데이터와 다름(지수/ETF 혼동·카드와 본문 불일치): ${numeric.slice(0, 3).join(' / ')}`)
   }
@@ -669,7 +669,7 @@ export function assessMorningReportQuality(
     ...findCardSessionOrderViolations(report.assetCards, buildAssetClassSlots(data.quotes), timeline),
   ]
   // 2026-11-27 대책 3: "자산 + 방향어"가 입력 부호와 반대(11-20 "금 현물 강세", GLD -1.76%).
-  const direction = findDirectionClaimMismatches(text, etfDirectionAssets(data.indices, data.quotes, data.macro?.usdKrwChangePercent ?? null))
+  const direction = findDirectionClaimMismatches(text, etfDirectionAssets(data.indices, data.quotes, data.macro?.usdKrwChangePercent ?? null, data.priorUsMoves ?? []))
   if (direction.length > 0) factViolations.push(`방향 서술이 입력과 반대: ${direction.slice(0, 2).join(' / ')}`)
   if (orderHits.length > 0) {
     factViolations.push(`시간 순서 오류(국내 전일 등락의 이유로 그 뒤에 열린 간밤 미국 장을 씀 — 원인 후보는 [시간 순서]의 직전 미국 장): ${orderHits.slice(0, 2).join(' / ')}`)

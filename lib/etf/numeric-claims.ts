@@ -11,6 +11,7 @@ interface Entity {
   label: string
   pattern: RegExp
   value: number | null // null = 실측 없음(지수) → 수치를 쓰면 위반
+  alt?: number // 2026-11-27: 국내 전일 장 '직전' 미국 장 등락 — 프롬프트가 주는 값이라 이것과 맞아도 통과
 }
 
 interface Mention { start: number; end: number; entity: Entity }
@@ -29,6 +30,7 @@ type Claim = NumericClaim
 export interface PairedClaim {
   label: string
   actual: number | null
+  alt?: number
   quoted: string
   claim: NumericClaim
 }
@@ -56,7 +58,7 @@ const INDEX_NAME_PATTERNS: Array<{ nameKo: string; pattern: RegExp }> = [
 const JOSA = '(?:은|는|이|가|와|과|의|도|를|을|로|으로|에|에서|만|보다|까지|처럼|조차|마저|이나|나|라는|이라는)'
 const KR_NAME_END = `(?=\\s|\\(|[,.·/)\\]]|$|${JOSA}(?![가-힣]))`
 
-function buildEntities(quotes: EtfQuote[], indices: IndexQuote[] | undefined): Entity[] {
+function buildEntities(quotes: EtfQuote[], indices: IndexQuote[] | undefined, priorMoves: PriorMove[] = []): Entity[] {
   const entities: Entity[] = []
   for (const q of quotes) {
     if (q.changePercent === null || q.changePercent === undefined || !Number.isFinite(q.changePercent)) continue
@@ -68,7 +70,8 @@ function buildEntities(quotes: EtfQuote[], indices: IndexQuote[] | undefined): E
   }
   for (const idx of INDEX_NAME_PATTERNS) {
     const found = indices?.find(i => i.nameKo === idx.nameKo)
-    entities.push({ label: idx.nameKo, pattern: idx.pattern, value: found?.changePercent ?? null })
+    const prior = priorMoves.find(p => p.nameKo === idx.nameKo)?.changePercent
+    entities.push({ label: idx.nameKo, pattern: idx.pattern, value: found?.changePercent ?? null, ...(typeof prior === 'number' ? { alt: prior } : {}) })
   }
   return entities
 }
@@ -177,8 +180,10 @@ function introducesOtherSubject(gap: string): boolean {
  * 문장마다 대상(ETF 이름·티커, 지수명)과 바로 뒤 등락률 수치를 짝짓는다 — 판정은 하지 않는다.
  * 다른 지표 문맥·가정문·다른 주어가 끼면 짝을 만들지 않는다(보수적).
  */
-export function extractNumericClaims(text: string, quotes: EtfQuote[], indices: IndexQuote[] | undefined): PairedClaim[] {
-  const entities = buildEntities(quotes, indices)
+export interface PriorMove { nameKo: string; changePercent: number }
+
+export function extractNumericClaims(text: string, quotes: EtfQuote[], indices: IndexQuote[] | undefined, priorMoves: PriorMove[] = []): PairedClaim[] {
+  const entities = buildEntities(quotes, indices, priorMoves)
   const out: PairedClaim[] = []
   for (const sentence of splitSentences(text)) {
     const mentions = findMentions(sentence, entities)
@@ -215,16 +220,17 @@ export function extractNumericClaims(text: string, quotes: EtfQuote[], indices: 
       }
 
       for (const [m, c] of pairs) {
-        out.push({ label: m.entity.label, actual: m.entity.value, quoted: sentence.slice(c.start, c.end).trim(), claim: c })
+        out.push({ label: m.entity.label, actual: m.entity.value, ...(m.entity.alt !== undefined ? { alt: m.entity.alt } : {}), quoted: sentence.slice(c.start, c.end).trim(), claim: c })
       }
     }
   }
   return out
 }
 
-export function findNumericClaimMismatches(text: string, quotes: EtfQuote[], indices: IndexQuote[] | undefined): string[] {
+export function findNumericClaimMismatches(text: string, quotes: EtfQuote[], indices: IndexQuote[] | undefined, priorMoves: PriorMove[] = []): string[] {
   const mismatches: string[] = []
-  for (const p of extractNumericClaims(text, quotes, indices)) {
+  for (const p of extractNumericClaims(text, quotes, indices, priorMoves)) {
+    if (p.alt !== undefined && claimMatches(p.claim, p.alt)) continue
     if (p.actual === null) {
       mismatches.push(`${p.label} ${p.quoted} — 지수 실측 없음`)
     } else if (!claimMatches(p.claim, p.actual)) {

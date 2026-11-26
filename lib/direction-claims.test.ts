@@ -52,3 +52,11 @@ test("ETF: 금 ETF·금광주 ETF 상품명은 금 방향이 아니다 · 지수
   assert.equal(findDirectionClaimMismatches("간밤 S&P500이 1.2% 올랐습니다.", a).length, 1);
   assert.equal(findDirectionClaimMismatches("다우지수는 0.5% 하락했습니다.", a).length, 1);
 });
+
+test("Codex 지적: 부정형은 방향 주장이 아니다 · 직전 미국 장 값과 맞으면 통과", () => {
+  const nas = (change: number, alt: number | null = null): DirectionAsset[] => [{ label: "나스닥", pattern: /나스닥/, change, minAbs: 0.3, altChange: alt }];
+  assert.deepEqual(findDirectionClaimMismatches("나스닥은 상승하지 못했습니다.", nas(-1.2)), []);
+  assert.deepEqual(findDirectionClaimMismatches("나스닥은 1.0% 상승했습니다.", nas(-1.2, 1.0)), []);
+  assert.deepEqual(findDirectionClaimMismatches("11/24 미국 장에서 나스닥은 1.0% 상승했습니다.", nas(-1.2)), []);
+  assert.equal(findDirectionClaimMismatches("나스닥은 1.0% 상승했습니다.", nas(-1.2, -0.5)).length, 1);
+});

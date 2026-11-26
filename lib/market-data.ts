@@ -1,5 +1,6 @@
 import YahooFinance from "yahoo-finance2";
 import { OPTIONAL_SYMBOLS } from "./optional-symbols";
+import { withDeadline } from "./fetch-utils";
 import { getPrevTradingDay, koreanWeekday } from "./market-calendar";
 import { pickCloseOnOrBefore, weekStartKst } from "./historical-baseline";
 import { sessionDate } from "./etf/market-context";
@@ -120,6 +121,8 @@ export function reconcilePreviousClose(
   return { price: quote.price, change, changePercent: (change / prev) * 100, previousClose: prev, corrected: true };
 }
 
+const RECONCILE_CHART_MS = 4000;
+
 async function fetchQuote(
   symbol: string
 ): Promise<{
@@ -143,7 +146,11 @@ async function fetchQuote(
     };
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const history: any = await yahooFinance.chart(symbol, { period1: new Date(Date.now() - 12 * 86400000), interval: "1d" });
+      const history: any = await withDeadline(
+        yahooFinance.chart(symbol, { period1: new Date(Date.now() - 12 * 86400000), interval: "1d" }),
+        RECONCILE_CHART_MS,
+        `${symbol} 일봉`,
+      );
       const bars = (history?.quotes ?? []).map((b: { date: Date; close: number | null }) => ({ date: sessionDate(b.date, tz) ?? "", close: b.close }));
       const fixed = reconcilePreviousClose(raw, bars);
       if (fixed.corrected) {
@@ -151,7 +158,7 @@ async function fetchQuote(
       }
       return { price: fixed.price, change: fixed.change, changePercent: fixed.changePercent, previousClose: fixed.previousClose, asOf };
     } catch {
-      return raw; // 일봉 실패는 시세 그대로
+      return raw; // 일봉 실패·시한 초과는 시세 그대로
     }
   } catch {
     return { price: null, change: null, changePercent: null, previousClose: null, asOf: null };
