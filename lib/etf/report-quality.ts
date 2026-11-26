@@ -17,6 +17,7 @@
 import { findNumericClaimMismatches } from './numeric-claims'
 import { findSessionOrderViolations, findCardSessionOrderViolations } from './session-order-check'
 import { buildSessionTimeline } from '../session-timeline'
+import { findDirectionClaimMismatches, etfDirectionAssets } from '../direction-claims'
 import type { CollectedData, MorningReport, MorningStrategyInput } from './types'
 // 2026-10-17 출력 스키마 개편: 자산군 카드 key·카드 key는 코드가 확정한 슬롯 안에서만.
 import { buildAssetClassSlots, cardSlot, findTacticalAlert, pickFeaturedSlot, TACTICAL_WARNING_MIN_ABS_PCT } from './asset-classes'
@@ -667,6 +668,9 @@ export function assessMorningReportQuality(
     ...findSessionOrderViolations(text, timeline, data.indices),
     ...findCardSessionOrderViolations(report.assetCards, buildAssetClassSlots(data.quotes), timeline),
   ]
+  // 2026-11-27 대책 3: "자산 + 방향어"가 입력 부호와 반대(11-20 "금 현물 강세", GLD -1.76%).
+  const direction = findDirectionClaimMismatches(text, etfDirectionAssets(data.indices, data.quotes, data.macro?.usdKrwChangePercent ?? null))
+  if (direction.length > 0) factViolations.push(`방향 서술이 입력과 반대: ${direction.slice(0, 2).join(' / ')}`)
   if (orderHits.length > 0) {
     factViolations.push(`시간 순서 오류(국내 전일 등락의 이유로 그 뒤에 열린 간밤 미국 장을 씀 — 원인 후보는 [시간 순서]의 직전 미국 장): ${orderHits.slice(0, 2).join(' / ')}`)
   }

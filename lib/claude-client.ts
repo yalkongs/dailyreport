@@ -13,6 +13,7 @@ import { CLAUDE_MAX_RETRIES, CLAUDE_REQUEST_TIMEOUT_MS, MARKET_GENERATION_BUDGET
 import { EVIDENCE_RULES } from "./evidence-rules";
 import { formatEconomicEventLine } from "./economic-calendar";
 import { buildReportCalendar } from "./report-calendar";
+import { findDirectionClaimMismatches, marketDirectionAssets, type DirectionAsset } from "./direction-claims";
 import { buildSessionTimeline, describeSessionOrder, newsTimingTag } from "./session-timeline";
 import { getUpcomingKrMacroEvents } from "./kr-macro-calendar";
 import { renderReport, sanitizeInlineHtml } from "./report-renderer";
@@ -734,7 +735,7 @@ interface MarketAssessment {
  * 한 결과의 soft fix·검증 — 매 시도와 제목 편집자 교체 뒤 재검증이 같은 함수를 쓴다.
  * 형식이 깨진 응답이면 던질 수 있다 — 호출자가 파싱 실패처럼 다룬다(Ruling 28).
  */
-function assessMarketContent(parsed: ReportContent, reportDate: string, todaySources: string[]): MarketAssessment {
+function assessMarketContent(parsed: ReportContent, reportDate: string, todaySources: string[], directionAssets: DirectionAsset[] = []): MarketAssessment {
   let content = parsed;
   const temporal = checkAndFixTemporal(JSON.stringify(content), reportDate);
   const sourceFix = softFixUnquotableSources(temporal.fixed, todaySources);
@@ -750,6 +751,9 @@ function assessMarketContent(parsed: ReportContent, reportDate: string, todaySou
   // Ruling 31: 제목·카드 한 줄의 기간 비교·최상급은 일반 기준 위반(1~2번째 재생성, 마지막 시도 경고만).
   // Ruling 37e: 권유성 단정(SOFT)도 일반 기준 위반 — 해설에 섞여 걸려도 재생성 한 번이 비용이고 마지막 시도는 경고만.
   const base = [...temporal.violations, ...requiredMissing, ...validateMarketSummary(content), ...validateMarketComparativeClaims(content), ...validateMarketSoftAdvice(content)];
+  // 2026-11-27 대책 3: "자산 + 방향어"가 입력 부호와 반대면 일반 기준 위반(1~2번째 재생성, 마지막 시도 경고만).
+  const direction = findDirectionClaimMismatches(extractReportText(content), directionAssets);
+  if (direction.length > 0) base.push(`방향 서술이 입력과 반대: ${direction.slice(0, 2).join(" / ")}`);
   const citationCount = countCitationPhrases(sourceFix.fixed);
   if (citationCount >= 8) {
     base.push(`"에 따르면" 인용 ${citationCount}회 과다`);
@@ -882,6 +886,7 @@ export async function generateReport(
   // 2026-10-27 제목 편집 기준: 최근 제목(최신순, 오늘 제외)·출처 목록·선택 켬 여부는 시도마다 같다.
   const recentHeadlines = marketRecentHeadlines(defaultCtx, data.date);
   const todaySources = (context?.news ?? []).map((n) => n.source);
+  const directionAssets = marketDirectionAssets(data);
   const selectionOn = headlineSelectionEnabled();
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     // F07: 생성 예산을 넘기면 새 호출을 시작하지 않는다(다음 트리거가 새 runner에서 재시도).
@@ -964,7 +969,7 @@ export async function generateReport(
       // 그 위반을 아래 기존 검증이 보고한다(1~2번째 재생성, 마지막 경고) — 한 후보의 권유 때문에 발송이 막히지 않게(F1).
       const current = parsed;
       const selection = applyHeadlineSelection(current, recentHeadlines, (c) => marketHeadlineProblems(c, current), { scoring: selectionOn, isBlocking: marketHeadlineBlocking });
-      const assessed = assessMarketContent(parsed, data.date, todaySources);
+      const assessed = assessMarketContent(parsed, data.date, todaySources, directionAssets);
       parsed = assessed.content;
       const { requiredMissing, base: baseViolations, card: cardViolations, advice: adviceViolations } = assessed;
       if (requiredMissing.length > 0) lastRequiredMissing = { attempt, fields: requiredMissing };
@@ -1048,7 +1053,7 @@ export async function generateReport(
         const next = structuredClone(top.content);
         next.cover.headline = c.headline;
         next.cover.subline = c.subline;
-        const a = assessMarketContent(next, data.date, todaySources);
+        const a = assessMarketContent(next, data.date, todaySources, directionAssets);
         const worse = a.requiredMissing.length > 0 || a.advice.length > 0 || a.base.length + a.card.length > top.base.length + top.card.length;
         return worse ? null : { ...top, content: a.content, base: a.base, card: a.card };
       } catch {
