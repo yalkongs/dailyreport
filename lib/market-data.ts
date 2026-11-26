@@ -1,4 +1,5 @@
 import YahooFinance from "yahoo-finance2";
+import { OPTIONAL_SYMBOLS } from "./optional-symbols";
 import { getPrevTradingDay, koreanWeekday } from "./market-calendar";
 import { pickCloseOnOrBefore, weekStartKst } from "./historical-baseline";
 import { sessionDate } from "./etf/market-context";
@@ -38,7 +39,19 @@ const US_INDICES = [
   { symbol: "^GSPC", name: "S&P 500", nameKo: "S&P 500" },
   { symbol: "^IXIC", name: "NASDAQ", nameKo: "나스닥" },
   { symbol: "^DJI", name: "Dow Jones", nameKo: "다우존스" },
+  // 2026-11-27 (spec 2026-11-13-market-sox-design): 반도체 방향을 짐작하지 않게. 이름은 ETF·발송 점검 대조 키와 같다.
+  { symbol: "^SOX", name: "PHLX Semiconductor", nameKo: "필라델피아 반도체지수" },
 ];
+
+export { OPTIONAL_SYMBOLS };
+
+/** 수집 실패율 가드의 분자·분모(선택 지표 제외). 실패 항목은 배열에 남고 오류 문자열에 "(심볼)"이 들어간다. */
+export function collectionFailureCounts(data: MarketDataCollection): { total: number; failed: number } {
+  const groups = [data.koreaStocks, data.usStocks, data.europeStocks, data.japanStocks, data.chinaStocks, data.forex, data.commodities, data.bonds, data.crypto];
+  const total = groups.reduce((n, g) => n + g.filter((x) => !OPTIONAL_SYMBOLS.has(x.symbol)).length, 0);
+  const failed = data.collectionErrors.filter((e) => ![...OPTIONAL_SYMBOLS].some((s) => e.includes(`(${s})`))).length;
+  return { total, failed };
+}
 
 const EUROPE_INDICES = [
   { symbol: "^GDAXI", name: "DAX", nameKo: "DAX (독일)" },
@@ -272,6 +285,7 @@ export const HISTORICAL_SYMBOLS = [
   { symbol: "^GSPC", nameKo: "S&P 500" },
   { symbol: "^IXIC", nameKo: "나스닥" },
   { symbol: "^DJI", nameKo: "다우존스" },
+  { symbol: "^SOX", nameKo: "필라델피아 반도체지수" },
   { symbol: "^N225", nameKo: "닛케이 225" },
   { symbol: "KRW=X", nameKo: "원/달러" },
   { symbol: "CL=F", nameKo: "WTI 원유" },

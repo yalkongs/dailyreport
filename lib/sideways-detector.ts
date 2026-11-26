@@ -1,3 +1,4 @@
+import { OPTIONAL_SYMBOLS } from "./optional-symbols";
 import type { MarketDataCollection, SidewaysAnalysis, NarrativeLogEntry } from "./types";
 
 const DEEP_DIVE_TOPICS = [
@@ -49,6 +50,8 @@ export function analyzeSideways(data: MarketDataCollection): SidewaysAnalysis {
   const allChanges: number[] = [];
   for (const group of [data.koreaStocks, data.usStocks, data.europeStocks, data.japanStocks, data.chinaStocks]) {
     for (const item of group) {
+      // 업종 지수(^SOX)는 시장 전체보다 변동이 커서 '80%가 0.5% 미만' 판정을 혼자 흔든다(spec 2026-11-13).
+      if (OPTIONAL_SYMBOLS.has(item.symbol)) continue;
       if (item.changePercent != null) allChanges.push(Math.abs(item.changePercent));
     }
   }

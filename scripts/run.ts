@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { collectAllMarketData, collectKospiSessions, toKSTString } from "../lib/market-data";
+import { collectAllMarketData, collectKospiSessions, collectionFailureCounts, OPTIONAL_SYMBOLS, toKSTString } from "../lib/market-data";
 import { collectContextData } from "../lib/context-data";
 import { generateReport } from "../lib/claude-client";
 import { summarySentence } from "../lib/market-summary";
@@ -100,7 +100,8 @@ function buildMarketSnapshot(data: MarketDataCollection): MarketSnapshot {
 
   // 핵심 지표만 선택
   for (const idx of data.koreaStocks) addIndex(idx);
-  for (const idx of data.usStocks) addIndex(idx);
+  // 첫 화면 시장 요약 격자는 9칸 유지(사용자 결정 2026-11-13) — 선택 지표(^SOX) 제외.
+  for (const idx of data.usStocks) if (!OPTIONAL_SYMBOLS.has(idx.symbol)) addIndex(idx);
   // 원/달러만
   const usdkrw = data.forex.find(f => f.symbol === "KRW=X");
   if (usdkrw) addForex(usdkrw);
@@ -238,20 +239,12 @@ async function main() {
 
   // Step 2: 수집 결과 검증
   console.log("━━━ Step 2: 수집 결과 검증 ━━━");
-  const totalItems =
-    marketData.koreaStocks.length +
-    marketData.usStocks.length +
-    marketData.europeStocks.length +
-    marketData.japanStocks.length +
-    marketData.chinaStocks.length +
-    marketData.forex.length +
-    marketData.commodities.length +
-    marketData.bonds.length +
-    marketData.crypto.length;
+  // 선택 지표(^SOX)는 분자·분모에서 뺀다 — 하나 실패로 리포트가 멈추지 않게(spec 2026-11-13).
+  const { total: totalItems, failed: failedItems } = collectionFailureCounts(marketData);
 
-  console.log(`📋 총 ${totalItems}개 항목 수집, ${marketData.collectionErrors.length}개 실패`);
+  console.log(`📋 총 ${totalItems}개 항목 수집, ${failedItems}개 실패(선택 지표 제외)`);
 
-  if (marketData.collectionErrors.length > totalItems * 0.5) {
+  if (failedItems > totalItems * 0.5) {
     console.error("❌ 50% 이상 데이터 수집 실패. 리포트 생성을 중단합니다.");
     process.exit(1);
   }
